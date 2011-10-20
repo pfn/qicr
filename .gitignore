@@ -1,0 +1,4 @@
+*.swp
+local.properties
+gen
+bin

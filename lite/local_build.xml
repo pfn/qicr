@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="local build config" default="-compile">
+
+    <taskdef resource="scala/tools/ant/antlib.xml"
+             classpath="${scala.lib.dir}/scala-compiler.jar:${scala.lib.dir}/scala-library.jar" />
+    <target name="-compile" depends="-build-setup, -pre-build, -code-gen, -pre-compile">
+        <do-only-if-manifest-hasCode elseText="hasCode = false. Skipping...">
+            <!-- If android rules are used for a test project, its classpath should include
+                 tested project's location -->
+            <condition property="extensible.classpath"
+                    value="${tested.project.absolute.dir}/bin/classes"
+                    else=".">
+                <isset property="tested.project.absolute.dir" />
+            </condition>
+            <condition property="extensible.libs.classpath"
+                    value="${tested.project.absolute.dir}/${jar.libs.dir}"
+                    else="${jar.libs.dir}">
+                <isset property="tested.project.absolute.dir" />
+            </condition>
+            <javac encoding="${java.encoding}"
+                    source="${java.source}" target="${java.target}"
+                    debug="true" extdirs=""
+                    destdir="${out.classes.absolute.dir}"
+                    bootclasspathref="android.target.classpath"
+                    verbose="${verbose}"
+                    classpath="${extensible.classpath}"
+                    classpathref="jar.libs.ref">
+                <src path="${source.absolute.dir}" />
+                <src path="${gen.absolute.dir}" />
+                <classpath>
+                    <fileset dir="${extensible.libs.classpath}" includes="*.jar" />
+                </classpath>
+            </javac>
+            <scalac force="changed" deprecation="on" debuginfo="true" unchecked="on"
+                    destdir="${out.classes.absolute.dir}"
+                    bootclasspathref="android.target.classpath">
+              <src path="${source.absolute.dir}" />
+              <src path="${gen.absolute.dir}" />
+              <exclude name="**/*.java"/>
+              <classpath>
+                <fileset dir="${extensible.libs.classpath}" includes="*.jar" />
+                <fileset dir="${scala.lib.dir}" includes="*.jar"/>
+                <pathelement location="${out.classes.absolute.dir}"/>
+                <path refid="project.libraries.jars"/>
+              </classpath>
+            </scalac>
+
+            <!-- if the project is a library then we generate a jar file -->
+            <if condition="${project.is.library}">
+                <then>
+                    <echo>Creating library output jar file...</echo>
+                    <property name="out.library.jar.file" location="${out.absolute.dir}/classes.jar" />
+                    <if>
+                        <condition>
+                            <length string="${android.package.excludes}" trim="true" when="greater" length="0" />
+                        </condition>
+                        <then>
+                            <echo>Custom jar packaging exclusion: ${android.package.excludes}</echo>
+                        </then>
+                    </if>
+                    <jar destfile="${out.library.jar.file}">
+                        <fileset dir="${out.classes.absolute.dir}" excludes="**/R.class **/R$*.class"/>
+                        <fileset dir="${source.absolute.dir}" excludes="**/*.java ${android.package.excludes}" />
+                    </jar>
+                </then>
+            </if>
+
+            <!-- if the project is instrumented, intrument the classes -->
+            <if condition="${build.is.instrumented}">
+                <then>
+                    <echo>Instrumenting classes from ${out.absolute.dir}/classes...</echo>
+                    <!-- It only instruments class files, not any external libs -->
+                    <emma enabled="true">
+                        <instr verbosity="${verbosity}"
+                               mode="overwrite"
+                               instrpath="${out.absolute.dir}/classes"
+                               outdir="${out.absolute.dir}/classes">
+                        </instr>
+                        <!-- TODO: exclusion filters on R*.class and allowing custom exclusion from
+                             user defined file -->
+                    </emma>
+                </then>
+            </if>
+        </do-only-if-manifest-hasCode>
+    </target>
+    <target name="-obfuscate">
+        <if condition="${proguard.enabled}">
+            <then>
+                <property name="obfuscate.absolute.dir" location="${out.absolute.dir}/proguard" />
+                <property name="preobfuscate.jar.file" value="${obfuscate.absolute.dir}/original.jar" />
+                <property name="obfuscated.jar.file" value="${obfuscate.absolute.dir}/obfuscated.jar" />
+                <!-- input for dex will be proguard's output -->
+                <property name="out.dex.input.absolute.dir" value="${obfuscated.jar.file}" />
+
+                <!-- Add Proguard Tasks -->
+                <property name="proguard.jar" location="${android.tools.dir}/proguard/lib/proguard.jar" />
+                <taskdef name="proguard" classname="proguard.ant.ProGuardTask" classpath="${proguard.jar}" />
+
+                <!-- Set the android classpath Path object into a single property. It'll be
+                     all the jar files separated by a platform path-separator.
+                     Each path must be quoted if it contains spaces.
+                -->
+                <pathconvert property="android.libraryjars" refid="android.target.classpath">
+                    <firstmatchmapper>
+                        <regexpmapper from='^([^ ]*)( .*)$$' to='"\1\2"'/>
+                        <identitymapper/>
+                    </firstmatchmapper>
+                </pathconvert>
+
+                <!-- Build a path object with all the jar files that must be obfuscated.
+                     This include the project compiled source code and any 3rd party jar
+                     files. -->
+                <path id="project.jars.ref">
+                    <pathelement location="${preobfuscate.jar.file}" />
+                    <path refid="jar.libs.ref" />
+                </path>
+                <!-- Set the project jar files Path object into a single property. It'll be
+                     all the jar files separated by a platform path-separator.
+                     Each path must be quoted if it contains spaces.
+                -->
+                <pathconvert property="project.jars" refid="project.jars.ref">
+                    <firstmatchmapper>
+                        <regexpmapper from='^([^ ]*)( .*)$$' to='"\1\2"'/>
+                        <regexpmapper from="^.*/android-support-v13.jar$|(.*)" to="\1"/>
+                        <identitymapper/>
+                    </firstmatchmapper>
+                </pathconvert>
+                <script language="javascript">
+                    var p = project.getProperty('project.jars')
+                    project.setProperty('project.jars', p.replaceAll('::', ':'))
+                </script>
+
+                <mkdir   dir="${obfuscate.absolute.dir}" />
+                <delete file="${preobfuscate.jar.file}"/>
+                <delete file="${obfuscated.jar.file}"/>
+                <jar basedir="${out.classes.absolute.dir}"
+                    destfile="${preobfuscate.jar.file}" />
+                <proguard>
+                    @${proguard.config}
+                    -injars       ${project.jars}
+                    -outjars      "${obfuscated.jar.file}"
+                    -libraryjars  ${android.libraryjars}
+                    -dump         "${obfuscate.absolute.dir}/dump.txt"
+                    -printseeds   "${obfuscate.absolute.dir}/seeds.txt"
+                    -printusage   "${obfuscate.absolute.dir}/usage.txt"
+                    -printmapping "${obfuscate.absolute.dir}/mapping.txt"
+                </proguard>
+            </then>
+        </if>
+    </target>
+
+    <target name="-add-support-jar">
+      <if>
+        <condition>
+          <available file="${obfuscated.jar.file}"/>
+        </condition>
+        <then>
+          <property name="support.jar.tmp"
+                  value="${out.classes.absolute.dir}/support_tmp"/>
+          <mkdir dir="${support.jar.tmp}"/>
+          <unjar src="${android.library.reference.1}/libs/android-support-v13.jar"
+                  dest="${support.jar.tmp}"/>
+          <jar destfile="${obfuscated.jar.file}" basedir="${support.jar.tmp}"
+                  update="true" excludes="META-INF/**"/>
+          <delete dir="${support.jar.tmp}"/>
+        </then>
+      </if>
+    </target>
+
+    <target name="-package-release" depends="-dex, -package-resources">
+        <package-helper output.filepath="${out.unsigned.file}"/>
+        <property name="scala.rm.tmp"
+                value="${out.classes.absolute.dir}/scala_del"/>
+        <mkdir dir="${scala.rm.tmp}"/>
+        <unzip dest="${scala.rm.tmp}" src="${out.unsigned.file}"/>
+        <delete file="${out.unsigned.file}"/>
+        <delete>
+          <fileset dir="${scala.rm.tmp}">
+            <include name="**/*.scala"/>
+          </fileset>
+        </delete>
+        <zip destfile="${out.unsigned.file}" basedir="${scala.rm.tmp}"/>
+        <delete dir="${scala.rm.tmp}"/>
+    </target>
+    <target name="-set-obfuscation-jars">
+      <pathconvert refid="project.libraries.jars" property="obfuscate.project.libraries.jars">
+        <mapper type="regexp" from="^.*/android-support-v13.jar$|(.*)" to="\1"/>
+      </pathconvert>
+      <path id="jar.libs.ref">
+        <fileset dir="${jar.libs.absolute.dir}" includes="*.jar" />
+        <pathelement path="${obfuscate.project.libraries.jars}" />
+      </path>
+    </target>
+    <target name="-dex"
+            depends="-compile, -post-compile, -obfuscate, -add-support-jar"
+            unless="do.not.compile">
+        <if condition="${manifest.hasCode}">
+            <then>
+                <dex-helper />
+            </then>
+            <else>
+                <echo>hasCode = false. Skipping...</echo>
+            </else>
+        </if>
+    </target>
+    <target name="release"
+                depends="-set-release-mode, -release-obfuscation-check, -package, -release-nosign"
+                if="has.keystore"
+                description="Builds the application. The generated apk file must be signed before
+                            it is published.">
+
+        <!-- only create apk if *not* a library project -->
+        <do-only-if-not-library elseText="Library project: do not create apk..." >
+            <sequential>
+                <property name="out.unaligned.file" location="${out.absolute.dir}/${ant.project.name}-release-unaligned.apk" />
+
+                <!-- Signs the APK -->
+                <echo>Signing final apk...</echo>
+                <signjar
+                        jar="${out.packaged.file}"
+                        signedjar="${out.unaligned.file}"
+                        keystore="${key.store}"
+                        storepass="${key.store.password}"
+                        storetype="pkcs12"
+                        alias="${key.alias}"
+                        keypass="${key.alias.password}"
+                        verbose="${verbose}" />
+
+                <!-- Zip aligns the APK -->
+                <zipalign-helper in.package="${out.unaligned.file}"
+                                           out.package="${out.final.file}" />
+                <echo>Release Package: ${out.final.file}</echo>
+            </sequential>
+        </do-only-if-not-library>
+        <record-build-info />
+    </target>
+</project>

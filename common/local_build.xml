@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="common local build" default="release">
+
+    <taskdef resource="scala/tools/ant/antlib.xml"
+             classpath="${scala.lib.dir}/scala-compiler.jar:${scala.lib.dir}/scala-library.jar" />
+
+    <property name="android.package.excludes" value="**/*.scala **/*.swp"/>
+    <target name="-compile" depends="-build-setup, -pre-build, -code-gen, -pre-compile">
+        <do-only-if-manifest-hasCode elseText="hasCode = false. Skipping...">
+            <!-- If android rules are used for a test project, its classpath should include
+                 tested project's location -->
+            <condition property="extensible.classpath"
+                    value="${tested.project.absolute.dir}/bin/classes"
+                    else=".">
+                <isset property="tested.project.absolute.dir" />
+            </condition>
+            <condition property="extensible.libs.classpath"
+                    value="${tested.project.absolute.dir}/${jar.libs.dir}"
+                    else="${jar.libs.dir}">
+                <isset property="tested.project.absolute.dir" />
+            </condition>
+            <javac encoding="${java.encoding}"
+                    source="${java.source}" target="${java.target}"
+                    debug="true" extdirs=""
+                    destdir="${out.classes.absolute.dir}"
+                    bootclasspathref="android.target.classpath"
+                    verbose="${verbose}"
+                    classpath="${extensible.classpath}"
+                    classpathref="jar.libs.ref">
+                <src path="${source.absolute.dir}" />
+                <src path="${gen.absolute.dir}" />
+                <classpath>
+                    <fileset dir="${extensible.libs.classpath}" includes="*.jar" />
+                </classpath>
+            </javac>
+            <scalac force="changed" deprecation="on" debuginfo="true" unchecked="on"
+                    destdir="${out.classes.absolute.dir}"
+                    bootclasspathref="android.target.classpath">
+              <src path="${source.absolute.dir}" />
+              <src path="${gen.absolute.dir}" />
+              <exclude name="**/*.java"/>
+              <classpath>
+                <fileset dir="${extensible.libs.classpath}" includes="*.jar" />
+                <fileset dir="${scala.lib.dir}" includes="*.jar"/>
+                <pathelement location="${out.classes.absolute.dir}"/>
+                <path refid="project.libraries.jars"/>
+              </classpath>
+            </scalac>
+
+            <!-- if the project is a library then we generate a jar file -->
+            <if condition="${project.is.library}">
+                <then>
+                    <echo>Creating library output jar file...</echo>
+                    <property name="out.library.jar.file" location="${out.absolute.dir}/classes.jar" />
+                    <if>
+                        <condition>
+                            <length string="${android.package.excludes}" trim="true" when="greater" length="0" />
+                        </condition>
+                        <then>
+                            <echo>Custom jar packaging exclusion: ${android.package.excludes}</echo>
+                        </then>
+                    </if>
+                    <jar destfile="${out.library.jar.file}">
+                        <fileset dir="${out.classes.absolute.dir}" excludes="**/R.class **/R$*.class"/>
+                        <fileset dir="${source.absolute.dir}" excludes="**/*.java ${android.package.excludes}" />
+                    </jar>
+                </then>
+            </if>
+
+            <!-- if the project is instrumented, intrument the classes -->
+            <if condition="${build.is.instrumented}">
+                <then>
+                    <echo>Instrumenting classes from ${out.absolute.dir}/classes...</echo>
+                    <!-- It only instruments class files, not any external libs -->
+                    <emma enabled="true">
+                        <instr verbosity="${verbosity}"
+                               mode="overwrite"
+                               instrpath="${out.absolute.dir}/classes"
+                               outdir="${out.absolute.dir}/classes">
+                        </instr>
+                        <!-- TODO: exclusion filters on R*.class and allowing custom exclusion from
+                             user defined file -->
+                    </emma>
+                </then>
+            </if>
+        </do-only-if-manifest-hasCode>
+    </target>
+</project>
