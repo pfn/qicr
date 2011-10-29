@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_weight="1"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<TableLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:stretchColumns="1">
+    <TextView
+        android:text="Connection Info"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"/>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_name"
+            android:singleLine="true"
+            android:hint="required"
+            android:inputType="textCapWords"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Server address"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_host"
+            android:hint="required: Hostname or IP"
+            android:singleLine="true"
+            android:inputType="textUri"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Port"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_port"
+            android:hint="Default: 6667"
+            android:inputType="number"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <CheckBox
+            android:id="@+id/add_server_autoconnect"
+            android:text="Enable Autoconnect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <CheckBox
+            android:id="@+id/add_server_ssl"
+            android:text="Enable SSL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TextView
+        android:text="User Info"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textAllCaps="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"/>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Nickname"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_nickname"
+            android:singleLine="true"
+            android:hint="required"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Alt. nick"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_altnick"
+            android:hint="Default: &lt;Nickname&gt;_"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Real name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_realname"
+            android:hint="required"
+            android:singleLine="true"
+            android:inputType="textPersonName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Username"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_username"
+            android:hint="required"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Password"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_password"
+            android:hint="optional"
+            android:singleLine="true"
+            android:inputType="textPassword"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TextView
+        android:text="Session Options"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textAllCaps="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"/>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Auto join"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_autojoin"
+            android:hint="#chan1 key;#chan2"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Auto run"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_autorun"
+            android:hint="/msg nickserv identify me;"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <!--
+    <TextView
+        android:text="Connection Options"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textAllCaps="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"/>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <CheckBox
+            android:id="@+id/add_server_socks"
+            android:text="Enable SOCKS"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Proxy host"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_host"
+            android:hint="required with SOCKS"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="Proxy port"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_port"
+            android:hint="required with SOCKS"
+            android:singleLine="true"
+            android:inputType="number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <CheckBox
+            android:id="@+id/add_server_sasl"
+            android:text="Enable SASL"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="SASL user"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_sasluser"
+            android:hint="required with SASL"
+            android:singleLine="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    <TableRow
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+        <TextView
+            android:text="SASL pass"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <EditText
+            android:id="@+id/add_server_saslpass"
+            android:hint="required with SASL"
+            android:singleLine="true"
+            android:inputType="textPassword"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </TableRow>
+    -->
+</TableLayout>
+</ScrollView>

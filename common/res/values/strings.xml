@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Common IRC Library</string>
+    <string name="add_server">Add Server</string>
+    <string name="save_server">Save</string>
+    <string name="cancel_server">Cancel</string>
+    <string name="server_incomplete">Not all required server fields have been filled</string>
 </resources>
