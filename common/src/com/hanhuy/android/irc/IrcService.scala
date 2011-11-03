@@ -52,7 +52,6 @@ class IrcService extends Service {
         config.addServer(server)
         _servers += server
         serverAddedListeners.foreach(_(server))
-        android.util.Log.i("IrcService", "Called listeners: " + serverAddedListeners.size)
     }
     def updateServer(server: Server) = {
         config.updateServer(server)

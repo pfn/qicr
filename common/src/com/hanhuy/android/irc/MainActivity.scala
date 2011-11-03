@@ -547,7 +547,6 @@ class MainFragment extends Fragment {
         setRetainInstance(true)
     }
 
-
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         thisview = inflater.inflate(R.layout.fragment_main, container, false)
@@ -603,27 +602,6 @@ class ServersMenuFragment extends Fragment {
         if (R.id.add_server == item.getItemId()) {
             val main = getActivity().asInstanceOf[MainActivity]
             main.serversFragment.addServerSetupFragment()
-            /*
-            val mgr = main.getSupportFragmentManager()
-            var fragment: ServerSetupFragment = null
-            fragment = mgr.findFragmentByTag(SERVER_SETUP_FRAGMENT)
-                    .asInstanceOf[ServerSetupFragment]
-            if (fragment == null)
-                fragment = new ServerSetupFragment
-            if (fragment.isVisible()) return true
-
-
-            val listview = main.serversFragment.getListView()
-            val checked = listview.getCheckedItemPosition()
-            if (AdapterView.INVALID_POSITION != checked)
-                listview.setItemChecked(checked, false)
-            val tx = mgr.beginTransaction()
-            main.setServerMenuVisibility(false)
-            tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
-            tx.addToBackStack(SERVER_SETUP_STACK)
-            tx.commit()
-            fragment.server = new Server
-            */
             return true
         }
         false
