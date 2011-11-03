@@ -1,7 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:padding="10dp"
-    android:textSize="16sp" >
-</TextView>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:gravity="center_vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <RelativeLayout
+        android:gravity="center"
+        android:measureAllChildren="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+        <ProgressBar
+            android:id="@+id/server_item_progress"
+            android:gravity="center"
+            android:layout_centerInParent="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="6dip"
+            style="@android:style/Widget.ProgressBar.Small"
+            android:visibility="gone"
+            android:indeterminate="true"
+            android:paddingRight="6dip" />
+        <ImageView
+            android:id="@+id/server_item_status"
+            android:gravity="center_vertical"
+            android:layout_centerInParent="true"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:paddingLeft="6dip"
+            android:paddingRight="6dip"
+            android:scaleType="centerInside"
+            android:src="@android:drawable/presence_offline"/>
+    </RelativeLayout>
+    <CheckedTextView
+        android:id="@+id/server_item_text"
+        android:gravity="center_vertical"
+        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="?android:attr/listPreferredItemHeight"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:checkMark="?android:attr/listChoiceIndicatorSingle"
+        android:paddingLeft="6dip"
+        android:paddingRight="6dip"/>
+</LinearLayout>

@@ -8,9 +8,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:stretchColumns="1">
+        <!--
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        -->
     <TextView
         android:text="Connection Info"
-        android:textAppearance="?android:attr/textAppearanceMedium"
+        style="?android:attr/listSeparatorTextViewStyle"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"/>
     <TableRow
@@ -84,7 +87,7 @@
     </TableRow>
     <TextView
         android:text="User Info"
-        android:textAppearance="?android:attr/textAppearanceMedium"
+        style="?android:attr/listSeparatorTextViewStyle"
         android:textAllCaps="true"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"/>
@@ -162,7 +165,7 @@
     </TableRow>
     <TextView
         android:text="Session Options"
-        android:textAppearance="?android:attr/textAppearanceMedium"
+        style="?android:attr/listSeparatorTextViewStyle"
         android:textAllCaps="true"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"/>
@@ -197,7 +200,7 @@
     <!--
     <TextView
         android:text="Connection Options"
-        android:textAppearance="?android:attr/textAppearanceMedium"
+        style="?android:attr/listSeparatorTextViewStyle"
         android:textAllCaps="true"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"/>

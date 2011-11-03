@@ -4,5 +4,16 @@
     <string name="add_server">Add Server</string>
     <string name="save_server">Save</string>
     <string name="cancel_server">Cancel</string>
-    <string name="server_incomplete">Not all required server fields have been filled</string>
+    <string name="exit">Quit</string>
+    <string name="server_incomplete">
+        Not all required server fields have been filled</string>
+    <string name="server_connect">Connect</string>
+    <string name="server_disconnect">Disonnect</string>
+    <string name="server_delete">Delete server</string>
+    <string name="server_options">Edit server</string>
+    <string name="server_confirm_delete">Delete server?</string>
+    <string name="server_confirm_delete_message">
+        Are you sure you want to permanently remove %s?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
 </resources>

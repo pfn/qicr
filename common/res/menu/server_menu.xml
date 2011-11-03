@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/server_options"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:title="@string/server_options"/>
+    <item android:id="@+id/server_delete"
+        android:icon="@android:drawable/ic_menu_delete"
+        android:title="@string/server_delete"/>
+    <item android:id="@+id/server_connect"
+        android:icon="@android:drawable/ic_menu_rotate"
+        android:title="@string/server_connect"/>
+    <item android:id="@+id/server_disconnect"
+        android:icon="@android:drawable/ic_menu_revert"
+        android:title="@string/server_disconnect"/>
+</menu>

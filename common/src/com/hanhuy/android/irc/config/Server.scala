@@ -3,7 +3,26 @@ package com.hanhuy.android.irc.config
 import android.content.ContentValues
 import android.provider.BaseColumns
 
+import scala.collection.mutable.HashSet
+
+object Server {
+    object State extends Enumeration {
+        type State = Value
+        val INITIAL, DISCONNECTED, CONNECTING, CONNECTED = Value
+    }
+}
 class Server {
+
+    import Server.State._
+    val stateChangedListeners = new HashSet[(Server, State) => Any]
+
+    private var _state: State = INITIAL
+    def state = _state
+    def state_=(state: State) = {
+        stateChangedListeners.foreach(listener => listener(this, _state))
+        _state = state
+    }
+
     var id: Long = -1
     var name: String = _
 
