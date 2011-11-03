@@ -1,4 +1,6 @@
-package com.hanhuy.android.irc.config
+package com.hanhuy.android.irc
+
+import com.hanhuy.android.irc.model.Server
 
 import android.content.Context
 import android.content.ContentValues

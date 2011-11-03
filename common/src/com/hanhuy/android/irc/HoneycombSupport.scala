@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc
 
-import com.hanhuy.android.irc.config.Server
+import com.hanhuy.android.irc.model.Server
 
 import scala.ref.WeakReference
 

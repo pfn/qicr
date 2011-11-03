@@ -35,7 +35,7 @@ import android.support.v4.view.{ViewPager, MenuCompat}
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-import com.hanhuy.android.irc.config.Server
+import com.hanhuy.android.irc.model.Server
 
 import ViewFinder._
 import MainActivity._
@@ -118,8 +118,9 @@ class MainActivity extends FragmentActivity with ServiceConnection
 
     override def onServiceConnected(name : ComponentName, binder : IBinder) {
         service = binder.asInstanceOf[IrcService#LocalService].getService()
-        if (!service.running)
-            service.connect()
+        service.bind(this)
+        //if (!service.running)
+        //    service.connect()
         fragment.servers.onIrcServiceConnected(service)
     }
     override def onServiceDisconnected(name : ComponentName) {
@@ -500,8 +501,8 @@ class ServersFragment extends ListFragment {
                 })
                 builder.create().show()
             }
-            case R.id.server_connect    => return true
-            case R.id.server_disconnect => return true
+            case R.id.server_connect    => service.connect(server)
+            case R.id.server_disconnect => service.disconnect(server)
             case R.id.server_options    => addServerSetupFragment(server)
         }
         true

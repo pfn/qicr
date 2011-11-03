@@ -33,4 +33,7 @@ object AndroidConversions {
                             f(av, v, pos, id)
     }
 
+    implicit def toRunnable[A](f: () => A) : Runnable = new Runnable() {
+        def run() = f()
+    }
 }

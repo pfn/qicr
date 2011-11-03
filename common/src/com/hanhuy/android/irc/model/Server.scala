@@ -1,4 +1,6 @@
-package com.hanhuy.android.irc.config
+package com.hanhuy.android.irc.model
+
+import com.hanhuy.android.irc.Config
 
 import android.content.ContentValues
 import android.provider.BaseColumns
