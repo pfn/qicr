@@ -4,9 +4,16 @@
     <string name="add_server">Add Server</string>
     <string name="save_server">Save</string>
     <string name="cancel_server">Cancel</string>
+    <string name="server_nick_retry">
+        Your nickname is unavailable, trying alternate.
+    </string>
+    <string name="server_nick_error">
+        Your nicknames are all unavailable, aborting.
+    </string>
     <string name="server_incomplete">
         Not all required server fields have been filled</string>
     <string name="server_connecting">Connecting...</string>
+    <string name="server_connected">Connected</string>
     <string name="server_disconnected">Disonnected</string>
     <string name="server_connect">Connect</string>
     <string name="server_disconnect">Disonnect</string>

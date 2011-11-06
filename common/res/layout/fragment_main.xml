@@ -44,7 +44,9 @@
 
         <EditText
             android:id="@+id/input"
+            android:autoText="true"
             android:singleLine="true"
+            android:inputType="text|textAutoCorrect|textShortMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
     </LinearLayout>

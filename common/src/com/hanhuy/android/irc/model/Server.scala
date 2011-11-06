@@ -18,10 +18,11 @@ class Server {
     import Server.State._
     val stateChangedListeners = new HashSet[(Server, State) => Any]
 
+    val messages = new QueueAdapter[String]
     private var _state: State = INITIAL
     def state = _state
     def state_=(state: State) = {
-        stateChangedListeners.foreach(listener => listener(this, _state))
+        stateChangedListeners.foreach(_(this, _state))
         _state = state
     }
 
@@ -63,13 +64,12 @@ class Server {
         valid = valid && !blank(hostname)
         valid = valid && port > 0
         valid = valid && !blank(nickname)
-        if (valid && !blank(nickname))
+        if (valid && !blank(nickname) && blank(altnick))
             altnick = nickname + "_"
         valid
     }
     def values: ContentValues = {
         val values = new ContentValues
-        //values.put(BaseColumns._ID,          new java.lang.Long(id))
         values.put(Config.FIELD_NAME,        name)
         values.put(Config.FIELD_AUTOCONNECT, autoconnect)
         values.put(Config.FIELD_HOSTNAME,    hostname)

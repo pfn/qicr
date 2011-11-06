@@ -1,11 +1,12 @@
 package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Server
-import com.hanhuy.android.irc.config.WeakHashSet
 
+import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
 import scala.ref.WeakReference
 
+import android.util.Log
 import android.app.Service
 import android.content.Intent
 import android.os.{Binder, IBinder}
@@ -13,12 +14,19 @@ import android.os.AsyncTask
 
 import com.sorcix.sirc.IrcServer
 import com.sorcix.sirc.IrcConnection
+import com.sorcix.sirc.NickNameException
 
 import AndroidConversions._
+import IrcService._
 
+object IrcService {
+    val TAG = "IrcService"
+}
 class IrcService extends Service {
     var _running = false
     var config: Config = _
+    private var connections  = new HashMap[Server,IrcConnection]
+    private var _connections = new HashMap[IrcConnection,Server]
 
     var _activity: WeakReference[MainActivity] = _
     def activity = _activity.get match {
@@ -26,6 +34,17 @@ class IrcService extends Service {
         case None    => null
     }
 
+    def removeConnection(server: Server) {
+        val c = connections(server)
+
+        connections  -= server
+        _connections -= c
+    }
+
+    def addConnection(server: Server, connection: IrcConnection) {
+        connections  += ((server, connection))
+        _connections += ((connection, server))
+    }
     class LocalService extends Binder {
         def getService() : IrcService = {
             IrcService.this
@@ -48,6 +67,11 @@ class IrcService extends Service {
     def running = _running
 
     def disconnect(server: Server) {
+        val c = connections(server)
+        if (c != null)
+            c.disconnect()
+        server.state = Server.State.DISCONNECTED
+        removeConnection(server)
     }
     def connect(server: Server) {
         if (server.state == Server.State.CONNECTING ||
@@ -55,7 +79,7 @@ class IrcService extends Service {
             return
         }
         server.state = Server.State.CONNECTING
-        new ConnectTask(server, activity).execute()
+        new ConnectTask(server, this).execute()
     }
 
     lazy val _servers = {
@@ -97,11 +121,11 @@ class IrcService extends Service {
     val serverChangedListeners = new HashSet[Server => Any]
 }
 
-// java.lang.Object due to java<->scala varargs interop bug
+// Object due to java<->scala varargs interop bug
 // https://issues.scala-lang.org/browse/SI-1459
-class ConnectTask(server: Server, activity: MainActivity)
-extends AsyncTask[java.lang.Object, String, Server.State.State] {
-    protected override def doInBackground(args: java.lang.Object*) :
+class ConnectTask(server: Server, service: IrcService)
+extends AsyncTask[Object, Object, Server.State.State] {
+    protected override def doInBackground(args: Object*) :
             Server.State.State = {
         val ircserver = new IrcServer(server.hostname, server.port,
                 server.password, server.ssl)
@@ -109,14 +133,37 @@ extends AsyncTask[java.lang.Object, String, Server.State.State] {
         connection.setServer(ircserver)
         connection.setNick(server.nickname)
         var state = server.state
+        //server.messages.context = service
+        publishProgress(service.getString(R.string.server_connecting))
+        service.addConnection(server, connection)
         try {
-            publishProgress(activity.getString(R.string.server_connecting))
             connection.connect()
             state = Server.State.CONNECTED
+            publishProgress(service.getString(R.string.server_connected))
         } catch {
+            case e: NickNameException => {
+                connection.setNick(server.altnick)
+                publishProgress(service.getString(R.string.server_nick_retry))
+                try {
+                    connection.connect()
+                    state = Server.State.CONNECTED
+                    publishProgress(service.getString(
+                            R.string.server_connected))
+                } catch {
+                    case n: NickNameException => {
+                        service.removeConnection(server)
+                        publishProgress(service.getString(
+                                R.string.server_nick_error))
+                        state = Server.State.DISCONNECTED
+                        connection.disconnect()
+                    }
+                }
+            }
             case e: Exception => {
+                service.removeConnection(server)
                 publishProgress(e.getMessage())
                 state = Server.State.DISCONNECTED
+                connection.disconnect()
             }
         }
         state
@@ -126,6 +173,10 @@ extends AsyncTask[java.lang.Object, String, Server.State.State] {
         server.state = state
     }
 
-    protected override def onProgressUpdate(progress: String*) {
+    protected override def onProgressUpdate(progress: Object*) {
+        Log.i(TAG, "progress update: " + progress)
+        if (progress.length > 0) {
+            server.messages.add(progress(0).toString())
+        }
     }
 }
