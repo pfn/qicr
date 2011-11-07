@@ -23,6 +23,9 @@
     <string name="server_confirm_delete_message">
         Are you sure you want to permanently remove %s?</string>
 
+    <string name="ssl_expired">Your SSL certificate has expired</string>
+    <string name="sha1_fingerprint">SHA1 Fingerprint: </string>
+    <string name="md5_fingerprint">MD5 Fingerprint: </string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
 </resources>

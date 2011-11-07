@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Server
+import com.hanhuy.android.irc.model.QueueAdapter
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
@@ -25,8 +26,10 @@ object IrcService {
 class IrcService extends Service {
     var _running = false
     var config: Config = _
-    private var connections  = new HashMap[Server,IrcConnection]
-    private var _connections = new HashMap[IrcConnection,Server]
+    val connections  = new HashMap[Server,IrcConnection]
+    val _connections = new HashMap[IrcConnection,Server]
+    // TODO find a way to automatically(?) purge the adapters
+    val messages = new HashMap[String,QueueAdapter[_<:Object]]
 
     var _activity: WeakReference[MainActivity] = _
     def activity = _activity.get match {
@@ -72,6 +75,7 @@ class IrcService extends Service {
             c.disconnect()
         server.state = Server.State.DISCONNECTED
         removeConnection(server)
+        server.messages.add(getString(R.string.server_disconnected))
     }
     def connect(server: Server) {
         if (server.state == Server.State.CONNECTING ||
@@ -125,30 +129,36 @@ class IrcService extends Service {
 // https://issues.scala-lang.org/browse/SI-1459
 class ConnectTask(server: Server, service: IrcService)
 extends AsyncTask[Object, Object, Server.State.State] {
+    IrcConnection.ABOUT = "qicr: stronger'n'better!"
     protected override def doInBackground(args: Object*) :
             Server.State.State = {
         val ircserver = new IrcServer(server.hostname, server.port,
                 server.password, server.ssl)
         val connection = new IrcConnection
         connection.setServer(ircserver)
+        connection.setUsername(server.username, server.realname)
         connection.setNick(server.nickname)
+
         var state = server.state
         //server.messages.context = service
         publishProgress(service.getString(R.string.server_connecting))
         service.addConnection(server, connection)
+        val sslctx = SSLManager.configureSSL(service, server.messages)
+        val listener = new ConnectionListeners(service)
+        connection.setAdvancedListener(listener)
+        connection.addServerListener(listener)
+        connection.addModeListener(listener)
+        connection.addMessageListener(listener)
         try {
-            connection.connect()
+            connection.connect(sslctx)
             state = Server.State.CONNECTED
-            publishProgress(service.getString(R.string.server_connected))
         } catch {
             case e: NickNameException => {
                 connection.setNick(server.altnick)
                 publishProgress(service.getString(R.string.server_nick_retry))
                 try {
-                    connection.connect()
+                    connection.connect(sslctx)
                     state = Server.State.CONNECTED
-                    publishProgress(service.getString(
-                            R.string.server_connected))
                 } catch {
                     case n: NickNameException => {
                         service.removeConnection(server)
@@ -156,6 +166,8 @@ extends AsyncTask[Object, Object, Server.State.State] {
                                 R.string.server_nick_error))
                         state = Server.State.DISCONNECTED
                         connection.disconnect()
+                        publishProgress(service.getString(
+                                R.string.server_disconnected))
                     }
                 }
             }
@@ -164,6 +176,8 @@ extends AsyncTask[Object, Object, Server.State.State] {
                 publishProgress(e.getMessage())
                 state = Server.State.DISCONNECTED
                 connection.disconnect()
+                publishProgress(service.getString(
+                        R.string.server_disconnected))
             }
         }
         state
@@ -174,9 +188,7 @@ extends AsyncTask[Object, Object, Server.State.State] {
     }
 
     protected override def onProgressUpdate(progress: Object*) {
-        Log.i(TAG, "progress update: " + progress)
-        if (progress.length > 0) {
+        if (progress.length > 0)
             server.messages.add(progress(0).toString())
-        }
     }
 }

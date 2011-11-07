@@ -39,6 +39,8 @@ import scala.collection.mutable.ArrayBuffer
 import com.hanhuy.android.irc.model.QueueAdapter
 import com.hanhuy.android.irc.model.Server
 
+import java.util.UUID
+
 import ViewFinder._
 import MainActivity._
 
@@ -404,10 +406,12 @@ class ServerSetupFragment extends Fragment {
     }
 }
 
-class MessagesFragment(adapter: QueueAdapter[_]) extends ListFragment {
+class MessagesFragment(_adapter: QueueAdapter[_<:Object]) extends ListFragment {
+    var adapter = _adapter
+    var uuid: String = _
     def this() {
         this(null)
-        Log.w(TAG, "Calling no-arg MessagesFragment()")
+        Log.d(TAG, "Calling no-arg MessagesFragment()")
     }
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View =
@@ -415,7 +419,21 @@ class MessagesFragment(adapter: QueueAdapter[_]) extends ListFragment {
 
     override def onActivityCreated(bundle: Bundle) {
         super.onActivityCreated(bundle)
+        val service = getActivity().asInstanceOf[MainActivity].service
+        if (adapter != null) {
+            uuid = UUID.randomUUID().toString()
+            service.messages += ((uuid, adapter))
+        }
+        if (uuid == null && bundle != null) {
+            uuid = bundle.getString("uuid")
+            adapter = service.messages(uuid)
+        }
         setListAdapter(adapter)
+    }
+
+    override def onSaveInstanceState(bundle: Bundle) {
+        super.onSaveInstanceState(bundle)
+        bundle.putString("uuid", uuid)
     }
 }
 
@@ -447,9 +465,6 @@ class ServersFragment extends ListFragment {
         thisview
     }
 
-    override def onActivityCreated(bundle: Bundle) {
-        super.onActivityCreated(bundle)
-    }
     override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
         findView[CheckedTextView](v, R.id.server_item_text).setChecked(true)
         val activity = getActivity().asInstanceOf[MainActivity]
@@ -481,13 +496,6 @@ class ServersFragment extends ListFragment {
         service.serverRemovedListeners += removeListener
     }
 
-    override def onPause() {
-        super.onPause()
-        val main = getActivity().asInstanceOf[MainActivity]
-        val mgr = main.getSupportFragmentManager()
-        mgr.popBackStack(SERVER_MESSAGES_STACK,
-                FragmentManager.POP_BACK_STACK_INCLUSIVE)
-    }
     def addServerMessagesFragment(server: Server) {
         val main = getActivity().asInstanceOf[MainActivity]
         val mgr = main.getSupportFragmentManager()

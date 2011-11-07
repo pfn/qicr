@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:autoLink="all"
+    android:typeface="monospace"
     android:textAppearance="?android:attr/textAppearanceSmall"
     android:paddingLeft="6dip"
     android:paddingRight="6dip"/>
