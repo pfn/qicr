@@ -6,6 +6,7 @@
     <application android:label="@string/app_name" android:icon="@drawable/ic_appicon">
         <activity
             android:name="com.hanhuy.android.irc.MainActivity"
+            android:launchMode="singleTask"
             android:label="@string/app_name"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

@@ -19,7 +19,7 @@ class Server {
     val stateChangedListeners = new HashSet[(Server, State) => Any]
 
     val messages = new QueueAdapter[String]
-    private var _state: State = INITIAL
+    private var _state = INITIAL
     def state = _state
     def state_=(state: State) = {
         stateChangedListeners.foreach(_(this, _state))

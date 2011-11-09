@@ -18,6 +18,10 @@ object HoneycombSupport {
         _main = null
     }
 
+    def invalidateActionBar() {
+        if (_main != null)
+            _main.invalidateOptionsMenu()
+    }
     def stopActionMode() {
         if (_actionmode == null) return
         _actionmode.get match {

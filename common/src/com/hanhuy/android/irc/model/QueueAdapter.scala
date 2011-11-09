@@ -5,6 +5,7 @@ import com.hanhuy.android.irc.R
 import scala.collection.mutable.Queue
 import scala.ref.WeakReference
 
+import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.content.Context
 import android.widget.BaseAdapter
@@ -35,6 +36,9 @@ class QueueAdapter[T<:Object] extends BaseAdapter {
         case Some(c) => c
         case None    => null
     }
+    lazy val font = {
+        Typeface.createFromAsset(context.getAssets(), "DejaVuSansMono.ttf")
+    }
 
     def clear() {
         items.clear()
@@ -62,7 +66,10 @@ class QueueAdapter[T<:Object] extends BaseAdapter {
         if (view == null)
             view = inflater.inflate(R.layout.message_item, container, false)
 
-        view.asInstanceOf[TextView].setText(items(pos).toString())
+        val tv = view.asInstanceOf[TextView]
+        tv.setTypeface(font)
+        if (items(pos) != null)
+            tv.setText(items(pos).toString())
         view
     }
 }
