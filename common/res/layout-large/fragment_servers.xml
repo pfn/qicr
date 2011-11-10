@@ -7,7 +7,7 @@
     android:paddingRight="8dp">
     <LinearLayout
         android:id="@+id/servers_container"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
         <TextView android:id="@id/android:empty"

@@ -82,7 +82,8 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val v = tabhost.getTabWidget().getChildTabViewAt(pos)
         val hsv = findView[HorizontalScrollView](
                 activity, R.id.tab_scroller)
-        val display = activity.getWindowManager().getDefaultDisplay()
+        //val display = activity.getWindowManager().getDefaultDisplay()
+        val display = tabhost
         val offset = v.getLeft() - display.getWidth() / 2 + v.getWidth() / 2
         hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
         activity.updateMenuVisibility(pos)
@@ -125,13 +126,17 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         if (tabs.size == 1) return
 
         val tw = tabhost.getTabWidget()
-        for (i <- 0 until tw.getTabCount()) {
-            val v = tw.getChildTabViewAt(i)
-            val titleId = if (MainActivity.honeycombAndNewer)
-                    android.R.id.title else R.id.title
-            findView[TextView](v, titleId).setText(tabs(i).title)
-        }
+        for (i <- 0 until tw.getTabCount())
+            setTabTitle(tabs(i).title, i)
         notifyDataSetChanged()
+    }
+
+    def setTabTitle(title: String, pos: Int) {
+        val tw = tabhost.getTabWidget()
+        val v = tw.getChildTabViewAt(pos)
+        val titleId = if (MainActivity.honeycombAndNewer)
+                android.R.id.title else R.id.title
+        findView[TextView](v, titleId).setText(title)
     }
 
     def addChannel(c: Channel) {

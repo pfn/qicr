@@ -70,6 +70,10 @@ class IrcService extends Service {
     def bind(main: MainActivity) = _activity = new WeakReference(main)
 
     override def onBind(intent: Intent) : IBinder = {
+        if (!running) {
+            for (server <- _servers)
+                if (server.autoconnect) connect(server)
+        }
         new LocalService()
     }
     override def onCreate() {

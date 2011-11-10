@@ -26,6 +26,9 @@
     <string name="ssl_expired">Your SSL certificate has expired</string>
     <string name="sha1_fingerprint">SHA1 Fingerprint: </string>
     <string name="md5_fingerprint">MD5 Fingerprint: </string>
+    <string name="quit_confirm_title">Exit?</string>
+    <string name="quit_confirm">
+        You are still connected, are you sure you would like to quit?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
 </resources>
