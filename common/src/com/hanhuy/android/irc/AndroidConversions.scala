@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver
 import android.view.View
+import android.view.KeyEvent
 import android.widget.AdapterView
 import android.content.DialogInterface
 
@@ -31,6 +32,12 @@ object AndroidConversions {
                 def onItemClick(
                         av: AdapterView[_], v: View, pos: Int, id: Long) =
                             f(av, v, pos, id)
+    }
+
+    implicit def toViewOnKeyListener(
+            f: (View, Int, KeyEvent) => Boolean) : View.OnKeyListener =
+                    new View.OnKeyListener() {
+                def onKey(v: View, key: Int, e: KeyEvent) = f(v, key, e)
     }
 
     implicit def toRunnable[A](f: () => A) : Runnable = new Runnable() {

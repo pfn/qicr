@@ -16,7 +16,7 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.util.Log
 
-//import com.sorcix.sirc.IrcDebug
+import com.sorcix.sirc.IrcDebug
 import com.sorcix.sirc.IrcServer
 import com.sorcix.sirc.IrcConnection
 import com.sorcix.sirc.NickNameException
@@ -171,7 +171,7 @@ class IrcService extends Service {
         _channels += ((ch,channel))
         runOnUI(() => {
             if (showing)
-                activity.fragment.adapter.addChannel(channel)
+                activity.adapter.addChannel(channel)
             channel.state = Channel.State.JOINED
         })
     }
@@ -206,7 +206,7 @@ class IrcService extends Service {
 class ConnectTask(server: Server, service: IrcService)
 extends AsyncTask[Object, Object, Server.State.State] {
     IrcConnection.ABOUT = "qicr for android: faster and better!"
-    //IrcDebug.setEnabled(true)
+    IrcDebug.setEnabled(true)
     protected override def doInBackground(args: Object*) :
             Server.State.State = {
         val ircserver = new IrcServer(server.hostname, server.port,

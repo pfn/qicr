@@ -13,6 +13,7 @@ import android.app.AlertDialog
 import android.view.LayoutInflater;
 import android.view.{View, ViewGroup}
 import android.view.Display
+import android.view.KeyEvent
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.widget.LinearLayout
 import android.widget.{TabHost, TabWidget}
@@ -75,7 +76,10 @@ object MainActivity {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB
 }
 class MainActivity extends FragmentActivity with ServiceConnection {
-    var fragment: MainFragment = _
+    var tabhost: TabHost = _
+    var servers: ServersFragment = _
+    var adapter: MainPagerAdapter = _
+    var page = -1
 
     val serviceConnectionListeners    = new HashSet[(IrcService) => Any]
     val serviceDisconnectionListeners = new HashSet[() => Any]
@@ -87,27 +91,36 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         serviceConnectionListeners.foreach(_(s))
     }
 
-    override def onCreate(savedInstanceState: Bundle) {
+    override def onCreate(bundle: Bundle) {
         if (!honeycombAndNewer)
             setTheme(android.R.style.Theme_NoTitleBar)
+        super.onCreate(bundle);
 
-        super.onCreate(savedInstanceState);
+        if (bundle != null)
+            page = bundle.getInt("page")
+
+        setContentView(R.layout.fragment_main)
+
+        tabhost = findView[TabHost](this, android.R.id.tabhost)
+        tabhost.setup()
+
+        val pager = findView[ViewPager](tabhost, R.id.pager)
+        adapter = new MainPagerAdapter(
+                getSupportFragmentManager(), tabhost, pager)
+
+        findView[EditText](tabhost, R.id.input).setOnKeyListener(
+            (v: View, key: Int, e: KeyEvent) => {
+                Log.i(TAG, "Got key: " + key)
+                false
+            }
+        )
+        servers = new ServersFragment
+        adapter.createTab("Servers", servers)
 
         val manager = getSupportFragmentManager()
-        //FragmentManager.enableDebugLogging(true)
-        fragment = manager.findFragmentByTag(MAIN_FRAGMENT)
-                .asInstanceOf[MainFragment]
-        val tx = manager.beginTransaction()
-        if (fragment == null) {
-            fragment = new MainFragment
-            tx.add(android.R.id.content, fragment, MAIN_FRAGMENT)
-        }
-
 
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
-
-        tx.commit()
     }
 
     override def onPause() {
@@ -123,10 +136,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
     override def onStart() {
         super.onStart()
-        serviceConnectionListeners +=
-                fragment.servers.onIrcServiceConnected
-        serviceDisconnectionListeners +=
-                fragment.servers.onIrcServiceDisconnected _
+        serviceConnectionListeners += servers.onIrcServiceConnected
+        serviceDisconnectionListeners += servers.onIrcServiceDisconnected _
 
         bindService(new Intent(this, classOf[IrcService]), this,
                 Context.BIND_AUTO_CREATE)
@@ -136,6 +147,10 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         service = binder.asInstanceOf[IrcService#LocalService].getService()
         service.bind(this)
         service.showing = true
+        if (page != -1) {
+            new Thread(() =>
+                    runOnUiThread(() => tabhost.setCurrentTab(page))).start()
+        }
     }
     override def onServiceDisconnected(name : ComponentName) {
         serviceDisconnectionListeners.foreach(_())
@@ -170,8 +185,43 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     // can't make it lazy, it might go away
     def serversFragment = {
         val mgr = getSupportFragmentManager()
-        mgr.findFragmentByTag(fragment.adapter.tabs(0).tag)
-                .asInstanceOf[ServersFragment]
+        mgr.findFragmentByTag(adapter.tabs(0).tag).asInstanceOf[ServersFragment]
+    }
+    override def onCreateOptionsMenu(menu: Menu): Boolean = {
+        val inflater = new MenuInflater(this)
+        inflater.inflate(R.menu.main_menu, menu)
+        val item = menu.findItem(R.id.exit)
+        MenuCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
+                                         MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+        true
+    }
+    override def onOptionsItemSelected(item: MenuItem) : Boolean = {
+        if (R.id.exit == item.getItemId()) {
+            if (service.running) {
+                var builder = new AlertDialog.Builder(this)
+                builder.setTitle(R.string.quit_confirm_title)
+                builder.setMessage(getString(R.string.quit_confirm))
+                builder.setPositiveButton(R.string.yes,
+                        (d: DialogInterface, id: Int) => {
+                    service.quit()
+                    finish()
+                })
+                builder.setNegativeButton(R.string.no, 
+                        (d: DialogInterface, id: Int) => {
+                })
+                builder.create().show()
+                return true
+            }
+            service.quit()
+            finish()
+            return true
+        }
+        false
+    }
+    override def onSaveInstanceState(state: Bundle) {
+        super.onSaveInstanceState(state)
+        page = tabhost.getCurrentTab()
+        state.putInt("page", page)
     }
 }
 
@@ -366,8 +416,9 @@ class ServersFragment extends ListFragment {
         }
 
         if (server.state == Server.State.CONNECTED) {
-            findView[EditText](activity.fragment.thisview, R.id.input)
-                    .setVisibility(View.VISIBLE)
+            val input = findView[EditText](activity.tabhost, R.id.input)
+            input.setVisibility(View.VISIBLE)
+            input.setFocusable(true)
         }
         addServerMessagesFragment(server)
         _server = server
@@ -477,9 +528,9 @@ class ServersFragment extends ListFragment {
                 builder.create().show()
                 true
             }
-            case R.id.server_connect    => {service.connect(server); true}
-            case R.id.server_disconnect => {service.disconnect(server) ; true}
-            case R.id.server_options    => {addServerSetupFragment(server); true}
+            case R.id.server_connect    => {service.connect(server);true}
+            case R.id.server_disconnect => {service.disconnect(server);true}
+            case R.id.server_options    => {addServerSetupFragment(server);true}
             case _ => false
         }
     }
@@ -514,8 +565,8 @@ class ServersFragment extends ListFragment {
         val m = activity.getSupportFragmentManager()
 
         var page = 0
-        if (activity.fragment != null && activity.fragment.adapter != null)
-            page = activity.fragment.adapter.page
+        if (activity.adapter != null)
+            page = activity.adapter.page
 
         val c = m.getBackStackEntryCount()
         var found = false
@@ -575,92 +626,6 @@ extends ArrayAdapter[Server](
         findView[CheckedTextView](v, R.id.server_item_text).setChecked(
                 pos == checked)
         v
-    }
-}
-
-class MainFragment extends Fragment {
-    var thisview: View = _
-    var tabhost: TabHost = _
-    var servers: ServersFragment = _
-    var adapter: MainPagerAdapter = _
-    var page = -1
-    override def onCreate(bundle: Bundle) {
-        super.onCreate(bundle)
-        setHasOptionsMenu(true)
-        setRetainInstance(true)
-    }
-
-    def onServiceConnected(service: IrcService) {
-        // terrible hack, setCurrentTab needs to happen on the next event
-        // so that MainPagerAdapter can fill in all the fragments
-        if (page != -1) {
-            new Thread(() => getActivity().runOnUiThread(() =>
-                    tabhost.setCurrentTab(page))).start()
-        }
-    }
-    override def onActivityCreated(bundle: Bundle) {
-        super.onActivityCreated(bundle)
-        if (bundle != null) {
-            page = bundle.getInt("page")
-        }
-        val main = getActivity().asInstanceOf[MainActivity]
-        if (main.service != null)
-            onServiceConnected(main.service)
-        else
-            main.serviceConnectionListeners += onServiceConnected
-    }
-
-    override def onCreateView(inflater: LayoutInflater,
-            container: ViewGroup, bundle: Bundle) : View = {
-        thisview = inflater.inflate(R.layout.fragment_main, container, false)
-
-        tabhost = findView[TabHost](thisview, android.R.id.tabhost)
-        tabhost.setup()
-
-        val pager = findView[ViewPager](thisview, R.id.pager)
-        adapter = new MainPagerAdapter(
-                getActivity().getSupportFragmentManager(), tabhost, pager)
-
-        servers = new ServersFragment
-        adapter.createTab("Servers", servers)
-        thisview
-    }
-    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.main_menu, menu)
-        val item = menu.findItem(R.id.exit)
-        MenuCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                                         MenuItem.SHOW_AS_ACTION_WITH_TEXT)
-    }
-    override def onOptionsItemSelected(item: MenuItem) : Boolean = {
-        if (R.id.exit == item.getItemId()) {
-            val main = getActivity().asInstanceOf[MainActivity]
-            if (main.service.running) {
-                var builder = new AlertDialog.Builder(getActivity())
-                builder.setTitle(R.string.quit_confirm_title)
-                builder.setMessage(getActivity().getString(
-                        R.string.quit_confirm))
-                builder.setPositiveButton(R.string.yes,
-                        (d: DialogInterface, id: Int) => {
-                    main.service.quit()
-                    main.finish()
-                })
-                builder.setNegativeButton(R.string.no, 
-                        (d: DialogInterface, id: Int) => {
-                })
-                builder.create().show()
-                return true
-            }
-            main.service.quit()
-            main.finish()
-            return true
-        }
-        false
-    }
-
-    override def onSaveInstanceState(state: Bundle) {
-        super.onSaveInstanceState(state)
-        page = tabhost.getCurrentTab()
-        state.putInt("page", page)
     }
 }
 

@@ -63,7 +63,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     override def onTabChanged(tabId: String) {
         val idx = tabhost.getCurrentTab()
         val activity = tabhost.getContext().asInstanceOf[MainActivity]
-        val input = findView[EditText](activity.fragment.thisview, R.id.input)
+        val input = findView[EditText](activity.tabhost, R.id.input)
         input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
         pager.setCurrentItem(idx)
         activity.updateMenuVisibility(idx)
@@ -75,7 +75,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     override def onPageSelected(pos: Int) {
         page = pos
         val activity = tabhost.getContext().asInstanceOf[MainActivity]
-        val input = findView[EditText](activity.fragment.thisview, R.id.input)
+        val input = findView[EditText](activity.tabhost, R.id.input)
         input.setVisibility(if (pos == 0) View.GONE else View.VISIBLE)
 
         tabhost.setCurrentTab(pos)
@@ -181,6 +181,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             mCurTransaction.add(container.getId(), f, name)
         if (f != mCurrentPrimaryItem)
             f.setMenuVisibility(false)
+        //f.setMenuVisibility(f == mCurrentPrimaryItem)
         f
     }
 
