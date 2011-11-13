@@ -2,7 +2,8 @@ package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Server
-import com.hanhuy.android.irc.model.QueueAdapter
+import com.hanhuy.android.irc.model.MessageAdapter
+import com.hanhuy.android.irc.model.ServerInfo
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
@@ -43,7 +44,7 @@ class IrcService extends Service {
 
     // TODO find a way to automatically(?) purge the adapters
     // worst-case: leak memory on the string, but not the adapter
-    val messages = new HashMap[String,QueueAdapter[_<:Object]]
+    val messages = new HashMap[String,MessageAdapter]
 
     var _activity: WeakReference[MainActivity] = _
     def activity = _activity.get match {
@@ -104,7 +105,7 @@ class IrcService extends Service {
         server.state = Server.State.DISCONNECTED
         removeConnection(server)
         // handled by onDisconnect
-        server.messages.add(getString(R.string.server_disconnected))
+        server.messages.add(ServerInfo(getString(R.string.server_disconnected)))
         if (connections.size == 0) {
             stopForeground(true)
             _running = false
@@ -266,6 +267,6 @@ extends AsyncTask[Object, Object, Server.State.State] {
 
     protected override def onProgressUpdate(progress: Object*) {
         if (progress.length > 0)
-            server.messages.add(progress(0).toString())
+            server.messages.add(ServerInfo(progress(0).toString()))
     }
 }

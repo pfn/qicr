@@ -28,6 +28,7 @@ object HoneycombSupport {
             case Some(actionmode) => actionmode.finish()
             case _ => Unit
         }
+        _actionmode = null
     }
 
     def startActionMode(server: Server) {

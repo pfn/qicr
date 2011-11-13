@@ -82,7 +82,6 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val v = tabhost.getTabWidget().getChildTabViewAt(pos)
         val hsv = findView[HorizontalScrollView](
                 activity, R.id.tab_scroller)
-        //val display = activity.getWindowManager().getDefaultDisplay()
         val display = tabhost
         val offset = v.getLeft() - display.getWidth() / 2 + v.getWidth() / 2
         hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
@@ -181,7 +180,6 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             mCurTransaction.add(container.getId(), f, name)
         if (f != mCurrentPrimaryItem)
             f.setMenuVisibility(false)
-        //f.setMenuVisibility(f == mCurrentPrimaryItem)
         f
     }
 

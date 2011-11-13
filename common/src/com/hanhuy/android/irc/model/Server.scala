@@ -18,7 +18,7 @@ class Server {
     import Server.State._
     val stateChangedListeners = new HashSet[(Server, State) => Any]
 
-    val messages = new QueueAdapter[String]
+    val messages = new MessageAdapter
     private var _state = INITIAL
     def state = _state
     def state_=(state: State) = {

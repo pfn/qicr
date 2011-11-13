@@ -12,7 +12,7 @@ object Channel {
 class Channel(_server: Server, _name: String) {
     import Channel.State._
     val stateChangedListeners = new HashSet[(Channel, State) => Any]
-    val messages = new QueueAdapter[String]
+    val messages = new MessageAdapter
     def name = _name
     def server = _server
     private var _state = NEW

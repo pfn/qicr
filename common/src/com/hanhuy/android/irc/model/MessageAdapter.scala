@@ -12,14 +12,14 @@ import android.widget.BaseAdapter
 import android.widget.TextView
 import android.view.{View, ViewGroup}
 
-class QueueAdapter[T<:Object] extends BaseAdapter {
+class MessageAdapter extends BaseAdapter {
     var _maximumSize = 128
     def maximumSize = _maximumSize
     def maximumSize_= (size: Int) = {
         _maximumSize = size
         ensureSize()
     }
-    var items = new Queue[T]
+    var items = new Queue[MessageLike]
 
     var _inflater: WeakReference[LayoutInflater] = _
     def inflater = _inflater.get match {
@@ -49,27 +49,36 @@ class QueueAdapter[T<:Object] extends BaseAdapter {
             items.dequeue()
     }
 
-    def add(item: T) {
+    def add(item: MessageLike) {
         items += item
         ensureSize()
         notifyDataSetChanged()
     }
 
     override def getItemId(pos: Int) : Long = pos
-    override def getItem(pos: Int) : T = items(pos)
+    override def getItem(pos: Int) : MessageLike = items(pos)
     override def getCount() : Int = items.size
     override def getView(pos: Int, convertView: View, container: ViewGroup) :
             View = createViewFromResource(pos, convertView, container)
     private def createViewFromResource(
             pos: Int, convertView: View, container: ViewGroup): View = {
-        var view = convertView
-        if (view == null)
+        var view: TextView = convertView.asInstanceOf[TextView]
+        if (view == null) {
             view = inflater.inflate(R.layout.message_item, container, false)
+                    .asInstanceOf[TextView]
+            view.setTypeface(font)
+        }
 
-        val tv = view.asInstanceOf[TextView]
-        tv.setTypeface(font)
-        if (items(pos) != null)
-            tv.setText(items(pos).toString())
+        val m = items(pos) match {
+            case Privmsg(s, m)    => String.format("<%s> %s", s, m)
+            case Notice(s, m)     => String.format("-%s- %s", s, m)
+            case CtcpAction(s, m) => String.format("* %s %s", s, m)
+            case ServerInfo(m)    => m
+            case Motd(m)          => m
+            case SslInfo(m)       => m
+            case SslError(m)      => m
+        }
+        view.setText(m)
         view
     }
 }

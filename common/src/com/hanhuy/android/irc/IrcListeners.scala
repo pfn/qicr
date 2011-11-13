@@ -2,6 +2,11 @@ package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.{Channel => QicrChannel}
+import com.hanhuy.android.irc.model.ServerInfo
+import com.hanhuy.android.irc.model.Privmsg
+import com.hanhuy.android.irc.model.CtcpAction
+import com.hanhuy.android.irc.model.Motd
+import com.hanhuy.android.irc.model.Notice
 
 import com.sorcix.sirc._
 
@@ -13,8 +18,8 @@ with ServerListener with MessageListener with ModeListener {
     override def onConnect(c: IrcConnection) {
         val server = service._connections(c)
         service.runOnUI(() =>
-                server.messages.add(
-                        service.getString(R.string.server_connected)))
+                server.messages.add(ServerInfo(
+                        service.getString(R.string.server_connected))))
     }
     override def onDisconnect(c: IrcConnection) {
         service._connections.get(c) match {
@@ -56,7 +61,7 @@ with ServerListener with MessageListener with ModeListener {
             sender: User, mode: String) = Unit // TODO
     override def onMotd(c: IrcConnection, motd: String) {
         val server = service._connections(c)
-        service.runOnUI(() => server.messages.add(motd))
+        service.runOnUI(() => server.messages.add(Motd(motd)))
     }
     // TODO
     override def onNick(c: IrcConnection, oldnick: User, newnick: User) = Unit
@@ -88,22 +93,19 @@ with ServerListener with MessageListener with ModeListener {
 
     // MessageListener
     override def onAction(c: IrcConnection, sender: User, channel: Channel,
-            action: String) {
+            msg: String) {
         val c = service._channels(channel)
-        val m = String.format("* %s %s", sender.getNick(), action)
-        service.runOnUI(() => c.messages.add(m))
+        service.runOnUI(() => c.messages.add(CtcpAction(sender.getNick(), msg)))
     }
     override def onMessage(c: IrcConnection, sender: User, channel: Channel,
             msg: String) {
         val c = service._channels(channel)
-        val m = String.format("<%s> %s", sender.getNick(), msg)
-        service.runOnUI(() => c.messages.add(m))
+        service.runOnUI(() => c.messages.add(Privmsg(sender.getNick(), msg)))
     }
     override def onNotice(c: IrcConnection, sender: User, channel: Channel,
             msg: String) {
         val c = service._channels(channel)
-        val m = String.format("-%s- %s", sender.getNick(), msg)
-        service.runOnUI(() => c.messages.add(m))
+        service.runOnUI(() => c.messages.add(Notice(sender.getNick(), msg)))
     }
 
     // TODO
@@ -128,15 +130,15 @@ with ServerListener with MessageListener with ModeListener {
                 case _ => Unit
             }
         }
-        service.runOnUI(() => server.messages.add(
+        service.runOnUI(() => server.messages.add(ServerInfo(
                 String.format("Unknown command: [%s](%s):[%s]",
-                line.getCommand(), line.getArguments(), line.getMessage())))
+                line.getCommand(), line.getArguments(), line.getMessage()))))
                 
     }
     override def onUnknownReply(c: IrcConnection, line: IrcDecoder) {
         val server = service._connections(c)
-        service.runOnUI(() => server.messages.add(
+        service.runOnUI(() => server.messages.add(ServerInfo(
                 String.format("Unknown reply: [%s](%s):[%s]",
-                line.getCommand(), line.getArguments(), line.getMessage())))
+                line.getCommand(), line.getArguments(), line.getMessage()))))
     }
 }

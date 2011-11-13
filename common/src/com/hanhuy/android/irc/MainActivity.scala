@@ -10,10 +10,12 @@ import android.os.{Bundle, Build, IBinder, Parcelable}
 import android.util.Log
 import android.content.DialogInterface
 import android.app.AlertDialog
+import android.util.AttributeSet
 import android.view.LayoutInflater;
 import android.view.{View, ViewGroup}
 import android.view.Display
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.widget.LinearLayout
 import android.widget.{TabHost, TabWidget}
@@ -35,7 +37,7 @@ import android.support.v4.view.{ViewPager, MenuCompat}
 import scala.collection.JavaConversions._
 import scala.collection.mutable.HashSet
 
-import com.hanhuy.android.irc.model.QueueAdapter
+import com.hanhuy.android.irc.model.MessageAdapter
 import com.hanhuy.android.irc.model.Server
 
 import java.util.UUID
@@ -99,7 +101,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (bundle != null)
             page = bundle.getInt("page")
 
-        setContentView(R.layout.fragment_main)
+        setContentView(R.layout.main)
 
         tabhost = findView[TabHost](this, android.R.id.tabhost)
         tabhost.setup()
@@ -114,6 +116,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                 false
             }
         )
+
         servers = new ServersFragment
         adapter.createTab("Servers", servers)
 
@@ -323,10 +326,10 @@ class ServerSetupFragment extends Fragment {
     }
 }
 
-class MessagesFragment(_a: QueueAdapter[_<:Object]) extends ListFragment {
+class MessagesFragment(_a: MessageAdapter) extends ListFragment {
     var _adapter = _a
     def adapter = _adapter
-    def adapter_=(a: QueueAdapter[_<:Object]) = {
+    def adapter_=(a: MessageAdapter) = {
         _adapter = a
         _adapter.context = getActivity()
         setListAdapter(_adapter)
