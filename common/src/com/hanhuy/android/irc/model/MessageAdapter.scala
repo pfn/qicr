@@ -1,5 +1,7 @@
 package com.hanhuy.android.irc.model
 
+import MessageLike._
+
 import com.hanhuy.android.irc.R
 
 import scala.collection.mutable.Queue

@@ -1,9 +1,10 @@
 package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Channel
+import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.MessageAdapter
-import com.hanhuy.android.irc.model.ServerInfo
+import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
@@ -39,8 +40,8 @@ class IrcService extends Service {
     val connections  = new HashMap[Server,IrcConnection]
     val _connections = new HashMap[IrcConnection,Server]
 
-    val channels  = new HashMap[Channel,SircChannel]
-    val _channels = new HashMap[SircChannel,Channel]
+    val channels  = new HashMap[ChannelLike,SircChannel]
+    val _channels = new HashMap[SircChannel,ChannelLike]
 
     // TODO find a way to automatically(?) purge the adapters
     // worst-case: leak memory on the string, but not the adapter
@@ -97,6 +98,7 @@ class IrcService extends Service {
     def disconnect(server: Server) {
         connections.get(server) match {
             case Some(c) => {
+                // TODO throw in an asynctask for some thread pooling maybe?
                 new Thread(() =>
                     c.disconnect("qicr for android: faster and better")).start()
             }
@@ -158,7 +160,7 @@ class IrcService extends Service {
 
     def addChannel(c: IrcConnection, ch: SircChannel) {
         val server = _connections(c)
-        var channel    = new Channel(server, ch.getName())
+        var channel:ChannelLike = new Channel(server, ch.getName())
         channels.keys.find(_ == channel) match {
             case Some(_c) => {
                 channel    = _c
@@ -173,7 +175,10 @@ class IrcService extends Service {
         runOnUI(() => {
             if (showing)
                 activity.adapter.addChannel(channel)
-            channel.state = Channel.State.JOINED
+            channel match {
+                case c: Channel => c.state = Channel.State.JOINED
+                case _ => Unit
+            }
         })
     }
     def removeChannel(ch: Channel) {
@@ -207,7 +212,7 @@ class IrcService extends Service {
 class ConnectTask(server: Server, service: IrcService)
 extends AsyncTask[Object, Object, Server.State.State] {
     IrcConnection.ABOUT = "qicr for android: faster and better!"
-    IrcDebug.setEnabled(true)
+    //IrcDebug.setEnabled(true)
     protected override def doInBackground(args: Object*) :
             Server.State.State = {
         val ircserver = new IrcServer(server.hostname, server.port,

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TabHost
+<com.hanhuy.android.irc.NoKeyEventTabHost
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/tabhost"
     android:layout_weight="1"
@@ -49,6 +49,8 @@
             android:inputType="text|textAutoCorrect|textShortMessage"
             android:imeOptions="actionSend|flagNoFullscreen"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content">
+            <requestFocus/>
+        </EditText>
     </LinearLayout>
-</TabHost>
+</com.hanhuy.android.irc.NoKeyEventTabHost>

@@ -2,11 +2,11 @@ package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.{Channel => QicrChannel}
-import com.hanhuy.android.irc.model.ServerInfo
-import com.hanhuy.android.irc.model.Privmsg
-import com.hanhuy.android.irc.model.CtcpAction
-import com.hanhuy.android.irc.model.Motd
-import com.hanhuy.android.irc.model.Notice
+import com.hanhuy.android.irc.model.MessageLike.ServerInfo
+import com.hanhuy.android.irc.model.MessageLike.Privmsg
+import com.hanhuy.android.irc.model.MessageLike.CtcpAction
+import com.hanhuy.android.irc.model.MessageLike.Motd
+import com.hanhuy.android.irc.model.MessageLike.Notice
 
 import com.sorcix.sirc._
 
@@ -43,7 +43,7 @@ with ServerListener with MessageListener with ModeListener {
             sender: User, user: User) {
         if (user.isUs()) {
             service.runOnUI(() => {
-                service._channels(channel).state = QicrChannel.State.KICKED
+                //service._channels(channel).state = QicrChannel.State.KICKED
             })
         }
     }
@@ -51,7 +51,7 @@ with ServerListener with MessageListener with ModeListener {
             user: User, msg: String) {
         if (user.isUs()) {
             service.runOnUI(() => {
-                service._channels(channel).state = QicrChannel.State.PARTED
+                //service._channels(channel).state = QicrChannel.State.PARTED
             })
         }
     }

@@ -29,6 +29,14 @@
     <string name="quit_confirm_title">Exit?</string>
     <string name="quit_confirm">
         You are still connected, are you sure you would like to quit?</string>
+
     <string name="yes">Yes</string>
     <string name="no">No</string>
+
+    <string name="channel_leave">Leave</string>
+    <string name="channel_close">Close tab</string>
+    <string name="channel_close_confirm_title">Close tab?</string>
+    <string name="channel_close_confirm">
+        Are you sure you would like to close and leave this channel?</string>
+    <string name="query_close">Close tab</string>
 </resources>

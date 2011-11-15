@@ -7,6 +7,7 @@ import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.widget.AdapterView
+import android.widget.TextView
 import android.content.DialogInterface
 
 object AndroidConversions {
@@ -44,6 +45,13 @@ object AndroidConversions {
             f: (View, MotionEvent) => Boolean) : View.OnTouchListener =
                     new View.OnTouchListener() {
                 def onTouch(v: View, e: MotionEvent) = f(v, e)
+    }
+
+    implicit def toTextViewOnEditorAction(f: (View, Int, KeyEvent) => Boolean):
+            TextView.OnEditorActionListener =
+            new TextView.OnEditorActionListener() {
+        def onEditorAction(v: TextView, action: Int, e: KeyEvent) =
+            f(v, action, e)
     }
 
     implicit def toRunnable[A](f: () => A) : Runnable = new Runnable() {

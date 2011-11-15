@@ -26,7 +26,7 @@ public class NoKeyEventTabHost extends TabHost {
             t.requestFocus(View.FOCUS_DOWN);
             handled = t.dispatchKeyEvent(e);
         }
-        handled = handled || super.dispatchKeyEvent(e);
+        //handled = handled || super.dispatchKeyEvent(e);
         return handled;
     }
 }

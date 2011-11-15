@@ -1,7 +1,9 @@
 package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Channel
-import com.hanhuy.android.irc.model.ChannelComparator
+import com.hanhuy.android.irc.model.Query
+import com.hanhuy.android.irc.model.ChannelLike
+import com.hanhuy.android.irc.model.ChannelLikeComparator
 import com.hanhuy.android.irc.model.FragmentPagerAdapter
 
 import android.content.Context
@@ -32,8 +34,8 @@ class MainPagerAdapter(manager: FragmentManager,
         tabhost: TabHost, pager: ViewPager)
 extends FragmentPagerAdapter(manager)
 with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
-    val channels = new ArrayBuffer[Channel]
-    val comp = new ChannelComparator
+    val channels = new ArrayBuffer[ChannelLike]
+    val comp = new ChannelLikeComparator
 
     tabhost.setOnTabChangedListener(this)
     pager.setOnPageChangeListener(this)
@@ -138,23 +140,34 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         findView[TextView](v, titleId).setText(title)
     }
 
-    def addChannel(c: Channel) {
+    def addChannel(c: ChannelLike) {
         var idx = Collections.binarySearch(channels, c, comp)
         if (idx < 0) {
             idx = idx * -1
             channels.insert(idx - 1, c)
-            insertTab(c.name, new MessagesFragment(c.messages), idx - 1)
+            val frag = c match {
+                case _: Channel => new ChannelFragment(c.messages)
+                case _: Query   => new QueryFragment(c.messages)
+            }
+            insertTab(c.name, frag, idx - 1)
         } else {
             // tab already exists, TODO update tab indicator
         }
     }
 
     def removeTab(pos: Int) {
+        if (pos < 0) {
+            Log.w(TAG, "Invalid position for removeTab: " + pos,
+                    new IllegalArgumentException)
+            return
+        }
         tabhost.setCurrentTab(0)
         tabhost.clearAllTabs()
+        channels.remove(pos-1)
         tabs.remove(pos)
         for (i <- 0 until tabs.length)
             addTab(tabs(i).title)
+        tabhost.setCurrentTab(pos-1)
         notifyDataSetChanged()
     }
 

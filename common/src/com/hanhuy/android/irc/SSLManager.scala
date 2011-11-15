@@ -1,8 +1,8 @@
 package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.MessageAdapter
-import com.hanhuy.android.irc.model.SslInfo
-import com.hanhuy.android.irc.model.SslError
+import com.hanhuy.android.irc.model.MessageLike.SslInfo
+import com.hanhuy.android.irc.model.MessageLike.SslError
 
 import java.security.MessageDigest
 import java.security.KeyStore

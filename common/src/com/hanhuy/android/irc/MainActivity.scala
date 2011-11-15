@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.os.{Bundle, Build, IBinder, Parcelable}
+import android.os.AsyncTask
 import android.util.Log
 import android.content.DialogInterface
 import android.app.AlertDialog
@@ -110,13 +111,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         adapter = new MainPagerAdapter(
                 getSupportFragmentManager(), tabhost, pager)
 
-        findView[EditText](tabhost, R.id.input).setOnKeyListener(
-            (v: View, key: Int, e: KeyEvent) => {
-                Log.i(TAG, "Got key: " + key)
-                false
-            }
-        )
-
         servers = new ServersFragment
         adapter.createTab("Servers", servers)
 
@@ -124,6 +118,16 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
+
+        val input = findView[EditText](this, R.id.input)
+        input.setOnEditorActionListener((v: View, a: Int, e: KeyEvent) => {
+            Log.i(TAG, "action: " + a + " e: " + e)
+            false
+        })
+        input.setOnKeyListener((v: View, k: Int, e: KeyEvent) => {
+            Log.i(TAG, "key: " + k + " e: " + e)
+            false
+        })
     }
 
     override def onPause() {
@@ -151,8 +155,10 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         service.bind(this)
         service.showing = true
         if (page != -1) {
-            new Thread(() =>
-                    runOnUiThread(() => tabhost.setCurrentTab(page))).start()
+            postOnUiThread(() => {
+                runOnUiThread(() => tabhost.setCurrentTab(page))
+                page = -1
+            })
         }
     }
     override def onServiceDisconnected(name : ComponentName) {
@@ -178,11 +184,23 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         tx.commit()
     }
 
+    def postOnUiThread[A](r: () => A) {
+        class RunnableTask extends AsyncTask[Object,Object,Unit] {
+            override def doInBackground(args: Object*): Unit = 
+                runOnUiThread(r)
+        }
+        new RunnableTask().execute()
+    }
+
     def updateMenuVisibility(idx: Int) {
-        // called by pager adapter, there's an implicit invalidate there
-        //HoneycombSupport.invalidateActionBar()
-        if (honeycombAndNewer)
+        if (honeycombAndNewer) {
             HoneycombSupport.stopActionMode()
+            // workaround for disappearing menus
+            val f = adapter.getItem(idx)
+            f.setMenuVisibility(false)
+            f.setMenuVisibility(true)
+            postOnUiThread(() => HoneycombSupport.invalidateActionBar())
+        }
     }
 
     // can't make it lazy, it might go away
@@ -376,6 +394,47 @@ class MessagesFragment(_a: MessageAdapter) extends ListFragment {
     }
 }
 
+class ChannelFragment(a: MessageAdapter) extends MessagesFragment(a) {
+    def this() = this(null)
+    override def onCreate(bundle: Bundle) {
+        super.onCreate(bundle)
+        setHasOptionsMenu(true)
+    }
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
+        inflater.inflate(R.menu.channel_menu, menu)
+        List(R.id.channel_leave,
+             R.id.channel_close).foreach(item =>
+                     MenuCompat.setShowAsAction(menu.findItem(item),
+                             MenuItem.SHOW_AS_ACTION_IF_ROOM |
+                             MenuItem.SHOW_AS_ACTION_WITH_TEXT))
+    }
+
+    override def onOptionsItemSelected(item: MenuItem): Boolean = {
+        if (R.id.channel_close == item.getItemId()) {
+            if (true) { // TODO check channel state
+                val activity = getActivity().asInstanceOf[MainActivity]
+                var builder = new AlertDialog.Builder(activity)
+                builder.setTitle(R.string.channel_close_confirm_title)
+                builder.setMessage(getString(R.string.channel_close_confirm))
+                builder.setPositiveButton(R.string.yes,
+                        (d: DialogInterface, id: Int) => {
+                    activity.adapter.removeTab(activity.adapter.getItemPosition(this))
+                })
+                builder.setNegativeButton(R.string.no, 
+                        (d: DialogInterface, id: Int) => {
+                })
+                builder.create().show()
+                return true
+            }
+            return true
+        }
+        false
+    }
+}
+class QueryFragment(a: MessageAdapter) extends MessagesFragment(a) {
+    def this() = this(null)
+}
+
 class ServersFragment extends ListFragment {
     var thisview: View = _
     var service: IrcService = _
@@ -543,16 +602,8 @@ class ServersFragment extends ListFragment {
         MenuCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
                                          MenuItem.SHOW_AS_ACTION_WITH_TEXT)
 
-        Log.i(TAG, "createoptions menu")
-        if (!honeycombAndNewer) {
+        if (!honeycombAndNewer)
             inflater.inflate(R.menu.server_menu, menu)
-            List(R.id.server_connect,
-                 R.id.server_disconnect,
-                 R.id.server_options).foreach(item =>
-                         MenuCompat.setShowAsAction(menu.findItem(item),
-                                 MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                                 MenuItem.SHOW_AS_ACTION_WITH_TEXT))
-        }
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         val activity = getActivity().asInstanceOf[MainActivity]
@@ -580,7 +631,6 @@ class ServersFragment extends ListFragment {
             }
         }
 
-        Log.i(TAG, "setting add server menu item visibility: " + !found)
         menu.findItem(R.id.add_server).setVisible(!found)
 
         if (!honeycombAndNewer) {
