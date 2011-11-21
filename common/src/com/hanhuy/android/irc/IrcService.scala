@@ -1,21 +1,29 @@
 package com.hanhuy.android.irc
 
+import com.hanhuy.android.irc.model.Query
 import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.MessageAdapter
+import com.hanhuy.android.irc.model.MessageLike
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
+import com.hanhuy.android.irc.model.MessageLike.Privmsg
+import com.hanhuy.android.irc.model.MessageLike.CtcpAction
+import com.hanhuy.android.irc.model.MessageLike.Notice
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
 import scala.ref.WeakReference
 
 import android.app.Service
+import android.app.NotificationManager
 import android.content.Intent
+import android.content.Context
 import android.os.{Binder, IBinder}
 import android.os.AsyncTask
 import android.app.Notification
 import android.app.PendingIntent
+import android.widget.Toast
 import android.util.Log
 
 import com.sorcix.sirc.IrcDebug
@@ -30,10 +38,19 @@ import IrcService._
 
 object IrcService {
     val TAG = "IrcService"
+
+    val EXTRA_SUBJECT = "com.hanhuy.android.irc.extra.subject"
+    val EXTRA_SPLITTER = "::qicr-splitter-boundary::"
+
+    // notification IDs
     val RUNNING_ID = 1
+    val DISCON_ID  = 2
+    val PRIVMSG_ID = 3
+    val MENTION_ID = 4
 }
 class IrcService extends Service {
     var startId: Int = -1
+    var messagesId = 0
     var _running = false
     var showing = false
     var config: Config = _
@@ -42,10 +59,21 @@ class IrcService extends Service {
 
     val channels  = new HashMap[ChannelLike,SircChannel]
     val _channels = new HashMap[SircChannel,ChannelLike]
+    val queries   = new HashMap[(Server,String),Query]
+
+    val serverAddedListeners   = new HashSet[Server => Any]
+    val serverRemovedListeners = new HashSet[Server => Any]
+    val serverChangedListeners = new HashSet[Server => Any]
 
     // TODO find a way to automatically(?) purge the adapters
-    // worst-case: leak memory on the string, but not the adapter
-    val messages = new HashMap[String,MessageAdapter]
+    // worst-case: leak memory on the int, but not the adapter
+    val messages = new HashMap[Int,MessageAdapter]
+    val chans    = new HashMap[Int,ChannelLike]
+
+    def newMessagesId(): Int = {
+        messagesId += 1
+        messagesId
+    }
 
     var _activity: WeakReference[MainActivity] = _
     def activity = _activity.get match {
@@ -54,10 +82,13 @@ class IrcService extends Service {
     }
 
     def removeConnection(server: Server) {
-        val c = connections(server)
-
-        connections  -= server
-        _connections -= c
+        connections.get(server) match {
+        case Some(c) => {
+            connections  -= server
+            _connections -= c
+        }
+        case None => Unit
+        }
     }
 
     def addConnection(server: Server, connection: IrcConnection) {
@@ -80,6 +111,7 @@ class IrcService extends Service {
     }
     override def onCreate() {
         super.onCreate()
+        Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler _)
         config = new Config(this)
     }
     override def onDestroy() {
@@ -88,26 +120,55 @@ class IrcService extends Service {
     }
 
     def running = _running
+    var disconnectCount = 0
 
-    def quit() {
+    def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
+        val count = connections.keys.size
+        disconnectCount = 0
+        if (!cb.isEmpty) {
+            new Thread(() => {
+                synchronized {
+                    while (disconnectCount < count)
+                        wait()
+                }
+                stopSelf()
+                runOnUI(cb.get)
+            }, "Quit disconnect waiter").start()
+        }
         for (server <- { Seq.empty ++ connections.keys }) {
             disconnect(server)
         }
-        stopSelf()
     }
-    def disconnect(server: Server) {
+    def disconnect(server: Server, message: Option[String] = None) {
         connections.get(server) match {
             case Some(c) => {
                 // TODO throw in an asynctask for some thread pooling maybe?
-                new Thread(() =>
-                    c.disconnect("qicr for android: faster and better")).start()
+                new Thread(() => {
+                    try {
+                        val m = message match {
+                        case Some(msg) => msg
+                        case None => getString(R.string.quit_msg_default)
+                        }
+                        c.disconnect(m)
+                    } catch {
+                        case e: Exception => {
+                            Log.w(TAG, "Disconnect failed", e)
+                            c.setConnected(false)
+                            c.disconnect()
+                        }
+                    }
+                    synchronized {
+                        disconnectCount += 1
+                        notify()
+                    }
+                }, server.name + ": Disconnect thread").start()
             }
             case None => Unit
         }
         server.state = Server.State.DISCONNECTED
         removeConnection(server)
         // handled by onDisconnect
-        server.messages.add(ServerInfo(getString(R.string.server_disconnected)))
+        server.add(ServerInfo(getString(R.string.server_disconnected)))
         if (connections.size == 0) {
             stopForeground(true)
             _running = false
@@ -129,12 +190,13 @@ class IrcService extends Service {
         if (!_running) {
             _running = true
             startService(new Intent(this, classOf[IrcService]))
-            val notif = new Notification(R.drawable.ic_notify,
+            val notif = new Notification(R.drawable.ic_notify_mono,
                     null, System.currentTimeMillis())
             val pending = PendingIntent.getActivity(this, 0,
                     new Intent(this, classOf[MainActivity]), 0)
             notif.setLatestEventInfo(getApplicationContext(),
-                    "qicr", "running...", pending)
+                    getString(R.string.notif_title),
+                    getString(R.string.notif_running), pending)
             startForeground(RUNNING_ID, notif)
         }
     }
@@ -158,9 +220,47 @@ class IrcService extends Service {
         serverAddedListeners.foreach(_(server))
     }
 
+    def channelMessagesListener(c: ChannelLike, m: MessageLike) {
+        if (!showing) return
+        activity.adapter.refreshTabTitle(c)
+    }
+
+    def addQuery(c: IrcConnection, _nick: String, msg: String,
+            sending: Boolean = false, action: Boolean = false,
+            notice: Boolean = false) {
+        val server = _connections(c)
+
+        val query = queries.get((server, _nick.toLowerCase())) match {
+            case Some(q) => q
+            case None => {
+                val q = new Query(server, _nick.toLowerCase())
+                queries += (((server, _nick.toLowerCase()),q))
+                q.channelMessagesListeners += channelMessagesListener
+                q
+            }
+        }
+        channels += ((query,null))
+
+        val nick = if (sending) server.currentNick else _nick
+
+        runOnUI(() => {
+            if (showing)
+                activity.adapter.addChannel(query)
+
+            val m = if (notice) Notice(nick, msg)
+            else if (action) CtcpAction(nick, msg)
+            else Privmsg(nick, msg)
+
+            query.add(m)
+            if (!showing)
+                showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
+                        m.toString(), server.name + EXTRA_SPLITTER + query.name)
+        })
+    }
+
     def addChannel(c: IrcConnection, ch: SircChannel) {
         val server = _connections(c)
-        var channel:ChannelLike = new Channel(server, ch.getName())
+        var channel: ChannelLike = new Channel(server, ch.getName())
         channels.keys.find(_ == channel) match {
             case Some(_c) => {
                 channel    = _c
@@ -172,6 +272,8 @@ class IrcService extends Service {
         }
         channels  += ((channel,ch))
         _channels += ((ch,channel))
+        channel.channelMessagesListeners += channelMessagesListener
+
         runOnUI(() => {
             if (showing)
                 activity.adapter.addChannel(channel)
@@ -202,16 +304,49 @@ class IrcService extends Service {
             a.runOnUiThread(f)
     }
 
-    val serverAddedListeners   = new HashSet[Server => Any]
-    val serverRemovedListeners = new HashSet[Server => Any]
-    val serverChangedListeners = new HashSet[Server => Any]
+    def uncaughtExceptionHandler(t: Thread, e: Throwable) {
+        Log.e(TAG, "Uncaught exception in thread: " + t, e)
+        Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show()
+        if (!t.getName().startsWith("sIRC-")) throw e
+    }
+
+    def serverDisconnected(server: Server) {
+        runOnUI(() => disconnect(server))
+        if (!showing)
+            showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
+                    getString(R.string.notif_server_disconnected, server.name),
+                    "")
+    }
+
+    def addChannelMention(c: ChannelLike, m: MessageLike) {
+        if (!showing)
+            showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
+                    getString(R.string.notif_mention_template,
+                            c.name, m.toString()),
+                    c.server.name + EXTRA_SPLITTER + c.name)
+    }
+    def showNotification(id: Int, res: Int, text: String, extra: String) {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE)
+                .asInstanceOf[NotificationManager]
+        val notif = new Notification(res, text, System.currentTimeMillis())
+        val intent = new Intent(this, classOf[MainActivity])
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.putExtra(EXTRA_SUBJECT, extra)
+        val pending = PendingIntent.getActivity(this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT)
+        notif.setLatestEventInfo(getApplicationContext(),
+                getString(R.string.notif_title), text, pending)
+        notif.flags |= Notification.FLAG_AUTO_CANCEL
+        nm.notify(id, notif)
+    }
+
 }
 
 // Object due to java<->scala varargs interop bug
 // https://issues.scala-lang.org/browse/SI-1459
 class ConnectTask(server: Server, service: IrcService)
 extends AsyncTask[Object, Object, Server.State.State] {
-    IrcConnection.ABOUT = "qicr for android: faster and better!"
+    IrcConnection.ABOUT = service.getString(R.string.version, "0.1alpha")
     //IrcDebug.setEnabled(true)
     protected override def doInBackground(args: Object*) :
             Server.State.State = {
@@ -223,42 +358,53 @@ extends AsyncTask[Object, Object, Server.State.State] {
         connection.setNick(server.nickname)
 
         var state = server.state
-        //server.messages.context = service
         publishProgress(service.getString(R.string.server_connecting))
         service.addConnection(server, connection)
-        val sslctx = SSLManager.configureSSL(service, server.messages)
+        val sslctx = SSLManager.configureSSL(service, server)
         val listener = new IrcListeners(service)
         connection.setAdvancedListener(listener)
         connection.addServerListener(listener)
         connection.addModeListener(listener)
         connection.addMessageListener(listener)
         try {
+            server.currentNick = server.nickname
             connection.connect(sslctx)
             state = Server.State.CONNECTED
         } catch {
             case e: NickNameException => {
                 connection.setNick(server.altnick)
+                server.currentNick = server.altnick
                 publishProgress(service.getString(R.string.server_nick_retry))
                 try {
                     connection.connect(sslctx)
                     state = Server.State.CONNECTED
                 } catch {
                     case n: NickNameException => {
-                        service.removeConnection(server)
                         publishProgress(service.getString(
                                 R.string.server_nick_error))
                         state = Server.State.DISCONNECTED
                         connection.disconnect()
                         publishProgress(service.getString(
                                 R.string.server_disconnected))
+                        service.removeConnection(server)
                     }
                 }
             }
             case e: Exception => {
-                service.removeConnection(server)
-                publishProgress(e.getMessage())
                 state = Server.State.DISCONNECTED
-                connection.disconnect()
+                service.removeConnection(server)
+                Log.w(TAG, "Unable to connect", e)
+                publishProgress(e.getMessage())
+                try {
+                    connection.disconnect()
+                } catch {
+                    case ex: Exception => {
+                        Log.w(TAG, "Exception cleanup failed", ex)
+                        connection.setConnected(false)
+                        connection.disconnect()
+                        state = Server.State.DISCONNECTED
+                    }
+                }
                 publishProgress(service.getString(
                         R.string.server_disconnected))
             }
@@ -272,6 +418,6 @@ extends AsyncTask[Object, Object, Server.State.State] {
 
     protected override def onProgressUpdate(progress: Object*) {
         if (progress.length > 0)
-            server.messages.add(ServerInfo(progress(0).toString()))
+            server.add(ServerInfo(progress(0).toString()))
     }
 }

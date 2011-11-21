@@ -16,7 +16,7 @@
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="0dip"
-    android:layout_height="28dip"
+    android:layout_height="36dip"
     android:layout_weight="1"
     android:layout_marginLeft="-3dip"
     android:layout_marginRight="-3dip"
@@ -28,8 +28,11 @@
         android:layout_height="wrap_content"
         android:paddingLeft="10dip"
         android:paddingRight="10dip"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
+        android:layout_centerInParent="true"
         style="?android:attr/tabWidgetStyle"
     />
+        <!--
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        -->
 </RelativeLayout>

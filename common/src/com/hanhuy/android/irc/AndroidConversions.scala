@@ -57,4 +57,10 @@ object AndroidConversions {
     implicit def toRunnable[A](f: () => A) : Runnable = new Runnable() {
         def run() = f()
     }
+
+    implicit def toUncaughtExceptionHandler[A]( f: (Thread, Throwable) => A):
+            Thread.UncaughtExceptionHandler =
+            new Thread.UncaughtExceptionHandler {
+        override def uncaughtException(t: Thread, e: Throwable) = f(t, e)
+    }
 }

@@ -14,9 +14,9 @@
         Not all required server fields have been filled</string>
     <string name="server_connecting">Connecting...</string>
     <string name="server_connected">Connected</string>
-    <string name="server_disconnected">Disonnected</string>
+    <string name="server_disconnected">Disconnected</string>
     <string name="server_connect">Connect</string>
-    <string name="server_disconnect">Disonnect</string>
+    <string name="server_disconnect">Disconnect</string>
     <string name="server_delete">Delete server</string>
     <string name="server_options">Edit server</string>
     <string name="server_confirm_delete">Delete server?</string>
@@ -26,6 +26,9 @@
     <string name="ssl_expired">Your SSL certificate has expired</string>
     <string name="sha1_fingerprint">SHA1 Fingerprint: </string>
     <string name="md5_fingerprint">MD5 Fingerprint: </string>
+
+    <string name="version">qicr for android: %s</string>
+    <string name="quit_msg_default">qicr for android: faster and better</string>
     <string name="quit_confirm_title">Exit?</string>
     <string name="quit_confirm">
         You are still connected, are you sure you would like to quit?</string>
@@ -33,10 +36,46 @@
     <string name="yes">Yes</string>
     <string name="no">No</string>
 
+    <string name="tab_servers">Servers</string>
+    <string name="notif_mention_template">%1$s: %2$s</string>
+    <string name="notif_running">running...</string>
+    <string name="notif_title">qicr</string>
+    <string name="notif_server_disconnected">Server disconnected: %s</string>
     <string name="channel_leave">Leave</string>
     <string name="channel_close">Close tab</string>
     <string name="channel_close_confirm_title">Close tab?</string>
     <string name="channel_close_confirm">
         Are you sure you would like to close and leave this channel?</string>
     <string name="query_close">Close tab</string>
+
+    <string name="usage_join">Usage: /join &lt;channel&gt; [password]</string>
+    <string name="usage_msg">Usage: /msg &lt;nick&gt; [message]</string>
+    <string name="usage_notice">Usage: /notice &lt;nick&gt; [message]</string>
+
+    <string name="message_template">&lt;%1$s&gt; %2$s</string>
+    <string name="notice_template">-%1$s- %2$s</string>
+    <string name="action_template">* %1$s %2$s</string>
+
+    <string name="error_no_channel">
+        You are not on a channel or query, try /help</string>
+    <string name="error_server_disconnected">You are not connected</string>
+    <string name="error_channel_disconnected">
+        You are not currently on this channel</string>
+    <string name="error_command_unknown">%s: command unknown, see /help</string>
+    <string name="error_join_unknown">Unknown JOIN error</string>
+    <string name="command_join_1">join</string>
+    <string name="command_join_2">j</string>
+    <string name="command_leave_1">leave</string>
+    <string name="command_leave_2">part</string>
+    <string name="command_quit">quit</string>
+    <string name="command_ping">ping</string>
+    <string name="command_topic">topic</string>
+    <string name="command_quote">quote</string>
+    <string name="command_notice">notice</string>
+    <string name="command_msg_1">msg</string>
+    <string name="command_msg_2">m</string>
+    <string name="command_invite">invite</string>
+    <string name="command_action_1">action</string>
+    <string name="command_action_2">me</string>
+    <string name="command_ignore">ignore</string>
 </resources>

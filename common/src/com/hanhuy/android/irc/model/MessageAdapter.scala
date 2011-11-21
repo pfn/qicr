@@ -51,7 +51,7 @@ class MessageAdapter extends BaseAdapter {
             items.dequeue()
     }
 
-    def add(item: MessageLike) {
+    /*protected[model]*/ def add(item: MessageLike) {
         items += item
         ensureSize()
         notifyDataSetChanged()
@@ -72,9 +72,13 @@ class MessageAdapter extends BaseAdapter {
         }
 
         val m = items(pos) match {
-            case Privmsg(s, m)    => String.format("<%s> %s", s, m)
-            case Notice(s, m)     => String.format("-%s- %s", s, m)
-            case CtcpAction(s, m) => String.format("* %s %s", s, m)
+            case Privmsg(s, m)    => context.getString(
+                    R.string.message_template, s, m)
+            case Notice(s, m)     => context.getString(
+                    R.string.notice_template, s, m)
+            case CtcpAction(s, m) => context.getString(
+                    R.string.action_template, s, m)
+            case CommandError(m)  => m
             case ServerInfo(m)    => m
             case Motd(m)          => m
             case SslInfo(m)       => m

@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc
 
-import com.hanhuy.android.irc.model.MessageAdapter
+import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.MessageLike.SslInfo
 import com.hanhuy.android.irc.model.MessageLike.SslError
 
@@ -16,17 +16,17 @@ import javax.net.ssl.X509TrustManager
 import AndroidConversions._
 
 object SSLManager {
-    def configureSSL(service: IrcService, adapter: MessageAdapter):
+    def configureSSL(service: IrcService, server: Server):
             SSLContext = {
         val c = SSLContext.getInstance("TLS")
         c.init(null,
-                Array[TrustManager](new EasyTrustManager(service, adapter)),
+                Array[TrustManager](new EasyTrustManager(service, server)),
                 null)
         c
     }
 }
 
-class EasyTrustManager(service: IrcService, adapter: MessageAdapter)
+class EasyTrustManager(service: IrcService, server: Server)
 extends X509TrustManager {
     lazy val trustManager = {
         val factory = TrustManagerFactory.getInstance(
@@ -43,12 +43,12 @@ extends X509TrustManager {
     override def checkServerTrusted(
             chain: Array[X509Certificate], authType: String) {
         service.runOnUI(() => {
-            adapter.add(SslInfo(
+            server.add(SslInfo(
                     chain(0).getSubjectX500Principal().toString()))
-            adapter.add(SslInfo(
+            server.add(SslInfo(
                     service.getString(R.string.sha1_fingerprint) +
                     sha1(chain(0))))
-            adapter.add(SslInfo(
+            server.add(SslInfo(
                     service.getString(R.string.md5_fingerprint) +
                     md5(chain(0))))
         })
@@ -57,9 +57,9 @@ extends X509TrustManager {
         } catch {
             case e: Exception => {
                 service.runOnUI(() => {
-                    adapter.add(SslError(
+                    server.add(SslError(
                             service.getString(R.string.ssl_expired)))
-                    adapter.add(SslError(e.getMessage()))
+                    server.add(SslError(e.getMessage()))
                 })
             }
         }

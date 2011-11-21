@@ -19,11 +19,14 @@ class Server {
     val stateChangedListeners = new HashSet[(Server, State) => Any]
 
     val messages = new MessageAdapter
+
+    def add(m: MessageLike) = messages.add(m)
     private var _state = INITIAL
     def state = _state
     def state_=(state: State) = {
-        stateChangedListeners.foreach(_(this, _state))
+        val oldstate = _state
         _state = state
+        stateChangedListeners.foreach(_(this, oldstate))
     }
 
     var id: Long = -1
@@ -40,10 +43,19 @@ class Server {
     var altnick: String = _
     var username: String = "qicruser"
     var realname: String = "strong faster qicr"
-    var password: String = _
+    var _password: String = _
+    def password = _password
+    def password_=(p: String) = _password =
+            if (p == null || p.trim().length() == 0) null else p
 
-    var autorun: String = _
-    var autojoin: String = _
+    var _autorun: String = _
+    def autorun = _autorun
+    def autorun_=(a: String) = _autorun =
+            if (a == null || a.trim().length() == 0) null else a
+    var _autojoin: String = _
+    def autojoin = _autojoin
+    def autojoin_=(a: String) = _autojoin =
+            if (a == null || a.trim().length() == 0) null else a
 
     var socks = false
     var socksHost: String = _
@@ -55,6 +67,7 @@ class Server {
     var saslUser: String = _
     var saslPass: String = _
 
+    var currentNick = nickname
     override def toString() = name
 
     def blank(s: String) : Boolean = s == null || s == ""

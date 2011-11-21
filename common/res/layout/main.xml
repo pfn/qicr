@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
     <LinearLayout
+        android:id="@+id/top_container"
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -42,15 +43,15 @@
             android:layout_height="0dp"
             android:layout_weight="1"/>
 
+            <!--
+            android:singleLine="true"
+            -->
         <EditText
             android:id="@+id/input"
             android:autoText="true"
-            android:singleLine="true"
             android:inputType="text|textAutoCorrect|textShortMessage"
             android:imeOptions="actionSend|flagNoFullscreen"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <requestFocus/>
-        </EditText>
+            android:layout_height="wrap_content"/>
     </LinearLayout>
 </com.hanhuy.android.irc.NoKeyEventTabHost>

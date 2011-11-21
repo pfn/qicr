@@ -1,6 +1,8 @@
 package com.hanhuy.android.irc
 
 import android.app.Activity
+import android.app.NotificationManager
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.ComponentName
@@ -10,7 +12,6 @@ import android.os.{Bundle, Build, IBinder, Parcelable}
 import android.os.AsyncTask
 import android.util.Log
 import android.content.DialogInterface
-import android.app.AlertDialog
 import android.util.AttributeSet
 import android.view.LayoutInflater;
 import android.view.{View, ViewGroup}
@@ -40,8 +41,9 @@ import scala.collection.mutable.HashSet
 
 import com.hanhuy.android.irc.model.MessageAdapter
 import com.hanhuy.android.irc.model.Server
-
-import java.util.UUID
+import com.hanhuy.android.irc.model.ChannelLike
+import com.hanhuy.android.irc.model.Channel
+import com.hanhuy.android.irc.model.Query
 
 import ViewFinder._
 import MainActivity._
@@ -92,6 +94,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     def service_=(s: IrcService) {
         _service = s
         serviceConnectionListeners.foreach(_(s))
+        serviceConnectionListeners.clear()
     }
 
     override def onCreate(bundle: Bundle) {
@@ -112,7 +115,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                 getSupportFragmentManager(), tabhost, pager)
 
         servers = new ServersFragment
-        adapter.createTab("Servers", servers)
+        adapter.createTab(getString(R.string.tab_servers), servers)
 
         val manager = getSupportFragmentManager()
 
@@ -120,14 +123,9 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             HoneycombSupport.init(this)
 
         val input = findView[EditText](this, R.id.input)
-        input.setOnEditorActionListener((v: View, a: Int, e: KeyEvent) => {
-            Log.i(TAG, "action: " + a + " e: " + e)
-            false
-        })
-        input.setOnKeyListener((v: View, k: Int, e: KeyEvent) => {
-            Log.i(TAG, "key: " + k + " e: " + e)
-            false
-        })
+        val proc = new InputProcessor(this)
+        input.setOnEditorActionListener(proc.onEditorActionListener _)
+        input.setOnKeyListener(proc.onKeyListener _)
     }
 
     override def onPause() {
@@ -140,6 +138,39 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             service.showing = true
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
+
+        def refreshTabs(s: IrcService = null) {
+            adapter.refreshTabs(service)
+            val i = getIntent()
+            if (i != null && i.hasExtra(IrcService.EXTRA_SUBJECT)) {
+                val subject = i.getStringExtra(IrcService.EXTRA_SUBJECT)
+                i.removeExtra(IrcService.EXTRA_SUBJECT)
+                if (subject != null) {
+                    if (subject == "")
+                        tabhost.setCurrentTab(0)
+                    else {
+                        val parts = subject.split(IrcService.EXTRA_SPLITTER)
+                        if (parts.length == 2) {
+                            val tab = adapter.tabs.indexWhere(t => {
+                                t.channel match {
+                                case Some(c) => parts(1) == c.name &&
+                                        parts(0) == c.server.name
+                                case None => false
+                                }
+                            })
+                            tabhost.setCurrentTab(tab)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (service != null) refreshTabs()
+        else serviceConnectionListeners += refreshTabs
+    }
+    override def onNewIntent(i: Intent) {
+        super.onNewIntent(i)
+        setIntent(i)
     }
     override def onStart() {
         super.onStart()
@@ -163,6 +194,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
     override def onServiceDisconnected(name : ComponentName) {
         serviceDisconnectionListeners.foreach(_())
+        serviceDisconnectionListeners.clear()
     }
 
     override def onDestroy() {
@@ -193,20 +225,40 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
 
     def updateMenuVisibility(idx: Int) {
+        val input = findView[EditText](this, R.id.input)
+        input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
+
+        getSupportFragmentManager().popBackStack(SERVER_SETUP_STACK,
+                FragmentManager.POP_BACK_STACK_INCLUSIVE)
+
+        val f = adapter.getItem(idx)
+        // workaround for disappearing menus, might be required for <3.0
+        val count = adapter.getCount()
+        if (idx < count - 1)
+            adapter.getItem(idx+1).setMenuVisibility(false)
+        if (idx > 0)
+            adapter.getItem(idx-1).setMenuVisibility(false)
+        f.setMenuVisibility(false)
+        f.setMenuVisibility(true)
+
         if (honeycombAndNewer) {
             HoneycombSupport.stopActionMode()
-            // workaround for disappearing menus
-            val f = adapter.getItem(idx)
-            f.setMenuVisibility(false)
-            f.setMenuVisibility(true)
             postOnUiThread(() => HoneycombSupport.invalidateActionBar())
+        }
+
+        f match {
+            // post to thread to make sure it shows up when done paging
+            case m: MessagesFragment => postOnUiThread(() => m.getListView()
+                    .setSelection(m.getListAdapter().getCount() - 1))
+            case _ => Unit
         }
     }
 
     // can't make it lazy, it might go away
     def serversFragment = {
         val mgr = getSupportFragmentManager()
-        mgr.findFragmentByTag(adapter.tabs(0).tag).asInstanceOf[ServersFragment]
+        mgr.findFragmentByTag(adapter.tabs(0).tag.get)
+                .asInstanceOf[ServersFragment]
     }
     override def onCreateOptionsMenu(menu: Menu): Boolean = {
         val inflater = new MenuInflater(this)
@@ -218,23 +270,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         if (R.id.exit == item.getItemId()) {
-            if (service.running) {
-                var builder = new AlertDialog.Builder(this)
-                builder.setTitle(R.string.quit_confirm_title)
-                builder.setMessage(getString(R.string.quit_confirm))
-                builder.setPositiveButton(R.string.yes,
-                        (d: DialogInterface, id: Int) => {
-                    service.quit()
-                    finish()
-                })
-                builder.setNegativeButton(R.string.no, 
-                        (d: DialogInterface, id: Int) => {
-                })
-                builder.create().show()
-                return true
-            }
-            service.quit()
-            finish()
+            exit()
             return true
         }
         false
@@ -243,6 +279,25 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         super.onSaveInstanceState(state)
         page = tabhost.getCurrentTab()
         state.putInt("page", page)
+    }
+
+    def exit(message: Option[String] = None) {
+        if (service.running) {
+            var builder = new AlertDialog.Builder(this)
+            builder.setTitle(R.string.quit_confirm_title)
+            builder.setMessage(getString(R.string.quit_confirm))
+            builder.setPositiveButton(R.string.yes,
+                    (d: DialogInterface, id: Int) => {
+                service.quit(message, Some(finish _))
+            })
+            builder.setNegativeButton(R.string.no, 
+                    (d: DialogInterface, id: Int) => {
+            })
+            builder.create().show()
+        } else {
+            service.quit(message)
+            finish()
+        }
     }
 }
 
@@ -352,9 +407,11 @@ class MessagesFragment(_a: MessageAdapter) extends ListFragment {
         _adapter.context = getActivity()
         setListAdapter(_adapter)
         val service = getActivity().asInstanceOf[MainActivity].service
-        service.messages += ((uuid, _adapter))
+        service.messages += ((id, _adapter))
+        getListView().setSelection(if (adapter.getCount() > 0)
+                _adapter.getCount()-1 else 0)
     }
-    var uuid: String = _
+    var id = -1
     def this() = this(null)
 
     override def onCreateView(inflater: LayoutInflater,
@@ -363,15 +420,15 @@ class MessagesFragment(_a: MessageAdapter) extends ListFragment {
 
     override def onActivityCreated(bundle: Bundle) {
         super.onActivityCreated(bundle)
-        if (uuid == null && bundle != null) {
-            uuid = bundle.getString("uuid")
+        if (id == -1 && bundle != null) {
+            id = bundle.getInt("id")
         }
         val activity = getActivity().asInstanceOf[MainActivity]
         if (adapter != null) {
             val service = activity.service
             adapter.context = activity
-            uuid = UUID.randomUUID().toString()
-            service.messages += ((uuid, adapter))
+            id = service.newMessagesId()
+            service.messages += ((id, adapter))
             setListAdapter(adapter)
         }
         if (activity.service == null)
@@ -382,11 +439,11 @@ class MessagesFragment(_a: MessageAdapter) extends ListFragment {
 
     override def onSaveInstanceState(bundle: Bundle) {
         super.onSaveInstanceState(bundle)
-        bundle.putString("uuid", uuid)
+        bundle.putInt("id", id)
     }
     def onServiceConnected(service: IrcService) {
-        if (adapter == null && uuid != null) {
-            service.messages.get(uuid) match {
+        if (adapter == null && id != -1) {
+            service.messages.get(id) match {
                 case Some(a) => adapter = a
                 case None    => Unit
             }
@@ -394,11 +451,20 @@ class MessagesFragment(_a: MessageAdapter) extends ListFragment {
     }
 }
 
-class ChannelFragment(a: MessageAdapter) extends MessagesFragment(a) {
-    def this() = this(null)
+class ChannelFragment(a: MessageAdapter, c: Channel)
+extends MessagesFragment(a) {
+    def this() = this(null, null)
+    var channel = c
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
+    }
+    override def onActivityCreated(bundle: Bundle) {
+        super.onActivityCreated(bundle)
+        if (id != -1 && channel != null) {
+            val activity = getActivity().asInstanceOf[MainActivity]
+            activity.service.chans += ((id, channel))
+        }
     }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
         inflater.inflate(R.menu.channel_menu, menu)
@@ -418,7 +484,8 @@ class ChannelFragment(a: MessageAdapter) extends MessagesFragment(a) {
                 builder.setMessage(getString(R.string.channel_close_confirm))
                 builder.setPositiveButton(R.string.yes,
                         (d: DialogInterface, id: Int) => {
-                    activity.adapter.removeTab(activity.adapter.getItemPosition(this))
+                    activity.adapter.removeTab(
+                            activity.adapter.getItemPosition(this))
                 })
                 builder.setNegativeButton(R.string.no, 
                         (d: DialogInterface, id: Int) => {
@@ -431,15 +498,24 @@ class ChannelFragment(a: MessageAdapter) extends MessagesFragment(a) {
         false
     }
 }
-class QueryFragment(a: MessageAdapter) extends MessagesFragment(a) {
-    def this() = this(null)
+class QueryFragment(a: MessageAdapter, q: Query) extends MessagesFragment(a) {
+    def this() = this(null, null)
+
+    override def onActivityCreated(bundle: Bundle) {
+        super.onActivityCreated(bundle)
+        if (id != -1 && q != null) {
+            val activity = getActivity().asInstanceOf[MainActivity]
+            activity.service.chans += ((id, q))
+        }
+    }
 }
 
 class ServersFragment extends ListFragment {
     var thisview: View = _
     var service: IrcService = _
     var adapter: ServerArrayAdapter = _
-    var _server: Server = _ // currently selected server
+    var _server: Option[Server] = None // currently selected server
+    var serverMessagesFragmentShowing: Option[String] = None
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
@@ -483,7 +559,7 @@ class ServersFragment extends ListFragment {
             input.setFocusable(true)
         }
         addServerMessagesFragment(server)
-        _server = server
+        _server = Some(server)
     }
 
     def onIrcServiceConnected(_service: IrcService) {
@@ -499,34 +575,57 @@ class ServersFragment extends ListFragment {
         service.serverRemovedListeners += removeListener
     }
 
+    def clearServerMessagesFragment(mgr: FragmentManager,
+            tx: FragmentTransaction = null) {
+        var mytx: FragmentTransaction = null
+        if (tx == null)
+            mytx = mgr.beginTransaction()
+
+        if (!serverMessagesFragmentShowing.isEmpty) {
+            val f = mgr.findFragmentByTag(serverMessagesFragmentShowing.get)
+            if (f != null) {
+                if (mytx != null)
+                    mytx.hide(f)
+                else if (tx != null)
+                    tx.hide(f)
+            }
+        }
+
+        if (mytx != null)
+            mytx.commit()
+    }
     def addServerMessagesFragment(server: Server) {
         val main = getActivity().asInstanceOf[MainActivity]
         val mgr = main.getSupportFragmentManager()
-        var fragment = mgr.findFragmentByTag(
-                SERVER_MESSAGES_FRAGMENT_PREFIX + server.name)
+        val name = SERVER_MESSAGES_FRAGMENT_PREFIX + server.name
+        var fragment = mgr.findFragmentByTag(name)
                 .asInstanceOf[MessagesFragment]
+
+        mgr.popBackStack(SERVER_SETUP_STACK,
+                FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        val tx = mgr.beginTransaction()
+        clearServerMessagesFragment(mgr, tx)
+
+        serverMessagesFragmentShowing = Some(name)
         if (fragment == null) {
             fragment = new MessagesFragment(server.messages)
-        } else
+            tx.add(R.id.servers_container, fragment, name)
+        } else {
             fragment.adapter = server.messages
-        if (fragment.isVisible()) return
+            main.postOnUiThread(() =>
+                    fragment.getListView().setSelection(
+                            fragment.adapter.getCount()-1))
+            if (fragment.isVisible()) return
+            tx.show(fragment)
+        }
 
-        mgr.popBackStack(SERVER_MESSAGES_STACK,
-                FragmentManager.POP_BACK_STACK_INCLUSIVE)
-
-        val tx = mgr.beginTransaction()
-        tx.add(R.id.servers_container, fragment,
-                SERVER_MESSAGES_FRAGMENT_PREFIX + server.name)
-        tx.addToBackStack(SERVER_MESSAGES_STACK)
         tx.commit()
     }
 
-    def addServerSetupFragment(_server: Server = null) {
-        var server = _server
+    def addServerSetupFragment(_s: Option[Server] = None) {
+        var server = _s
         val main = getActivity().asInstanceOf[MainActivity]
         val mgr = main.getSupportFragmentManager()
-        mgr.popBackStack(SERVER_MESSAGES_STACK,
-                FragmentManager.POP_BACK_STACK_INCLUSIVE)
         var fragment: ServerSetupFragment = null
         fragment = mgr.findFragmentByTag(SERVER_SETUP_FRAGMENT)
                 .asInstanceOf[ServerSetupFragment]
@@ -534,18 +633,19 @@ class ServersFragment extends ListFragment {
             fragment = new ServerSetupFragment
         if (fragment.isVisible()) return
 
-        if (server == null) {
+        if (server.isEmpty) {
             val listview = getListView()
             val checked = listview.getCheckedItemPosition()
             if (AdapterView.INVALID_POSITION != checked)
                 listview.setItemChecked(checked, false)
-            server = new Server
+            server = Some(new Server)
         }
         val tx = mgr.beginTransaction()
+        clearServerMessagesFragment(mgr, tx)
         tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
         tx.addToBackStack(SERVER_SETUP_STACK)
         tx.commit()
-        fragment.server = server
+        fragment.server = server.get
         if (honeycombAndNewer)
             thisview.getHandler().post(() =>
                     HoneycombSupport.invalidateActionBar())
@@ -557,6 +657,10 @@ class ServersFragment extends ListFragment {
     }
 
     def changeListener(server: Server) {
+        if (!_server.isEmpty && _server.get == server &&
+                server.state == Server.State.CONNECTED)
+            findView[View](getActivity(),
+                    R.id.input).setVisibility(View.VISIBLE)
         if (adapter != null)
             adapter.notifyDataSetChanged()
     }
@@ -574,8 +678,7 @@ class ServersFragment extends ListFragment {
             case R.id.server_delete     => {
                 var builder = new AlertDialog.Builder(getActivity())
                 val mgr = getActivity().getSupportFragmentManager()
-                mgr.popBackStack(SERVER_MESSAGES_STACK,
-                        FragmentManager.POP_BACK_STACK_INCLUSIVE)
+                clearServerMessagesFragment(mgr)
                 builder.setTitle(R.string.server_confirm_delete)
                 builder.setMessage(getActivity().getString(
                         R.string.server_confirm_delete_message, server.name))
@@ -590,9 +693,12 @@ class ServersFragment extends ListFragment {
                 builder.create().show()
                 true
             }
-            case R.id.server_connect    => {service.connect(server);true}
-            case R.id.server_disconnect => {service.disconnect(server);true}
-            case R.id.server_options    => {addServerSetupFragment(server);true}
+            case R.id.server_connect    => {service.connect(server); true}
+            case R.id.server_disconnect => {service.disconnect(server); true}
+            case R.id.server_options    => {
+                addServerSetupFragment(Some(server))
+                true
+            }
             case _ => false
         }
     }
@@ -612,7 +718,7 @@ class ServersFragment extends ListFragment {
             return true
         }
         getActivity().asInstanceOf[MainActivity]
-                .serversFragment.onServerMenuItemClicked(item, _server)
+                .serversFragment.onServerMenuItemClicked(item, _server.get)
     }
     override def onPrepareOptionsMenu(menu: Menu) {
         val activity = getActivity().asInstanceOf[MainActivity]
@@ -635,18 +741,18 @@ class ServersFragment extends ListFragment {
 
         if (!honeycombAndNewer) {
             if (getListView().getCheckedItemPosition() == -1)
-                _server = null
+                _server = None
 
-            val connected = _server != null && { _server.state match {
+            val connected = !_server.isEmpty && { _server.get.state match {
                 case Server.State.INITIAL      => false
                 case Server.State.DISCONNECTED => false
                 case _                         => true
             }}
 
-            menu.findItem(R.id.server_options).setVisible(_server != null)
-            menu.findItem(R.id.server_delete).setVisible(_server != null)
+            menu.findItem(R.id.server_options).setVisible(!_server.isEmpty)
+            menu.findItem(R.id.server_delete).setVisible(!_server.isEmpty)
             menu.findItem(R.id.server_connect).setVisible(
-                    !connected && _server != null)
+                    !connected && !_server.isEmpty)
             menu.findItem(R.id.server_disconnect).setVisible(connected)
         }
     }

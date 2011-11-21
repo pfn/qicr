@@ -1,6 +1,10 @@
 package com.hanhuy.android.irc.model
 
+import com.hanhuy.android.irc.IrcListeners
+
 import scala.collection.mutable.HashSet
+
+import MessageLike._
 
 object Channel {
     object State extends Enumeration {
@@ -13,6 +17,10 @@ abstract class ChannelLike(_server: Server, _name: String) {
     val messages = new MessageAdapter
     def name = _name
     def server = _server
+
+    val channelMessagesListeners = new HashSet[(ChannelLike,MessageLike) => Any]
+    var newMessages = false
+    var newMentions = false
     override def equals(o: Any): Boolean = {
         o match {
             case other: ChannelLike =>
@@ -21,6 +29,21 @@ abstract class ChannelLike(_server: Server, _name: String) {
         }
     }
     override def hashCode(): Int = name.hashCode()
+    def add(m: MessageLike) {
+        messages.add(m)
+        val msg = m match {
+        case Privmsg(src, msg)    => {newMessages = true; msg}
+        case CtcpAction(src, msg) => {newMessages = true; msg}
+        case Notice(src, msg)     => {newMessages = true; msg}
+        case _ => ""
+        }
+
+        if (IrcListeners.matchesNick(server, msg))
+            newMentions = true
+        channelMessagesListeners.foreach(_(this, m))
+    }
+
+    override def toString() = name
 }
 class Channel(s: Server, n: String) extends ChannelLike(s, n) {
     import Channel.State._

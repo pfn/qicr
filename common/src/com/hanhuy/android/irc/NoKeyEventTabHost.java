@@ -3,7 +3,6 @@ package com.hanhuy.android.irc;
 import android.view.View;
 import android.view.KeyEvent;
 import android.widget.TabHost;
-import android.widget.EditText;
 import android.util.AttributeSet;
 import android.content.Context;
 import android.util.Log;
@@ -17,16 +16,24 @@ public class NoKeyEventTabHost extends TabHost {
         super(c, a);
     }
 
+    private View input = null;
+    private View container = null;
+    private View getInput() {
+        if (input == null)
+            input = findViewById(R.id.input);
+        return input;
+    }
+    private View getContainer() {
+        if (container == null)
+            container = findViewById(R.id.top_container);
+        return container;
+    }
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
-        int key = e.getKeyCode();
-        boolean handled = false;
-        EditText t = (EditText) findViewById(R.id.input);
-        if (t.getVisibility() == View.VISIBLE) {
-            t.requestFocus(View.FOCUS_DOWN);
-            handled = t.dispatchKeyEvent(e);
+        if (getCurrentTab() != 0) {
+            getInput().requestFocus(View.FOCUS_DOWN);
+            return getInput().dispatchKeyEvent(e);
         }
-        //handled = handled || super.dispatchKeyEvent(e);
-        return handled;
+        return getContainer().dispatchKeyEvent(e);
     }
 }

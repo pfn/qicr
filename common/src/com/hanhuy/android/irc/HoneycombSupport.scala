@@ -52,7 +52,6 @@ object HoneycombSupport {
                 Boolean = {
             val inflater = new MenuInflater(_main)
             inflater.inflate(R.menu.server_menu, menu)
-            Log.i(TAG, "onCreateActionMode: " + menu)
             List(R.id.server_connect,
                  R.id.server_disconnect,
                  R.id.server_options).foreach(
