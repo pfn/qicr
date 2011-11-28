@@ -66,6 +66,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     }
 
     def serverStateChanged(server: Server) {
+        // TODO FIXME appears to not work
         server.state match {
         case Server.State.DISCONNECTED => {
             // iterate channels and flag them as disconnected
@@ -101,10 +102,10 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val t = tabs(pos)
         var title = t.title
 
-        if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 1) title = "*" + title
-        else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 1) title = "+" + title
+        if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0) title = "*" + title
+        else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0) title = "+" + title
 
-        if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 1) title = "(" + title + ")"
+        if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0) title = "(" + title + ")"
 
         setTabTitle(title, pos)
     }

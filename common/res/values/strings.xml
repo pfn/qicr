@@ -54,7 +54,11 @@
 
     <string name="message_template">&lt;%1$s&gt; %2$s</string>
     <string name="notice_template">-%1$s- %2$s</string>
-    <string name="action_template">* %1$s %2$s</string>
+    <string name="action_template"> * %1$s %2$s</string>
+    <string name="topic_template_2">
+        *** %1$s changed the topic of %2$s to: %3$s</string>
+    <string name="topic_template_1">
+        *** Topic for %1$s: %2$s</string>
 
     <string name="error_no_channel">
         You are not on a channel or query, try /help</string>
@@ -63,6 +67,8 @@
         You are not currently on this channel</string>
     <string name="error_command_unknown">%s: command unknown, see /help</string>
     <string name="error_join_unknown">Unknown JOIN error</string>
+    <string name="command_help_1">help</string>
+    <string name="command_help_2">h</string>
     <string name="command_join_1">join</string>
     <string name="command_join_2">j</string>
     <string name="command_leave_1">leave</string>

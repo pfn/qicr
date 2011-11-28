@@ -13,7 +13,7 @@ object HoneycombSupport {
     var _main: MainActivity = _
     var _server: WeakReference[Server] = _
     var _actionmode: WeakReference[ActionMode] = _
-    var menuItemListener: (MenuItem, Server) => Boolean = _
+    var menuItemListener: (MenuItem, Option[Server]) => Boolean = _
     def init(main: MainActivity) = _main = main
     def close() {
         menuItemListener = null
@@ -43,10 +43,7 @@ object HoneycombSupport {
         override def onActionItemClicked(mode: ActionMode, item: MenuItem) :
                 Boolean = {
             mode.finish()
-            _server.get match {
-                case Some(server) => menuItemListener(item, server)
-                case None         => false
-            }
+            menuItemListener(item, _server.get)
         }
         override def onCreateActionMode(mode: ActionMode, menu: Menu) :
                 Boolean = {

@@ -51,7 +51,7 @@ class MessageAdapter extends BaseAdapter {
             items.dequeue()
     }
 
-    /*protected[model]*/ def add(item: MessageLike) {
+    protected[model] def add(item: MessageLike) {
         items += item
         ensureSize()
         notifyDataSetChanged()
@@ -78,6 +78,14 @@ class MessageAdapter extends BaseAdapter {
                     R.string.notice_template, s, m)
             case CtcpAction(s, m) => context.getString(
                     R.string.action_template, s, m)
+            case Topic(chan, src, t)    => {
+                src match {
+                case Some(s) =>
+                        context.getString(R.string.topic_template_2, s, chan, t)
+                case None =>
+                        context.getString(R.string.topic_template_1, chan, t)
+                }
+            }
             case CommandError(m)  => m
             case ServerInfo(m)    => m
             case Motd(m)          => m

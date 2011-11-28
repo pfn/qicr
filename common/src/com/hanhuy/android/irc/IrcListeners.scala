@@ -7,6 +7,9 @@ import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.Motd
 import com.hanhuy.android.irc.model.MessageLike.Notice
+import com.hanhuy.android.irc.model.MessageLike.Topic
+
+import android.util.Log
 
 import com.sorcix.sirc._
 
@@ -14,6 +17,7 @@ import AndroidConversions._
 import IrcListeners._
 
 object IrcListeners {
+    val TAG = "IrcListeners"
     def matchesNick(server: Server, msg: String): Boolean = {
         val m = msg.toLowerCase()
         val nick = server.currentNick.toLowerCase()
@@ -47,6 +51,29 @@ with ServerListener with MessageListener with ModeListener {
         service.runOnUI(() =>
                 server.add(ServerInfo(
                         service.getString(R.string.server_connected))))
+        if (server.autorun != null || server.autojoin != null) {
+            val proc = new CommandProcessor(service)
+            proc.server = Some(server)
+            if (server.autorun != null) {
+                for (cmd <- server.autorun.split(";")) {
+                    if (cmd.trim().length() > 0) {
+                        var command = cmd.trim()
+                        if (command.charAt(0) != '/')
+                            command = "/" + command
+                        Log.w(TAG, "autorun command: " + command)
+                        proc.executeLine(command)
+                    }
+                }
+            }
+            if (server.autojoin != null) {
+                val join = service.getString(R.string.command_join_1)
+                val channels = server.autojoin.split(";")
+                for (c <- channels) {
+                    if (c.trim().length() > 0)
+                        proc.executeCommand(join, Some(c.trim()))
+                }
+            }
+        }
     }
     override def onDisconnect(c: IrcConnection) {
         service._connections.get(c) match {
@@ -85,7 +112,11 @@ with ServerListener with MessageListener with ModeListener {
         }
     }
     override def onTopic(c: IrcConnection, channel: Channel,
-            src: User, topic: String) = Unit // TODO
+            src: User, topic: String) {
+        val c = service._channels(channel)
+        service.runOnUI(() => c.add(Topic(channel.getName(),
+                if (src != null) Some(src.getNick()) else None, topic)))
+    }
     override def onMode(c: IrcConnection, channel: Channel,
             src: User, mode: String) = Unit // TODO
     override def onMotd(c: IrcConnection, motd: String) {

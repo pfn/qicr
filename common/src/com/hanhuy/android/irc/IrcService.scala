@@ -76,10 +76,7 @@ class IrcService extends Service {
     }
 
     var _activity: WeakReference[MainActivity] = _
-    def activity = _activity.get match {
-        case Some(a) => a
-        case None    => null
-    }
+    def activity = if (_activity == null) None else _activity.get
 
     def removeConnection(server: Server) {
         connections.get(server) match {
@@ -100,18 +97,29 @@ class IrcService extends Service {
             IrcService.this
         }
     }
-    def bind(main: MainActivity) = _activity = new WeakReference(main)
-
-    override def onBind(intent: Intent) : IBinder = {
+    def bind(main: MainActivity) = {
+        _activity = new WeakReference(main)
         if (!running) {
             for (server <- _servers)
                 if (server.autoconnect) connect(server)
         }
+    }
+
+    def unbind() {
+        _activity = null
+        // hopefully only UI uses these listeners
+        serverAddedListeners.clear()
+        serverChangedListeners.clear()
+        serverRemovedListeners.clear()
+    }
+
+    override def onBind(intent: Intent) : IBinder = {
         new LocalService()
     }
+
     override def onCreate() {
         super.onCreate()
-        Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler _)
+        //Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler _)
         config = new Config(this)
     }
     override def onDestroy() {
@@ -127,7 +135,7 @@ class IrcService extends Service {
         disconnectCount = 0
         if (!cb.isEmpty) {
             new Thread(() => {
-                synchronized {
+                synchronized { // TODO wait for quit to actually complete?
                     while (disconnectCount < count)
                         wait()
                 }
@@ -222,7 +230,7 @@ class IrcService extends Service {
 
     def channelMessagesListener(c: ChannelLike, m: MessageLike) {
         if (!showing) return
-        activity.adapter.refreshTabTitle(c)
+        activity.get.adapter.refreshTabTitle(c)
     }
 
     def addQuery(c: IrcConnection, _nick: String, msg: String,
@@ -245,7 +253,7 @@ class IrcService extends Service {
 
         runOnUI(() => {
             if (showing)
-                activity.adapter.addChannel(query)
+                activity.get.adapter.addChannel(query)
 
             val m = if (notice) Notice(nick, msg)
             else if (action) CtcpAction(nick, msg)
@@ -276,7 +284,7 @@ class IrcService extends Service {
 
         runOnUI(() => {
             if (showing)
-                activity.adapter.addChannel(channel)
+                activity.get.adapter.addChannel(channel)
             channel match {
                 case c: Channel => c.state = Channel.State.JOINED
                 case _ => Unit
@@ -298,10 +306,12 @@ class IrcService extends Service {
         serverRemovedListeners.foreach(_(server))
     }
 
+    // run on ui thread if an activity is visible, otherwise directly
     def runOnUI[A](f: () => A) {
-        val a = activity
-        if (a != null)
-            a.runOnUiThread(f)
+        if (!activity.isEmpty && showing)
+            activity.get.runOnUiThread(f)
+        else
+            f() // no UI, just run it
     }
 
     def uncaughtExceptionHandler(t: Thread, e: Throwable) {
@@ -347,7 +357,7 @@ class IrcService extends Service {
 class ConnectTask(server: Server, service: IrcService)
 extends AsyncTask[Object, Object, Server.State.State] {
     IrcConnection.ABOUT = service.getString(R.string.version, "0.1alpha")
-    //IrcDebug.setEnabled(true)
+    IrcDebug.setEnabled(true)
     protected override def doInBackground(args: Object*) :
             Server.State.State = {
         val ircserver = new IrcServer(server.hostname, server.port,

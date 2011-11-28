@@ -201,6 +201,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         super.onDestroy()
         if (honeycombAndNewer)
             HoneycombSupport.close()
+        service.unbind()
         unbindService(this)
     }
 
@@ -358,6 +359,7 @@ class ServerSetupFragment extends Fragment {
     }
 
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        if (menu.findItem(R.id.save_server) != null) return
         inflater.inflate(R.menu.server_setup_menu, menu)
         List(R.id.save_server, R.id.cancel_server).foreach(item =>
                  MenuCompat.setShowAsAction(menu.findItem(item),
@@ -399,7 +401,7 @@ class ServerSetupFragment extends Fragment {
     }
 }
 
-class MessagesFragment(_a: MessageAdapter) extends ListFragment {
+class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     var _adapter = _a
     def adapter = _adapter
     def adapter_=(a: MessageAdapter) = {
@@ -412,7 +414,6 @@ class MessagesFragment(_a: MessageAdapter) extends ListFragment {
                 _adapter.getCount()-1 else 0)
     }
     var id = -1
-    def this() = this(null)
 
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View =
@@ -451,9 +452,8 @@ class MessagesFragment(_a: MessageAdapter) extends ListFragment {
     }
 }
 
-class ChannelFragment(a: MessageAdapter, c: Channel)
+class ChannelFragment(a: MessageAdapter = null, c: Channel = null)
 extends MessagesFragment(a) {
-    def this() = this(null, null)
     var channel = c
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
@@ -467,6 +467,7 @@ extends MessagesFragment(a) {
         }
     }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
+        if (menu.findItem(R.id.channel_leave) != null) return
         inflater.inflate(R.menu.channel_menu, menu)
         List(R.id.channel_leave,
              R.id.channel_close).foreach(item =>
@@ -498,9 +499,8 @@ extends MessagesFragment(a) {
         false
     }
 }
-class QueryFragment(a: MessageAdapter, q: Query) extends MessagesFragment(a) {
-    def this() = this(null, null)
-
+class QueryFragment(a: MessageAdapter = null, q: Query = null)
+extends MessagesFragment(a) {
     override def onActivityCreated(bundle: Bundle) {
         super.onActivityCreated(bundle)
         if (id != -1 && q != null) {
@@ -658,7 +658,7 @@ class ServersFragment extends ListFragment {
 
     def changeListener(server: Server) {
         if (!_server.isEmpty && _server.get == server &&
-                server.state == Server.State.CONNECTED)
+                server.state == Server.State.CONNECTED && getActivity() != null)
             findView[View](getActivity(),
                     R.id.input).setVisibility(View.VISIBLE)
         if (adapter != null)
@@ -673,7 +673,8 @@ class ServersFragment extends ListFragment {
         adapter.notifyDataSetChanged()
     }
 
-    def onServerMenuItemClicked(item: MenuItem, server: Server): Boolean = {
+    def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
+            Boolean = {
         item.getItemId() match {
             case R.id.server_delete     => {
                 var builder = new AlertDialog.Builder(getActivity())
@@ -681,10 +682,11 @@ class ServersFragment extends ListFragment {
                 clearServerMessagesFragment(mgr)
                 builder.setTitle(R.string.server_confirm_delete)
                 builder.setMessage(getActivity().getString(
-                        R.string.server_confirm_delete_message, server.name))
+                        R.string.server_confirm_delete_message,
+                        server.get.name))
                 builder.setPositiveButton(R.string.yes,
                         (d: DialogInterface, id: Int) => {
-                    service.deleteServer(server)
+                    service.deleteServer(server.get)
                 })
                 builder.setNegativeButton(R.string.no, 
                         (d: DialogInterface, id: Int) => {
@@ -693,10 +695,16 @@ class ServersFragment extends ListFragment {
                 builder.create().show()
                 true
             }
-            case R.id.server_connect    => {service.connect(server); true}
-            case R.id.server_disconnect => {service.disconnect(server); true}
+            case R.id.server_connect    => {
+                service.connect(server.get)
+                true
+            }
+            case R.id.server_disconnect => {
+                service.disconnect(server.get)
+                true
+            }
             case R.id.server_options    => {
-                addServerSetupFragment(Some(server))
+                addServerSetupFragment(server)
                 true
             }
             case _ => false
@@ -718,7 +726,7 @@ class ServersFragment extends ListFragment {
             return true
         }
         getActivity().asInstanceOf[MainActivity]
-                .serversFragment.onServerMenuItemClicked(item, _server.get)
+                .serversFragment.onServerMenuItemClicked(item, _server)
     }
     override def onPrepareOptionsMenu(menu: Menu) {
         val activity = getActivity().asInstanceOf[MainActivity]

@@ -7,6 +7,7 @@ import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
 
+import android.content.Context
 import android.view.View
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
@@ -17,16 +18,15 @@ import com.sorcix.sirc.IrcConnection
 import com.sorcix.sirc.{User => SircUser}
 
 import scala.collection.mutable.HashMap
+import scala.ref.WeakReference
 
 trait Command {
     def execute(args: Option[String])
 }
 class InputProcessor(activity: MainActivity) {
     val TAG = "InputProcessor"
-    val commands = new HashMap[String,Command]
 
-    var channel: Option[ChannelLike] = None
-    var server: Option[Server] = None
+    val processor = new CommandProcessor(activity)
 
     def onEditorActionListener(v: View, action: Int, e: KeyEvent):
             Boolean = {
@@ -36,22 +36,24 @@ class InputProcessor(activity: MainActivity) {
             Unit // ignored
         if (action == EditorInfo.IME_NULL) {
             val line = input.getText()
-            val f = activity.adapter.getItem(activity.adapter.page)
-            f match {
-            case s: ServersFragment => { server = s._server; channel = None }
+            activity.adapter.getItem(activity.adapter.page) match {
+            case s: ServersFragment => {
+                processor.server = s._server
+                processor.channel = None
+            }
             case c: ChannelFragment => {
                 val ch = activity.service.chans(c.id)
-                server = Some(ch.server)
-                channel = Some(ch)
+                processor.server = Some(ch.server)
+                processor.channel = Some(ch)
             }
             case q: QueryFragment => {
                 val qu = activity.service.chans(q.id)
-                server = Some(qu.server)
-                channel = Some(qu)
+                processor.server = Some(qu.server)
+                processor.channel = Some(qu)
             }
-            case _ => { server = None; channel = None}
+            case _ => { processor.server = None; processor.channel = None }
             }
-            processLine(line.toString())
+            processor.executeLine(line.toString())
             input.setText(null)
         }
         false // return false so the keyboard can collapse
@@ -61,7 +63,7 @@ class InputProcessor(activity: MainActivity) {
         val input = v.asInstanceOf[EditText]
         Log.i(TAG, "key: " + k + " e: " + e)
         // keyboard shortcuts / honeycomb and above only
-        // TAB / SEARCH nick completion
+        // TAB / SEARCH nick completion TODO
         if (KeyEvent.ACTION_UP == e.getAction()) {
             val meta = e.getMetaState()
             val altOn   = (meta & KeyEvent.META_ALT_ON)   > 0
@@ -115,9 +117,33 @@ class InputProcessor(activity: MainActivity) {
         false
     }
 
-    // accept a nullable string in case input comes from elsewhere
-    // that isn't pre-cleaned
-    def processLine(line: String) {
+}
+
+// set ctx, server and channel prior to invoking executeLine
+class CommandProcessor(c: Context) {
+    val TAG = "CommandProcessor"
+    val commands = new HashMap[String,Command]
+    val ctx = new WeakReference(c)
+
+    def getString(res: Int, args: String*) = ctx.get.get.getString(res, args)
+    var channel: Option[ChannelLike] = None
+    var server: Option[Server] = None
+
+    def service: IrcService = {
+        ctx.get.get match {
+        case s: IrcService => s
+        case a: MainActivity => a.service
+        }
+    }
+    def activity: MainActivity = {
+        ctx.get.get match {
+        case s: IrcService => s.activity.get
+        case a: MainActivity => a
+        }
+    }
+
+    // accept a nullable string in case of input that isn't pre-cleaned
+    def executeLine(line: String) {
         if (line == null || line.trim().length() == 0) return
         if (line.charAt(0) == '/') {
             val idx = line.indexOf(" ")
@@ -132,80 +158,55 @@ class InputProcessor(activity: MainActivity) {
             }
             cmd = cmd.toLowerCase()
             if (cmd.length() == 0 || cmd.charAt(0) == ' ') {
-                cmd = activity.getString(R.string.command_quote)
+                cmd = getString(R.string.command_quote)
                 val a = line.substring(2)
                 if (a.trim().length() == 0)
                     args = None
                 else
                     args = Some(a)
             }
-            processCommand(cmd, args)
+            executeCommand(cmd, args)
         } else {
             sendMessage(Some(line))
         }
     }
 
     def addCommandError(error: String) {
-        getCurrentAdapter() match {
-        case Some(a) => a.add(CommandError(error)) // TODO don't use adapter
-        case None => Unit
-        }
-    }
-    def getCurrentAdapter(): Option[MessageAdapter] = {
-        val f = activity.adapter.getItem(activity.adapter.page)
-        f match {
-        case c: ChannelFragment => Some(c.adapter)
-        case q: QueryFragment => Some(q.adapter)
-        case s: ServersFragment => {
-            if (s.serverMessagesFragmentShowing.isEmpty)
-                None
-            else {
-                val tag = s.serverMessagesFragmentShowing.get
-                val fm = activity.getSupportFragmentManager()
-                val g = fm.findFragmentByTag(tag).asInstanceOf[MessagesFragment]
-                if (g != null) Some(g.adapter) else None
-            }
-        }
-        case _ => None
-        }
-    }
-    def getCurrentServer(): Option[Server] = {
-        activity.adapter.getItem(activity.adapter.page) match {
-        case f: ChannelFragment => Some(activity.service.chans(f.id).server)
-        case f: QueryFragment => Some(activity.service.chans(f.id).server)
-        case f: ServersFragment => f._server
-        case _ => None
-        }
+        if (!channel.isEmpty)
+            channel.get.add(CommandError(error))
+        else if (!server.isEmpty)
+            server.get.add(CommandError(error))
+        else Log.w(TAG, "Unable to addCommandError, no server or channel")
     }
 
     def sendMessage(line: Option[String], action: Boolean = false) {
         if (line.isEmpty) return
 
-        val f = activity.adapter.getItem(activity.adapter.page)
-        f match {
-        case c: ChannelFragment => {
-            val ch = activity.service.chans(c.id).asInstanceOf[Channel]
-            val channel = activity.service.channels(ch)
+        if (channel.isEmpty)
+            return addCommandError(getString(R.string.error_no_channel))
+
+        channel.get match {
+        case ch: Channel => {
+            val chan = service.channels(ch)
             if (ch.server.state != Server.State.CONNECTED)
-                return addCommandError(activity.getString(
+                return addCommandError(getString(
                         R.string.error_server_disconnected))
-            if (ch.asInstanceOf[Channel].state != Channel.State.JOINED)
-                return addCommandError(activity.getString(
+            if (ch.state != Channel.State.JOINED)
+                return addCommandError(getString(
                         R.string.error_channel_disconnected))
             if (action) {
                 ch.add(CtcpAction(ch.server.currentNick, line.get))
-                channel.sendAction(line.get)
+                chan.sendAction(line.get)
             } else {
                 ch.add(Privmsg(ch.server.currentNick, line.get))
-                channel.sendMessage(line.get)
+                chan.sendMessage(line.get)
             }
         }
-        case q: QueryFragment => {
-            val query = activity.service.chans(q.id).asInstanceOf[Query]
+        case query: Query => {
             if (query.server.state != Server.State.CONNECTED)
-                return addCommandError(activity.getString(
+                return addCommandError(getString(
                         R.string.error_server_disconnected))
-            val conn = activity.service.connections(query.server)
+            val conn = service.connections(query.server)
             val user = conn.createUser(query.name)
             if (action) {
                 query.add(CtcpAction(query.server.currentNick, line.get))
@@ -216,7 +217,7 @@ class InputProcessor(activity: MainActivity) {
             }
         }
         case _ =>
-                addCommandError(activity.getString(R.string.error_no_channel))
+                addCommandError(getString(R.string.error_no_channel))
         }
     }
 
@@ -224,101 +225,95 @@ class InputProcessor(activity: MainActivity) {
         sendMessage(line, true)
     }
 
-    def processCommand(cmd: String, args: Option[String]) {
+    def executeCommand(cmd: String, args: Option[String]) {
         commands.get(cmd) match {
         case Some(c) => c.execute(args)
         case None => addCommandError(
-                activity.getString(R.string.error_command_unknown, cmd))
+                getString(R.string.error_command_unknown, cmd))
         }
     }
 
+    def getCurrentServer() = {
+        channel match {
+        case Some(c) => Some(c.server)
+        case None => server
+        }
+    }
     object JoinCommand extends Command {
         override def execute(args: Option[String]) {
             if (args.isEmpty)
-                return addCommandError(activity.getString(R.string.usage_join))
+                return addCommandError(getString(R.string.usage_join))
 
-            var channel = args.get
-            val idx = channel.indexOf(" ")
+            var chan = args.get
+            val idx = chan.indexOf(" ")
             var password: Option[String] = None
             if (idx != -1) {
-                password = Some(channel.substring(idx + 1))
-                channel = channel.substring(0, idx)
+                password = Some(chan.substring(idx + 1))
+                chan = chan.substring(0, idx)
             }
-            val first = channel.charAt(0)
+            val first = chan.charAt(0)
             if (first != '#' && first != '&')
-                channel = "#" + channel
+                chan = "#" + chan
 
-            val f = activity.adapter.getItem(activity.adapter.page)
             var conn: Option[IrcConnection] = None
-            f match {
-            case s: ServersFragment => {
-                if (s._server.isEmpty)
-                    return addCommandError(
-                            activity.getString(R.string.error_join_unknown))
-                conn = Some(activity.service.connections(s._server.get))
-            }
-            case c: ChannelFragment => {
-                val ch = activity.service.chans(c.id)
-                conn = Some(activity.service.connections(ch.server))
-            }
-            case q: QueryFragment => {
-                val qu = activity.service.chans(q.id)
-                conn = Some(activity.service.connections(qu.server))
-            }
-            case _ => Unit
-            }
+            Log.w(TAG, "JoinCommand")
+
+            val s = getCurrentServer()
+            if (!s.isEmpty)
+                conn = service.connections.get(s.get)
 
             if (!conn.isEmpty) {
-                val c = conn.get.createChannel(channel)
+                val c = conn.get.createChannel(chan)
+                Log.w(TAG, "Joining: " + chan)
                 if (!password.isEmpty)
                     c.join(password.get)
                 else
                     c.join()
             } else {
-                addCommandError(activity.getString(R.string.error_join_unknown))
+                addCommandError(getString(R.string.error_join_unknown))
             }
         }
     }
-    commands += ((activity.getString(R.string.command_join_1), JoinCommand),
-                 (activity.getString(R.string.command_join_2), JoinCommand))
+    commands += ((getString(R.string.command_join_1), JoinCommand),
+                 (getString(R.string.command_join_2), JoinCommand))
 
     object PartCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((activity.getString(R.string.command_leave_1), PartCommand),
-                 (activity.getString(R.string.command_leave_2), PartCommand))
+    commands += ((getString(R.string.command_leave_1), PartCommand),
+                 (getString(R.string.command_leave_2), PartCommand))
 
     object QuitCommand extends Command {
         override def execute(args: Option[String]) = activity.exit(args)
     }
-    commands += ((activity.getString(R.string.command_quit), QuitCommand))
+    commands += ((getString(R.string.command_quit), QuitCommand))
 
     object QuoteCommand extends Command {
         override def execute(args: Option[String]) = sendMessage(args)
     }
-    commands += ((activity.getString(R.string.command_quote), QuoteCommand))
+    commands += ((getString(R.string.command_quote), QuoteCommand))
 
     def messageCommandSend(args: Option[String], notice: Boolean = false) {
         val usage = if (notice) R.string.usage_notice else R.string.usage_msg
 
         if (args.isEmpty)
-            return addCommandError(activity.getString(usage))
+            return addCommandError(getString(usage))
         val a = args.get
         val idx = a.indexOf(" ")
         if (idx == -1)
-            return addCommandError(activity.getString(usage))
+            return addCommandError(getString(usage))
         val target = a.substring(0, idx)
         val line = a.substring(idx + 1)
         if (line.trim().length() == 0)
-            return addCommandError(activity.getString(usage))
+            return addCommandError(getString(usage))
         getCurrentServer() match {
         case Some(s) => {
             if (s.state != Server.State.CONNECTED)
-                return addCommandError(activity.getString(
+                return addCommandError(getString(
                         R.string.error_server_disconnected))
 
-            val c = activity.service.connections(s)
-            activity.service.addQuery(c, target, line, sending = true)
+            val c = service.connections(s)
+            service.addQuery(c, target, line, sending = true)
             val user = c.createUser(target)
             if (notice) user.sendNotice(line)
             else user.sendMessage(line)
@@ -330,41 +325,38 @@ class InputProcessor(activity: MainActivity) {
     object MessageCommand extends Command {
         override def execute(args: Option[String]) = messageCommandSend(args)
     }
-    commands += ((activity.getString(R.string.command_msg_1), MessageCommand),
-                 (activity.getString(R.string.command_msg_2), MessageCommand))
+    commands += ((getString(R.string.command_msg_1), MessageCommand),
+                 (getString(R.string.command_msg_2), MessageCommand))
 
     object NoticeCommand extends Command {
         override def execute(args: Option[String]) =
                 messageCommandSend(args, true)
     }
-    commands += ((activity.getString(R.string.command_notice), NoticeCommand))
+    commands += ((getString(R.string.command_notice), NoticeCommand))
 
     object ActionCommand extends Command {
         override def execute(args: Option[String]) = sendAction(args)
     }
-    commands += ((activity.getString(R.string.command_action_1), ActionCommand),
-                 (activity.getString(R.string.command_action_2), ActionCommand))
+    commands += ((getString(R.string.command_action_1), ActionCommand),
+                 (getString(R.string.command_action_2), ActionCommand))
 
     object PingCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((activity.getString(R.string.command_ping), PingCommand))
+    commands += ((getString(R.string.command_ping), PingCommand))
 
     object TopicCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((activity.getString(R.string.command_topic), TopicCommand))
+    commands += ((getString(R.string.command_topic), TopicCommand))
 
     object InviteCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((activity.getString(R.string.command_invite), InviteCommand))
+    commands += ((getString(R.string.command_invite), InviteCommand))
 
     object IgnoreCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((activity.getString(R.string.command_ignore), IgnoreCommand))
-}
-
-class CommandProcessor {
+    commands += ((getString(R.string.command_ignore), IgnoreCommand))
 }
