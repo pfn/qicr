@@ -55,7 +55,12 @@ class Channel(s: Server, n: String) extends ChannelLike(s, n) {
         _state = state
     }
 }
-class Query(s: Server, n: String) extends ChannelLike(s, n)
+class Query(s: Server, n: String) extends ChannelLike(s, n) {
+    override def add(m: MessageLike) {
+        newMentions = true // always true in a query
+        super.add(m)
+    }
+}
 
 class ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
     private def stripInitial(_name: String): String = {

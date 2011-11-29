@@ -241,7 +241,7 @@ class IrcService extends Service {
         val query = queries.get((server, _nick.toLowerCase())) match {
             case Some(q) => q
             case None => {
-                val q = new Query(server, _nick.toLowerCase())
+                val q = new Query(server, _nick)
                 queries += (((server, _nick.toLowerCase()),q))
                 q.channelMessagesListeners += channelMessagesListener
                 q

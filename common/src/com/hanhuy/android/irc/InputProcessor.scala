@@ -26,7 +26,7 @@ trait Command {
 class InputProcessor(activity: MainActivity) {
     val TAG = "InputProcessor"
 
-    val processor = new CommandProcessor(activity)
+    val processor = CommandProcessor(activity)
 
     def onEditorActionListener(v: View, action: Int, e: KeyEvent):
             Boolean = {
@@ -119,13 +119,17 @@ class InputProcessor(activity: MainActivity) {
 
 }
 
+object CommandProcessor {
+    // context would be a hard-ref as a ctor arg
+    def apply(c: Context) = new CommandProcessor(new WeakReference(c))
+}
 // set ctx, server and channel prior to invoking executeLine
-class CommandProcessor(c: Context) {
+sealed class CommandProcessor(ctx: WeakReference[Context]) {
     val TAG = "CommandProcessor"
     val commands = new HashMap[String,Command]
-    val ctx = new WeakReference(c)
 
-    def getString(res: Int, args: String*) = ctx.get.get.getString(res, args)
+    def getString(res: Int, args: String*) =
+            ctx.get.get.getString(res, args: _*)
     var channel: Option[ChannelLike] = None
     var server: Option[Server] = None
 
@@ -147,7 +151,7 @@ class CommandProcessor(c: Context) {
         if (line == null || line.trim().length() == 0) return
         if (line.charAt(0) == '/') {
             val idx = line.indexOf(" ")
-            var cmd = line
+            var cmd = line.substring(1)
             var args: Option[String] = None
             if (idx != -1) {
                 cmd = line.substring(1, idx)
@@ -229,7 +233,7 @@ class CommandProcessor(c: Context) {
         commands.get(cmd) match {
         case Some(c) => c.execute(args)
         case None => addCommandError(
-                getString(R.string.error_command_unknown, cmd))
+                getString(R.string.error_command_unknown, cmd, "foo"))
         }
     }
 
@@ -256,7 +260,6 @@ class CommandProcessor(c: Context) {
                 chan = "#" + chan
 
             var conn: Option[IrcConnection] = None
-            Log.w(TAG, "JoinCommand")
 
             val s = getCurrentServer()
             if (!s.isEmpty)
@@ -264,7 +267,6 @@ class CommandProcessor(c: Context) {
 
             if (!conn.isEmpty) {
                 val c = conn.get.createChannel(chan)
-                Log.w(TAG, "Joining: " + chan)
                 if (!password.isEmpty)
                     c.join(password.get)
                 else
@@ -274,24 +276,18 @@ class CommandProcessor(c: Context) {
             }
         }
     }
-    commands += ((getString(R.string.command_join_1), JoinCommand),
-                 (getString(R.string.command_join_2), JoinCommand))
 
     object PartCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((getString(R.string.command_leave_1), PartCommand),
-                 (getString(R.string.command_leave_2), PartCommand))
 
     object QuitCommand extends Command {
         override def execute(args: Option[String]) = activity.exit(args)
     }
-    commands += ((getString(R.string.command_quit), QuitCommand))
 
     object QuoteCommand extends Command {
         override def execute(args: Option[String]) = sendMessage(args)
     }
-    commands += ((getString(R.string.command_quote), QuoteCommand))
 
     def messageCommandSend(args: Option[String], notice: Boolean = false) {
         val usage = if (notice) R.string.usage_notice else R.string.usage_msg
@@ -318,45 +314,88 @@ class CommandProcessor(c: Context) {
             if (notice) user.sendNotice(line)
             else user.sendMessage(line)
         }
-        case None => Unit
+        case None => addCommandError(getString(
+                R.string.error_server_disconnected))
         }
     }
 
     object MessageCommand extends Command {
         override def execute(args: Option[String]) = messageCommandSend(args)
     }
-    commands += ((getString(R.string.command_msg_1), MessageCommand),
-                 (getString(R.string.command_msg_2), MessageCommand))
 
     object NoticeCommand extends Command {
         override def execute(args: Option[String]) =
                 messageCommandSend(args, true)
     }
-    commands += ((getString(R.string.command_notice), NoticeCommand))
 
     object ActionCommand extends Command {
         override def execute(args: Option[String]) = sendAction(args)
     }
-    commands += ((getString(R.string.command_action_1), ActionCommand),
-                 (getString(R.string.command_action_2), ActionCommand))
 
     object PingCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((getString(R.string.command_ping), PingCommand))
 
     object TopicCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((getString(R.string.command_topic), TopicCommand))
 
     object InviteCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((getString(R.string.command_invite), InviteCommand))
+
+    object CtcpCommand extends Command {
+        override def execute(args: Option[String]) = Unit
+    }
+
+    object NickCommand extends Command {
+        override def execute(args: Option[String]) = Unit
+    }
+
+    object KickCommand extends Command {
+        override def execute(args: Option[String]) = Unit
+    }
+
+    object WhowasCommand extends Command {
+        override def execute(args: Option[String]) = Unit
+    }
+
+    object WhoisCommand extends Command {
+        override def execute(args: Option[String]) = Unit
+    }
 
     object IgnoreCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
-    commands += ((getString(R.string.command_ignore), IgnoreCommand))
+
+    object HelpCommand extends Command {
+        override def execute(args: Option[String]) =
+                addCommandError(getString(R.string.help_text))
+    }
+
+    commands += ((getString(R.string.command_ignore),   IgnoreCommand)
+                ,(getString(R.string.command_whowas),   WhowasCommand)
+                ,(getString(R.string.command_whois_1),  WhoisCommand)
+                ,(getString(R.string.command_whois_2),  WhoisCommand)
+                ,(getString(R.string.command_join_1),   JoinCommand)
+                ,(getString(R.string.command_join_2),   JoinCommand)
+                ,(getString(R.string.command_help_1),   HelpCommand)
+                ,(getString(R.string.command_help_2),   HelpCommand)
+                ,(getString(R.string.command_nick),     NickCommand)
+                ,(getString(R.string.command_kick_1),   KickCommand)
+                ,(getString(R.string.command_kick_2),   KickCommand)
+                ,(getString(R.string.command_leave_1),  PartCommand)
+                ,(getString(R.string.command_leave_2),  PartCommand)
+                ,(getString(R.string.command_quit),     QuitCommand)
+                ,(getString(R.string.command_quote),    QuoteCommand)
+                ,(getString(R.string.command_msg_1),    MessageCommand)
+                ,(getString(R.string.command_msg_2),    MessageCommand)
+                ,(getString(R.string.command_notice),   NoticeCommand)
+                ,(getString(R.string.command_action_1), ActionCommand)
+                ,(getString(R.string.command_action_2), ActionCommand)
+                ,(getString(R.string.command_ping),     PingCommand)
+                ,(getString(R.string.command_ctcp),     CtcpCommand)
+                ,(getString(R.string.command_topic),    TopicCommand)
+                ,(getString(R.string.command_invite),   InviteCommand)
+                )
 }

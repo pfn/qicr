@@ -26,7 +26,8 @@ class Server {
     def state_=(state: State) = {
         val oldstate = _state
         _state = state
-        stateChangedListeners.foreach(_(this, oldstate))
+        if (oldstate != state)
+            stateChangedListeners.foreach(_(this, oldstate))
     }
 
     var id: Long = -1

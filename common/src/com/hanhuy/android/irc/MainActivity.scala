@@ -402,6 +402,7 @@ class ServerSetupFragment extends Fragment {
 }
 
 class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
+    def this() = this(null)
     var _adapter = _a
     def adapter = _adapter
     def adapter_=(a: MessageAdapter) = {
@@ -438,6 +439,11 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
             onServiceConnected(activity.service)
     }
 
+    override def onResume() {
+        super.onResume()
+        if (adapter != null)
+            getListView().setSelection(adapter.getCount()-1)
+    }
     override def onSaveInstanceState(bundle: Bundle) {
         super.onSaveInstanceState(bundle)
         bundle.putInt("id", id)
@@ -452,8 +458,9 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     }
 }
 
-class ChannelFragment(a: MessageAdapter = null, c: Channel = null)
+class ChannelFragment(a: MessageAdapter, c: Channel)
 extends MessagesFragment(a) {
+    def this() = this(null, null)
     var channel = c
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
@@ -464,6 +471,7 @@ extends MessagesFragment(a) {
         if (id != -1 && channel != null) {
             val activity = getActivity().asInstanceOf[MainActivity]
             activity.service.chans += ((id, channel))
+            a.channel = Some(channel)
         }
     }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
@@ -499,14 +507,59 @@ extends MessagesFragment(a) {
         false
     }
 }
-class QueryFragment(a: MessageAdapter = null, q: Query = null)
+class QueryFragment(a: MessageAdapter, q: Query)
 extends MessagesFragment(a) {
+    def this() = this(null, null)
+
+    override def onCreate(bundle: Bundle) {
+        super.onCreate(bundle)
+        setHasOptionsMenu(true)
+    }
     override def onActivityCreated(bundle: Bundle) {
         super.onActivityCreated(bundle)
         if (id != -1 && q != null) {
             val activity = getActivity().asInstanceOf[MainActivity]
             activity.service.chans += ((id, q))
+            a.channel = Some(q)
         }
+    }
+
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
+        if (menu.findItem(R.id.query_close) != null) return
+        inflater.inflate(R.menu.query_menu, menu)
+        List(R.id.query_close).foreach(item =>
+                     MenuCompat.setShowAsAction(menu.findItem(item),
+                             MenuItem.SHOW_AS_ACTION_IF_ROOM |
+                             MenuItem.SHOW_AS_ACTION_WITH_TEXT))
+    }
+
+    override def onOptionsItemSelected(item: MenuItem): Boolean = {
+        if (R.id.query_close == item.getItemId()) {
+            if (true) { // TODO check preference
+                val activity = getActivity().asInstanceOf[MainActivity]
+                var builder = new AlertDialog.Builder(activity)
+                builder.setTitle(R.string.query_close_confirm_title)
+                builder.setMessage(getString(R.string.query_close_confirm))
+                builder.setPositiveButton(R.string.yes,
+                        (d: DialogInterface, resid: Int) => {
+                    val query = activity.service.chans(id).asInstanceOf[Query]
+                    activity.service.queries  -=
+                            ((query.server, query.name.toLowerCase()))
+                    activity.service.messages -= id
+                    activity.service.chans    -= id
+                    activity.service.channels -= query
+                    activity.adapter.removeTab(
+                            activity.adapter.getItemPosition(this))
+                })
+                builder.setNegativeButton(R.string.no, 
+                        (d: DialogInterface, resid: Int) => {
+                })
+                builder.create().show()
+                return true
+            }
+            return true
+        }
+        false
     }
 }
 
@@ -612,9 +665,6 @@ class ServersFragment extends ListFragment {
             tx.add(R.id.servers_container, fragment, name)
         } else {
             fragment.adapter = server.messages
-            main.postOnUiThread(() =>
-                    fragment.getListView().setSelection(
-                            fragment.adapter.getCount()-1))
             if (fragment.isVisible()) return
             tx.show(fragment)
         }

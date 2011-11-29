@@ -18,7 +18,12 @@ import IrcListeners._
 
 object IrcListeners {
     val TAG = "IrcListeners"
-    def matchesNick(server: Server, msg: String): Boolean = {
+    // TODO FIXME only looks for the first instance in a string
+    // won't match if the first match is bogus but there's a real
+    // match later on in the string.  e.g. with a nick of "foo"
+    // and a message of "foobar sucks bad, foo" -- the line will not report
+    // a match
+    def matchesNickIndex(server: Server, msg: String): Int = {
         val m = msg.toLowerCase()
         val nick = server.currentNick.toLowerCase()
 
@@ -40,7 +45,10 @@ object IrcListeners {
             }
         }
 
-        matches
+        if (matches) idx else -1
+    }
+    def matchesNick(server: Server, msg: String): Boolean = {
+        return matchesNickIndex(server, msg) != -1
     }
 }
 class IrcListeners(service: IrcService) extends AdvancedListener
@@ -48,11 +56,14 @@ with ServerListener with MessageListener with ModeListener {
     // ServerListener
     override def onConnect(c: IrcConnection) {
         val server = service._connections(c)
-        service.runOnUI(() =>
-                server.add(ServerInfo(
-                        service.getString(R.string.server_connected))))
+        service.runOnUI(() => {
+            // ugh, need to do it here so that the auto commands can run
+            server.state = Server.State.CONNECTED
+            server.add(ServerInfo(
+                    service.getString(R.string.server_connected)))
+        })
         if (server.autorun != null || server.autojoin != null) {
-            val proc = new CommandProcessor(service)
+            val proc = CommandProcessor(service)
             proc.server = Some(server)
             if (server.autorun != null) {
                 for (cmd <- server.autorun.split(";")) {
@@ -60,8 +71,7 @@ with ServerListener with MessageListener with ModeListener {
                         var command = cmd.trim()
                         if (command.charAt(0) != '/')
                             command = "/" + command
-                        Log.w(TAG, "autorun command: " + command)
-                        proc.executeLine(command)
+                        service.runOnUI(() => proc.executeLine(command))
                     }
                 }
             }
@@ -70,7 +80,8 @@ with ServerListener with MessageListener with ModeListener {
                 val channels = server.autojoin.split(";")
                 for (c <- channels) {
                     if (c.trim().length() > 0)
-                        proc.executeCommand(join, Some(c.trim()))
+                        service.runOnUI(() =>
+                                proc.executeCommand(join, Some(c.trim())))
                 }
             }
         }

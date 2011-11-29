@@ -15,6 +15,7 @@ import android.widget.TextView
 import android.view.{View, ViewGroup}
 
 class MessageAdapter extends BaseAdapter {
+    var channel: Option[ChannelLike] = None
     var _maximumSize = 128
     def maximumSize = _maximumSize
     def maximumSize_= (size: Int) = {
