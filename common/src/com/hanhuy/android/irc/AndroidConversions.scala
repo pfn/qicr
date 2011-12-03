@@ -8,6 +8,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.widget.AdapterView
 import android.widget.TextView
+import android.widget.CheckBox
 import android.content.DialogInterface
 
 object AndroidConversions {
@@ -63,4 +64,16 @@ object AndroidConversions {
             new Thread.UncaughtExceptionHandler {
         override def uncaughtException(t: Thread, e: Throwable) = f(t, e)
     }
+
+    implicit def toString(c: CharSequence) : String =
+            if (c == null) null else c.toString()
+    implicit def toString(t: TextView) : String = t.getText()
+    implicit def toInt(t: TextView) : Int = {
+        val s: String = t.getText()
+        if (s == null || s == "")
+            -1
+        else
+            Integer.parseInt(t.getText().toString())
+    }
+    implicit def toBoolean(c: CheckBox) : Boolean = c.isChecked()
 }

@@ -42,11 +42,11 @@
     <string name="notif_title">qicr</string>
     <string name="notif_server_disconnected">Server disconnected: %s</string>
     <string name="channel_leave">Leave</string>
-    <string name="channel_close">Close tab</string>
+    <string name="channel_close">Close channel</string>
     <string name="channel_close_confirm_title">Close tab?</string>
     <string name="channel_close_confirm">
         Are you sure you would like to close and leave this channel?</string>
-    <string name="query_close">Close tab</string>
+    <string name="query_close">Close query</string>
     <string name="query_close_confirm_title">Close tab?</string>
     <string name="query_close_confirm">
         Are you sure you would like to close and leave this query?</string>
@@ -55,7 +55,7 @@
     <string name="usage_msg">Usage: /msg &lt;nick&gt; [message]</string>
     <string name="usage_notice">Usage: /notice &lt;nick&gt; [message]</string>
 
-    <string name="message_template">&lt;%1$s&gt; %2$s</string>
+    <string name="message_template">&amp;lt;%1$s&amp;gt; %2$s</string>
     <string name="notice_template">-%1$s- %2$s</string>
     <string name="action_template"> * %1$s %2$s</string>
     <string name="topic_template_2">

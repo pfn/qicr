@@ -116,8 +116,11 @@ with ServerListener with MessageListener with ModeListener {
             user: User, msg: String) {
         if (user.isUs()) {
             service.runOnUI(() => {
-                service._channels(channel) match {
-                case c: QicrChannel => c.state = QicrChannel.State.PARTED
+                service._channels.get(channel) foreach {
+                    _ match {
+                        case c: QicrChannel => c.state = QicrChannel.State.PARTED
+                        case _ => Unit
+                    }
                 }
             })
         }
@@ -181,14 +184,7 @@ with ServerListener with MessageListener with ModeListener {
             msg: String) {
         val c = service._channels(channel)
 
-        val prefix = if (false /* replace with pref */) ""
-        else if (src.hasOperator()) "@"
-        else if (src.hasVoice()) "+"
-        else ""
-        val nick = prefix + src.getNick()
-
-        // TODO fix regex
-        val pm = Privmsg(nick, msg)
+        val pm = Privmsg(src.getNick(), msg, src.hasOperator(), src.hasVoice())
         if (matchesNick(c.server, msg))
             service.addChannelMention(c, pm)
 

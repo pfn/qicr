@@ -2,6 +2,8 @@
 <ListView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@id/android:list"
     android:listSelector="#0000"
+    android:focusable="false"
+    android:focusableInTouchMode="false"
     android:divider="#0000"
     android:dividerHeight="0px"
     android:layout_weight="1"

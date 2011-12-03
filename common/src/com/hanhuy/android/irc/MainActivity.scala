@@ -51,17 +51,6 @@ import MainActivity._
 import AndroidConversions._
 
 object ViewFinder {
-    implicit def toString(c: CharSequence) : String =
-            if (c == null) null else c.toString()
-    implicit def toString(t: TextView) : String = t.getText()
-    implicit def toInt(t: TextView) : Int = {
-        val s: String = t.getText()
-        if (s == null || s == "")
-            -1
-        else
-            Integer.parseInt(t.getText().toString())
-    }
-    implicit def toBoolean(c: CheckBox) : Boolean = c.isChecked()
 
     def findView[T<:View](container: Activity, id : Int) : T =
             container.findViewById(id).asInstanceOf[T]
@@ -84,6 +73,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     var tabhost: TabHost = _
     var servers: ServersFragment = _
     var adapter: MainPagerAdapter = _
+    var proc: InputProcessor = _
+    var input: EditText = _
     var page = -1
 
     val serviceConnectionListeners    = new HashSet[(IrcService) => Any]
@@ -122,10 +113,16 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
 
-        val input = findView[EditText](this, R.id.input)
-        val proc = new InputProcessor(this)
+        input = findView[EditText](this, R.id.input)
+        proc = new InputProcessor(this)
         input.setOnEditorActionListener(proc.onEditorActionListener _)
         input.setOnKeyListener(proc.onKeyListener _)
+        input.addTextChangedListener(proc.TextListener)
+    }
+
+    override def onSearchRequested() = {
+        proc.nickComplete(Some(input))
+        true // prevent KEYCODE_SEARCH being sent to onKey
     }
 
     override def onPause() {
@@ -407,7 +404,7 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     def adapter = _adapter
     def adapter_=(a: MessageAdapter) = {
         _adapter = a
-        _adapter.context = getActivity()
+        _adapter.context = getActivity().asInstanceOf[MainActivity]
         setListAdapter(_adapter)
         val service = getActivity().asInstanceOf[MainActivity].service
         service.messages += ((id, _adapter))
@@ -475,9 +472,9 @@ extends MessagesFragment(a) {
         }
     }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
-        if (menu.findItem(R.id.channel_leave) != null) return
+        if (menu.findItem(R.id.channel_close) != null) return
         inflater.inflate(R.menu.channel_menu, menu)
-        List(R.id.channel_leave,
+        List(/*R.id.channel_leave,*/
              R.id.channel_close).foreach(item =>
                      MenuCompat.setShowAsAction(menu.findItem(item),
                              MenuItem.SHOW_AS_ACTION_IF_ROOM |
@@ -486,27 +483,40 @@ extends MessagesFragment(a) {
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
         if (R.id.channel_close == item.getItemId()) {
-            if (true) { // TODO check channel state
-                val activity = getActivity().asInstanceOf[MainActivity]
+            val activity = getActivity().asInstanceOf[MainActivity]
+            def removeChannel() {
+                if (channel.state == Channel.State.JOINED) {
+                    val c = activity.service.channels(channel)
+                    c.part()
+                }
+                activity.service.messages -= id
+                activity.service.chans    -= id
+                activity.service.channels -= channel
+                activity.adapter.removeTab(
+                        activity.adapter.getItemPosition(this))
+            }
+            if (channel.state == Channel.State.JOINED) {
                 var builder = new AlertDialog.Builder(activity)
                 builder.setTitle(R.string.channel_close_confirm_title)
                 builder.setMessage(getString(R.string.channel_close_confirm))
                 builder.setPositiveButton(R.string.yes,
                         (d: DialogInterface, id: Int) => {
-                    activity.adapter.removeTab(
-                            activity.adapter.getItemPosition(this))
+                    removeChannel()
+                    channel.state = Channel.State.PARTED
                 })
                 builder.setNegativeButton(R.string.no, 
                         (d: DialogInterface, id: Int) => {
                 })
                 builder.create().show()
-                return true
+            } else {
+                removeChannel()
             }
             return true
         }
         false
     }
 }
+
 class QueryFragment(a: MessageAdapter, q: Query)
 extends MessagesFragment(a) {
     def this() = this(null, null)

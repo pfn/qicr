@@ -3,6 +3,13 @@ package com.hanhuy.android.irc.model
 import java.util.Date
 
 object MessageLike {
+    object ChatMessage {
+        def unapply(in: ChatMessage) = Some((in.sender, in.message))
+    }
+    trait ChatMessage extends MessageLike {
+        def sender: String
+        def message: String
+    }
     case class CommandError(message: String) extends MessageLike
     case class ServerInfo(message: String) extends MessageLike
     case class SslInfo(message: String) extends MessageLike
@@ -12,13 +19,19 @@ object MessageLike {
             topic: String) extends MessageLike
 
     // too hard to reference R.string, hardcode <> -- and *
-    case class Privmsg(sender: String, message: String) extends MessageLike {
-        override def toString = "<" + sender + "> " + message
+    case class Privmsg(sender: String, message: String,
+            op: Boolean = false, voice: Boolean = false) extends MessageLike
+    with ChatMessage {
+        override def toString = "<" +
+                (if (op) "@" else if (voice) "+" else "") +
+                sender + "> " + message
     }
-    case class CtcpAction(sender: String, message: String) extends MessageLike {
+    case class CtcpAction(sender: String, message: String) extends MessageLike
+    with ChatMessage {
         override def toString = " * " + sender + " " + message
     }
-    case class Notice(sender: String, message: String) extends MessageLike {
+    case class Notice(sender: String, message: String) extends MessageLike
+    with ChatMessage {
         override def toString = "-" + sender + "- " + message
     }
 }

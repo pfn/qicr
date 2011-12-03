@@ -146,6 +146,11 @@ class IrcService extends Service {
         for (server <- { Seq.empty ++ connections.keys }) {
             disconnect(server)
         }
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE)
+                .asInstanceOf[NotificationManager]
+        nm.cancel(DISCON_ID)
+        nm.cancel(MENTION_ID)
+        nm.cancel(PRIVMSG_ID)
     }
     def disconnect(server: Server, message: Option[String] = None) {
         connections.get(server) match {
@@ -308,7 +313,8 @@ class IrcService extends Service {
 
     // run on ui thread if an activity is visible, otherwise directly
     def runOnUI[A](f: () => A) {
-        if (!activity.isEmpty && showing)
+        // don't also check showing, !showing is possible, e.g. speech rec
+        if (!activity.isEmpty)
             activity.get.runOnUiThread(f)
         else
             f() // no UI, just run it
@@ -349,7 +355,6 @@ class IrcService extends Service {
         notif.flags |= Notification.FLAG_AUTO_CANCEL
         nm.notify(id, notif)
     }
-
 }
 
 // Object due to java<->scala varargs interop bug

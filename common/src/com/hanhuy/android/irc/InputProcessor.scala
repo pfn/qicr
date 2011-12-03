@@ -8,6 +8,8 @@ import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
 
 import android.content.Context
+import android.text.TextWatcher
+import android.text.Editable
 import android.view.View
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
@@ -18,7 +20,10 @@ import com.sorcix.sirc.IrcConnection
 import com.sorcix.sirc.{User => SircUser}
 
 import scala.collection.mutable.HashMap
+import scala.collection.JavaConversions._
 import scala.ref.WeakReference
+
+import AndroidConversions._
 
 trait Command {
     def execute(args: Option[String])
@@ -28,6 +33,20 @@ class InputProcessor(activity: MainActivity) {
 
     val processor = CommandProcessor(activity)
 
+    def currentState = {
+        activity.adapter.getItem(activity.adapter.page) match {
+        case s: ServersFragment => (s._server, None)
+        case c: ChannelFragment => {
+            val ch = activity.service.chans(c.id)
+            (Some(ch.server), Some(ch))
+        }
+        case q: QueryFragment => {
+            val qu = activity.service.chans(q.id)
+            (Some(qu.server), Some(qu))
+        }
+        case _ => (None, None)
+        }
+    }
     def onEditorActionListener(v: View, action: Int, e: KeyEvent):
             Boolean = {
         Log.i(TAG, "editoraction: " + action + " e: " + e)
@@ -36,22 +55,8 @@ class InputProcessor(activity: MainActivity) {
             Unit // ignored
         if (action == EditorInfo.IME_NULL) {
             val line = input.getText()
-            activity.adapter.getItem(activity.adapter.page) match {
-            case s: ServersFragment => {
-                processor.server = s._server
-                processor.channel = None
-            }
-            case c: ChannelFragment => {
-                val ch = activity.service.chans(c.id)
-                processor.server = Some(ch.server)
-                processor.channel = Some(ch)
-            }
-            case q: QueryFragment => {
-                val qu = activity.service.chans(q.id)
-                processor.server = Some(qu.server)
-                processor.channel = Some(qu)
-            }
-            case _ => { processor.server = None; processor.channel = None }
+            currentState match {
+            case (s, c) => processor.server = s; processor.channel = c
             }
             processor.executeLine(line.toString())
             input.setText(null)
@@ -114,33 +119,144 @@ class InputProcessor(activity: MainActivity) {
                 return true
             }
         }
+        if (KeyEvent.KEYCODE_SEARCH != k) {
+            completionPrefix = None
+            completionOffset = None
+        }
         false
     }
 
+    object TextListener extends TextWatcher {
+        override def afterTextChanged(s: Editable) = Unit
+        override def beforeTextChanged(s: CharSequence,
+                start: Int, count: Int, after: Int) = Unit
+        override def onTextChanged(s: CharSequence,
+                start: Int, before: Int, count: Int) {
+            if (start != 0 || count != s.length()) {
+                completionPrefix = None
+                completionOffset = None
+            }
+        }
+    }
+
+    var completionPrefix: Option[String] = None
+    var completionOffset: Option[Int]    = None
+    def nickComplete(_input: Option[EditText] = None) {
+        val input = _input match {
+        case Some(i) => i
+        case None => activity.findViewById(R.id.input).asInstanceOf[EditText]
+        }
+        val (server, channel) = currentState
+        val c = channel match {
+        case Some(c: Channel) => c
+        case _ => return
+        }
+
+        val caret = input.getSelectionStart()
+        val in = input.getText()
+        // TODO handle completion here
+        // completion logic:  starts off with recents first, then alphabet
+        // match a prefix, lowercased
+        //   (store the prefix and start index if not set)
+        //   verify prefix still matches if set (user input on soft kb)
+        //     if the prefix no longer matches, reset
+        // compare against recent, then sorted (iterate through)
+        // fill in the entire word, add a comma if at beginning of line
+        //   word should come from users (convert to proper case)
+        // if called again, replace previous result with the next result
+        //   lowercase the word first
+        //   compare current word against recent and sorted to find index
+        //   skip current nick if found again
+        // replace everytime called unless prefix and start index are unset
+        // prefix and start index get unset by key events or page change
+        // do nothing if no match
+        //   fell off the end? revert to prefix/start over
+        val prefix = completionPrefix match {
+            case Some(p) => p
+            case None => {
+                val start = input.getSelectionStart()
+                val beginning = in.lastIndexOf(" ", start - 1)
+                val p = in.substring(if (beginning == -1) 0
+                        else (beginning + 1), start)
+                completionPrefix = Some(p)
+                completionOffset = Some(start - p.length())
+                p
+            }
+        }
+        val suffix = ", "
+        val offset = completionOffset.get
+        val lowerp  = prefix.toLowerCase()
+
+        if (in.length() < offset || !in.substring(
+                offset).toLowerCase().startsWith(lowerp)) {
+            completionPrefix = None
+            completionOffset = None
+            return nickComplete(Some(input))
+        }
+        var current = in.substring(offset, caret)
+        if (current.endsWith(suffix))
+            current = current.substring(0, current.length() - suffix.length())
+        current = current.toLowerCase()
+
+        val ch = activity.service.channels(c)
+        val users = ch.getUsers() map {
+            u => ( u.getNick().toLowerCase(), u.getNick() )
+        } toMap
+        val seenSet = new collection.mutable.HashSet[String]
+        val recent = c.messages.messages.collect {
+            // side-effect cannot occur on the case side
+            case ChatMessage(s, m) if !seenSet.contains(s.toLowerCase()) =>
+                    seenSet.add(s.toLowerCase()); s.toLowerCase()
+        }.reverse toList
+        val names = recent ++ users.keys.toList.sorted.filterNot(seenSet)
+
+        def goodCandidate(x: String) = {
+            x.startsWith(lowerp) && users.contains(x)
+        }
+        val candidate: Option[String] = if (current == lowerp) {
+            val i = names.indexWhere(goodCandidate)
+            if (i != -1) Some(users(names(i))) else None
+        } else {
+            val i = names.indexWhere(_.equals(current))
+            if (i != -1 && i < names.size - 1) {
+                val n = names.indexWhere(goodCandidate, i + 1)
+                if (n != -1) Some(users(names(n))) else None
+            } else None
+        }
+
+        val replacement = candidate match {
+        case Some(nick) => nick + (if (offset == 0) suffix else "")
+        case None       => prefix
+        }
+        // replace offset to cursor with replacement
+        // move cursor to end of replacement
+        val out = in.substring(0, offset) + replacement + in.substring(caret)
+        input.setText(out)
+        input.setSelection(offset + replacement.length())
+    }
 }
 
 object CommandProcessor {
-    // context would be a hard-ref as a ctor arg
-    def apply(c: Context) = new CommandProcessor(new WeakReference(c))
+    def apply(c: Context) = new CommandProcessor(c)
 }
 // set ctx, server and channel prior to invoking executeLine
-sealed class CommandProcessor(ctx: WeakReference[Context]) {
+sealed class CommandProcessor(ctx: Context) {
     val TAG = "CommandProcessor"
     val commands = new HashMap[String,Command]
 
     def getString(res: Int, args: String*) =
-            ctx.get.get.getString(res, args: _*)
+            ctx.getString(res, args: _*)
     var channel: Option[ChannelLike] = None
     var server: Option[Server] = None
 
     def service: IrcService = {
-        ctx.get.get match {
+        ctx match {
         case s: IrcService => s
         case a: MainActivity => a.service
         }
     }
     def activity: MainActivity = {
-        ctx.get.get match {
+        ctx match {
         case s: IrcService => s.activity.get
         case a: MainActivity => a
         }

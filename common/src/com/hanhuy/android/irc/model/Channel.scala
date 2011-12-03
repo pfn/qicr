@@ -32,9 +32,9 @@ abstract class ChannelLike(_server: Server, _name: String) {
     def add(m: MessageLike) {
         messages.add(m)
         val msg = m match {
-        case Privmsg(src, msg)    => {newMessages = true; msg}
-        case CtcpAction(src, msg) => {newMessages = true; msg}
-        case Notice(src, msg)     => {newMessages = true; msg}
+        case Privmsg(src, msg, o, v) => {newMessages = true; msg}
+        case CtcpAction(src, msg)    => {newMessages = true; msg}
+        case Notice(src, msg)        => {newMessages = true; msg}
         case _ => ""
         }
 
