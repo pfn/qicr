@@ -87,10 +87,7 @@ with ServerListener with MessageListener with ModeListener {
         }
     }
     override def onDisconnect(c: IrcConnection) {
-        service._connections.get(c) match {
-        case Some(server) => service.serverDisconnected(server)
-        case None => Unit
-        }
+        service._connections.get(c) foreach { service.serverDisconnected(_) }
     }
     override def onInvite(c: IrcConnection, src: User, user: User,
             channel: Channel) {
@@ -146,9 +143,8 @@ with ServerListener with MessageListener with ModeListener {
     // TODO
     override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
         if (oldnick.isUs() || newnick.isUs())
-            service._connections.get(c) match {
-            case Some(server) => server.currentNick = newnick.getNick()
-            case None => Unit
+            service._connections.get(c) foreach {
+                _.currentNick = newnick.getNick()
             }
     }
     // TODO

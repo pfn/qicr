@@ -19,7 +19,7 @@ import android.widget.TextView
 import android.view.{View, ViewGroup}
 
 class MessageAdapter extends BaseAdapter {
-    var channel: Option[ChannelLike] = None
+    var channel: ChannelLike = _
     var _maximumSize = 128
     def maximumSize = _maximumSize
     def maximumSize_= (size: Int) = {
@@ -35,9 +35,12 @@ class MessageAdapter extends BaseAdapter {
     }
     var _context: WeakReference[MainActivity] = _
     def context_= (c: MainActivity) = {
-        _context = new WeakReference(c)
-        _inflater = new WeakReference(c.getSystemService(
-                Context.LAYOUT_INFLATER_SERVICE).asInstanceOf[LayoutInflater])
+        if (c != null) {
+            _context = new WeakReference(c)
+            _inflater = new WeakReference(c.getSystemService(
+                    Context.LAYOUT_INFLATER_SERVICE)
+                            .asInstanceOf[LayoutInflater])
+        }
     }
     def context = _context.get match {
         case Some(c) => c
@@ -98,8 +101,8 @@ class MessageAdapter extends BaseAdapter {
         view
     }
     private def gets(res: Int, src: String, msg: String) = {
-        val server = channel.get.server
-        if (channel.get.isInstanceOf[Query]) {
+        val server = channel.server
+        if (channel.isInstanceOf[Query]) {
             if (server.currentNick.toLowerCase() == src.toLowerCase())
                 Html.fromHtml(getString(res,
                         "<font color=#00ffff>" + src + "</font>", msg))

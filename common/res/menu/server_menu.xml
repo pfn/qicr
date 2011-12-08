@@ -7,9 +7,9 @@
         android:icon="@android:drawable/ic_menu_delete"
         android:title="@string/server_delete"/>
     <item android:id="@+id/server_connect"
-        android:icon="@android:drawable/ic_menu_rotate"
+        android:icon="@drawable/ic_menu_refresh"
         android:title="@string/server_connect"/>
     <item android:id="@+id/server_disconnect"
-        android:icon="@android:drawable/ic_menu_revert"
+        android:icon="@drawable/ic_menu_stop"
         android:title="@string/server_disconnect"/>
 </menu>

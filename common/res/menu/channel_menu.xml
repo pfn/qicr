@@ -4,6 +4,6 @@
         android:icon="@drawable/ic_menu_friendslist"
         android:title="@string/channel_names"/>
     <item android:id="@+id/channel_close"
-        android:icon="@android:drawable/ic_menu_delete"
+        android:icon="@drawable/ic_menu_end_conversation"
         android:title="@string/channel_close"/>
 </menu>

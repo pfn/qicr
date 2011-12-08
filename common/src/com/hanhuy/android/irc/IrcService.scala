@@ -99,13 +99,10 @@ class IrcService extends Service {
     def activity = if (_activity == null) None else _activity.get
 
     def removeConnection(server: Server) {
-        connections.get(server) match {
-        case Some(c) => {
-            connections  -= server
+        connections.get(server).foreach(c => {
+            connections -= server
             _connections -= c
-        }
-        case None => Unit
-        }
+        })
     }
 
     def addConnection(server: Server, connection: IrcConnection) {
@@ -204,6 +201,9 @@ class IrcService extends Service {
         // handled by onDisconnect
         server.add(ServerInfo(getString(R.string.server_disconnected)))
 
+        if (disconnected && server.autoconnect) // not requested?  auto-connect
+            connect(server)
+
         if (connections.size == 0) {
             // do not stop service if onDisconnect unless showing
             if (!disconnected || showing) {
@@ -297,14 +297,11 @@ class IrcService extends Service {
     def addChannel(c: IrcConnection, ch: SircChannel) {
         val server = _connections(c)
         var channel: ChannelLike = new Channel(server, ch.getName())
-        channels.keys.find(_ == channel) match {
-            case Some(_c) => {
-                channel    = _c
-                val _ch    = channels(channel)
-                channels  -= channel
-                _channels -= _ch
-            }
-            case None    => Unit
+        channels.keys.find(_ == channel) foreach { _c =>
+            channel    = _c
+            val _ch    = channels(channel)
+            channels  -= channel
+            _channels -= _ch
         }
         channels  += ((channel,ch))
         _channels += ((ch,channel))

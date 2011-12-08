@@ -164,21 +164,20 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                 (d: DialogInterface, which: Int) => {
             input.getText().append(results(which) + " ")
 
-            // TODO make a preference for this
-            val eol = " over"
-            if (results(which).toLowerCase().endsWith(eol)) {
-                // use the entire line, not just results(which)
-                // in case the user wants to record a single
-                // word to send the message
+            // TODO make preferences for these
+            val eol = "over"
+            val clearLine = "clear line"
+            val rec = results(which).toLowerCase
+            if (rec.endsWith(" " + eol) || rec == eol) {
                 val t = input.getText()
                 val line = t.substring(0, t.length() - eol.length())
                 proc.handleLine(line)
                 input.setText(null)
+            } else if (rec == clearLine) {
+                input.setText(null)
             }
         })
-        builder.setNegativeButton(R.string.speech_cancel, 
-                (d: DialogInterface, id: Int) => {
-        })
+        builder.setNegativeButton(R.string.speech_cancel, null)
         builder.create().show()
     }
 
@@ -265,18 +264,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         unbindService(this)
     }
 
-    def setFragmentVisibility(txn: FragmentTransaction, fragment: Fragment,
-            visible: Boolean) {
-        val tx = if (txn != null) txn
-                else getSupportFragmentManager().beginTransaction()
-        if (visible) {
-            tx.show(fragment)
-        } else {
-            tx.hide(fragment)
-        }
-        tx.commit()
-    }
-
     def postOnUiThread[A](r: () => A) {
         class RunnableTask extends AsyncTask[Object,Object,Unit] {
             override def doInBackground(args: Object*): Unit = 
@@ -314,8 +301,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         f match {
             // post to thread to make sure it shows up when done paging
-            case m: MessagesFragment => postOnUiThread(() => m.getListView()
-                    .setSelection(m.getListAdapter().getCount() - 1))
+            case m: MessagesFragment => postOnUiThread(() => m.getListView
+                    .setSelection(m.getListAdapter.getCount() - 1))
             case _ => Unit
         }
 
@@ -519,6 +506,7 @@ class ServerSetupFragment extends DialogFragment {
     }
 }
 
+// TODO convert to a Dialog fragment (checkpoint first!)
 class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     def this() = this(null)
     var _adapter = _a
@@ -568,23 +556,20 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     }
     def onServiceConnected(service: IrcService) {
         if (adapter == null && id != -1) {
-            service.messages.get(id) match {
-                case Some(a) => adapter = a
-                case None    => Unit
-            }
+            service.messages.get(id) foreach { adapter = _ }
         }
     }
 }
 
 class NickListFragment extends DialogFragment {
     var listview: ListView = _
-    var adapterProvided = false
+    var showAsDialog = true
     var adapter: Option[NickListAdapter] = None
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         listview = inflater.inflate(R.layout.fragment_nicklist,
                 container, false).asInstanceOf[ListView]
-        if (!adapterProvided && adapter.isEmpty)
+        if (showAsDialog && adapter.isEmpty)
             getActivity().asInstanceOf[MainActivity].postOnUiThread(dismiss _)
         adapter.foreach(listview.setAdapter(_))
         listview
@@ -619,7 +604,7 @@ extends MessagesFragment(a) {
                 || (config.screenLayout &
                         Configuration.SCREENLAYOUT_SIZE_XLARGE) != 0) {
             val f = new NickListFragment
-            f.adapterProvided = true
+            f.showAsDialog = false
             val view = f.onCreateView(inflater, null, null)
             nicklist = Some(view.asInstanceOf[ListView])
             if (channel != null)
@@ -636,7 +621,7 @@ extends MessagesFragment(a) {
         val activity = getActivity().asInstanceOf[MainActivity]
         if (id != -1 && channel != null) {
             activity.service.chans += ((id, channel))
-            a.channel = Some(channel)
+            a.channel = channel
         }
         if (channel == null && !nicklist.isEmpty) {
             def setAdapter(s: IrcService) {
@@ -685,9 +670,7 @@ extends MessagesFragment(a) {
                     removeChannel()
                     channel.state = Channel.State.PARTED
                 })
-                builder.setNegativeButton(R.string.no, 
-                        (d: DialogInterface, id: Int) => {
-                })
+                builder.setNegativeButton(R.string.no, null)
                 builder.create().show()
             } else {
                 removeChannel()
@@ -723,7 +706,7 @@ extends MessagesFragment(a) {
         if (id != -1 && q != null) {
             val activity = getActivity().asInstanceOf[MainActivity]
             activity.service.chans += ((id, q))
-            a.channel = Some(q)
+            a.channel = q
         }
     }
 
