@@ -1,0 +1,5 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <drawable name="transparent1">#aaff0000</drawable>
+    <drawable name="transparent2">#aa00ff00</drawable>
+    <drawable name="transparent3">#aa0000ff</drawable>
+</resources>

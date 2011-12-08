@@ -17,6 +17,8 @@ object AndroidConversions {
         def onReceive(c: Context, i: Intent) = f(c, i)
     }
 
+    implicit def toViewOnClickListener[A](f: () => A) : View.OnClickListener =
+            new View.OnClickListener() { def onClick(v: View) = f() }
     implicit def toViewOnClickListener[A](f: View => A) : View.OnClickListener =
             new View.OnClickListener() { def onClick(v: View) = f(v) }
 
@@ -25,6 +27,13 @@ object AndroidConversions {
                 DialogInterface.OnClickListener = {
         new DialogInterface.OnClickListener() {
             def onClick(d: DialogInterface, id: Int) = f(d, id)
+        }
+    }
+
+    implicit def toDialogInterfaceOnShowListener[A]( f: () => A):
+                DialogInterface.OnShowListener = {
+        new DialogInterface.OnShowListener() {
+            def onShow(d: DialogInterface) = f()
         }
     }
 

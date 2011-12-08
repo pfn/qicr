@@ -3,6 +3,7 @@ package com.hanhuy.android.irc
 import android.app.Activity
 import android.app.NotificationManager
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.ComponentName
@@ -12,6 +13,7 @@ import android.os.{Bundle, Build, IBinder, Parcelable}
 import android.os.AsyncTask
 import android.util.Log
 import android.content.DialogInterface
+import android.speech.RecognizerIntent
 import android.util.AttributeSet
 import android.view.LayoutInflater;
 import android.view.{View, ViewGroup}
@@ -31,8 +33,8 @@ import android.widget.ImageView
 import android.widget.HorizontalScrollView
 import android.widget.{ListView, ArrayAdapter}
 
-import android.support.v4.app.{Fragment, FragmentActivity, FragmentManager}
-import android.support.v4.app.FragmentTransaction
+import android.support.v4.app.{Fragment, FragmentActivity, DialogFragment}
+import android.support.v4.app.{FragmentTransaction, FragmentManager}
 import android.support.v4.app.{ListFragment, FragmentPagerAdapter}
 import android.support.v4.view.{ViewPager, MenuCompat}
 
@@ -44,6 +46,7 @@ import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
+import com.hanhuy.android.irc.model.NickListAdapter
 
 import ViewFinder._
 import MainActivity._
@@ -68,6 +71,8 @@ object MainActivity {
 
     val honeycombAndNewer =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB
+
+    val REQUEST_SPEECH_RECOGNITION = 1
 }
 class MainActivity extends FragmentActivity with ServiceConnection {
     var tabhost: TabHost = _
@@ -118,6 +123,63 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         input.setOnEditorActionListener(proc.onEditorActionListener _)
         input.setOnKeyListener(proc.onKeyListener _)
         input.addTextChangedListener(proc.TextListener)
+
+        val complete = findView[View](this, R.id.btn_nick_complete)
+        complete.setOnClickListener(() => proc.nickComplete(Some(input)))
+
+        val speech = findView[View](this, R.id.btn_speech_rec)
+        speech.setOnClickListener(() => {
+            val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            try {
+                startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
+            } catch {
+                case e: Exception => Log.w(TAG,
+                        "Unable to request speech recognition", e)
+            }
+        })
+    }
+
+    override def onActivityResult(req: Int, res: Int, i: Intent) {
+        if (req != REQUEST_SPEECH_RECOGNITION ||
+                res == Activity.RESULT_CANCELED) return
+        if (res != Activity.RESULT_OK) {
+            Toast.makeText(this, R.string.speech_failed,
+                    Toast.LENGTH_SHORT).show()
+            return
+        }
+        val results = i.getStringArrayListExtra(
+                RecognizerIntent.EXTRA_RESULTS)
+
+        if (results.size == 0) {
+            Toast.makeText(this, R.string.speech_failed,
+                    Toast.LENGTH_SHORT).show()
+            return
+        }
+        var builder = new AlertDialog.Builder(this)
+        builder.setTitle(R.string.speech_select)
+        builder.setItems(results.toArray(new Array[CharSequence](results.size)),
+                (d: DialogInterface, which: Int) => {
+            input.getText().append(results(which) + " ")
+
+            // TODO make a preference for this
+            val eol = " over"
+            if (results(which).toLowerCase().endsWith(eol)) {
+                // use the entire line, not just results(which)
+                // in case the user wants to record a single
+                // word to send the message
+                val t = input.getText()
+                val line = t.substring(0, t.length() - eol.length())
+                proc.handleLine(line)
+                input.setText(null)
+            }
+        })
+        builder.setNegativeButton(R.string.speech_cancel, 
+                (d: DialogInterface, id: Int) => {
+        })
+        builder.create().show()
     }
 
     override def onSearchRequested() = {
@@ -127,7 +189,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
     override def onPause() {
         super.onPause()
-        service.showing = false
+        if (service != null)
+            service.showing = false
     }
     override def onResume() {
         super.onResume()
@@ -222,8 +285,13 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         new RunnableTask().execute()
     }
 
-    def updateMenuVisibility(idx: Int) {
+    def pageChanged(idx: Int) {
+        val showNickComplete = honeycombAndNewer // TODO preference w/ default
+        val showSpeechRec = true // TODO preference
+
         val input = findView[EditText](this, R.id.input)
+        val complete = findView[View](this, R.id.btn_nick_complete)
+        val speech = findView[View](this, R.id.btn_speech_rec)
         input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
 
         getSupportFragmentManager().popBackStack(SERVER_SETUP_STACK,
@@ -249,6 +317,21 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             case m: MessagesFragment => postOnUiThread(() => m.getListView()
                     .setSelection(m.getListAdapter().getCount() - 1))
             case _ => Unit
+        }
+
+        // TODO implement an option to hide these buttons
+        if (f.isInstanceOf[QueryFragment]) {
+            complete.setVisibility(View.GONE)
+            if (showSpeechRec)
+                speech.setVisibility(View.VISIBLE)
+        } else if (f.isInstanceOf[ChannelFragment]) {
+            if (showNickComplete)
+                complete.setVisibility(View.VISIBLE)
+            if (showSpeechRec)
+                speech.setVisibility(View.VISIBLE)
+        } else {
+            complete.setVisibility(View.GONE)
+            speech.setVisibility(View.GONE)
         }
     }
 
@@ -299,7 +382,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
 }
 
-class ServerSetupFragment extends Fragment {
+class ServerSetupFragment extends DialogFragment {
     var _server: Server = _
     var thisview: View = _
     def server = {
@@ -391,10 +474,48 @@ class ServerSetupFragment extends Fragment {
     }
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
-        thisview = inflater.inflate(R.layout.fragment_server_setup,
-                container, false)
+        // otherwise an AndroidRuntimeException occurs
+        if (dialogShown) return super.onCreateView(inflater, container, bundle)
+
+        createView(inflater, container)
+    }
+
+    private def createView(inflater: LayoutInflater, c: ViewGroup): View = {
+        thisview = inflater.inflate(R.layout.fragment_server_setup, c, false)
         server = _server
         thisview
+    }
+
+    var dialogShown = false
+    override def onCreateDialog(bundle: Bundle): Dialog = {
+        dialogShown = true
+        val d = new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.server_details)
+                .setPositiveButton(R.string.save_server, null)
+                .setNegativeButton(R.string.cancel_server, null)
+                .setView(createView(getActivity().getLayoutInflater(), null))
+                .create()
+        // block dismiss on positive button click
+        d.setOnShowListener(() => {
+            val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
+            b.setOnClickListener(() => {
+                val activity = getActivity().asInstanceOf[MainActivity]
+                val manager = activity.getSupportFragmentManager()
+                val s = server
+                if (s.valid) {
+                    if (s.id == -1)
+                        activity.service.addServer(s)
+                    else
+                        activity.service.updateServer(s)
+                    d.dismiss()
+                } else {
+                    Toast.makeText(getActivity(),
+                            R.string.server_incomplete,
+                            Toast.LENGTH_SHORT).show()
+                }
+            })
+        })
+        d
     }
 }
 
@@ -455,22 +576,82 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     }
 }
 
+class NickListFragment extends DialogFragment {
+    var listview: ListView = _
+    var adapterProvided = false
+    var adapter: Option[NickListAdapter] = None
+    override def onCreateView(inflater: LayoutInflater,
+            container: ViewGroup, bundle: Bundle) : View = {
+        listview = inflater.inflate(R.layout.fragment_nicklist,
+                container, false).asInstanceOf[ListView]
+        if (!adapterProvided && adapter.isEmpty)
+            getActivity().asInstanceOf[MainActivity].postOnUiThread(dismiss _)
+        adapter.foreach(listview.setAdapter(_))
+        listview
+    }
+}
+
 class ChannelFragment(a: MessageAdapter, c: Channel)
 extends MessagesFragment(a) {
     def this() = this(null, null)
     var channel = c
+    var nicklist: Option[ListView] = None
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
     }
+
+    private def setNickListAdapter(list: ListView) {
+        val activity = getActivity().asInstanceOf[MainActivity]
+
+        val adapter = new NickListAdapter(activity, channel)
+        list.setAdapter(adapter)
+    }
+    override def onCreateView(inflater: LayoutInflater,
+            container: ViewGroup, bundle: Bundle) : View = {
+        val v = inflater.inflate(R.layout.fragment_channel, container, false)
+        val config = getActivity().getResources().getConfiguration()
+        // show via dialogfragment if < size_large
+        if (channel != null && channel.isInstanceOf[Channel] &&
+                (config.screenLayout &
+                        Configuration.SCREENLAYOUT_SIZE_LARGE) == 
+                                Configuration.SCREENLAYOUT_SIZE_LARGE
+                || (config.screenLayout &
+                        Configuration.SCREENLAYOUT_SIZE_XLARGE) != 0) {
+            val f = new NickListFragment
+            f.adapterProvided = true
+            val view = f.onCreateView(inflater, null, null)
+            nicklist = Some(view.asInstanceOf[ListView])
+            if (channel != null)
+                setNickListAdapter(nicklist.get)
+            findView[ViewGroup](v, R.id.nicklist_container).addView(view)
+            // this puts them one atop the other, even though it's horizontal?
+            //v.asInstanceOf[ViewGroup].addView(view)
+        }
+        v
+    }
+
     override def onActivityCreated(bundle: Bundle) {
         super.onActivityCreated(bundle)
+        val activity = getActivity().asInstanceOf[MainActivity]
         if (id != -1 && channel != null) {
-            val activity = getActivity().asInstanceOf[MainActivity]
             activity.service.chans += ((id, channel))
             a.channel = Some(channel)
         }
+        if (channel == null && !nicklist.isEmpty) {
+            def setAdapter(s: IrcService) {
+                val c = s.chans.get(bundle.getInt("id"))
+                c.foreach(ch => channel = ch.asInstanceOf[Channel])
+                if (channel != null)
+                    nicklist.foreach(setNickListAdapter(_))
+            }
+            if (activity.service != null)
+                setAdapter(activity.service)
+            else
+                activity.serviceConnectionListeners += (setAdapter(_))
+        }
     }
+
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
         if (menu.findItem(R.id.channel_close) != null) return
         inflater.inflate(R.menu.channel_menu, menu)
@@ -511,6 +692,18 @@ extends MessagesFragment(a) {
             } else {
                 removeChannel()
             }
+            return true
+        } else if (R.id.channel_names == item.getItemId()) {
+            val activity = getActivity().asInstanceOf[MainActivity]
+            val adapter = new NickListAdapter(activity, channel)
+            val tx = activity.getSupportFragmentManager().beginTransaction()
+
+            val f = new NickListFragment
+            f.setStyle(DialogFragment.STYLE_NO_TITLE, 0)
+            // should be set in onCreateDialog
+            //f.getDialog().setTitle("Names")
+            f.adapter = Some(adapter)
+            f.show(tx, "nick list")
             return true
         }
         false
@@ -586,8 +779,7 @@ class ServersFragment extends ListFragment {
         adapter = new ServerArrayAdapter(getActivity())
         setListAdapter(adapter)
         if (service != null) {
-            for (s <- service.getServers())
-                adapter.add(s)
+            service.getServers.foreach(adapter.add(_))
             adapter.notifyDataSetChanged()
         }
     }
@@ -629,8 +821,7 @@ class ServersFragment extends ListFragment {
         service = _service
         if (adapter != null) {
             adapter.clear()
-            for (s <- service.getServers())
-                adapter.add(s)
+            service.getServers.foreach(adapter.add(_))
             adapter.notifyDataSetChanged()
         }
         service.serverChangedListeners += changeListener
@@ -683,7 +874,6 @@ class ServersFragment extends ListFragment {
     }
 
     def addServerSetupFragment(_s: Option[Server] = None) {
-        var server = _s
         val main = getActivity().asInstanceOf[MainActivity]
         val mgr = main.getSupportFragmentManager()
         var fragment: ServerSetupFragment = null
@@ -693,19 +883,33 @@ class ServersFragment extends ListFragment {
             fragment = new ServerSetupFragment
         if (fragment.isVisible()) return
 
-        if (server.isEmpty) {
-            val listview = getListView()
-            val checked = listview.getCheckedItemPosition()
-            if (AdapterView.INVALID_POSITION != checked)
-                listview.setItemChecked(checked, false)
-            server = Some(new Server)
+        val server = _s match {
+            case Some(s) => s
+            case None => {
+                val listview = getListView()
+                val checked = listview.getCheckedItemPosition()
+                if (AdapterView.INVALID_POSITION != checked)
+                    listview.setItemChecked(checked, false)
+                new Server
+            }
         }
         val tx = mgr.beginTransaction()
         clearServerMessagesFragment(mgr, tx)
-        tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
-        tx.addToBackStack(SERVER_SETUP_STACK)
-        tx.commit()
-        fragment.server = server.get
+
+        val config = getActivity().getResources().getConfiguration()
+
+        if ((config.screenLayout & Configuration.SCREENLAYOUT_SIZE_LARGE) == 
+                Configuration.SCREENLAYOUT_SIZE_LARGE // 0x3, ugh
+                || (config.screenLayout &
+                        Configuration.SCREENLAYOUT_SIZE_XLARGE) != 0) {
+            tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
+            tx.addToBackStack(SERVER_SETUP_STACK)
+            tx.commit() // can't commit a show
+        } else {
+            fragment.show(tx, SERVER_SETUP_FRAGMENT)
+        }
+
+        fragment.server = server
         if (honeycombAndNewer)
             thisview.getHandler().post(() =>
                     HoneycombSupport.invalidateActionBar())

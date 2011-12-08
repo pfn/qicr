@@ -100,6 +100,8 @@ with ServerListener with MessageListener with ModeListener {
     override def onJoin(c: IrcConnection, channel: Channel, user: User) {
         if (user.isUs())
             service.addChannel(c, channel)
+        service.runOnUI(() =>
+            service.notifyNickListChanged(service._channels(channel)))
     }
 
     override def onKick(c: IrcConnection, channel: Channel,
@@ -110,7 +112,9 @@ with ServerListener with MessageListener with ModeListener {
                 case c: QicrChannel => c.state = QicrChannel.State.KICKED
                 }
             })
-        }
+        } else
+            service.runOnUI(() =>
+                service.notifyNickListChanged(service._channels(channel)))
     }
     override def onPart(c: IrcConnection, channel: Channel,
             user: User, msg: String) {
@@ -118,12 +122,14 @@ with ServerListener with MessageListener with ModeListener {
             service.runOnUI(() => {
                 service._channels.get(channel) foreach {
                     _ match {
-                        case c: QicrChannel => c.state = QicrChannel.State.PARTED
-                        case _ => Unit
+                    case c: QicrChannel => c.state = QicrChannel.State.PARTED
+                    case _ => Unit
                     }
                 }
             })
-        }
+        } else
+            service.runOnUI(() =>
+                service.notifyNickListChanged(service._channels(channel)))
     }
     override def onTopic(c: IrcConnection, channel: Channel,
             src: User, topic: String) {

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="exit">Quit</string>
+    <string name="server_details">Server Details</string>
     <string name="add_server">Add Server</string>
     <string name="save_server">Save</string>
     <string name="cancel_server">Cancel</string>
@@ -36,11 +37,15 @@
     <string name="yes">Yes</string>
     <string name="no">No</string>
 
+    <string name="speech_failed">Your speech could not be recognized</string>
+    <string name="speech_cancel">Cancel</string>
+    <string name="speech_select">Select message</string>
     <string name="tab_servers">Servers</string>
     <string name="notif_mention_template">%1$s: %2$s</string>
     <string name="notif_running">running...</string>
     <string name="notif_title">qicr</string>
     <string name="notif_server_disconnected">Server disconnected: %s</string>
+    <string name="channel_names">Names list</string>
     <string name="channel_leave">Leave</string>
     <string name="channel_close">Close channel</string>
     <string name="channel_close_confirm_title">Close tab?</string>

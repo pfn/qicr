@@ -79,7 +79,7 @@ class MessageAdapter extends BaseAdapter {
 
         val m = messages(pos) match {
             case Privmsg(s, m, o, v) => gets(R.string.message_template,
-                        {if (o) "@" else if (v) "+" else ""} +  s, m)
+                        {if (o) "@" else if (v) "+" else ""} + s, m)
             case Notice(s, m)        => gets(R.string.notice_template, s, m)
             case CtcpAction(s, m)    => gets(R.string.action_template, s, m)
             case Topic(chan, src, t) => {
@@ -106,6 +106,9 @@ class MessageAdapter extends BaseAdapter {
             else
                 Html.fromHtml(getString(res,
                         "<font color=#ff0000>" + src + "</font>", msg))
+        } else if (server.currentNick.toLowerCase() == src.toLowerCase()) {
+            Html.fromHtml(getString(res,
+                    "<b>" + src + "</b>", msg))
         } else if (IrcListeners.matchesNick(server, msg) &&
                 server.currentNick.toLowerCase() != src.toLowerCase()) {
             Html.fromHtml(getString(res,

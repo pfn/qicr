@@ -46,12 +46,32 @@
             <!--
             android:singleLine="true"
             -->
-        <EditText
-            android:id="@+id/input"
-            android:autoText="true"
-            android:inputType="text|textAutoCorrect|textShortMessage"
-            android:imeOptions="actionSend|flagNoFullscreen"
+        <LinearLayout
+            android:orientation="horizontal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content">
+            <ImageButton
+                android:id="@+id/btn_nick_complete"
+                android:focusable="false"
+                android:focusableInTouchMode="false"
+                android:src="@drawable/ic_btn_search"
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"/>
+            <EditText
+                android:id="@+id/input"
+                android:autoText="true"
+                android:inputType="text|textAutoCorrect"
+                android:imeOptions="actionSend|flagNoFullscreen"
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"/>
+            <ImageButton
+                android:id="@+id/btn_speech_rec"
+                android:focusable="false"
+                android:focusableInTouchMode="false"
+                android:src="@android:drawable/ic_btn_speak_now"
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"/>
+        </LinearLayout>
     </LinearLayout>
 </com.hanhuy.android.irc.NoKeyEventTabHost>

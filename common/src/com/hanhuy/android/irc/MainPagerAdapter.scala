@@ -6,7 +6,9 @@ import com.hanhuy.android.irc.model.Query
 import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.ChannelLikeComparator
 import com.hanhuy.android.irc.model.FragmentPagerAdapter
+import com.hanhuy.android.irc.model.NickListAdapter
 
+import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import android.view.View
@@ -42,17 +44,17 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     tabhost.setOnTabChangedListener(this)
     pager.setOnPageChangeListener(this)
     pager.setAdapter(this)
+    val activity = tabhost.getContext().asInstanceOf[MainActivity]
+    val nm = activity.getSystemService(Context.NOTIFICATION_SERVICE)
+            .asInstanceOf[NotificationManager]
 
     val tabs = new ArrayBuffer[TabInfo]()
     var page = 0
 
-    {
-        var activity = tabhost.getContext().asInstanceOf[MainActivity]
-        if (activity.service != null)
-            onServiceConnected(activity.service)
-        else
-            activity.serviceConnectionListeners += onServiceConnected
-    }
+    if (activity.service != null)
+        onServiceConnected(activity.service)
+    else
+        activity.serviceConnectionListeners += onServiceConnected
 
     def refreshTabs(service: IrcService) {
         if (service.channels.size > channels.size)
@@ -81,8 +83,16 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         }
     }
 
+    def updateNickList(c: Channel) {
+        val idx = Collections.binarySearch(channels, c, comp)
+        if (idx == -1) return
+
+        val f = tabs(idx+1).fragment.asInstanceOf[ChannelFragment]
+        f.nicklist.foreach(_.getAdapter
+                .asInstanceOf[NickListAdapter].notifyDataSetChanged())
+    }
     def refreshTabTitle(c: ChannelLike) {
-        var idx = Collections.binarySearch(channels, c, comp)
+        val idx = Collections.binarySearch(channels, c, comp)
         if (idx == -1) return
         val t = tabs(idx + 1)
         if (page == idx + 1) {
@@ -118,20 +128,25 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     override def onTabChanged(tabId: String) {
         val idx = tabhost.getCurrentTab()
         pager.setCurrentItem(idx)
-        val activity = tabhost.getContext().asInstanceOf[MainActivity]
-        activity.updateMenuVisibility(idx)
         page = idx
         pageChanged(page)
     }
 
     def pageChanged(pos: Int) {
+        activity.pageChanged(pos)
         val t = tabs(pos)
         t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
         t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
-        if (!t.channel.isEmpty) {
-            t.channel.get.newMessages = false
-            t.channel.get.newMentions = false
-        }
+        t.channel.foreach(c => {
+            if (c.newMentions) {
+                nm.cancel(c match {
+                case _: Channel => IrcService.MENTION_ID
+                case _: Query   => IrcService.PRIVMSG_ID
+                })
+            }
+            c.newMessages = false
+            c.newMentions = false
+        })
 
         refreshTabTitle(pos)
     }
@@ -140,7 +155,6 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     override def onPageScrolled(pos: Int, posOff: Float, posOffPix: Int) = Unit
     override def onPageSelected(pos: Int) {
         page = pos
-        val activity = tabhost.getContext().asInstanceOf[MainActivity]
 
         tabhost.setCurrentTab(pos)
         val v = tabhost.getTabWidget().getChildTabViewAt(pos)
@@ -150,7 +164,6 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val offset = v.getLeft() - display.getWidth() / 2 + v.getWidth() / 2
         hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
 
-        activity.updateMenuVisibility(pos)
         pageChanged(pos)
     }
     override def onPageScrollStateChanged(state: Int) = Unit
@@ -167,8 +180,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             findView[TextView](ind, R.id.title).setText(title)
 
             spec = tabhost.newTabSpec("tabspec" + tabnum).setIndicator(ind)
-        }
-        else
+        } else
             spec = tabhost.newTabSpec("tabspec" + tabnum).setIndicator(title)
 
         tabnum += 1

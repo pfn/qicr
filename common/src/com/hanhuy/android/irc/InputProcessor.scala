@@ -55,13 +55,17 @@ class InputProcessor(activity: MainActivity) {
             Unit // ignored
         if (action == EditorInfo.IME_NULL) {
             val line = input.getText()
-            currentState match {
-            case (s, c) => processor.server = s; processor.channel = c
-            }
-            processor.executeLine(line.toString())
+            handleLine(line)
             input.setText(null)
         }
         false // return false so the keyboard can collapse
+    }
+
+    def handleLine(line: String) {
+        currentState match {
+        case (s, c) => processor.server = s; processor.channel = c
+        }
+        processor.executeLine(line)
     }
 
     def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
@@ -154,7 +158,6 @@ class InputProcessor(activity: MainActivity) {
 
         val caret = input.getSelectionStart()
         val in = input.getText()
-        // TODO handle completion here
         // completion logic:  starts off with recents first, then alphabet
         // match a prefix, lowercased
         //   (store the prefix and start index if not set)
@@ -207,12 +210,12 @@ class InputProcessor(activity: MainActivity) {
             // side-effect cannot occur on the case side
             case ChatMessage(s, m) if !seenSet.contains(s.toLowerCase()) =>
                     seenSet.add(s.toLowerCase()); s.toLowerCase()
+        }.filter {
+            _ != "***" // znc playback user
         }.reverse toList
         val names = recent ++ users.keys.toList.sorted.filterNot(seenSet)
 
-        def goodCandidate(x: String) = {
-            x.startsWith(lowerp) && users.contains(x)
-        }
+        def goodCandidate(x: String) = x.startsWith(lowerp) && users.contains(x)
         val candidate: Option[String] = if (current == lowerp) {
             val i = names.indexWhere(goodCandidate)
             if (i != -1) Some(users(names(i))) else None
@@ -318,7 +321,12 @@ sealed class CommandProcessor(ctx: Context) {
                 ch.add(CtcpAction(ch.server.currentNick, line.get))
                 chan.sendAction(line.get)
             } else {
-                ch.add(Privmsg(ch.server.currentNick, line.get))
+                val u = chan.getUs()
+                if (u != null) // I doubt this will ever be null
+                    ch.add(Privmsg(ch.server.currentNick, line.get,
+                            u.hasOperator(), u.hasVoice()))
+                else
+                    ch.add(Privmsg(ch.server.currentNick, line.get))
                 chan.sendMessage(line.get)
             }
         }

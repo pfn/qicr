@@ -52,7 +52,27 @@ class IrcService extends Service {
     var startId: Int = -1
     var messagesId = 0
     var _running = false
-    var showing = false
+    var _showing = false
+    def showing = _showing
+    def showing_=(s: Boolean) = {
+        if (!s) {
+            if (_running) {
+                val notif = new Notification(R.drawable.ic_notify_mono,
+                        null, System.currentTimeMillis())
+                val pending = PendingIntent.getActivity(this, 0,
+                        new Intent(this, classOf[MainActivity]), 0)
+                notif.setLatestEventInfo(getApplicationContext(),
+                        getString(R.string.notif_title),
+                        getString(R.string.notif_running), pending)
+                startForeground(RUNNING_ID, notif)
+            } else {
+                stopForeground(true)
+            }
+        } else {
+            stopForeground(true)
+        }
+        _showing = s
+    }
     var config: Config = _
     val connections  = new HashMap[Server,IrcConnection]
     val _connections = new HashMap[IrcConnection,Server]
@@ -100,8 +120,7 @@ class IrcService extends Service {
     def bind(main: MainActivity) = {
         _activity = new WeakReference(main)
         if (!running) {
-            for (server <- _servers)
-                if (server.autoconnect) connect(server)
+            _servers.foreach(s => if (s.autoconnect) connect(s))
         }
     }
 
@@ -123,8 +142,8 @@ class IrcService extends Service {
         config = new Config(this)
     }
     override def onDestroy() {
-        super.onDestroy()
         _servers.foreach(_.stateChangedListeners -= serverStateChanged)
+        super.onDestroy()
     }
 
     def running = _running
@@ -143,8 +162,12 @@ class IrcService extends Service {
                 runOnUI(cb.get)
             }, "Quit disconnect waiter").start()
         }
-        for (server <- { Seq.empty ++ connections.keys }) {
-            disconnect(server)
+        { Seq.empty ++ connections.keys }.foreach(disconnect(_))
+        if (startId != -1) {
+            stopForeground(true)
+            _running = false
+            stopSelfResult(startId)
+            startId = -1
         }
         val nm = getSystemService(Context.NOTIFICATION_SERVICE)
                 .asInstanceOf[NotificationManager]
@@ -152,41 +175,45 @@ class IrcService extends Service {
         nm.cancel(MENTION_ID)
         nm.cancel(PRIVMSG_ID)
     }
-    def disconnect(server: Server, message: Option[String] = None) {
-        connections.get(server) match {
-            case Some(c) => {
-                // TODO throw in an asynctask for some thread pooling maybe?
-                new Thread(() => {
-                    try {
-                        val m = message match {
-                        case Some(msg) => msg
-                        case None => getString(R.string.quit_msg_default)
-                        }
-                        c.disconnect(m)
-                    } catch {
-                        case e: Exception => {
-                            Log.w(TAG, "Disconnect failed", e)
-                            c.setConnected(false)
-                            c.disconnect()
-                        }
+    def disconnect(server: Server, message: Option[String] = None,
+            disconnected: Boolean = false) {
+        connections.get(server).foreach(c => {
+            // TODO throw in an asynctask for some thread pooling maybe?
+            new Thread(() => {
+                try {
+                    val m = message match {
+                    case Some(msg) => msg
+                    case None => getString(R.string.quit_msg_default)
                     }
-                    synchronized {
-                        disconnectCount += 1
-                        notify()
+                    c.disconnect(m)
+                } catch {
+                    case e: Exception => {
+                        Log.w(TAG, "Disconnect failed", e)
+                        c.setConnected(false)
+                        c.disconnect()
                     }
-                }, server.name + ": Disconnect thread").start()
-            }
-            case None => Unit
-        }
+                }
+                synchronized {
+                    disconnectCount += 1
+                    notify()
+                }
+            }, server.name + ": Disconnect thread").start()
+        })
         server.state = Server.State.DISCONNECTED
         removeConnection(server)
         // handled by onDisconnect
         server.add(ServerInfo(getString(R.string.server_disconnected)))
+
         if (connections.size == 0) {
-            stopForeground(true)
-            _running = false
-            stopSelfResult(startId)
-            startId = -1
+            // do not stop service if onDisconnect unless showing
+            if (!disconnected || showing) {
+                stopForeground(true)
+                _running = false
+                if (startId != -1) {
+                    stopSelfResult(startId)
+                    startId = -1
+                }
+            }
         }
     }
     override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
@@ -203,22 +230,12 @@ class IrcService extends Service {
         if (!_running) {
             _running = true
             startService(new Intent(this, classOf[IrcService]))
-            val notif = new Notification(R.drawable.ic_notify_mono,
-                    null, System.currentTimeMillis())
-            val pending = PendingIntent.getActivity(this, 0,
-                    new Intent(this, classOf[MainActivity]), 0)
-            notif.setLatestEventInfo(getApplicationContext(),
-                    getString(R.string.notif_title),
-                    getString(R.string.notif_running), pending)
-            startForeground(RUNNING_ID, notif)
         }
     }
 
     lazy val _servers = {
         val servers = config.getServers()
-        for (server <- servers) {
-            server.stateChangedListeners += serverStateChanged
-        }
+        servers.foreach(_.stateChangedListeners += serverStateChanged)
         servers
     }
 
@@ -233,6 +250,12 @@ class IrcService extends Service {
         serverAddedListeners.foreach(_(server))
     }
 
+    def notifyNickListChanged(c: ChannelLike) {
+        if (!showing) return
+
+        val channel = c.asInstanceOf[Channel]
+        activity.get.adapter.updateNickList(channel)
+    }
     def channelMessagesListener(c: ChannelLike, m: MessageLike) {
         if (!showing) return
         activity.get.adapter.refreshTabTitle(c)
@@ -327,7 +350,7 @@ class IrcService extends Service {
     }
 
     def serverDisconnected(server: Server) {
-        runOnUI(() => disconnect(server))
+        runOnUI(() => disconnect(server, disconnected = true))
         if (!showing)
             showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
                     getString(R.string.notif_server_disconnected, server.name),
@@ -362,7 +385,7 @@ class IrcService extends Service {
 class ConnectTask(server: Server, service: IrcService)
 extends AsyncTask[Object, Object, Server.State.State] {
     IrcConnection.ABOUT = service.getString(R.string.version, "0.1alpha")
-    IrcDebug.setEnabled(true)
+    //IrcDebug.setEnabled(true)
     protected override def doInBackground(args: Object*) :
             Server.State.State = {
         val ircserver = new IrcServer(server.hostname, server.port,
