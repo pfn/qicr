@@ -37,6 +37,8 @@
     <string name="yes">Yes</string>
     <string name="no">No</string>
 
+    <string name="nick_insert">Insert name</string>
+    <string name="nick_start_chat">Start chat</string>
     <string name="speech_failed">Your speech could not be recognized</string>
     <string name="speech_cancel">Cancel</string>
     <string name="speech_select">Select message</string>
@@ -101,6 +103,16 @@
     <string name="command_kick_2">k</string>
 
     <string name="help_text">
+      available commands:\n
+      /action /me\n
+      /h /help\n
+      /j /join\n
+      /m /msg\n
+      /notice\n
+      /quit\n
+      / /quote\n
+    </string>
+    <string name="help_text_complete_TODO">
       available commands:\n
       /action /me\n
       /ctcp\n

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nick_insert"
+        android:icon="@drawable/ic_menu_paste"
+        android:title="@string/nick_insert"/>
+    <item android:id="@+id/nick_start_chat"
+        android:icon="@drawable/ic_menu_start_conversation"
+        android:title="@string/nick_start_chat"/>
+</menu>

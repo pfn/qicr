@@ -72,7 +72,6 @@ class InputProcessor(activity: MainActivity) {
         val input = v.asInstanceOf[EditText]
         Log.i(TAG, "key: " + k + " e: " + e)
         // keyboard shortcuts / honeycomb and above only
-        // TAB / SEARCH nick completion TODO
         if (KeyEvent.ACTION_UP == e.getAction()) {
             val meta = e.getMetaState()
             val altOn   = (meta & KeyEvent.META_ALT_ON)   > 0
@@ -401,6 +400,7 @@ sealed class CommandProcessor(ctx: Context) {
         }
     }
 
+    // TODO implement
     object PartCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
@@ -456,38 +456,47 @@ sealed class CommandProcessor(ctx: Context) {
         override def execute(args: Option[String]) = sendAction(args)
     }
 
+    // TODO implement
     object PingCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object TopicCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object InviteCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object CtcpCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object NickCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object KickCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object WhowasCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object WhoisCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }
 
+    // TODO implement
     object IgnoreCommand extends Command {
         override def execute(args: Option[String]) = Unit
     }

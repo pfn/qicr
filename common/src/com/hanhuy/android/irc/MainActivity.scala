@@ -20,6 +20,7 @@ import android.view.{View, ViewGroup}
 import android.view.Display
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.ContextMenu
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.widget.LinearLayout
 import android.widget.{TabHost, TabWidget}
@@ -561,18 +562,69 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     }
 }
 
-class NickListFragment extends DialogFragment {
+class NickListFragment extends DialogFragment
+with AdapterView.OnItemClickListener {
+    // sucky hack because of using the view directly
+    var activity: MainActivity = _
     var listview: ListView = _
     var showAsDialog = true
     var adapter: Option[NickListAdapter] = None
+
+    override def onActivityCreated(bundle: Bundle) {
+        super.onActivityCreated(bundle)
+        activity = getActivity().asInstanceOf[MainActivity]
+    }
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         listview = inflater.inflate(R.layout.fragment_nicklist,
                 container, false).asInstanceOf[ListView]
         if (showAsDialog && adapter.isEmpty)
             getActivity().asInstanceOf[MainActivity].postOnUiThread(dismiss _)
+        if (showAsDialog || !honeycombAndNewer)
+            registerForContextMenu(listview)
+        listview.setOnItemClickListener(this)
         adapter.foreach(listview.setAdapter(_))
         listview
+    }
+
+    var contextPos: Int = _
+    override def onContextItemSelected(item: MenuItem): Boolean = {
+        item.getItemId match {
+        case R.id.nick_insert => insertNick()
+        case R.id.nick_start_chat => Toast.makeText(activity,
+                            "Not implemented yet, use /msg",
+                            Toast.LENGTH_SHORT).show()
+        }
+        true
+    }
+
+    override def onCreateContextMenu(menu: ContextMenu,
+            v: View, info: ContextMenu.ContextMenuInfo) {
+        val i = info.asInstanceOf[AdapterView.AdapterContextMenuInfo]
+        contextPos = i.position
+        val inflater = activity.getMenuInflater()
+        inflater.inflate(R.menu.nicklist_menu, menu)
+    }
+
+    def insertNick() {
+        var nick = listview.getAdapter().getItem(contextPos)
+                .asInstanceOf[String]
+        val c = nick.charAt(0)
+        if (c == '@' || c == '+')
+            nick = nick.substring(1)
+        val cursor = activity.input.getSelectionStart
+        nick += (if (cursor == 0) ", " else " ")
+        activity.input.getText.insert(cursor, nick)
+    }
+    override def onItemClick(parent: AdapterView[_],
+            view: View, pos: Int, id: Long) {
+        contextPos = pos
+        if (honeycombAndNewer) {
+            HoneycombSupport.startActionMode(this)
+        } else {
+            insertNick()
+            if (showAsDialog) dismiss()
+        }
     }
 }
 
@@ -591,11 +643,13 @@ extends MessagesFragment(a) {
 
         val adapter = new NickListAdapter(activity, channel)
         list.setAdapter(adapter)
+        adapter
     }
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         val v = inflater.inflate(R.layout.fragment_channel, container, false)
-        val config = getActivity().getResources().getConfiguration()
+        val activity = getActivity().asInstanceOf[MainActivity]
+        val config = activity.getResources().getConfiguration()
         // show via dialogfragment if < size_large
         if (channel != null && channel.isInstanceOf[Channel] &&
                 (config.screenLayout &
@@ -605,6 +659,7 @@ extends MessagesFragment(a) {
                         Configuration.SCREENLAYOUT_SIZE_XLARGE) != 0) {
             val f = new NickListFragment
             f.showAsDialog = false
+            f.activity = activity
             val view = f.onCreateView(inflater, null, null)
             nicklist = Some(view.asInstanceOf[ListView])
             if (channel != null)

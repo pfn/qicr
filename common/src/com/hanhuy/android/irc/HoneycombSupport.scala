@@ -77,4 +77,33 @@ object HoneycombSupport {
             true
         }
     }
+
+    def startActionMode(f: NickListFragment) {
+        NickListActionModeSetup.fragment = new WeakReference(f)
+        _actionmode = new WeakReference(
+                _main.startActionMode(NickListActionModeSetup))
+    }
+
+    object NickListActionModeSetup extends ActionMode.Callback {
+        var fragment: WeakReference[NickListFragment] = _
+        override def onActionItemClicked(mode: ActionMode, item: MenuItem) :
+                Boolean = {
+            mode.finish()
+            fragment.get.foreach(_.onContextItemSelected(item))
+            true
+        }
+        override def onCreateActionMode(mode: ActionMode, menu: Menu) :
+                Boolean = {
+            val inflater = new MenuInflater(_main)
+            inflater.inflate(R.menu.nicklist_menu, menu)
+            List(R.id.nick_insert,
+                 R.id.nick_start_chat).foreach(
+                         menu.findItem(_).setShowAsAction(
+                                 MenuItem.SHOW_AS_ACTION_IF_ROOM |
+                                 MenuItem.SHOW_AS_ACTION_WITH_TEXT))
+            true
+        }
+        override def onDestroyActionMode(mode: ActionMode) = Unit
+        override def onPrepareActionMode(mode: ActionMode, menu: Menu) = true
+    }
 }
