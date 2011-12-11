@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.app.Activity
 import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver
@@ -85,4 +86,15 @@ object AndroidConversions {
             Integer.parseInt(t.getText().toString())
     }
     implicit def toBoolean(c: CheckBox) : Boolean = c.isChecked()
+
+    implicit def toAndroidView(v: View): AndroidView = new AndroidView(v)
+    implicit def toAndroidActivity(a: Activity): AndroidActivity =
+            new AndroidActivity(a)
+}
+
+class AndroidView(view: View) {
+    def findView[T](id: Int): T = view.findViewById(id).asInstanceOf[T]
+}
+class AndroidActivity(activity: Activity) {
+    def findView[T](id: Int): T = activity.findViewById(id).asInstanceOf[T]
 }

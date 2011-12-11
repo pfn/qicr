@@ -28,7 +28,6 @@ import scala.math.Numeric.{IntIsIntegral => Math}
 
 import java.util.Collections
 
-import ViewFinder._
 import MainPagerAdapter._
 import AndroidConversions._
 
@@ -187,8 +186,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
 
         tabhost.setCurrentTab(pos)
         val v = tabhost.getTabWidget().getChildTabViewAt(pos)
-        val hsv = findView[HorizontalScrollView](
-                activity, R.id.tab_scroller)
+        val hsv = activity.findView[HorizontalScrollView](R.id.tab_scroller)
         val offset = v.getLeft() - hsv.getWidth() / 2 + v.getWidth() / 2
         hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
 
@@ -205,7 +203,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
                     .asInstanceOf[LayoutInflater]
             val ind = inflater.inflate(R.layout.tab_indicator,
                     tabhost.getTabWidget(), false)
-            findView[TextView](ind, R.id.title).setText(title)
+            ind.findView[TextView](R.id.title).setText(title)
 
             spec = tabhost.newTabSpec("tabspec" + tabnum).setIndicator(ind)
         } else
@@ -242,7 +240,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val v = tw.getChildTabViewAt(pos)
         val titleId = if (MainActivity.honeycombAndNewer)
                 android.R.id.title else R.id.title
-        findView[TextView](v, titleId).setText(title)
+        v.findView[TextView](titleId).setText(title)
     }
 
     def addChannel(c: ChannelLike) {

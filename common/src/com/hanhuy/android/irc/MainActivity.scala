@@ -49,18 +49,10 @@ import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
 import com.hanhuy.android.irc.model.NickListAdapter
 
-import ViewFinder._
 import MainActivity._
 
 import AndroidConversions._
 
-object ViewFinder {
-
-    def findView[T<:View](container: Activity, id : Int) : T =
-            container.findViewById(id).asInstanceOf[T]
-    def findView[T<:View](container: View, id : Int) : T =
-            container.findViewById(id).asInstanceOf[T]
-}
 object MainActivity {
     val MAIN_FRAGMENT         = "mainfrag"
     val SERVER_SETUP_FRAGMENT = "serversetupfrag"
@@ -76,15 +68,34 @@ object MainActivity {
     val REQUEST_SPEECH_RECOGNITION = 1
 }
 class MainActivity extends FragmentActivity with ServiceConnection {
-    lazy val tabhost = findView[TabHost](this, android.R.id.tabhost)
+    lazy val tabhost = {
+        val t = findView[TabHost](android.R.id.tabhost)
+        t.setup()
+        t
+    }
     lazy val servers = new ServersFragment
-    lazy val pager = findView[ViewPager](tabhost, R.id.pager)
+    lazy val pager = findView[ViewPager](R.id.pager)
     lazy val adapter = new MainPagerAdapter(
             getSupportFragmentManager(), tabhost, pager)
 
-    lazy val newmessages = findView[View](this, R.id.btn_new_messages)
+    lazy val newmessages = {
+        val v = findView[View](R.id.btn_new_messages)
+        v.setOnClickListener(adapter.goToNewMessages _)
+        v
+    }
+
     lazy val proc = new InputProcessor(this)
-    lazy val input = findView[EditText](this, R.id.input)
+    lazy val input = {
+        val i = findView[EditText](R.id.input)
+        i.setOnEditorActionListener(proc.onEditorActionListener _)
+        i.setOnKeyListener(proc.onKeyListener _)
+        i.addTextChangedListener(proc.TextListener)
+        i
+    }
+    lazy val serversFragment = {
+        getSupportFragmentManager().findFragmentByTag(adapter.tabs(0).tag.get)
+                .asInstanceOf[ServersFragment]
+    }
     var page = -1
 
     val serviceConnectionListeners    = new HashSet[(IrcService) => Any]
@@ -98,6 +109,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         serviceConnectionListeners.clear()
     }
 
+    def findView[T](id: Int): T = findViewById(id).asInstanceOf[T]
+
     override def onCreate(bundle: Bundle) {
         if (!honeycombAndNewer)
             setTheme(android.R.style.Theme_NoTitleBar)
@@ -108,25 +121,15 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         setContentView(R.layout.main)
 
-        tabhost.setup()
-
         adapter.createTab(getString(R.string.tab_servers), servers)
-
-        val manager = getSupportFragmentManager()
 
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
 
-        input.setOnEditorActionListener(proc.onEditorActionListener _)
-        input.setOnKeyListener(proc.onKeyListener _)
-        input.addTextChangedListener(proc.TextListener)
-
-        val complete = findView[View](this, R.id.btn_nick_complete)
+        val complete = findView[View](R.id.btn_nick_complete)
         complete.setOnClickListener(() => proc.nickComplete(Some(input)))
 
-        val speech = findView[View](this, R.id.btn_speech_rec)
-        newmessages.setOnClickListener(adapter.goToNewMessages _)
-
+        val speech = findView[View](R.id.btn_speech_rec)
         speech.setOnClickListener(() => {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -278,9 +281,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         val showNickComplete = honeycombAndNewer // TODO preference w/ default
         val showSpeechRec = true // TODO preference
 
-        val input = findView[EditText](this, R.id.input)
-        val complete = findView[View](this, R.id.btn_nick_complete)
-        val speech = findView[View](this, R.id.btn_speech_rec)
+        val complete = findView[View](R.id.btn_nick_complete)
+        val speech = findView[View](R.id.btn_speech_rec)
         input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
 
         getSupportFragmentManager().popBackStack(SERVER_SETUP_STACK,
@@ -324,12 +326,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         }
     }
 
-    // can't make it lazy, it might go away
-    def serversFragment = {
-        val mgr = getSupportFragmentManager()
-        mgr.findFragmentByTag(adapter.tabs(0).tag.get)
-                .asInstanceOf[ServersFragment]
-    }
     override def onCreateOptionsMenu(menu: Menu): Boolean = {
         val inflater = new MenuInflater(this)
         inflater.inflate(R.menu.main_menu, menu)
@@ -377,47 +373,47 @@ class ServerSetupFragment extends DialogFragment {
     var thisview: View = _
     def server = {
         val s = _server
-        s.name        = findView[EditText](thisview, R.id.add_server_name)
-        s.hostname    = findView[EditText](thisview, R.id.add_server_host)
-        s.port        = findView[EditText](thisview, R.id.add_server_port)
-        s.ssl         = findView[CheckBox](thisview, R.id.add_server_ssl)
-        s.autoconnect = findView[CheckBox](thisview,
+        s.name        = thisview.findView[EditText](R.id.add_server_name)
+        s.hostname    = thisview.findView[EditText](R.id.add_server_host)
+        s.port        = thisview.findView[EditText](R.id.add_server_port)
+        s.ssl         = thisview.findView[CheckBox](R.id.add_server_ssl)
+        s.autoconnect = thisview.findView[CheckBox](
                 R.id.add_server_autoconnect)
-        s.nickname    = findView[EditText](thisview, R.id.add_server_nickname)
-        s.altnick     = findView[EditText](thisview, R.id.add_server_altnick)
-        s.realname    = findView[EditText](thisview, R.id.add_server_realname)
-        s.username    = findView[EditText](thisview, R.id.add_server_username)
-        s.password    = findView[EditText](thisview, R.id.add_server_password)
-        s.autojoin    = findView[EditText](thisview, R.id.add_server_autojoin)
-        s.autorun     = findView[EditText](thisview, R.id.add_server_autorun)
+        s.nickname    = thisview.findView[EditText](R.id.add_server_nickname)
+        s.altnick     = thisview.findView[EditText](R.id.add_server_altnick)
+        s.realname    = thisview.findView[EditText](R.id.add_server_realname)
+        s.username    = thisview.findView[EditText](R.id.add_server_username)
+        s.password    = thisview.findView[EditText](R.id.add_server_password)
+        s.autojoin    = thisview.findView[EditText](R.id.add_server_autojoin)
+        s.autorun     = thisview.findView[EditText](R.id.add_server_autorun)
         _server
     }
     def server_=(s: Server) = {
         _server = s
         if (thisview != null && s != null) {
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_name).setText(s.name)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_host).setText(s.hostname)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_port).setText("" + s.port)
-            findView[CheckBox](thisview,
+            thisview.findView[CheckBox](
                     R.id.add_server_ssl).setChecked(s.ssl)
-            findView[CheckBox](thisview,
+            thisview.findView[CheckBox](
                     R.id.add_server_autoconnect).setChecked(s.autoconnect)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_nickname).setText(s.nickname)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_altnick).setText(s.altnick)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_realname).setText(s.realname)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_username).setText(s.username)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_password).setText(s.password)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_autojoin).setText(s.autojoin)
-            findView[EditText](thisview,
+            thisview.findView[EditText](
                     R.id.add_server_autorun).setText(s.autorun)
         }
     }
@@ -666,7 +662,7 @@ extends MessagesFragment(a) {
             nicklist = Some(view.asInstanceOf[ListView])
             if (channel != null)
                 setNickListAdapter(nicklist.get)
-            findView[ViewGroup](v, R.id.nicklist_container).addView(view)
+            v.findView[ViewGroup](R.id.nicklist_container).addView(view)
             // this puts them one atop the other, even though it's horizontal?
             //v.asInstanceOf[ViewGroup].addView(view)
         }
@@ -837,7 +833,7 @@ class ServersFragment extends ListFragment {
     }
 
     override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
-        findView[CheckedTextView](v, R.id.server_item_text).setChecked(true)
+        v.findView[CheckedTextView](R.id.server_item_text).setChecked(true)
         val activity = getActivity().asInstanceOf[MainActivity]
         val manager = activity.getSupportFragmentManager()
         manager.popBackStack(SERVER_SETUP_STACK,
@@ -849,9 +845,8 @@ class ServersFragment extends ListFragment {
         }
 
         if (server.state == Server.State.CONNECTED) {
-            val input = findView[EditText](activity.tabhost, R.id.input)
-            input.setVisibility(View.VISIBLE)
-            input.setFocusable(true)
+            activity.input.setVisibility(View.VISIBLE)
+            activity.input.setFocusable(true)
         }
         addServerMessagesFragment(server)
         _server = Some(server)
@@ -963,8 +958,8 @@ class ServersFragment extends ListFragment {
     def changeListener(server: Server) {
         if (!_server.isEmpty && _server.get == server &&
                 server.state == Server.State.CONNECTED && getActivity() != null)
-            findView[View](getActivity(),
-                    R.id.input).setVisibility(View.VISIBLE)
+            getActivity().asInstanceOf[MainActivity]
+                    .input.setVisibility(View.VISIBLE)
         if (adapter != null)
             adapter.notifyDataSetChanged()
     }
@@ -1080,9 +1075,9 @@ extends ArrayAdapter[Server](
         val list = parent.asInstanceOf[ListView]
         val v = super.getView(pos, reuseView, parent)
         val checked = list.getCheckedItemPosition()
-        val img = findView[ImageView](v, R.id.server_item_status)
+        val img = v.findView[ImageView](R.id.server_item_status)
 
-        findView[View](v, R.id.server_item_progress).setVisibility(
+        v.findView[View](R.id.server_item_progress).setVisibility(
                 if (server.state == Server.State.CONNECTING)
                         View.VISIBLE else View.INVISIBLE)
         img.setImageResource(server.state match {
@@ -1094,7 +1089,7 @@ extends ArrayAdapter[Server](
         img.setVisibility(if (server.state != Server.State.CONNECTING)
                 View.VISIBLE else View.INVISIBLE)
 
-        findView[CheckedTextView](v, R.id.server_item_text).setChecked(
+        v.findView[CheckedTextView](R.id.server_item_text).setChecked(
                 pos == checked)
         v
     }
