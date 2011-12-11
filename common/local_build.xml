@@ -19,6 +19,12 @@
                     else="${jar.libs.dir}">
                 <isset property="tested.project.absolute.dir" />
             </condition>
+            <dependset>
+                <srcfilelist dir="${gen.absolute.dir}/com/hanhuy/android/irc"
+                             files="R.java"/>
+                <targetfileset dir="${out.classes.absolute.dir}"
+                               includes="**/*.class"/>
+            </dependset>
             <javac encoding="${java.encoding}"
                     includeantruntime="false"
                     source="${java.source}" target="${java.target}"
@@ -34,7 +40,8 @@
                     <fileset dir="${extensible.libs.classpath}" includes="*.jar" />
                 </classpath>
             </javac>
-            <scalac force="changed" deprecation="on" debuginfo="true" unchecked="on"
+            <fsc force="changed" deprecation="on"
+                    debuginfo="vars" unchecked="on"
                     destdir="${out.classes.absolute.dir}"
                     bootclasspathref="android.target.classpath">
               <src path="${source.absolute.dir}" />
@@ -46,7 +53,7 @@
                 <pathelement location="${out.classes.absolute.dir}"/>
                 <path refid="project.libraries.jars"/>
               </classpath>
-            </scalac>
+            </fsc>
 
             <!-- if the project is a library then we generate a jar file -->
             <if condition="${project.is.library}">

@@ -39,6 +39,8 @@
 
     <string name="nick_insert">Insert name</string>
     <string name="nick_start_chat">Start chat</string>
+    <string name="speech_unsupported">
+        Speech recognition is not supported on this device</string>
     <string name="speech_failed">Your speech could not be recognized</string>
     <string name="speech_cancel">Cancel</string>
     <string name="speech_select">Select message</string>

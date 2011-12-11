@@ -32,7 +32,8 @@
                     <fileset dir="${extensible.libs.classpath}" includes="*.jar" />
                 </classpath>
             </javac>
-            <scalac force="changed" deprecation="on" debuginfo="true" unchecked="on"
+            <fsc force="changed" deprecation="on" debuginfo="true"
+                    unchecked="on"
                     destdir="${out.classes.absolute.dir}"
                     bootclasspathref="android.target.classpath">
               <src path="${source.absolute.dir}" />
@@ -44,7 +45,7 @@
                 <pathelement location="${out.classes.absolute.dir}"/>
                 <path refid="project.libraries.jars"/>
               </classpath>
-            </scalac>
+            </fsc>
 
             <!-- if the project is a library then we generate a jar file -->
             <if condition="${project.is.library}">

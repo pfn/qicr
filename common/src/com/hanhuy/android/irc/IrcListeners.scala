@@ -66,7 +66,7 @@ with ServerListener with MessageListener with ModeListener {
             val proc = CommandProcessor(service)
             proc.server = Some(server)
             if (server.autorun != null) {
-                for (cmd <- server.autorun.split(";")) {
+                server.autorun.split(";") foreach { cmd =>
                     if (cmd.trim().length() > 0) {
                         var command = cmd.trim()
                         if (command.charAt(0) != '/')
@@ -78,7 +78,7 @@ with ServerListener with MessageListener with ModeListener {
             if (server.autojoin != null) {
                 val join = service.getString(R.string.command_join_1)
                 val channels = server.autojoin.split(";")
-                for (c <- channels) {
+                channels foreach { c =>
                     if (c.trim().length() > 0)
                         service.runOnUI(() =>
                                 proc.executeCommand(join, Some(c.trim())))
@@ -87,6 +87,7 @@ with ServerListener with MessageListener with ModeListener {
         }
     }
     override def onDisconnect(c: IrcConnection) {
+        Log.w(TAG, "Connection dropped: " + c, new StackTrace)
         service._connections.get(c) foreach { service.serverDisconnected(_) }
     }
     override def onInvite(c: IrcConnection, src: User, user: User,

@@ -20,7 +20,7 @@ import android.view.{View, ViewGroup}
 
 class MessageAdapter extends BaseAdapter {
     var channel: ChannelLike = _
-    var _maximumSize = 128
+    var _maximumSize = 256
     def maximumSize = _maximumSize
     def maximumSize_= (size: Int) = {
         _maximumSize = size

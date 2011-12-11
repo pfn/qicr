@@ -10,26 +10,45 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+        <!--
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        <ImageView
+            android:id="@+id/btn_new_messages"
+            android:gravity="center_vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:paddingLeft="2dip"
+            android:paddingRight="2dip"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_btn_new_messages"/>
+            -->
         <HorizontalScrollView
             android:id="@+id/tab_scroller"
-            android:layout_width="fill_parent"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fillViewport="true"
             android:scrollbars="none">
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_height="wrap_content"
-                android:layout_width="fill_parent">
+                android:layout_width="match_parent">
                 <TabWidget
                     android:id="@android:id/tabs"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
+                <!-- don't let a single tab eat up all space -->
                 <View
                     android:layout_width="0dp"
                     android:layout_height="0dp"
                     android:layout_weight="1"/>
             </LinearLayout>
         </HorizontalScrollView>
+        <!--
+        </LinearLayout>
+        -->
 
         <FrameLayout
             android:id="@android:id/tabcontent"
@@ -50,6 +69,14 @@
             android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
+            <ImageButton
+                android:id="@+id/btn_new_messages"
+                android:visibility="gone"
+                android:focusable="false"
+                android:focusableInTouchMode="false"
+                android:src="@drawable/ic_btn_new_messages"
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"/>
             <ImageButton
                 android:id="@+id/btn_nick_complete"
                 android:focusable="false"

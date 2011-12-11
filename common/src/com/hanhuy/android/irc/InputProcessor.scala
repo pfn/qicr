@@ -205,13 +205,14 @@ class InputProcessor(activity: MainActivity) {
             u => ( u.getNick().toLowerCase(), u.getNick() )
         } toMap
         val seenSet = new collection.mutable.HashSet[String]
-        val recent = c.messages.messages.collect {
+        val recent = c.messages.messages.reverse.collect {
             // side-effect cannot occur on the case side
             case ChatMessage(s, m) if !seenSet.contains(s.toLowerCase()) =>
                     seenSet.add(s.toLowerCase()); s.toLowerCase()
-        }.filter {
-            _ != "***" // znc playback user
-        }.reverse toList
+        }.filter { n =>
+            // znc playback user and current nick
+            n != "***" && n != c.server.currentNick
+        } toList
         val names = recent ++ users.keys.toList.sorted.filterNot(seenSet)
 
         def goodCandidate(x: String) = x.startsWith(lowerp) && users.contains(x)

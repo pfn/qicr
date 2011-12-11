@@ -11,6 +11,7 @@ import com.hanhuy.android.irc.model.NickListAdapter
 import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
+import android.text.Html
 import android.view.View
 import android.view.LayoutInflater;
 import android.widget.HorizontalScrollView
@@ -72,9 +73,17 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         server.state match {
         case Server.State.DISCONNECTED => {
             // iterate channels and flag them as disconnected
-            for (i <- 0 until channels.size) {
+            (0 until channels.size) foreach { i =>
                 if (channels(i).server == server) {
                     tabs(i+1).flags |= TabInfo.FLAG_DISCONNECTED
+                    refreshTabTitle(i+1)
+                }
+            }
+        }
+        case Server.State.CONNECTED => {
+            (0 until channels.size) foreach { i =>
+                if (channels(i).server == server) {
+                    tabs(i+1).flags &= ~TabInfo.FLAG_DISCONNECTED
                     refreshTabTitle(i+1)
                 }
             }
@@ -96,10 +105,15 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         if (idx == -1) return
         val t = tabs(idx + 1)
         if (page == idx + 1) {
+            // make sure they're cleared when coming back
+            c.newMentions = false
+            c.newMessages = false
             t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
             t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
             return
         }
+        if (c.newMentions)
+            activity.newmessages.setVisibility(View.VISIBLE)
 
         if (c.newMessages)
             t.flags |= TabInfo.FLAG_NEW_MESSAGES
@@ -112,12 +126,15 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val t = tabs(pos)
         var title = t.title
 
-        if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0) title = "*" + title
-        else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0) title = "+" + title
+        if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
+            title = "<font color=#ff0000>*" + title + "</font>"
+        else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0)
+            title = "<font color=#00ffff>+" + title +"</font>"
 
-        if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0) title = "(" + title + ")"
+        if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
+            title = "(" + title + ")"
 
-        setTabTitle(title, pos)
+        setTabTitle(Html.fromHtml(title), pos)
     }
 
     // PagerAdapter
@@ -148,7 +165,18 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             c.newMentions = false
         })
 
+        activity.newmessages.setVisibility(channels.find(_.newMentions) match {
+        case Some(_) => View.VISIBLE
+        case None    => View.GONE
+        })
+
         refreshTabTitle(pos)
+    }
+
+    def goToNewMessages() {
+        val pos = channels.indexWhere(_.newMentions)
+        if (pos != -1)
+            tabhost.setCurrentTab(pos + 1)
     }
 
     // OnPageChangeListener
@@ -160,8 +188,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val v = tabhost.getTabWidget().getChildTabViewAt(pos)
         val hsv = findView[HorizontalScrollView](
                 activity, R.id.tab_scroller)
-        val display = tabhost
-        val offset = v.getLeft() - display.getWidth() / 2 + v.getWidth() / 2
+        val offset = v.getLeft() - hsv.getWidth() / 2 + v.getWidth() / 2
         hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
 
         pageChanged(pos)
@@ -204,13 +231,12 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         if (tabs.size == 1) return info
 
         val tw = tabhost.getTabWidget()
-        for (i <- 0 until tw.getTabCount())
-            refreshTabTitle(i)
+        (0 until tw.getTabCount) foreach { refreshTabTitle(_) }
         notifyDataSetChanged()
         info
     }
 
-    def setTabTitle(title: String, pos: Int) {
+    def setTabTitle(title: CharSequence, pos: Int) {
         val tw = tabhost.getTabWidget()
         val v = tw.getChildTabViewAt(pos)
         val titleId = if (MainActivity.honeycombAndNewer)
@@ -246,8 +272,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         tabhost.clearAllTabs()
         channels.remove(pos-1)
         tabs.remove(pos)
-        for (i <- 0 until tabs.length)
-            addTab(tabs(i).title)
+        (0 until tabs.length) foreach { i => addTab(tabs(i).title) }
         tabhost.setCurrentTab(Math.max(0, pos-1))
         notifyDataSetChanged()
     }

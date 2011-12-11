@@ -73,7 +73,7 @@ class IrcService extends Service {
         }
         _showing = s
     }
-    var config: Config = _
+    lazy val config = new Config(this)
     val connections  = new HashMap[Server,IrcConnection]
     val _connections = new HashMap[IrcConnection,Server]
 
@@ -99,6 +99,7 @@ class IrcService extends Service {
     def activity = if (_activity == null) None else _activity.get
 
     def removeConnection(server: Server) {
+        Log.i(TAG, "Unregistering connection: " + server, new StackTrace)
         connections.get(server).foreach(c => {
             connections -= server
             _connections -= c
@@ -106,6 +107,7 @@ class IrcService extends Service {
     }
 
     def addConnection(server: Server, connection: IrcConnection) {
+        Log.i(TAG, "Registering connection: " + server + " => " + connection)
         connections  += ((server, connection))
         _connections += ((connection, server))
     }
@@ -133,11 +135,6 @@ class IrcService extends Service {
         new LocalService()
     }
 
-    override def onCreate() {
-        super.onCreate()
-        //Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler _)
-        config = new Config(this)
-    }
     override def onDestroy() {
         _servers.foreach(_.stateChangedListeners -= serverStateChanged)
         super.onDestroy()
@@ -388,6 +385,8 @@ extends AsyncTask[Object, Object, Server.State.State] {
         val ircserver = new IrcServer(server.hostname, server.port,
                 server.password, server.ssl)
         val connection = new IrcConnection
+        Log.i(TAG, "Connecting to server: " +
+                (server.hostname, server.port, server.ssl))
         connection.setServer(ircserver)
         connection.setUsername(server.username, server.realname)
         connection.setNick(server.nickname)
@@ -456,3 +455,5 @@ extends AsyncTask[Object, Object, Server.State.State] {
             server.add(ServerInfo(progress(0).toString()))
     }
 }
+
+class StackTrace extends Exception

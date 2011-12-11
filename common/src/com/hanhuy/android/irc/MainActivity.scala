@@ -76,11 +76,15 @@ object MainActivity {
     val REQUEST_SPEECH_RECOGNITION = 1
 }
 class MainActivity extends FragmentActivity with ServiceConnection {
-    var tabhost: TabHost = _
-    var servers: ServersFragment = _
-    var adapter: MainPagerAdapter = _
-    var proc: InputProcessor = _
-    var input: EditText = _
+    lazy val tabhost = findView[TabHost](this, android.R.id.tabhost)
+    lazy val servers = new ServersFragment
+    lazy val pager = findView[ViewPager](tabhost, R.id.pager)
+    lazy val adapter = new MainPagerAdapter(
+            getSupportFragmentManager(), tabhost, pager)
+
+    lazy val newmessages = findView[View](this, R.id.btn_new_messages)
+    lazy val proc = new InputProcessor(this)
+    lazy val input = findView[EditText](this, R.id.input)
     var page = -1
 
     val serviceConnectionListeners    = new HashSet[(IrcService) => Any]
@@ -104,14 +108,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         setContentView(R.layout.main)
 
-        tabhost = findView[TabHost](this, android.R.id.tabhost)
         tabhost.setup()
 
-        val pager = findView[ViewPager](tabhost, R.id.pager)
-        adapter = new MainPagerAdapter(
-                getSupportFragmentManager(), tabhost, pager)
-
-        servers = new ServersFragment
         adapter.createTab(getString(R.string.tab_servers), servers)
 
         val manager = getSupportFragmentManager()
@@ -119,8 +117,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
 
-        input = findView[EditText](this, R.id.input)
-        proc = new InputProcessor(this)
         input.setOnEditorActionListener(proc.onEditorActionListener _)
         input.setOnKeyListener(proc.onKeyListener _)
         input.addTextChangedListener(proc.TextListener)
@@ -129,6 +125,10 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         complete.setOnClickListener(() => proc.nickComplete(Some(input)))
 
         val speech = findView[View](this, R.id.btn_speech_rec)
+        newmessages.setOnClickListener(() => {
+            adapter.goToNewMessages()
+        })
+
         speech.setOnClickListener(() => {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -137,8 +137,11 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             try {
                 startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
             } catch {
-                case e: Exception => Log.w(TAG,
+                case e: Exception => {Log.w(TAG,
                         "Unable to request speech recognition", e)
+                    Toast.makeText(this, R.string.speech_unsupported,
+                            Toast.LENGTH_SHORT).show()
+                }
             }
         })
     }
@@ -171,7 +174,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             val rec = results(which).toLowerCase
             if (rec.endsWith(" " + eol) || rec == eol) {
                 val t = input.getText()
-                val line = t.substring(0, t.length() - eol.length())
+                val line = t.substring(0, t.length() - eol.length() - 1)
                 proc.handleLine(line)
                 input.setText(null)
             } else if (rec == clearLine) {
@@ -1013,6 +1016,7 @@ class ServersFragment extends ListFragment {
         }
     }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        if (menu.findItem(R.id.add_server) != null) return
         inflater.inflate(R.menu.servers_menu, menu)
         val item = menu.findItem(R.id.add_server)
         MenuCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
@@ -1041,9 +1045,8 @@ class ServersFragment extends ListFragment {
         val c = m.getBackStackEntryCount()
         var found = false
         if (page == 0) {
-            for (i <- 0 until c) {
-                if (m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK)
-                    found = true
+            (0 until c) find { i =>
+                m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK
             }
         }
 
