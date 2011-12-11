@@ -125,9 +125,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         complete.setOnClickListener(() => proc.nickComplete(Some(input)))
 
         val speech = findView[View](this, R.id.btn_speech_rec)
-        newmessages.setOnClickListener(() => {
-            adapter.goToNewMessages()
-        })
+        newmessages.setOnClickListener(adapter.goToNewMessages _)
 
         speech.setOnClickListener(() => {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -373,6 +371,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
 }
 
+// TODO fix dialog dismiss on-recreate
 class ServerSetupFragment extends DialogFragment {
     var _server: Server = _
     var thisview: View = _
