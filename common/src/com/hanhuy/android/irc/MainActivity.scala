@@ -1045,9 +1045,9 @@ class ServersFragment extends ListFragment {
         val c = m.getBackStackEntryCount()
         var found = false
         if (page == 0) {
-            (0 until c) find { i =>
+            found = (0 until c) find { i =>
                 m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK
-            }
+            } isDefined
         }
 
         menu.findItem(R.id.add_server).setVisible(!found)
