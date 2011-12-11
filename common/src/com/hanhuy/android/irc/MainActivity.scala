@@ -246,7 +246,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
 
     override def onServiceConnected(name : ComponentName, binder : IBinder) {
-        service = binder.asInstanceOf[IrcService#LocalService].getService()
+        service = binder.asInstanceOf[LocalIrcService].instance
         service.bind(this)
         service.showing = true
         if (page != -1) {
@@ -269,13 +269,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         unbindService(this)
     }
 
-    def postOnUiThread[A](r: () => A) {
-        class RunnableTask extends AsyncTask[Object,Object,Unit] {
-            override def doInBackground(args: Object*): Unit = 
-                runOnUiThread(r)
-        }
-        new RunnableTask().execute()
-    }
+    def postOnUiThread[A](r: () => A) = (() => runOnUiThread(r)).execute()
 
     def pageChanged(idx: Int) {
         val showNickComplete = honeycombAndNewer // TODO preference w/ default
@@ -329,17 +323,22 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     override def onCreateOptionsMenu(menu: Menu): Boolean = {
         val inflater = new MenuInflater(this)
         inflater.inflate(R.menu.main_menu, menu)
-        val item = menu.findItem(R.id.exit)
-        MenuCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                                         MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+        List(R.id.exit, R.id.settings).foreach { item =>
+            MenuCompat.setShowAsAction(menu.findItem(item),
+                    MenuItem.SHOW_AS_ACTION_IF_ROOM |
+                    MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+        }
         true
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
-        if (R.id.exit == item.getItemId()) {
+        item.getItemId() match {
+        case R.id.exit => {
             exit()
-            return true
+            true
         }
-        false
+        case R.id.settings => true
+        case _ => false
+        }
     }
     override def onSaveInstanceState(state: Bundle) {
         super.onSaveInstanceState(state)

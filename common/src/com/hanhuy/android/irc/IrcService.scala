@@ -36,6 +36,17 @@ import com.sorcix.sirc.{User => SircUser}
 import AndroidConversions._
 import IrcService._
 
+// practice doing this so as to prevent leaking the service instance
+//     irrelevant in this app
+class LocalIrcService extends Binder {
+    var ref: WeakReference[IrcService] = _
+    // can't use default constructor as it will save a strong-ref
+    def this(s: IrcService) = {
+        this()
+        ref = new WeakReference(s)
+    }
+    def instance: IrcService = ref.get.get
+}
 object IrcService {
     val TAG = "IrcService"
 
@@ -111,11 +122,6 @@ class IrcService extends Service {
         connections  += ((server, connection))
         _connections += ((connection, server))
     }
-    class LocalService extends Binder {
-        def getService() : IrcService = {
-            IrcService.this
-        }
-    }
     def bind(main: MainActivity) = {
         _activity = new WeakReference(main)
         if (!running) {
@@ -132,7 +138,7 @@ class IrcService extends Service {
     }
 
     override def onBind(intent: Intent) : IBinder = {
-        new LocalService()
+        new LocalIrcService(this)
     }
 
     override def onDestroy() {
@@ -146,17 +152,18 @@ class IrcService extends Service {
     def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
         val count = connections.keys.size
         disconnectCount = 0
-        if (!cb.isEmpty) {
-            new Thread(() => {
-                synchronized { // TODO wait for quit to actually complete?
+        cb.foreach { call =>
+            (() => {
+                IrcService.this.synchronized {
+                    // TODO wait for quit to actually complete?
                     while (disconnectCount < count)
                         wait()
                 }
+                runOnUI(call)
                 stopSelf()
-                runOnUI(cb.get)
-            }, "Quit disconnect waiter").start()
+            }).execute()
         }
-        { Seq.empty ++ connections.keys }.foreach(disconnect(_))
+        connections.keys.foreach(disconnect(_))
         if (startId != -1) {
             stopForeground(true)
             _running = false
@@ -172,8 +179,7 @@ class IrcService extends Service {
     def disconnect(server: Server, message: Option[String] = None,
             disconnected: Boolean = false) {
         connections.get(server).foreach(c => {
-            // TODO throw in an asynctask for some thread pooling maybe?
-            new Thread(() => {
+            (() => {
                 try {
                     val m = message match {
                     case Some(msg) => msg
@@ -191,10 +197,10 @@ class IrcService extends Service {
                     disconnectCount += 1
                     notify()
                 }
-            }, server.name + ": Disconnect thread").start()
+            }).execute()
         })
+        removeConnection(server) // gotta go after the foreach above
         server.state = Server.State.DISCONNECTED
-        removeConnection(server)
         // handled by onDisconnect
         server.add(ServerInfo(getString(R.string.server_disconnected)))
 

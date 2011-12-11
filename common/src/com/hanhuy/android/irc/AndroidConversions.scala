@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver
+import android.os.AsyncTask
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -69,6 +70,13 @@ object AndroidConversions {
         def run() = f()
     }
 
+    implicit def toAsyncTask[A](f: () => A): AsyncTask[Object,Object,Unit] = {
+        object Task extends AsyncTask[Object,Object,Unit] {
+            override def doInBackground(args: Object*): Unit = f()
+        }
+        Task
+    }
+
     implicit def toUncaughtExceptionHandler[A]( f: (Thread, Throwable) => A):
             Thread.UncaughtExceptionHandler =
             new Thread.UncaughtExceptionHandler {
@@ -80,10 +88,8 @@ object AndroidConversions {
     implicit def toString(t: TextView) : String = t.getText()
     implicit def toInt(t: TextView) : Int = {
         val s: String = t.getText()
-        if (s == null || s == "")
-            -1
-        else
-            Integer.parseInt(t.getText().toString())
+        if (s == null || s == "") -1
+        else Integer.parseInt(s)
     }
     implicit def toBoolean(c: CheckBox) : Boolean = c.isChecked()
 
