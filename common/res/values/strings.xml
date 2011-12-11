@@ -8,6 +8,7 @@
     <string name="server_nick_retry">
         Your nickname is unavailable, trying alternate.
     </string>
+    <string name="input_placeholder">Type here</string>
     <string name="server_nick_error">
         Your nicknames are all unavailable, aborting.
     </string>
@@ -67,10 +68,11 @@
     <string name="message_template">&amp;lt;%1$s&amp;gt; %2$s</string>
     <string name="notice_template">-%1$s- %2$s</string>
     <string name="action_template"> * %1$s %2$s</string>
-    <string name="topic_template_2">
-        *** %1$s changed the topic of %2$s to: %3$s</string>
+
     <string name="topic_template_1">
         *** Topic for %1$s: %2$s</string>
+    <string name="topic_template_2">
+        *** %1$s changed the topic of %2$s to: %3$s</string>
 
     <string name="error_no_channel">
         You are not on a channel or query, try /help</string>

@@ -70,6 +70,7 @@
                 android:id="@+id/input"
                 android:autoText="true"
                 android:inputType="text|textAutoCorrect"
+                android:hint="@string/input_placeholder"
                 android:imeOptions="actionSend|flagNoFullscreen"
                 android:layout_weight="1"
                 android:layout_width="0dp"

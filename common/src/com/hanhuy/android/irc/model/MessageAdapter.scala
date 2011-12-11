@@ -12,12 +12,18 @@ import scala.ref.WeakReference
 
 import android.graphics.Typeface
 import android.view.LayoutInflater
+import android.util.Log
 import android.content.Context
 import android.text.Html
 import android.widget.BaseAdapter
 import android.widget.TextView
 import android.view.{View, ViewGroup}
 
+import MessageAdapter._
+
+object MessageAdapter {
+    val TAG = "MessageAdapter"
+}
 class MessageAdapter extends BaseAdapter {
     var channel: ChannelLike = _
     var _maximumSize = 256

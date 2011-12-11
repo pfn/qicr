@@ -60,6 +60,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     def refreshTabs(service: IrcService) {
         if (service.channels.size > channels.size)
             (service.channels.keySet -- channels).foreach(addChannel(_))
+        channels.foreach(refreshTabTitle(_))
     }
 
     def onServiceConnected(service: IrcService) {
