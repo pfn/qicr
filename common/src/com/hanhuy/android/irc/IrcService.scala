@@ -84,9 +84,22 @@ class IrcService extends Service {
         }
         _showing = s
     }
-    lazy val config = new Config(this)
-    val connections  = new HashMap[Server,IrcConnection]
-    val _connections = new HashMap[IrcConnection,Server]
+    lazy val config   = new Config(this)
+    lazy val settings = {
+        val s = new Settings(this)
+        s.preferenceChangedListeners += { key =>
+            if (key == getString(R.string.pref_message_lines)) {
+                _servers.foreach { server =>
+                    server.messages.maximumSize = s.getString(
+                            R.string.pref_message_lines,
+                            MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
+                }
+            }
+        }
+        s
+    }
+    val connections   = new HashMap[Server,IrcConnection]
+    val _connections  = new HashMap[IrcConnection,Server]
 
     val channels  = new HashMap[ChannelLike,SircChannel]
     val _channels = new HashMap[SircChannel,ChannelLike]
@@ -125,7 +138,12 @@ class IrcService extends Service {
     def bind(main: MainActivity) = {
         _activity = new WeakReference(main)
         if (!running) {
-            _servers.foreach(s => if (s.autoconnect) connect(s))
+            _servers.foreach { s =>
+                if (s.autoconnect) connect(s)
+                s.messages.maximumSize = settings.getString(
+                        R.string.pref_message_lines,
+                        MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
+            }
         }
     }
 
@@ -147,8 +165,8 @@ class IrcService extends Service {
     }
 
     def running = _running
-    var disconnectCount = 0
 
+    var disconnectCount = 0
     def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
         val count = connections.keys.size
         disconnectCount = 0
@@ -157,7 +175,7 @@ class IrcService extends Service {
                 IrcService.this.synchronized {
                     // TODO wait for quit to actually complete?
                     while (disconnectCount < count)
-                        wait()
+                        IrcService.this.wait()
                 }
                 runOnUI(call)
                 stopSelf()
@@ -183,7 +201,8 @@ class IrcService extends Service {
                 try {
                     val m = message match {
                     case Some(msg) => msg
-                    case None => getString(R.string.quit_msg_default)
+                    case None => settings.getString(R.string.pref_quit_message,
+                            R.string.pref_quit_message_default)
                     }
                     c.disconnect(m)
                 } catch {
@@ -193,9 +212,9 @@ class IrcService extends Service {
                         c.disconnect()
                     }
                 }
-                synchronized {
+                IrcService.this.synchronized {
                     disconnectCount += 1
-                    notify()
+                    IrcService.this.notify()
                 }
             }).execute()
         })
@@ -380,7 +399,9 @@ class IrcService extends Service {
     }
 }
 
-// Object due to java<->scala varargs interop bug
+// TODO when cancelled, disconnect if still in process
+// TODO implement connection timeouts
+// use Object due to java<->scala varargs interop bug
 // https://issues.scala-lang.org/browse/SI-1459
 class ConnectTask(server: Server, service: IrcService)
 extends AsyncTask[Object, Object, Server.State.State] {

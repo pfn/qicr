@@ -314,3 +314,12 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     def makeFragmentTag(f: Fragment): String =
         "android:switcher:" + System.identityHashCode(f)
 }
+
+class DummyTabFactory(c : Context) extends TabHost.TabContentFactory {
+    override def createTabContent(tag : String) : View = {
+        val v = new View(c)
+        v.setMinimumWidth(0)
+        v.setMinimumHeight(0)
+        v
+    }
+}

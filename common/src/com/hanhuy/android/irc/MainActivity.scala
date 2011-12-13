@@ -68,6 +68,29 @@ object MainActivity {
     val REQUEST_SPEECH_RECOGNITION = 1
 }
 class MainActivity extends FragmentActivity with ServiceConnection {
+    val _richactivity: RichActivity = this; import _richactivity._
+
+    lazy val settings = {
+        val s = new Settings(this)
+        s.preferenceChangedListeners += { key =>
+            List(R.string.pref_show_nick_complete,
+                    R.string.pref_show_speech_rec) foreach { r =>
+                if (getString(r) == key) {
+                    r match {
+                    case R.string.pref_show_nick_complete =>
+                        showNickComplete = s.getBoolean(r, honeycombAndNewer)
+                    case R.string.pref_show_speech_rec =>
+                        showSpeechRec = s.getBoolean(r, true)
+                    }
+                }
+            }
+        }
+        s
+    }
+    var showNickComplete: Boolean = _
+    var showSpeechRec: Boolean = _
+
+    // TODO remove tabhost?
     lazy val tabhost = {
         val t = findView[TabHost](android.R.id.tabhost)
         t.setup()
@@ -82,6 +105,31 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         val v = findView[View](R.id.btn_new_messages)
         v.setOnClickListener(adapter.goToNewMessages _)
         v
+    }
+
+    lazy val nickcomplete = {
+        val complete = findView[View](R.id.btn_nick_complete)
+        complete.setOnClickListener(() => proc.nickComplete(Some(input)))
+        complete
+    }
+    lazy val speechrec = {
+        val speech = findView[View](R.id.btn_speech_rec)
+        speech.setOnClickListener(() => {
+            val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            try {
+                startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
+            } catch {
+                case e: Exception => {Log.w(TAG,
+                        "Unable to request speech recognition", e)
+                    Toast.makeText(this, R.string.speech_unsupported,
+                            Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+        speech
     }
 
     lazy val proc = new InputProcessor(this)
@@ -109,8 +157,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         serviceConnectionListeners.clear()
     }
 
-    def findView[T](id: Int): T = findViewById(id).asInstanceOf[T]
-
     override def onCreate(bundle: Bundle) {
         if (!honeycombAndNewer)
             setTheme(android.R.style.Theme_NoTitleBar)
@@ -126,25 +172,10 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
 
-        val complete = findView[View](R.id.btn_nick_complete)
-        complete.setOnClickListener(() => proc.nickComplete(Some(input)))
-
-        val speech = findView[View](R.id.btn_speech_rec)
-        speech.setOnClickListener(() => {
-            val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            try {
-                startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
-            } catch {
-                case e: Exception => {Log.w(TAG,
-                        "Unable to request speech recognition", e)
-                    Toast.makeText(this, R.string.speech_unsupported,
-                            Toast.LENGTH_SHORT).show()
-                }
-            }
-        })
+        // cannot be lazily loaded along with settings
+        showNickComplete = settings.getBoolean(
+                R.string.pref_show_nick_complete, honeycombAndNewer)
+        showSpeechRec = settings.getBoolean(R.string.pref_show_speech_rec, true)
     }
 
     override def onActivityResult(req: Int, res: Int, i: Intent) {
@@ -169,9 +200,12 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                 (d: DialogInterface, which: Int) => {
             input.getText().append(results(which) + " ")
 
-            // TODO make preferences for these
-            val eol = "over"
-            val clearLine = "clear line"
+            val eol = settings.getString(
+                    R.string.pref_speech_rec_eol,
+                    R.string.pref_speech_rec_eol_default)
+            val clearLine = settings.getString(
+                    R.string.pref_speech_rec_clearline,
+                    R.string.pref_speech_rec_clearline_default)
             val rec = results(which).toLowerCase
             if (rec.endsWith(" " + eol) || rec == eol) {
                 val t = input.getText()
@@ -231,6 +265,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         if (service != null) refreshTabs()
         else serviceConnectionListeners += refreshTabs
+
+        pageChanged(adapter.page)
     }
     override def onNewIntent(i: Intent) {
         super.onNewIntent(i)
@@ -272,11 +308,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     def postOnUiThread[A](r: () => A) = (() => runOnUiThread(r)).execute()
 
     def pageChanged(idx: Int) {
-        val showNickComplete = honeycombAndNewer // TODO preference w/ default
-        val showSpeechRec = true // TODO preference
-
-        val complete = findView[View](R.id.btn_nick_complete)
-        val speech = findView[View](R.id.btn_speech_rec)
         input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
 
         getSupportFragmentManager().popBackStack(SERVER_SETUP_STACK,
@@ -284,12 +315,9 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         val f = adapter.getItem(idx)
         // workaround for disappearing menus, might be required for <3.0
-        val count = adapter.getCount()
-        if (idx < count - 1)
-            adapter.getItem(idx+1).setMenuVisibility(false)
-        if (idx > 0)
-            adapter.getItem(idx-1).setMenuVisibility(false)
-        f.setMenuVisibility(false)
+        (0 until adapter.getCount()) foreach { i =>
+            adapter.getItem(i).setMenuVisibility(false)
+        }
         f.setMenuVisibility(true)
 
         if (honeycombAndNewer) {
@@ -304,19 +332,18 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             case _ => Unit
         }
 
-        // TODO implement an option to hide these buttons
         if (f.isInstanceOf[QueryFragment]) {
-            complete.setVisibility(View.GONE)
-            if (showSpeechRec)
-                speech.setVisibility(View.VISIBLE)
+            nickcomplete.setVisibility(View.GONE)
+            speechrec.setVisibility(if (showSpeechRec)
+                    View.VISIBLE else View.GONE)
         } else if (f.isInstanceOf[ChannelFragment]) {
-            if (showNickComplete)
-                complete.setVisibility(View.VISIBLE)
-            if (showSpeechRec)
-                speech.setVisibility(View.VISIBLE)
+            nickcomplete.setVisibility(if (showNickComplete)
+                    View.VISIBLE else View.GONE)
+            speechrec.setVisibility(if (showSpeechRec)
+                    View.VISIBLE else View.GONE)
         } else {
-            complete.setVisibility(View.GONE)
-            speech.setVisibility(View.GONE)
+            nickcomplete.setVisibility(View.GONE)
+            speechrec.setVisibility(View.GONE)
         }
     }
 
@@ -336,7 +363,13 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             exit()
             true
         }
-        case R.id.settings => true
+        case R.id.settings => {
+            val clazz = if (honeycombAndNewer) classOf[SettingsFragmentActivity]
+            else classOf[SettingsActivity]
+            val intent = new Intent(this, clazz)
+            startActivity(intent)
+            true
+        }
         case _ => false
         }
     }
@@ -347,7 +380,9 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
 
     def exit(message: Option[String] = None) {
-        if (service.running) {
+        val prompt = settings.getBoolean(
+                R.string.pref_quit_prompt, true)
+        if (service.running && prompt) {
             var builder = new AlertDialog.Builder(this)
             builder.setTitle(R.string.quit_confirm_title)
             builder.setMessage(getString(R.string.quit_confirm))
@@ -360,8 +395,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             })
             builder.create().show()
         } else {
-            service.quit(message)
-            finish()
+            service.quit(message, if (service.running) Some(finish _) else None)
         }
     }
 }
@@ -662,7 +696,7 @@ extends MessagesFragment(a) {
             if (channel != null)
                 setNickListAdapter(nicklist.get)
             v.findView[ViewGroup](R.id.nicklist_container).addView(view)
-            // this puts them one atop the other, even though it's horizontal?
+            // TODO this puts them one atop the other, even when horizontal?
             //v.asInstanceOf[ViewGroup].addView(view)
         }
         v
@@ -702,6 +736,8 @@ extends MessagesFragment(a) {
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
         if (R.id.channel_close == item.getItemId()) {
             val activity = getActivity().asInstanceOf[MainActivity]
+            val prompt = activity.settings.getBoolean(
+                    R.string.pref_close_tab_prompt, true)
             def removeChannel() {
                 if (channel.state == Channel.State.JOINED) {
                     val c = activity.service.channels(channel)
@@ -713,7 +749,7 @@ extends MessagesFragment(a) {
                 activity.adapter.removeTab(
                         activity.adapter.getItemPosition(this))
             }
-            if (channel.state == Channel.State.JOINED) {
+            if (channel.state == Channel.State.JOINED && prompt) {
                 var builder = new AlertDialog.Builder(activity)
                 builder.setTitle(R.string.channel_close_confirm_title)
                 builder.setMessage(getString(R.string.channel_close_confirm))
@@ -773,28 +809,34 @@ extends MessagesFragment(a) {
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
         if (R.id.query_close == item.getItemId()) {
-            if (true) { // TODO check preference
-                val activity = getActivity().asInstanceOf[MainActivity]
+            val activity = getActivity().asInstanceOf[MainActivity]
+            val prompt = activity.settings.getBoolean(
+                    R.string.pref_close_tab_prompt, true)
+            def removeQuery() {
+                val query = activity.service.chans(id).asInstanceOf[Query]
+                activity.service.queries  -=
+                        ((query.server, query.name.toLowerCase()))
+                activity.service.messages -= id
+                activity.service.chans    -= id
+                activity.service.channels -= query
+                activity.adapter.removeTab(
+                        activity.adapter.getItemPosition(this))
+            }
+            if (prompt) {
                 var builder = new AlertDialog.Builder(activity)
                 builder.setTitle(R.string.query_close_confirm_title)
                 builder.setMessage(getString(R.string.query_close_confirm))
                 builder.setPositiveButton(R.string.yes,
                         (d: DialogInterface, resid: Int) => {
-                    val query = activity.service.chans(id).asInstanceOf[Query]
-                    activity.service.queries  -=
-                            ((query.server, query.name.toLowerCase()))
-                    activity.service.messages -= id
-                    activity.service.chans    -= id
-                    activity.service.channels -= query
-                    activity.adapter.removeTab(
-                            activity.adapter.getItemPosition(this))
+                    removeQuery()
                 })
                 builder.setNegativeButton(R.string.no, 
                         (d: DialogInterface, resid: Int) => {
                 })
                 builder.create().show()
                 return true
-            }
+            } else
+                removeQuery()
             return true
         }
         false
@@ -1090,15 +1132,6 @@ extends ArrayAdapter[Server](
 
         v.findView[CheckedTextView](R.id.server_item_text).setChecked(
                 pos == checked)
-        v
-    }
-}
-
-class DummyTabFactory(c : Context) extends TabHost.TabContentFactory {
-    override def createTabContent(tag : String) : View = {
-        val v = new View(c)
-        v.setMinimumWidth(0)
-        v.setMinimumHeight(0)
         v
     }
 }

@@ -2,6 +2,7 @@ package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.IrcListeners
 import com.hanhuy.android.irc.MainActivity
+import com.hanhuy.android.irc.Settings
 
 import MessageLike._
 
@@ -23,16 +24,17 @@ import MessageAdapter._
 
 object MessageAdapter {
     val TAG = "MessageAdapter"
+    val DEFAULT_MAXIMUM_SIZE = 256
 }
 class MessageAdapter extends BaseAdapter {
     var channel: ChannelLike = _
-    var _maximumSize = 256
+    val messages = new Queue[MessageLike]
+    var _maximumSize = DEFAULT_MAXIMUM_SIZE
     def maximumSize = _maximumSize
-    def maximumSize_= (size: Int) = {
-        _maximumSize = size
+    def maximumSize_=(s: Int) = {
+        _maximumSize = s
         ensureSize()
     }
-    val messages = new Queue[MessageLike]
 
     var _inflater: WeakReference[LayoutInflater] = _
     def inflater = _inflater.get match {

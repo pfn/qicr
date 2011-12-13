@@ -30,7 +30,6 @@
     <string name="md5_fingerprint">MD5 Fingerprint: </string>
 
     <string name="version">qicr for android: %s</string>
-    <string name="quit_msg_default">qicr for android: faster and better</string>
     <string name="quit_confirm_title">Exit?</string>
     <string name="quit_confirm">
         You are still connected, are you sure you would like to quit?</string>

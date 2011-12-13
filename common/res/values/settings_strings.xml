@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pref_category_interface">Interface</string>
+    <string name="pref_category_speech_rec">Speech Recognition</string>
+    <string name="pref_category_irc">IRC</string>
+
+    <!-- these pref names should not be localized -->
+    <string name="pref_close_tab_prompt">ui_close_tab_prompt</string>
+    <string name="pref_quit_prompt">ui_quit_prompt</string>
+    <string name="pref_show_nick_complete">ui_show_nick_complete</string>
+    <string name="pref_show_speech_rec">ui_show_speech_rec</string>
+    <string name="pref_quit_message">irc_quit_message</string>
+    <string name="pref_speech_rec_eol">speech_cmd_eol</string>
+    <string name="pref_speech_rec_clearline">speech_cmd_clear_line</string>
+    <string name="pref_message_lines">ui_message_lines</string>
+    <!-- end of pref names that should not be localized -->
+
+    <string name="pref_show_nick_complete_title">
+        Nick completion button</string>
+    <string name="pref_show_nick_complete_summary">
+        Show the search soft button for nick completion</string>
+
+    <string name="pref_quit_prompt_title">Prompt before quitting</string>
+    <string name="pref_quit_prompt_summary">
+        Ask before exiting when still connected</string>
+
+    <string name="pref_close_tab_prompt_title">
+        Prompt before closing tabs</string>
+    <string name="pref_close_tab_prompt_summary">
+        Always ask before closing an active tab</string>
+
+    <string name="pref_quit_message_title">
+        Default quit message</string>
+    <string name="pref_quit_message_summary">
+        The default message to send when quitting</string>
+    <string name="pref_quit_message_default">
+        qicr for android: faster and better</string>
+
+    <string name="pref_message_lines_title">
+        Scrollback size</string>
+    <string name="pref_message_lines_summary">
+        The number of messages to keep in the scrollback buffer</string>
+    <integer name="pref_message_lines_default">256</integer>
+
+    <string name="pref_show_speech_rec_title">
+        Show speech recognition button</string>
+    <string name="pref_show_speech_rec_summary">
+        Enable speech recognition for keyboardless input</string>
+
+    <string name="pref_speech_rec_clearline_title">Clear line command</string>
+    <string name="pref_speech_rec_clearline_summary">
+        Clear the input line by saying this command</string>
+    <string name="pref_speech_rec_clearline_default">clear line</string>
+
+    <string name="pref_speech_rec_eol_title">Send command</string>
+    <string name="pref_speech_rec_eol_summary">
+        Send the input line by saying this command</string>
+    <string name="pref_speech_rec_eol_default">over</string>
+
+    <!-- default here because it's true on honeycomb -v11 and newer -->
+    <bool name="pref_show_nick_complete_default">false</bool>
+</resources>

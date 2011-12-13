@@ -93,14 +93,14 @@ object AndroidConversions {
     }
     implicit def toBoolean(c: CheckBox) : Boolean = c.isChecked()
 
-    implicit def toAndroidView(v: View): AndroidView = new AndroidView(v)
-    implicit def toAndroidActivity(a: Activity): AndroidActivity =
-            new AndroidActivity(a)
+    implicit def toRichView(v: View): RichView = new RichView(v)
+    implicit def toRichActivity(a: Activity): RichActivity =
+            new RichActivity(a)
 }
 
-class AndroidView(view: View) {
+class RichView(view: View) {
     def findView[T](id: Int): T = view.findViewById(id).asInstanceOf[T]
 }
-class AndroidActivity(activity: Activity) {
+class RichActivity(activity: Activity) {
     def findView[T](id: Int): T = activity.findViewById(id).asInstanceOf[T]
 }

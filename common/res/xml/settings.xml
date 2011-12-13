@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/pref_category_interface">
+        <CheckBoxPreference
+            android:key="@string/pref_show_nick_complete"
+            android:title="@string/pref_show_nick_complete_title"
+            android:defaultValue="@bool/pref_show_nick_complete_default"
+            android:summary="@string/pref_show_nick_complete_summary"
+        />
+        <CheckBoxPreference
+            android:key="@string/pref_close_tab_prompt"
+            android:title="@string/pref_close_tab_prompt_title"
+            android:summary="@string/pref_close_tab_prompt_summary"
+            android:defaultValue="true"
+        />
+        <CheckBoxPreference
+            android:key="@string/pref_quit_prompt"
+            android:title="@string/pref_quit_prompt_title"
+            android:summary="@string/pref_quit_prompt_summary"
+            android:defaultValue="true"
+        />
+        <EditTextPreference
+            android:key="@string/pref_message_lines"
+            android:title="@string/pref_message_lines_title"
+            android:summary="@string/pref_message_lines_summary"
+            android:defaultValue="@integer/pref_message_lines_default"
+            android:inputType="number"
+            android:numeric="integer"
+            android:singleLine="true"
+        />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/pref_category_speech_rec">
+        <CheckBoxPreference
+            android:key="@string/pref_show_speech_rec"
+            android:title="@string/pref_show_speech_rec_title"
+            android:summary="@string/pref_show_speech_rec_summary"
+            android:defaultValue="true"
+        />
+        <EditTextPreference
+            android:dependency="@string/pref_show_speech_rec"
+            android:key="@string/pref_speech_rec_eol"
+            android:title="@string/pref_speech_rec_eol_title"
+            android:summary="@string/pref_speech_rec_eol_summary"
+            android:defaultValue="@string/pref_speech_rec_eol_default"
+            android:singleLine="true"
+        />
+        <EditTextPreference
+            android:dependency="@string/pref_show_speech_rec"
+            android:key="@string/pref_speech_rec_clearline"
+            android:title="@string/pref_speech_rec_clearline_title"
+            android:summary="@string/pref_speech_rec_clearline_summary"
+            android:defaultValue="@string/pref_speech_rec_clearline_default"
+            android:singleLine="true"
+        />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/pref_category_irc">
+        <EditTextPreference
+            android:key="@string/pref_quit_message"
+            android:title="@string/pref_quit_message_title"
+            android:summary="@string/pref_quit_message_summary"
+            android:defaultValue="@string/pref_quit_message_default"
+            android:singleLine="true"
+        />
+    </PreferenceCategory>
+</PreferenceScreen>
