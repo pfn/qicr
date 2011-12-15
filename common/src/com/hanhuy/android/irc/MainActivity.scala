@@ -1044,26 +1044,29 @@ class ServersFragment extends ListFragment {
     def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
             Boolean = {
         item.getItemId() match {
-            case R.id.server_delete     => {
-                var builder = new AlertDialog.Builder(getActivity())
-                val mgr = getActivity().getSupportFragmentManager()
-                clearServerMessagesFragment(mgr)
-                builder.setTitle(R.string.server_confirm_delete)
-                builder.setMessage(getActivity().getString(
-                        R.string.server_confirm_delete_message,
-                        server.get.name))
-                builder.setPositiveButton(R.string.yes,
-                        (d: DialogInterface, id: Int) => {
-                    service.deleteServer(server.get)
-                })
-                builder.setNegativeButton(R.string.no, 
-                        (d: DialogInterface, id: Int) => {
-                    // noop
-                })
-                builder.create().show()
+            case R.id.server_delete => {
+                server match {
+                case Some(s) => {
+                    var builder = new AlertDialog.Builder(getActivity())
+                    val mgr = getActivity().getSupportFragmentManager()
+                    clearServerMessagesFragment(mgr)
+                    builder.setTitle(R.string.server_confirm_delete)
+                    builder.setMessage(getActivity().getString(
+                            R.string.server_confirm_delete_message,
+                            s.name))
+                    builder.setPositiveButton(R.string.yes,
+                            (d: DialogInterface, id: Int) => {
+                        service.deleteServer(s)
+                    })
+                    builder.setNegativeButton(R.string.no, null)
+                    builder.create().show()
+                }
+                case None => Toast.makeText(getActivity(),
+                        R.string.server_not_selected, Toast.LENGTH_SHORT).show()
+                }
                 true
             }
-            case R.id.server_connect    => {
+            case R.id.server_connect => {
                 server match {
                 case Some(s) => service.connect(s)
                 case None => Toast.makeText(getActivity(),
@@ -1072,10 +1075,14 @@ class ServersFragment extends ListFragment {
                 true
             }
             case R.id.server_disconnect => {
-                service.disconnect(server.get)
+                server match {
+                case Some(s) => service.disconnect(s)
+                case None => Toast.makeText(getActivity(),
+                        R.string.server_not_selected, Toast.LENGTH_SHORT).show()
+                }
                 true
             }
-            case R.id.server_options    => {
+            case R.id.server_options => {
                 addServerSetupFragment(server)
                 true
             }
