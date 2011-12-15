@@ -13,6 +13,7 @@
     <string name="pref_speech_rec_eol">speech_cmd_eol</string>
     <string name="pref_speech_rec_clearline">speech_cmd_clear_line</string>
     <string name="pref_message_lines">ui_message_lines</string>
+    <string name="pref_daynight_mode">ui_daynight_mode</string>
     <!-- end of pref names that should not be localized -->
 
     <string name="pref_show_nick_complete_title">

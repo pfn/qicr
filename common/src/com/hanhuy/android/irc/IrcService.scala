@@ -50,6 +50,7 @@ class LocalIrcService extends Binder {
 object IrcService {
     val TAG = "IrcService"
 
+    val EXTRA_PAGE    = "com.hanhuy.android.irc.extra.page"
     val EXTRA_SUBJECT = "com.hanhuy.android.irc.extra.subject"
     val EXTRA_SPLITTER = "::qicr-splitter-boundary::"
 
@@ -60,6 +61,7 @@ object IrcService {
     val MENTION_ID = 4
 }
 class IrcService extends Service {
+    var recreateActivity: Option[Int] = None
     var startId: Int = -1
     var messagesId = 0
     var _running = false
@@ -153,6 +155,17 @@ class IrcService extends Service {
         serverAddedListeners.clear()
         serverChangedListeners.clear()
         serverRemovedListeners.clear()
+        recreateActivity foreach { page =>
+            recreateActivity = None
+            val intent = new Intent(this, classOf[MainActivity])
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.putExtra(EXTRA_PAGE, page)
+            startActivity(intent)
+        }
+    }
+
+    def queueCreateActivity(page: Int) {
+        recreateActivity = Some(page)
     }
 
     override def onBind(intent: Intent) : IBinder = {
@@ -276,11 +289,11 @@ class IrcService extends Service {
         if (!showing) return
 
         val channel = c.asInstanceOf[Channel]
-        activity.get.adapter.updateNickList(channel)
+        activity foreach { _.adapter.updateNickList(channel) }
     }
     def channelMessagesListener(c: ChannelLike, m: MessageLike) {
         if (!showing) return
-        activity.get.adapter.refreshTabTitle(c)
+        activity foreach { _.adapter.refreshTabTitle(c) }
     }
 
     def addQuery(c: IrcConnection, _nick: String, msg: String,
@@ -303,7 +316,7 @@ class IrcService extends Service {
 
         runOnUI(() => {
             if (showing)
-                activity.get.adapter.addChannel(query)
+                activity foreach { _.adapter.addChannel(query) }
 
             val m = if (notice) Notice(nick, msg)
             else if (action) CtcpAction(nick, msg)
@@ -331,7 +344,7 @@ class IrcService extends Service {
 
         runOnUI(() => {
             if (showing)
-                activity.get.adapter.addChannel(channel)
+                activity foreach { _.adapter.addChannel(channel) }
             channel match {
                 case c: Channel => c.state = Channel.State.JOINED
                 case _ => Unit
@@ -356,10 +369,10 @@ class IrcService extends Service {
     // run on ui thread if an activity is visible, otherwise directly
     def runOnUI[A](f: () => A) {
         // don't also check showing, !showing is possible, e.g. speech rec
-        if (!activity.isEmpty)
-            activity.get.runOnUiThread(f)
-        else
-            f() // no UI, just run it
+        activity match {
+        case Some(a) => a.runOnUiThread(f)
+        case None => f()
+        }
     }
 
     def uncaughtExceptionHandler(t: Thread, e: Throwable) {

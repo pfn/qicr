@@ -12,6 +12,10 @@
     <string name="server_nick_error">
         Your nicknames are all unavailable, aborting.
     </string>
+
+    <string name="server_none">
+        No servers configured, tap menu -&gt; add a server to continue</string>
+    <string name="server_not_selected">No server selected</string>
     <string name="server_incomplete">
         Not all required server fields have been filled</string>
     <string name="server_connecting">Connecting...</string>
@@ -106,6 +110,7 @@
     <string name="command_kick_2">k</string>
 
     <string name="settings">Settings</string>
+    <string name="toggle_theme">Day/Night mode</string>
 
     <string name="help_text">
       available commands:\n

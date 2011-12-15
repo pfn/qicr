@@ -119,6 +119,8 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             t.flags |= TabInfo.FLAG_NEW_MESSAGES
         if (c.newMentions)
             t.flags |= TabInfo.FLAG_NEW_MENTIONS
+        if (c.server.state == Server.State.DISCONNECTED)
+            t.flags |= TabInfo.FLAG_DISCONNECTED
         refreshTabTitle(idx + 1)
     }
 
@@ -129,7 +131,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
             title = "<font color=#ff0000>*" + title + "</font>"
         else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0)
-            title = "<font color=#00ffff>+" + title +"</font>"
+            title = "<font color=#009999>+" + title +"</font>"
 
         if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
             title = "(" + title + ")"

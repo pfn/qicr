@@ -33,6 +33,9 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
             p.getString(c.getString(key), default)
     def getString(key: Int, default: Int): String =
             p.getString(c.getString(key), c.getString(default))
+
+    def set(key: Int, value: Boolean) =
+            p.edit().putBoolean(c.getString(key), value).commit()
 }
 
 // android2.3-

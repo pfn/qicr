@@ -117,6 +117,9 @@
         <record-build-info />
     </target>
     <target name="-debug-obfuscation-check">
+        <!-- Workaround for SDK r16 buggy tools -->
+        <delete file="${intermediate.dex.file}"/>
+        <delete file="${out.packaged.file}"/>
         <condition property="proguard.enabled" value="true" else="false">
             <and>
                 <isset property="proguard.config" />

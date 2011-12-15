@@ -3,8 +3,6 @@
     android:id="@id/android:list"
     android:listSelector="@drawable/message_selector"
     android:drawSelectorOnTop="true"
-    android:focusable="false"
-    android:focusableInTouchMode="false"
     android:divider="#0000"
     android:dividerHeight="0px"
     android:layout_weight="1"

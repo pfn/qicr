@@ -85,6 +85,9 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                 }
             }
         }
+        showNickComplete = s.getBoolean(
+                R.string.pref_show_nick_complete, honeycombAndNewer)
+        showSpeechRec = s.getBoolean(R.string.pref_show_speech_rec, true)
         s
     }
     var showNickComplete: Boolean = _
@@ -158,8 +161,10 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
 
     override def onCreate(bundle: Bundle) {
-        if (!honeycombAndNewer)
-            setTheme(android.R.style.Theme_NoTitleBar)
+        val mode = settings.getBoolean(R.string.pref_daynight_mode)
+        val theme = if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark
+        setTheme(theme)
+
         super.onCreate(bundle);
 
         if (bundle != null)
@@ -171,11 +176,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         if (honeycombAndNewer)
             HoneycombSupport.init(this)
-
-        // cannot be lazily loaded along with settings
-        showNickComplete = settings.getBoolean(
-                R.string.pref_show_nick_complete, honeycombAndNewer)
-        showSpeechRec = settings.getBoolean(R.string.pref_show_speech_rec, true)
     }
 
     override def onActivityResult(req: Int, res: Int, i: Intent) {
@@ -256,10 +256,16 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                                 case None => false
                                 }
                             })
-                            tabhost.setCurrentTab(tab)
+                            //tabhost.setCurrentTab(tab)
+                            pager.setCurrentItem(tab)
+                            // onpagechanged will scroll the tab
                         }
                     }
                 }
+            } else if (i != null && i.hasExtra(IrcService.EXTRA_PAGE)) {
+                val page = i.getIntExtra(IrcService.EXTRA_PAGE, 0)
+                //tabhost.setCurrentTab(page)
+                pager.setCurrentItem(page)
             }
         }
 
@@ -355,6 +361,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                     MenuItem.SHOW_AS_ACTION_IF_ROOM |
                     MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         }
+        MenuCompat.setShowAsAction(menu.findItem(R.id.toggle_theme),
+                MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         true
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
@@ -368,6 +376,17 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             else classOf[SettingsActivity]
             val intent = new Intent(this, clazz)
             startActivity(intent)
+            true
+        }
+        case R.id.toggle_theme => {
+            val mode = settings.getBoolean(R.string.pref_daynight_mode)
+            settings.set(R.string.pref_daynight_mode, !mode)
+            if (honeycombAndNewer)
+                HoneycombSupport.recreate()
+            else {
+                service.queueCreateActivity(tabhost.getCurrentTab())
+                finish()
+            }
             true
         }
         case _ => false
@@ -508,7 +527,11 @@ class ServerSetupFragment extends DialogFragment {
     var dialogShown = false
     override def onCreateDialog(bundle: Bundle): Dialog = {
         dialogShown = true
-        val d = new AlertDialog.Builder(getActivity())
+        import android.view.ContextThemeWrapper
+        val activity = getActivity().asInstanceOf[MainActivity]
+        val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
+        val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
+            if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark))
                 .setTitle(R.string.server_details)
                 .setPositiveButton(R.string.save_server, null)
                 .setNegativeButton(R.string.cancel_server, null)
@@ -770,7 +793,9 @@ extends MessagesFragment(a) {
             val tx = activity.getSupportFragmentManager().beginTransaction()
 
             val f = new NickListFragment
-            f.setStyle(DialogFragment.STYLE_NO_TITLE, 0)
+            val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
+            f.setStyle(DialogFragment.STYLE_NO_TITLE,
+                    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
             // should be set in onCreateDialog
             //f.getDialog().setTitle("Names")
             f.adapter = Some(adapter)
@@ -911,8 +936,8 @@ class ServersFragment extends ListFragment {
         if (tx == null)
             mytx = mgr.beginTransaction()
 
-        if (!serverMessagesFragmentShowing.isEmpty) {
-            val f = mgr.findFragmentByTag(serverMessagesFragmentShowing.get)
+        serverMessagesFragmentShowing foreach { name =>
+            val f = mgr.findFragmentByTag(name)
             if (f != null) {
                 if (mytx != null)
                     mytx.hide(f)
@@ -982,6 +1007,9 @@ class ServersFragment extends ListFragment {
             tx.addToBackStack(SERVER_SETUP_STACK)
             tx.commit() // can't commit a show
         } else {
+            val m = main.settings.getBoolean(R.string.pref_daynight_mode)
+            fragment.setStyle(DialogFragment.STYLE_NO_TITLE,
+                    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
             fragment.show(tx, SERVER_SETUP_FRAGMENT)
         }
 
@@ -1036,7 +1064,11 @@ class ServersFragment extends ListFragment {
                 true
             }
             case R.id.server_connect    => {
-                service.connect(server.get)
+                server match {
+                case Some(s) => service.connect(s)
+                case None => Toast.makeText(getActivity(),
+                        R.string.server_not_selected, Toast.LENGTH_SHORT).show()
+                }
                 true
             }
             case R.id.server_disconnect => {

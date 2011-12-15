@@ -32,6 +32,7 @@ object HoneycombSupport {
         }
         _actionmode = null
     }
+    def recreate() = _main.recreate()
 
     def startActionMode(server: Server) {
         _server = new WeakReference(server)

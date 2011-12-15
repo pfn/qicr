@@ -28,7 +28,8 @@
             android:singleLine="true"
             android:hint="required"
             android:inputType="textCapWords"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -40,10 +41,11 @@
             android:layout_height="wrap_content"/>
         <EditText
             android:id="@+id/add_server_host"
-            android:hint="required: Hostname or IP"
+            android:hint="required"
             android:singleLine="true"
             android:inputType="textUri"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -58,7 +60,8 @@
             android:hint="Default: 6667"
             android:inputType="number"
             android:singleLine="true"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -102,7 +105,8 @@
             android:id="@+id/add_server_nickname"
             android:singleLine="true"
             android:hint="required"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -116,7 +120,8 @@
             android:id="@+id/add_server_altnick"
             android:hint="Default: &lt;Nickname&gt;_"
             android:singleLine="true"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -131,7 +136,8 @@
             android:hint="required"
             android:singleLine="true"
             android:inputType="textPersonName"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -145,7 +151,8 @@
             android:id="@+id/add_server_username"
             android:hint="required"
             android:singleLine="true"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -160,7 +167,8 @@
             android:hint="optional"
             android:singleLine="true"
             android:inputType="textPassword"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TextView
@@ -180,7 +188,8 @@
             android:id="@+id/add_server_autojoin"
             android:hint="#chan1 key;#chan2"
             android:singleLine="true"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -192,9 +201,10 @@
             android:layout_height="wrap_content"/>
         <EditText
             android:id="@+id/add_server_autorun"
-            android:hint="/msg nickserv identify me;"
+            android:hint="m pfn hi there;"
             android:singleLine="true"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <!--
@@ -227,7 +237,8 @@
             android:id="@+id/add_server_host"
             android:hint="required with SOCKS"
             android:singleLine="true"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -242,7 +253,8 @@
             android:hint="required with SOCKS"
             android:singleLine="true"
             android:inputType="number"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -269,7 +281,8 @@
             android:id="@+id/add_server_sasluser"
             android:hint="required with SASL"
             android:singleLine="true"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     <TableRow
@@ -284,7 +297,8 @@
             android:hint="required with SASL"
             android:singleLine="true"
             android:inputType="textPassword"
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"/>
     </TableRow>
     -->
