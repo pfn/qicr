@@ -149,6 +149,9 @@ class IrcService extends Service {
         }
     }
 
+    // TODO identify if this is the cause of memory leaks
+    // potentially putting stuff into the wrong activity's
+    // fragment manager because it's removed onDestroy
     def unbind() {
         _activity = null
         // hopefully only UI uses these listeners

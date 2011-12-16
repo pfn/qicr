@@ -307,7 +307,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         super.onDestroy()
         if (honeycombAndNewer)
             HoneycombSupport.close()
-        service.unbind()
+        if (service != null)
+            service.unbind()
         unbindService(this)
     }
 
@@ -316,8 +317,13 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     def pageChanged(idx: Int) {
         input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
 
-        getSupportFragmentManager().popBackStack(SERVER_SETUP_STACK,
-                FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        val m = getSupportFragmentManager()
+        if ((0 until m.getBackStackEntryCount) find { i =>
+                 m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK
+            } isDefined) {
+            m.popBackStack(SERVER_SETUP_STACK,
+                    FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        }
 
         val f = adapter.getItem(idx)
         // workaround for disappearing menus, might be required for <3.0
@@ -1116,13 +1122,9 @@ class ServersFragment extends ListFragment {
         if (activity.adapter != null)
             page = activity.adapter.page
 
-        val c = m.getBackStackEntryCount()
-        var found = false
-        if (page == 0) {
-            found = (0 until c) find { i =>
-                m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK
-            } isDefined
-        }
+        val found = page == 0 && ((0 until m.getBackStackEntryCount) find {
+                i => m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK
+            } isDefined)
 
         menu.findItem(R.id.add_server).setVisible(!found)
 
