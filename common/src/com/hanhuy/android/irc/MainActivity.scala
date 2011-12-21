@@ -571,12 +571,17 @@ class ServerSetupFragment extends DialogFragment {
 class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     def this() = this(null)
     var _adapter = _a
+    lazy val _service = getActivity().asInstanceOf[MainActivity].service
+    var __service: IrcService = _
+    def service = if (__service != null) __service else _service
+
     def adapter = _adapter
     def adapter_=(a: MessageAdapter) = {
         _adapter = a
-        _adapter.context = getActivity().asInstanceOf[MainActivity]
+        if (getActivity() != null)
+            _adapter.context = getActivity().asInstanceOf[MainActivity]
+
         setListAdapter(_adapter)
-        val service = getActivity().asInstanceOf[MainActivity].service
         service.messages += ((id, _adapter))
         getListView().setSelection(if (adapter.getCount() > 0)
                 _adapter.getCount()-1 else 0)
@@ -617,6 +622,7 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     }
     def onServiceConnected(service: IrcService) {
         if (adapter == null && id != -1) {
+            __service = service
             service.messages.get(id) foreach { adapter = _ }
         }
     }

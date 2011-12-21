@@ -239,8 +239,8 @@ class IrcService extends Service {
         // handled by onDisconnect
         server.add(ServerInfo(getString(R.string.server_disconnected)))
 
-        if (disconnected && server.autoconnect) // not requested?  auto-connect
-            connect(server)
+        //if (disconnected && server.autoconnect) // not requested?  auto-connect
+        //    connect(server)
 
         if (connections.size == 0) {
             // do not stop service if onDisconnect unless showing
@@ -302,7 +302,10 @@ class IrcService extends Service {
     def addQuery(c: IrcConnection, _nick: String, msg: String,
             sending: Boolean = false, action: Boolean = false,
             notice: Boolean = false) {
-        val server = _connections(c)
+        val server = _connections.get(c) match {
+        case Some(s) => s
+        case None => return
+        }
 
         val query = queries.get((server, _nick.toLowerCase())) match {
             case Some(q) => q
@@ -495,7 +498,8 @@ extends AsyncTask[Object, Object, Server.State.State] {
 
     protected override def onProgressUpdate(progress: Object*) {
         if (progress.length > 0)
-            server.add(ServerInfo(progress(0).toString()))
+            server.add(ServerInfo(
+                    if (progress(0) == null) "" else progress(0).toString()))
     }
 }
 
