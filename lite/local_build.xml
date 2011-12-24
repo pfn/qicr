@@ -94,6 +94,7 @@
         <!-- only create apk if *not* a library project -->
         <do-only-if-not-library elseText="Library project: do not create apk..." >
             <sequential>
+                <property name="key.store.type" value="jks"/>
                 <property name="out.unaligned.file" location="${out.absolute.dir}/${ant.project.name}-release-unaligned.apk" />
 
                 <!-- Signs the APK -->
@@ -103,7 +104,7 @@
                         signedjar="${out.unaligned.file}"
                         keystore="${key.store}"
                         storepass="${key.store.password}"
-                        storetype="pkcs12"
+                        storetype="${key.store.type}"
                         alias="${key.alias}"
                         keypass="${key.alias.password}"
                         verbose="${verbose}" />
