@@ -37,7 +37,7 @@ import android.widget.{ListView, ArrayAdapter}
 import android.support.v4.app.{Fragment, FragmentActivity, DialogFragment}
 import android.support.v4.app.{FragmentTransaction, FragmentManager}
 import android.support.v4.app.{ListFragment, FragmentPagerAdapter}
-import android.support.v4.view.{ViewPager, MenuCompat}
+import android.support.v4.view.{ViewPager, MenuItemCompat}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.HashSet
@@ -339,8 +339,15 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         f match {
             // post to thread to make sure it shows up when done paging
-            case m: MessagesFragment => postOnUiThread(() => m.getListView
-                    .setSelection(m.getListAdapter.getCount() - 1))
+            case m: MessagesFragment => postOnUiThread { () =>
+                    try {
+                        m.getListView.setSelection(
+                                m.getListAdapter.getCount() - 1)
+                    } catch {
+                        case e: Exception => Log.w(TAG,
+                                "Failed to set list position", e)
+                    }
+                }
             case _ => Unit
         }
 
@@ -363,11 +370,11 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         val inflater = new MenuInflater(this)
         inflater.inflate(R.menu.main_menu, menu)
         List(R.id.exit, R.id.settings).foreach { item =>
-            MenuCompat.setShowAsAction(menu.findItem(item),
+            MenuItemCompat.setShowAsAction(menu.findItem(item),
                     MenuItem.SHOW_AS_ACTION_IF_ROOM |
                     MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         }
-        MenuCompat.setShowAsAction(menu.findItem(R.id.toggle_theme),
+        MenuItemCompat.setShowAsAction(menu.findItem(R.id.toggle_theme),
                 MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         true
     }
@@ -486,7 +493,7 @@ class ServerSetupFragment extends DialogFragment {
         if (menu.findItem(R.id.save_server) != null) return
         inflater.inflate(R.menu.server_setup_menu, menu)
         List(R.id.save_server, R.id.cancel_server).foreach(item =>
-                 MenuCompat.setShowAsAction(menu.findItem(item),
+                 MenuItemCompat.setShowAsAction(menu.findItem(item),
                          MenuItem.SHOW_AS_ACTION_IF_ROOM |
                          MenuItem.SHOW_AS_ACTION_WITH_TEXT))
     }
@@ -763,7 +770,7 @@ extends MessagesFragment(a) {
         inflater.inflate(R.menu.channel_menu, menu)
         List(/*R.id.channel_leave,*/
              R.id.channel_close).foreach(item =>
-                     MenuCompat.setShowAsAction(menu.findItem(item),
+                     MenuItemCompat.setShowAsAction(menu.findItem(item),
                              MenuItem.SHOW_AS_ACTION_IF_ROOM |
                              MenuItem.SHOW_AS_ACTION_WITH_TEXT))
     }
@@ -839,7 +846,7 @@ extends MessagesFragment(a) {
         if (menu.findItem(R.id.query_close) != null) return
         inflater.inflate(R.menu.query_menu, menu)
         List(R.id.query_close).foreach(item =>
-                     MenuCompat.setShowAsAction(menu.findItem(item),
+                     MenuItemCompat.setShowAsAction(menu.findItem(item),
                              MenuItem.SHOW_AS_ACTION_IF_ROOM |
                              MenuItem.SHOW_AS_ACTION_WITH_TEXT))
     }
@@ -1105,7 +1112,7 @@ class ServersFragment extends ListFragment {
         if (menu.findItem(R.id.add_server) != null) return
         inflater.inflate(R.menu.servers_menu, menu)
         val item = menu.findItem(R.id.add_server)
-        MenuCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
+        MenuItemCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
                                          MenuItem.SHOW_AS_ACTION_WITH_TEXT)
 
         if (!honeycombAndNewer)

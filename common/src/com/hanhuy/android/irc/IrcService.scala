@@ -190,8 +190,12 @@ class IrcService extends Service {
             (() => {
                 IrcService.this.synchronized {
                     // TODO wait for quit to actually complete?
-                    while (disconnectCount < count)
+                    while (disconnectCount < count) {
+                        Log.i(TAG, String.format(
+                                "Waiting for disconnect: %d/%d",
+                                disconnectCount, count))
                         IrcService.this.wait()
+                    }
                 }
                 runOnUI(call)
                 stopSelf()

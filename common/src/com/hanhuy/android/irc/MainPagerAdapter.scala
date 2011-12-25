@@ -12,7 +12,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import android.text.Html
-import android.view.View
+import android.view.{View, ViewGroup}
 import android.view.LayoutInflater;
 import android.widget.HorizontalScrollView
 import android.widget.TextView
@@ -296,7 +296,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val pos = tabs.indexWhere(_.fragment == item)
         return if (pos == -1) PagerAdapter.POSITION_NONE else pos
     }
-    override def instantiateItem(container: View, pos: Int): Object = {
+    override def instantiateItem(container: ViewGroup, pos: Int): Object = {
         if (mCurTransaction == null)
             mCurTransaction = mFragmentManager.beginTransaction()
         val f = getItem(pos).asInstanceOf[Fragment]
