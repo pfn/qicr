@@ -42,7 +42,7 @@ extends X509TrustManager {
             trustManager.checkClientTrusted(chain, authType)
     override def checkServerTrusted(
             chain: Array[X509Certificate], authType: String) {
-        service.runOnUI(() => {
+        service.runOnUI {
             server.add(SslInfo(
                     chain(0).getSubjectX500Principal().toString()))
             server.add(SslInfo(
@@ -51,16 +51,16 @@ extends X509TrustManager {
             server.add(SslInfo(
                     service.getString(R.string.md5_fingerprint) +
                     md5(chain(0))))
-        })
+        }
         try {
             chain(0).checkValidity()
         } catch {
             case e: Exception => {
-                service.runOnUI(() => {
+                service.runOnUI {
                     server.add(SslError(
                             service.getString(R.string.ssl_expired)))
                     server.add(SslError(e.getMessage()))
-                })
+                }
             }
         }
     }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver
 import android.os.AsyncTask
+import android.os.Build
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -14,6 +15,11 @@ import android.widget.CheckBox
 import android.content.DialogInterface
 
 object AndroidConversions {
+    val icsAndNewer =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH
+    val honeycombAndNewer =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB
+
     implicit def toBroadcastReceiver[A](f: (Context, Intent) => A) :
         BroadcastReceiver = new BroadcastReceiver() {
         def onReceive(c: Context, i: Intent) = f(c, i)
@@ -31,8 +37,14 @@ object AndroidConversions {
             def onClick(d: DialogInterface, id: Int) = f(d, id)
         }
     }
+    implicit def toDialogInterfaceOnClickListener1[A](f: () => A) :
+                DialogInterface.OnClickListener = {
+        new DialogInterface.OnClickListener() {
+            def onClick(d: DialogInterface, id: Int) = f()
+        }
+    }
 
-    implicit def toDialogInterfaceOnShowListener[A]( f: () => A):
+    implicit def toDialogInterfaceOnShowListener[A](f: () => A):
                 DialogInterface.OnShowListener = {
         new DialogInterface.OnShowListener() {
             def onShow(d: DialogInterface) = f()
@@ -70,9 +82,17 @@ object AndroidConversions {
         def run() = f()
     }
 
-    implicit def toAsyncTask[A](f: () => A): AsyncTask[Object,Object,Unit] = {
+    def async(task: AsyncTask[_,_,_]) {
+        if (honeycombAndNewer)
+            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+        else
+            task.execute()
+    }
+    // ok, param: => T can only be used if called directly, no implicits
+    def async(f: => Any): Unit = async(toAsyncTask(f))
+    private def toAsyncTask(f: => Any): AsyncTask[Object,Object,Unit] = {
         object Task extends AsyncTask[Object,Object,Unit] {
-            override def doInBackground(args: Object*): Unit = f()
+            override def doInBackground(args: Object*): Unit = f
         }
         Task
     }

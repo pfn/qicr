@@ -64,6 +64,7 @@ class IrcService extends Service {
     var recreateActivity: Option[Int] = None
     var startId: Int = -1
     var messagesId = 0
+    def connected = connections.size > 0
     var _running = false
     var _showing = false
     def showing = _showing
@@ -125,7 +126,7 @@ class IrcService extends Service {
     def activity = if (_activity == null) None else _activity.get
 
     def removeConnection(server: Server) {
-        Log.i(TAG, "Unregistering connection: " + server, new StackTrace)
+        //Log.d(TAG, "Unregistering connection: " + server, new StackTrace)
         connections.get(server).foreach(c => {
             connections -= server
             _connections -= c
@@ -185,39 +186,39 @@ class IrcService extends Service {
     var disconnectCount = 0
     def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
         val count = connections.keys.size
+        _running = false
         disconnectCount = 0
-        cb.foreach { call =>
-            (() => {
-                IrcService.this.synchronized {
-                    // TODO wait for quit to actually complete?
-                    while (disconnectCount < count) {
-                        Log.i(TAG, String.format(
-                                "Waiting for disconnect: %d/%d",
-                                disconnectCount, count))
-                        IrcService.this.wait()
-                    }
+        async {
+            synchronized {
+                // TODO wait for quit to actually complete?
+                while (disconnectCount < count) {
+                    Log.d(TAG, String.format(
+                            "Waiting for disconnect: %d/%d",
+                            disconnectCount.asInstanceOf[AnyRef],
+                            count.asInstanceOf[AnyRef]))
+                    wait()
                 }
-                runOnUI(call)
-                stopSelf()
-            }).execute()
+            }
+            Log.d(TAG, "All disconnects completed, running callback: " + cb)
+            cb.foreach { callback => runOnUI { callback() } }
+            stopSelf()
+            if (startId != -1) {
+                stopForeground(true)
+                stopSelfResult(startId)
+                startId = -1
+            }
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE)
+                    .asInstanceOf[NotificationManager]
+            nm.cancel(DISCON_ID)
+            nm.cancel(MENTION_ID)
+            nm.cancel(PRIVMSG_ID)
         }
-        connections.keys.foreach(disconnect(_))
-        if (startId != -1) {
-            stopForeground(true)
-            _running = false
-            stopSelfResult(startId)
-            startId = -1
-        }
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE)
-                .asInstanceOf[NotificationManager]
-        nm.cancel(DISCON_ID)
-        nm.cancel(MENTION_ID)
-        nm.cancel(PRIVMSG_ID)
+        connections.keys.foreach(disconnect(_, message, false, true))
     }
     def disconnect(server: Server, message: Option[String] = None,
-            disconnected: Boolean = false) {
-        connections.get(server).foreach(c => {
-            (() => {
+            disconnected: Boolean = false, quitting: Boolean = false) {
+        connections.get(server).foreach { c =>
+            async {
                 try {
                     val m = message match {
                     case Some(msg) => msg
@@ -227,17 +228,18 @@ class IrcService extends Service {
                     c.disconnect(m)
                 } catch {
                     case e: Exception => {
-                        Log.w(TAG, "Disconnect failed", e)
+                        Log.e(TAG, "Disconnect failed", e)
                         c.setConnected(false)
                         c.disconnect()
                     }
                 }
-                IrcService.this.synchronized {
+                synchronized {
                     disconnectCount += 1
-                    IrcService.this.notify()
+                    Log.d(TAG, "disconnectCount: " + disconnectCount)
+                    notify()
                 }
-            }).execute()
-        })
+            }
+        }
         removeConnection(server) // gotta go after the foreach above
         server.state = Server.State.DISCONNECTED
         // handled by onDisconnect
@@ -248,7 +250,9 @@ class IrcService extends Service {
 
         if (connections.size == 0) {
             // do not stop service if onDisconnect unless showing
-            if (!disconnected || showing) {
+            // do not stop service if quitting, quit() will do it
+            if ((!disconnected || showing) && !quitting) {
+                Log.i(TAG, "Stopping service because all connections closed")
                 stopForeground(true)
                 _running = false
                 if (startId != -1) {
@@ -268,7 +272,7 @@ class IrcService extends Service {
             return
         }
         server.state = Server.State.CONNECTING
-        new ConnectTask(server, this).execute()
+        async(new ConnectTask(server, this))
         if (!_running) {
             _running = true
             startService(new Intent(this, classOf[IrcService]))
@@ -324,7 +328,7 @@ class IrcService extends Service {
 
         val nick = if (sending) server.currentNick else _nick
 
-        runOnUI(() => {
+        runOnUI {
             if (showing)
                 activity foreach { _.adapter.addChannel(query) }
 
@@ -336,7 +340,7 @@ class IrcService extends Service {
             if (!showing)
                 showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
                         m.toString(), server.name + EXTRA_SPLITTER + query.name)
-        })
+        }
     }
 
     def addChannel(c: IrcConnection, ch: SircChannel) {
@@ -352,14 +356,14 @@ class IrcService extends Service {
         _channels += ((ch,channel))
         channel.channelMessagesListeners += channelMessagesListener
 
-        runOnUI(() => {
+        runOnUI {
             if (showing)
                 activity foreach { _.adapter.addChannel(channel) }
             channel match {
                 case c: Channel => c.state = Channel.State.JOINED
                 case _ => Unit
             }
-        })
+        }
     }
     def removeChannel(ch: Channel) {
         val sircchannel = channels(ch)
@@ -377,11 +381,11 @@ class IrcService extends Service {
     }
 
     // run on ui thread if an activity is visible, otherwise directly
-    def runOnUI[A](f: () => A) {
+    def runOnUI[A](f: => A) {
         // don't also check showing, !showing is possible, e.g. speech rec
         activity match {
-        case Some(a) => a.runOnUiThread(f)
-        case None => f()
+        case Some(a) => a.runOnUiThread(f _)
+        case None => f
         }
     }
 
@@ -392,7 +396,7 @@ class IrcService extends Service {
     }
 
     def serverDisconnected(server: Server) {
-        runOnUI(() => disconnect(server, disconnected = true))
+        runOnUI { disconnect(server, disconnected = true) }
         if (!showing)
             showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
                     getString(R.string.notif_server_disconnected, server.name),
@@ -477,13 +481,13 @@ extends AsyncTask[Object, Object, Server.State.State] {
             case e: Exception => {
                 state = Server.State.DISCONNECTED
                 service.removeConnection(server)
-                Log.w(TAG, "Unable to connect", e)
+                Log.e(TAG, "Unable to connect", e)
                 publishProgress(e.getMessage())
                 try {
                     connection.disconnect()
                 } catch {
                     case ex: Exception => {
-                        Log.w(TAG, "Exception cleanup failed", ex)
+                        Log.e(TAG, "Exception cleanup failed", ex)
                         connection.setConnected(false)
                         connection.disconnect()
                         state = Server.State.DISCONNECTED
@@ -492,6 +496,7 @@ extends AsyncTask[Object, Object, Server.State.State] {
                 publishProgress(service.getString(
                         R.string.server_disconnected))
             }
+            if (service.connections.size == 0) service._running = false
         }
         state
     }

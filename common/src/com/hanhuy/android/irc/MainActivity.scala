@@ -10,7 +10,6 @@ import android.content.ComponentName
 import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.os.{Bundle, Build, IBinder, Parcelable}
-import android.os.AsyncTask
 import android.util.Log
 import android.content.DialogInterface
 import android.speech.RecognizerIntent
@@ -62,9 +61,6 @@ object MainActivity {
 
     val TAG = "MainActivity"
 
-    val honeycombAndNewer =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB
-
     val REQUEST_SPEECH_RECOGNITION = 1
 }
 class MainActivity extends FragmentActivity with ServiceConnection {
@@ -112,12 +108,12 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
     lazy val nickcomplete = {
         val complete = findView[View](R.id.btn_nick_complete)
-        complete.setOnClickListener(() => proc.nickComplete(Some(input)))
+        complete.setOnClickListener { () => proc.nickComplete(Some(input)) }
         complete
     }
     lazy val speechrec = {
         val speech = findView[View](R.id.btn_speech_rec)
-        speech.setOnClickListener(() => {
+        speech.setOnClickListener { () =>
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -131,7 +127,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                             Toast.LENGTH_SHORT).show()
                 }
             }
-        })
+        }
         speech
     }
 
@@ -292,10 +288,11 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         service.bind(this)
         service.showing = true
         if (page != -1) {
-            postOnUiThread(() => {
-                runOnUiThread(() => tabhost.setCurrentTab(page))
+            postOnUiThread {
+                // why did I do this?
+                runOnUiThread { () => tabhost.setCurrentTab(page) }
                 page = -1
-            })
+            }
         }
     }
     override def onServiceDisconnected(name : ComponentName) {
@@ -312,7 +309,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         unbindService(this)
     }
 
-    def postOnUiThread[A](r: () => A) = (() => runOnUiThread(r)).execute()
+    def postOnUiThread[A](r: => A) = async { runOnUiThread(r _) }
 
     def pageChanged(idx: Int) {
         input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
@@ -334,12 +331,12 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         if (honeycombAndNewer) {
             HoneycombSupport.stopActionMode()
-            postOnUiThread(() => HoneycombSupport.invalidateActionBar())
+            postOnUiThread { HoneycombSupport.invalidateActionBar() }
         }
 
         f match {
             // post to thread to make sure it shows up when done paging
-            case m: MessagesFragment => postOnUiThread { () =>
+            case m: MessagesFragment => postOnUiThread {
                     try {
                         m.getListView.setSelection(
                                 m.getListAdapter.getCount() - 1)
@@ -414,7 +411,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     def exit(message: Option[String] = None) {
         val prompt = settings.getBoolean(
                 R.string.pref_quit_prompt, true)
-        if (service.running && prompt) {
+        if (service.connected && prompt) {
             var builder = new AlertDialog.Builder(this)
             builder.setTitle(R.string.quit_confirm_title)
             builder.setMessage(getString(R.string.quit_confirm))
@@ -422,12 +419,11 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                     (d: DialogInterface, id: Int) => {
                 service.quit(message, Some(finish _))
             })
-            builder.setNegativeButton(R.string.no, 
-                    (d: DialogInterface, id: Int) => {
-            })
+            builder.setNegativeButton(R.string.no, null)
             builder.create().show()
         } else {
-            service.quit(message, if (service.running) Some(finish _) else None)
+            service.quit(message,
+                    if (service.connected) Some(finish _) else { finish; None })
         }
     }
 }
@@ -543,20 +539,22 @@ class ServerSetupFragment extends DialogFragment {
         import android.view.ContextThemeWrapper
         val activity = getActivity().asInstanceOf[MainActivity]
         val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
-        val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
-            if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark))
+        //val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
+        //    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark))
+        val d = new AlertDialog.Builder(activity)
                 .setTitle(R.string.server_details)
                 .setPositiveButton(R.string.save_server, null)
                 .setNegativeButton(R.string.cancel_server, null)
                 .setView(createView(getActivity().getLayoutInflater(), null))
                 .create()
         // block dismiss on positive button click
-        d.setOnShowListener(() => {
+        d.setOnShowListener { () =>
+            Log.w(TAG, "in onShow")
             val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
-            b.setOnClickListener(() => {
-                val activity = getActivity().asInstanceOf[MainActivity]
+            b.setOnClickListener { () =>
                 val manager = activity.getSupportFragmentManager()
                 val s = server
+                Log.d(TAG, "server: " + s)
                 if (s.valid) {
                     if (s.id == -1)
                         activity.service.addServer(s)
@@ -568,8 +566,8 @@ class ServerSetupFragment extends DialogFragment {
                             R.string.server_incomplete,
                             Toast.LENGTH_SHORT).show()
                 }
-            })
-        })
+            }
+        }
         d
     }
 }
@@ -590,8 +588,12 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
 
         setListAdapter(_adapter)
         service.messages += ((id, _adapter))
-        getListView().setSelection(if (adapter.getCount() > 0)
-                _adapter.getCount()-1 else 0)
+        try {
+            getListView().setSelection(if (adapter.getCount() > 0)
+                    _adapter.getCount()-1 else 0)
+        } catch {
+            case e: Exception => Log.i(TAG, "Content view not ready", e)
+        }
     }
     var id = -1
 
@@ -874,9 +876,7 @@ extends MessagesFragment(a) {
                         (d: DialogInterface, resid: Int) => {
                     removeQuery()
                 })
-                builder.setNegativeButton(R.string.no, 
-                        (d: DialogInterface, resid: Int) => {
-                })
+                builder.setNegativeButton(R.string.no, null)
                 builder.create().show()
                 return true
             } else
@@ -1034,8 +1034,9 @@ class ServersFragment extends ListFragment {
 
         fragment.server = server
         if (honeycombAndNewer)
-            thisview.getHandler().post(() =>
-                    HoneycombSupport.invalidateActionBar())
+            thisview.getHandler().post { () =>
+                    HoneycombSupport.invalidateActionBar()
+            }
     }
     def onIrcServiceDisconnected() {
         service.serverChangedListeners -= changeListener

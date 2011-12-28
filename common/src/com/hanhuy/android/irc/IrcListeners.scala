@@ -56,12 +56,12 @@ with ServerListener with MessageListener with ModeListener {
     // ServerListener
     override def onConnect(c: IrcConnection) {
         val server = service._connections(c)
-        service.runOnUI(() => {
+        service.runOnUI {
             // ugh, need to do it here so that the auto commands can run
             server.state = Server.State.CONNECTED
             server.add(ServerInfo(
                     service.getString(R.string.server_connected)))
-        })
+        }
         if (server.autorun != null || server.autojoin != null) {
             val proc = CommandProcessor(service)
             proc.server = Some(server)
@@ -71,7 +71,7 @@ with ServerListener with MessageListener with ModeListener {
                         var command = cmd.trim()
                         if (command.charAt(0) != '/')
                             command = "/" + command
-                        service.runOnUI(() => proc.executeLine(command))
+                        service.runOnUI { proc.executeLine(command) }
                     }
                 }
             }
@@ -80,14 +80,15 @@ with ServerListener with MessageListener with ModeListener {
                 val channels = server.autojoin.split(";")
                 channels foreach { c =>
                     if (c.trim().length() > 0)
-                        service.runOnUI(() =>
-                                proc.executeCommand(join, Some(c.trim())))
+                        service.runOnUI {
+                            proc.executeCommand(join, Some(c.trim()))
+                        }
                 }
             }
         }
     }
     override def onDisconnect(c: IrcConnection) {
-        Log.w(TAG, "Connection dropped: " + c, new StackTrace)
+        //Log.w(TAG, "Connection dropped: " + c, new StackTrace)
         service._connections.get(c) foreach { service.serverDisconnected(_) }
     }
     override def onInvite(c: IrcConnection, src: User, user: User,
@@ -98,48 +99,53 @@ with ServerListener with MessageListener with ModeListener {
     override def onJoin(c: IrcConnection, channel: Channel, user: User) {
         if (user.isUs())
             service.addChannel(c, channel)
-        service.runOnUI(() =>
-            service.notifyNickListChanged(service._channels(channel)))
+        service.runOnUI {
+            service.notifyNickListChanged(service._channels(channel))
+        }
     }
 
     override def onKick(c: IrcConnection, channel: Channel,
             src: User, user: User) {
         if (user.isUs()) {
-            service.runOnUI(() => {
+            service.runOnUI {
                 service._channels(channel) match {
                 case c: QicrChannel => c.state = QicrChannel.State.KICKED
                 }
-            })
+            }
         } else
-            service.runOnUI(() =>
-                service.notifyNickListChanged(service._channels(channel)))
+            service.runOnUI {
+                service.notifyNickListChanged(service._channels(channel))
+            }
     }
     override def onPart(c: IrcConnection, channel: Channel,
             user: User, msg: String) {
         if (user.isUs()) {
-            service.runOnUI(() => {
+            service.runOnUI {
                 service._channels.get(channel) foreach {
                     _ match {
                     case c: QicrChannel => c.state = QicrChannel.State.PARTED
                     case _ => Unit
                     }
                 }
-            })
+            }
         } else
-            service.runOnUI(() =>
-                service.notifyNickListChanged(service._channels(channel)))
+            service.runOnUI {
+                service.notifyNickListChanged(service._channels(channel))
+            }
     }
     override def onTopic(c: IrcConnection, channel: Channel,
             src: User, topic: String) {
         val c = service._channels(channel)
-        service.runOnUI(() => c.add(Topic(channel.getName(),
-                if (src != null) Some(src.getNick()) else None, topic)))
+        service.runOnUI {
+            c.add(Topic(channel.getName(),
+                    if (src != null) Some(src.getNick()) else None, topic))
+        }
     }
     override def onMode(c: IrcConnection, channel: Channel,
             src: User, mode: String) = Unit // TODO
     override def onMotd(c: IrcConnection, motd: String) {
         val server = service._connections(c)
-        service.runOnUI(() => server.add(Motd(motd)))
+        service.runOnUI { server.add(Motd(motd)) }
     }
     // TODO
     override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
@@ -179,7 +185,7 @@ with ServerListener with MessageListener with ModeListener {
             msg: String) {
         val c = service._channels(channel)
         val action = CtcpAction(src.getNick(), msg)
-        service.runOnUI(() => c.add(action))
+        service.runOnUI { c.add(action) }
         if (matchesNick(c.server, msg))
             service.addChannelMention(c, action)
     }
@@ -191,13 +197,13 @@ with ServerListener with MessageListener with ModeListener {
         if (matchesNick(c.server, msg))
             service.addChannelMention(c, pm)
 
-        service.runOnUI(() => c.add(pm))
+        service.runOnUI { c.add(pm) }
     }
     override def onNotice(c: IrcConnection, src: User, channel: Channel,
             msg: String) {
         val c = service._channels(channel)
         val notice = Notice(src.getNick(), msg)
-        service.runOnUI(() => c.add(notice))
+        service.runOnUI { c.add(notice) }
         if (matchesNick(c.server, msg))
             service.addChannelMention(c, notice)
     }
@@ -207,15 +213,17 @@ with ServerListener with MessageListener with ModeListener {
             cmd: String, reply: String) = Unit
 
     override def onAction(c: IrcConnection, src: User, action: String) {
-        service.runOnUI(() => service.addQuery(c, src.getNick(), action,
-                action = true))
+        service.runOnUI {
+            service.addQuery(c, src.getNick(), action, action = true)
+        }
     }
     override def onNotice(c: IrcConnection, src: User, msg: String) {
-        service.runOnUI(() =>
-                service.addQuery(c, src.getNick(), msg, notice = true))
+        service.runOnUI {
+            service.addQuery(c, src.getNick(), msg, notice = true)
+        }
     }
     override def onPrivateMessage(c: IrcConnection, src: User, msg: String) {
-        service.runOnUI(() => service.addQuery(c, src.getNick(), msg))
+        service.runOnUI { service.addQuery(c, src.getNick(), msg) }
     }
 
     // AdvancedListener
@@ -232,15 +240,19 @@ with ServerListener with MessageListener with ModeListener {
                 case _ => Unit
             }
         }
-        service.runOnUI(() => server.get.add(ServerInfo(
-                String.format("Unknown command: [%s](%s):[%s]",
-                line.getCommand(), line.getArguments(), line.getMessage()))))
+        service.runOnUI {
+            server.get.add(ServerInfo(
+                    String.format("Unknown command: [%s](%s):[%s]",
+                    line.getCommand(), line.getArguments(), line.getMessage())))
+        }
                 
     }
     override def onUnknownReply(c: IrcConnection, line: IrcDecoder) {
         val server = service._connections(c)
-        service.runOnUI(() => server.add(ServerInfo(
-                String.format("Unknown reply: [%s](%s):[%s]",
-                line.getCommand(), line.getArguments(), line.getMessage()))))
+        service.runOnUI {
+            server.add(ServerInfo(
+                    String.format("Unknown reply: [%s](%s):[%s]",
+                    line.getCommand(), line.getArguments(), line.getMessage())))
+        }
     }
 }

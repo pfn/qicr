@@ -199,7 +199,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     private def addTab(title: String) {
         var spec : TabHost#TabSpec = null
 
-        if (!MainActivity.honeycombAndNewer) {
+        if (!honeycombAndNewer) {
             val inflater = tabhost.getContext().getSystemService(
                     Context.LAYOUT_INFLATER_SERVICE)
                     .asInstanceOf[LayoutInflater]
@@ -215,7 +215,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         spec.setContent(new DummyTabFactory(tabhost.getContext()))
         tabhost.addTab(spec)
 
-        if (!MainActivity.honeycombAndNewer)
+        if (!honeycombAndNewer)
             tabhost.getTabWidget().setStripEnabled(true)
     }
     var tabnum = 0
@@ -240,7 +240,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     def setTabTitle(title: CharSequence, pos: Int) {
         val tw = tabhost.getTabWidget()
         val v = tw.getChildTabViewAt(pos)
-        val titleId = if (MainActivity.honeycombAndNewer)
+        val titleId = if (honeycombAndNewer)
                 android.R.id.title else R.id.title
         v.findView[TextView](titleId).setText(title)
     }

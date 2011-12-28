@@ -3,6 +3,7 @@ package com.hanhuy.android.irc.model
 import com.hanhuy.android.irc.IrcListeners
 import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.Settings
+import com.hanhuy.android.irc.AndroidConversions
 
 import MessageLike._
 
@@ -85,7 +86,8 @@ class MessageAdapter extends BaseAdapter {
         if (view == null) {
             view = inflater.inflate(R.layout.message_item, container, false)
                     .asInstanceOf[TextView]
-            view.setTypeface(font)
+            if (!AndroidConversions.icsAndNewer)
+                view.setTypeface(font)
         }
 
         val m = messages(pos) match {
