@@ -190,30 +190,46 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                     Toast.LENGTH_SHORT).show()
             return
         }
-        var builder = new AlertDialog.Builder(this)
-        builder.setTitle(R.string.speech_select)
-        builder.setItems(results.toArray(new Array[CharSequence](results.size)),
-                (d: DialogInterface, which: Int) => {
-            input.getText().append(results(which) + " ")
+        val eol = settings.getString(
+                R.string.pref_speech_rec_eol,
+                R.string.pref_speech_rec_eol_default)
+        val clearLine = settings.getString(
+                R.string.pref_speech_rec_clearline,
+                R.string.pref_speech_rec_clearline_default)
 
-            val eol = settings.getString(
-                    R.string.pref_speech_rec_eol,
-                    R.string.pref_speech_rec_eol_default)
-            val clearLine = settings.getString(
-                    R.string.pref_speech_rec_clearline,
-                    R.string.pref_speech_rec_clearline_default)
-            val rec = results(which).toLowerCase
-            if (rec.endsWith(" " + eol) || rec == eol) {
-                val t = input.getText()
-                val line = t.substring(0, t.length() - eol.length() - 1)
-                proc.handleLine(line)
-                input.setText(null)
-            } else if (rec == clearLine) {
-                input.setText(null)
+        results find { r => r == eol || r == clearLine } match {
+            case Some(c) => {
+                if (c == eol) {
+                    val t = input.getText()
+                    val line = t.substring(0, t.length() - eol.length() - 1)
+                    proc.handleLine(line)
+                    input.setText(null)
+                } else if (c == clearLine) {
+                    input.setText(null)
+                }
             }
-        })
-        builder.setNegativeButton(R.string.speech_cancel, null)
-        builder.create().show()
+            case None => {
+                var builder = new AlertDialog.Builder(this)
+                builder.setTitle(R.string.speech_select)
+                builder.setItems(results.toArray(
+                        new Array[CharSequence](results.size)),
+                        (d: DialogInterface, which: Int) => {
+                    input.getText().append(results(which) + " ")
+
+                    val rec = results(which).toLowerCase
+                    if (rec.endsWith(" " + eol) || rec == eol) {
+                        val t = input.getText()
+                        val line = t.substring(0, t.length() - eol.length() - 1)
+                        proc.handleLine(line)
+                        input.setText(null)
+                    } else if (rec == clearLine) {
+                        input.setText(null)
+                    }
+                })
+                builder.setNegativeButton(R.string.speech_cancel, null)
+                builder.create().show()
+            }
+        }
     }
 
     override def onSearchRequested() = {
@@ -549,12 +565,10 @@ class ServerSetupFragment extends DialogFragment {
                 .create()
         // block dismiss on positive button click
         d.setOnShowListener { () =>
-            Log.w(TAG, "in onShow")
             val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
             b.setOnClickListener { () =>
                 val manager = activity.getSupportFragmentManager()
                 val s = server
-                Log.d(TAG, "server: " + s)
                 if (s.valid) {
                     if (s.id == -1)
                         activity.service.addServer(s)
@@ -597,20 +611,25 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     }
     var id = -1
 
+    override def onCreate(bundle: Bundle) {
+        super.onCreate(bundle)
+        if (id == -1 && bundle != null)
+            id = bundle.getInt("id")
+        else
+            id = service.newMessagesId()
+    }
+
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View =
         inflater.inflate(R.layout.fragment_messages, container, false)
 
     override def onActivityCreated(bundle: Bundle) {
         super.onActivityCreated(bundle)
-        if (id == -1 && bundle != null) {
-            id = bundle.getInt("id")
-        }
+
         val activity = getActivity().asInstanceOf[MainActivity]
         if (adapter != null) {
             val service = activity.service
             adapter.context = activity
-            id = service.newMessagesId()
             service.messages += ((id, adapter))
             setListAdapter(adapter)
         }
@@ -708,9 +727,29 @@ extends MessagesFragment(a) {
     def this() = this(null, null)
     var channel = c
     var nicklist: Option[ListView] = None
+    //Log.d(TAG, "Creating ChannelFragment: " + this, new StackTrace)
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
+
+        if (channel == null) {
+            val activity = getActivity().asInstanceOf[MainActivity]
+            def setChannel(s: IrcService) {
+                val c = s.chans.get(bundle.getInt("id"))
+                c.foreach(ch => channel = ch.asInstanceOf[Channel])
+                //Log.d(TAG, format(
+                //        "Loading instance state: %d => %s => %s",
+                //        id, channel, this))
+            }
+            if (activity.service != null)
+                setChannel(activity.service)
+            else
+                activity.serviceConnectionListeners += (setChannel(_))
+        //} else {
+            //Log.d(TAG, format(
+            //        "Created ChannelFragment: %d => %s => %s",
+            //        id, channel, this))
+        }
     }
 
     private def setNickListAdapter(list: ListView) {
@@ -720,6 +759,7 @@ extends MessagesFragment(a) {
         list.setAdapter(adapter)
         adapter
     }
+
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         val v = inflater.inflate(R.layout.fragment_channel, container, false)
@@ -736,9 +776,9 @@ extends MessagesFragment(a) {
             f.showAsDialog = false
             f.activity = activity
             val view = f.onCreateView(inflater, null, null)
-            nicklist = Some(view.asInstanceOf[ListView])
-            if (channel != null)
-                setNickListAdapter(nicklist.get)
+            val list = view.asInstanceOf[ListView]
+            nicklist = Some(list)
+            setNickListAdapter(list)
             v.findView[ViewGroup](R.id.nicklist_container).addView(view)
             // TODO this puts them one atop the other, even when horizontal?
             //v.asInstanceOf[ViewGroup].addView(view)
@@ -749,24 +789,18 @@ extends MessagesFragment(a) {
     override def onActivityCreated(bundle: Bundle) {
         super.onActivityCreated(bundle)
         val activity = getActivity().asInstanceOf[MainActivity]
-        if (id != -1 && channel != null) {
+        if (id != -1 && channel != null && a != null) {
             activity.service.chans += ((id, channel))
             a.channel = channel
         }
-        if (channel == null && !nicklist.isEmpty) {
-            def setAdapter(s: IrcService) {
-                val c = s.chans.get(bundle.getInt("id"))
-                c.foreach(ch => channel = ch.asInstanceOf[Channel])
-                if (channel != null)
-                    nicklist.foreach(setNickListAdapter(_))
-            }
-            if (activity.service != null)
-                setAdapter(activity.service)
-            else
-                activity.serviceConnectionListeners += (setAdapter(_))
-        }
     }
 
+    override def onSaveInstanceState(bundle: Bundle) {
+        super.onSaveInstanceState(bundle)
+        //Log.d(TAG, format(
+        //        "Saving instance state: %d => %s => %s",
+        //        id, channel, this))
+    }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
         if (menu.findItem(R.id.channel_close) != null) return
         inflater.inflate(R.menu.channel_menu, menu)
@@ -778,18 +812,22 @@ extends MessagesFragment(a) {
     }
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
+        //if (!(getUserVisibleHint() && isVisible() && isResumed() && isAdded() && isInLayout())) return false
         if (R.id.channel_close == item.getItemId()) {
             val activity = getActivity().asInstanceOf[MainActivity]
             val prompt = activity.settings.getBoolean(
                     R.string.pref_close_tab_prompt, true)
+
+            // TODO FIXME closes the wrong tab/fragment/huh?
+            Log.i(TAG, "Requesting tab close for: " + channel + " <= " + id)
             def removeChannel() {
                 if (channel.state == Channel.State.JOINED) {
-                    val c = activity.service.channels(channel)
-                    c.part()
+                    activity.service.channels.get(channel) foreach { _.part() }
                 }
                 activity.service.messages -= id
                 activity.service.chans    -= id
                 activity.service.channels -= channel
+                //Log.d(TAG, "Trying to remove: " + this + " => " + getUserVisibleHint())
                 activity.adapter.removeTab(
                         activity.adapter.getItemPosition(this))
             }
@@ -829,6 +867,7 @@ extends MessagesFragment(a) {
 
 class QueryFragment(a: MessageAdapter, q: Query)
 extends MessagesFragment(a) {
+    def query = q
     def this() = this(null, null)
 
     override def onCreate(bundle: Bundle) {

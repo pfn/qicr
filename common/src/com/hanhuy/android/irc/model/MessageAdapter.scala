@@ -110,8 +110,12 @@ class MessageAdapter extends BaseAdapter {
         view.setText(m)
         view
     }
-    private def gets(res: Int, src: String, msg: String) = {
+    private def gets(res: Int, src: String, _msg: String) = {
         val server = channel.server
+        // escape HTML
+        val msg = _msg.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
         if (channel.isInstanceOf[Query]) {
             if (server.currentNick.toLowerCase() == src.toLowerCase())
                 Html.fromHtml(getString(res,

@@ -192,10 +192,9 @@ class IrcService extends Service {
             synchronized {
                 // TODO wait for quit to actually complete?
                 while (disconnectCount < count) {
-                    Log.d(TAG, String.format(
+                    Log.d(TAG, format(
                             "Waiting for disconnect: %d/%d",
-                            disconnectCount.asInstanceOf[AnyRef],
-                            count.asInstanceOf[AnyRef]))
+                            disconnectCount, count))
                     wait()
                 }
             }

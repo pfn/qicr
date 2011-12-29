@@ -39,13 +39,14 @@ class MainPagerAdapter(manager: FragmentManager,
 extends FragmentPagerAdapter(manager)
 with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     val channels = new ArrayBuffer[ChannelLike]
-    val comp = new ChannelLikeComparator
+    lazy val comp = new ChannelLikeComparator
 
     tabhost.setOnTabChangedListener(this)
     pager.setOnPageChangeListener(this)
     pager.setAdapter(this)
-    val activity = tabhost.getContext().asInstanceOf[MainActivity]
-    val nm = activity.getSystemService(Context.NOTIFICATION_SERVICE)
+    lazy val hsv = activity.findView[HorizontalScrollView](R.id.tab_scroller)
+    lazy val activity = tabhost.getContext().asInstanceOf[MainActivity]
+    lazy val nm = activity.getSystemService(Context.NOTIFICATION_SERVICE)
             .asInstanceOf[NotificationManager]
 
     val tabs = new ArrayBuffer[TabInfo]()
@@ -64,12 +65,10 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
 
     def onServiceConnected(service: IrcService) {
         refreshTabs(service)
-        // TODO figure out how to remove the listener
         service.serverChangedListeners += serverStateChanged
     }
 
     def serverStateChanged(server: Server) {
-        // TODO FIXME appears to not work
         server.state match {
         case Server.State.DISCONNECTED => {
             // iterate channels and flag them as disconnected
@@ -187,12 +186,13 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         page = pos
 
         tabhost.setCurrentTab(pos)
+        showTabIndicator(pos)
+        pageChanged(pos)
+    }
+    def showTabIndicator(pos: Int) {
         val v = tabhost.getTabWidget().getChildTabViewAt(pos)
-        val hsv = activity.findView[HorizontalScrollView](R.id.tab_scroller)
         val offset = v.getLeft() - hsv.getWidth() / 2 + v.getWidth() / 2
         hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
-
-        pageChanged(pos)
     }
     override def onPageScrollStateChanged(state: Int) = Unit
 
@@ -250,7 +250,9 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         if (idx < 0) {
             idx = idx * -1
             channels.insert(idx - 1, c)
-            val frag = c match {
+            val tag = getFragmentTag(c)
+            val f = manager.findFragmentByTag(tag)
+            val frag = if (f != null) f else c match {
                 case ch: Channel => new ChannelFragment(ch.messages, ch)
                 case qu: Query   => new QueryFragment(qu.messages, qu)
             }
@@ -265,6 +267,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
 
     def removeTab(pos: Int) {
         if (pos < 0) {
+            Log.d(TAG, "Available tabs: " + tabs)
             Log.w(TAG, "Invalid position for removeTab: " + pos,
                     new IllegalArgumentException)
             return
@@ -274,8 +277,10 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         channels.remove(pos-1)
         tabs.remove(pos)
         (0 until tabs.length) foreach { i => addTab(tabs(i).title) }
-        tabhost.setCurrentTab(Math.max(0, pos-1))
+        val idx = Math.max(0, pos-1)
+        tabhost.setCurrentTab(idx)
         notifyDataSetChanged()
+        activity.postOnUiThread { showTabIndicator(idx) }
     }
 
     object TabInfo {
@@ -290,12 +295,15 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         var tag: Option[String] = None
         var channel: Option[ChannelLike] = None
         var flags = TabInfo.FLAG_NONE
+        override def toString =
+                title + " fragment=" + fragment + " channel=" + channel
     }
 
     override def getItemPosition(item: Object): Int = {
         val pos = tabs.indexWhere(_.fragment == item)
         return if (pos == -1) PagerAdapter.POSITION_NONE else pos
     }
+
     override def instantiateItem(container: ViewGroup, pos: Int): Object = {
         if (mCurTransaction == null)
             mCurTransaction = mFragmentManager.beginTransaction()
@@ -307,14 +315,31 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         else if (!f.isAdded())
             mCurTransaction.add(container.getId(), f, name)
         // because the ordering of instantiateItem vs. insertTab can't be
-        // guaranteed, always make the menu invisible
+        // guaranteed, always make the menu invisible (true?)
         //if (f != mCurrentPrimaryItem)
         f.setMenuVisibility(false)
         f
     }
 
-    def makeFragmentTag(f: Fragment): String =
-        "android:switcher:" + System.identityHashCode(f)
+    def makeFragmentTag(f: Fragment): String = {
+        f match {
+        case c: ChannelFragment => getFragmentTag(c.channel)
+        case q: QueryFragment   => getFragmentTag(q.query)
+        case _ => "viewpager:" + System.identityHashCode(f)
+        }
+    }
+    def getFragmentTag(c: ChannelLike): String = {
+        if (c == null) Log.d(TAG, "Channel object is null", new StackTrace)
+        val s = if (c == null) null else c.server
+        val sinfo = if (s == null) "server-object-null:"
+            else format("%s::%s::%d::%s::%s::",
+                    s.name, s.hostname, s.port, s.username, s.nickname)
+        "viewpager:" + sinfo + (c match {
+        case ch: Channel => ch.name 
+        case qu: Query   => qu.name
+        case _ => "null"
+        })
+    }
 }
 
 class DummyTabFactory(c : Context) extends TabHost.TabContentFactory {

@@ -242,7 +242,7 @@ with ServerListener with MessageListener with ModeListener {
         }
         service.runOnUI {
             server.get.add(ServerInfo(
-                    String.format("Unknown command: [%s](%s):[%s]",
+                    format("Unknown command: [%s](%s):[%s]",
                     line.getCommand(), line.getArguments(), line.getMessage())))
         }
                 
@@ -251,7 +251,7 @@ with ServerListener with MessageListener with ModeListener {
         val server = service._connections(c)
         service.runOnUI {
             server.add(ServerInfo(
-                    String.format("Unknown reply: [%s](%s):[%s]",
+                    format("Unknown reply: [%s](%s):[%s]",
                     line.getCommand(), line.getArguments(), line.getMessage())))
         }
     }
