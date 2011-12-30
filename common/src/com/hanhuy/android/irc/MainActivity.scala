@@ -200,9 +200,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         results find { r => r == eol || r == clearLine } match {
             case Some(c) => {
                 if (c == eol) {
-                    val t = input.getText()
-                    val line = t.substring(0, t.length() - eol.length() - 1)
-                    proc.handleLine(line)
+                    proc.handleLine(input.getText())
                     input.setText(null)
                 } else if (c == clearLine) {
                     input.setText(null)
