@@ -8,6 +8,10 @@ import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.Motd
 import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.MessageLike.Topic
+import com.hanhuy.android.irc.model.MessageLike.Kick
+import com.hanhuy.android.irc.model.MessageLike.Join
+import com.hanhuy.android.irc.model.MessageLike.Part
+import com.hanhuy.android.irc.model.MessageLike.NickChange
 
 import android.util.Log
 
@@ -50,6 +54,10 @@ object IrcListeners {
     def matchesNick(server: Server, msg: String): Boolean = {
         return matchesNickIndex(server, msg) != -1
     }
+    class EnhancedUser(u: User) {
+        def address = u.getUserName() + "@" + u.getHostName()
+    }
+    implicit def toEnhancedUser(u: User) = new EnhancedUser(u)
 }
 class IrcListeners(service: IrcService) extends AdvancedListener
 with ServerListener with MessageListener with ModeListener {
@@ -100,38 +108,44 @@ with ServerListener with MessageListener with ModeListener {
         if (user.isUs())
             service.addChannel(c, channel)
         service.runOnUI {
-            service.notifyNickListChanged(service._channels(channel))
+            val ch = service._channels(channel)
+            service.notifyNickListChanged(ch)
+            if (!user.isUs())
+                ch.add(Join(user.getNick(), user.address))
         }
     }
 
     override def onKick(c: IrcConnection, channel: Channel,
-            src: User, user: User) {
-        if (user.isUs()) {
-            service.runOnUI {
-                service._channels(channel) match {
+            user: User, op: User, msg: String) {
+        service.runOnUI {
+            val ch = service._channels(channel)
+            if (user.isUs()) {
+                // TODO update adapter's channel state
+                ch match {
                 case c: QicrChannel => c.state = QicrChannel.State.KICKED
                 }
+            } else {
+                service.notifyNickListChanged(ch)
             }
-        } else
-            service.runOnUI {
-                service.notifyNickListChanged(service._channels(channel))
-            }
+            ch.add(Kick(op.getNick(), user.getNick(), msg))
+        }
     }
     override def onPart(c: IrcConnection, channel: Channel,
             user: User, msg: String) {
-        if (user.isUs()) {
-            service.runOnUI {
-                service._channels.get(channel) foreach {
+        service.runOnUI {
+            val ch = service._channels.get(channel)
+            if (user.isUs()) {
+                ch foreach {
                     _ match {
                     case c: QicrChannel => c.state = QicrChannel.State.PARTED
                     case _ => Unit
                     }
                 }
+            } else {
+                ch.foreach { service.notifyNickListChanged(_) }
             }
-        } else
-            service.runOnUI {
-                service.notifyNickListChanged(service._channels(channel))
-            }
+            ch.foreach { _.add(Part(user.getNick(), user.address, msg)) }
+        }
     }
     override def onTopic(c: IrcConnection, channel: Channel,
             src: User, topic: String) {

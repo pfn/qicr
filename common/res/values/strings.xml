@@ -72,6 +72,14 @@
     <string name="notice_template">-%1$s- %2$s</string>
     <string name="action_template"> * %1$s %2$s</string>
 
+    <!-- TODO colorize? -->
+    <string name="nick_change_template">-!- %1$s is not known as %2$s</string>
+    <string name="join_template">-!- %1$s [%2$s] has joined</string>
+    <string name="quit_template">-!- %1$s [%2$s] has quit [%3$s]</string>
+    <string name="part_template">-!- %1$s [%2$s] has left [%3$s]</string>
+    <string name="kick_template">
+        -!- %1$s was kicked by %2$s [%3$s]</string>
+
     <string name="topic_template_1">
         *** Topic for %1$s: %2$s</string>
     <string name="topic_template_2">

@@ -10,6 +10,14 @@ object MessageLike {
         def sender: String
         def message: String
     }
+    case class Kick(op: String, nick: String, msg: String) extends MessageLike
+    case class Join(nick: String, uhost: String) extends MessageLike
+    case class Part(nick: String, uhost: String, msg: String)
+    extends MessageLike
+    case class Quit(nick: String, uhost: String, msg: String)
+    extends MessageLike
+
+    case class NickChange(oldnick: String, newnick: String) extends MessageLike
     case class CommandError(message: String) extends MessageLike
     case class ServerInfo(message: String) extends MessageLike
     case class SslInfo(message: String) extends MessageLike

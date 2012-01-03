@@ -92,10 +92,15 @@ class IrcService extends Service {
         val s = new Settings(this)
         s.preferenceChangedListeners += { key =>
             if (key == getString(R.string.pref_message_lines)) {
-                _servers.foreach { server =>
-                    server.messages.maximumSize = s.getString(
-                            R.string.pref_message_lines,
-                            MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
+                val max = s.getString(R.string.pref_message_lines,
+                        MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
+                _servers.foreach { _.messages.maximumSize = max }
+                messages.values.foreach { _.maximumSize = max }
+            } else if (key == getString(R.string.pref_show_join_part_quit)) {
+                val show = s.getBoolean(R.string.pref_show_join_part_quit)
+                messages.values.foreach { a =>
+                    a.showJoinPartQuit = show
+                    a.notifyDataSetChanged()
                 }
             }
         }

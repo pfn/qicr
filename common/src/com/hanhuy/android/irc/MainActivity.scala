@@ -711,7 +711,7 @@ with AdapterView.OnItemClickListener {
     override def onItemClick(parent: AdapterView[_],
             view: View, pos: Int, id: Long) {
         contextPos = pos
-        if (honeycombAndNewer) {
+        if (honeycombAndNewer && !showAsDialog) {
             HoneycombSupport.startActionMode(this)
         } else {
             insertNick()
@@ -816,7 +816,6 @@ extends MessagesFragment(a) {
             val prompt = activity.settings.getBoolean(
                     R.string.pref_close_tab_prompt, true)
 
-            // TODO FIXME closes the wrong tab/fragment/huh?
             Log.i(TAG, "Requesting tab close for: " + channel + " <= " + id)
             def removeChannel() {
                 if (channel.state == Channel.State.JOINED) {

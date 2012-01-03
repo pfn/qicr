@@ -20,65 +20,58 @@ object AndroidConversions {
     val honeycombAndNewer =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB
 
-    implicit def toBroadcastReceiver[A](f: (Context, Intent) => A) :
-        BroadcastReceiver = new BroadcastReceiver() {
+    implicit def toBroadcastReceiver[A](f: (Context, Intent) => A) =
+            new BroadcastReceiver() {
         def onReceive(c: Context, i: Intent) = f(c, i)
     }
 
-    implicit def toViewOnClickListener1[A](f: () => A) : View.OnClickListener =
+    implicit def toViewOnClickListener1[A](f: () => A) =
             new View.OnClickListener() { def onClick(v: View) = f() }
-    implicit def toViewOnClickListener[A](f: View => A) : View.OnClickListener =
+    implicit def toViewOnClickListener[A](f: View => A) =
             new View.OnClickListener() { def onClick(v: View) = f(v) }
 
     implicit def toDialogInterfaceOnClickListener[A](
-            f: (DialogInterface, Int) => A) :
-                DialogInterface.OnClickListener = {
+            f: (DialogInterface, Int) => A) = {
         new DialogInterface.OnClickListener() {
             def onClick(d: DialogInterface, id: Int) = f(d, id)
         }
     }
-    implicit def toDialogInterfaceOnClickListener1[A](f: () => A) :
-                DialogInterface.OnClickListener = {
+    implicit def toDialogInterfaceOnClickListener1[A](f: () => A) = {
         new DialogInterface.OnClickListener() {
             def onClick(d: DialogInterface, id: Int) = f()
         }
     }
 
-    implicit def toDialogInterfaceOnShowListener[A](f: () => A):
-                DialogInterface.OnShowListener = {
+    implicit def toDialogInterfaceOnShowListener[A](f: () => A) = {
         new DialogInterface.OnShowListener() {
             def onShow(d: DialogInterface) = f()
         }
     }
 
     implicit def toAdapterViewOnItemClickListener[A](
-            f: (AdapterView[_], View, Int, Long) => A) :
-            AdapterView.OnItemClickListener =
+            f: (AdapterView[_], View, Int, Long) => A) =
                     new AdapterView.OnItemClickListener() {
                 def onItemClick(
                         av: AdapterView[_], v: View, pos: Int, id: Long) =
                             f(av, v, pos, id)
     }
 
-    implicit def toViewOnKeyListener(
-            f: (View, Int, KeyEvent) => Boolean) : View.OnKeyListener =
+    implicit def toViewOnKeyListener(f: (View, Int, KeyEvent) => Boolean) =
                     new View.OnKeyListener() {
                 def onKey(v: View, key: Int, e: KeyEvent) = f(v, key, e)
     }
-    implicit def toViewOnTouchListener(
-            f: (View, MotionEvent) => Boolean) : View.OnTouchListener =
+    implicit def toViewOnTouchListener(f: (View, MotionEvent) => Boolean) =
                     new View.OnTouchListener() {
                 def onTouch(v: View, e: MotionEvent) = f(v, e)
     }
 
-    implicit def toTextViewOnEditorAction(f: (View, Int, KeyEvent) => Boolean):
-            TextView.OnEditorActionListener =
+    implicit def toTextViewOnEditorAction(f: (View, Int, KeyEvent) => Boolean) =
             new TextView.OnEditorActionListener() {
         def onEditorAction(v: TextView, action: Int, e: KeyEvent) =
             f(v, action, e)
     }
 
-    implicit def toRunnable[A](f: () => A) : Runnable = new Runnable() {
+    implicit def toRunnable[A](f: () => A) = new Runnable() {
         def run() = f()
     }
 
@@ -97,25 +90,23 @@ object AndroidConversions {
         Task
     }
 
-    implicit def toUncaughtExceptionHandler[A]( f: (Thread, Throwable) => A):
-            Thread.UncaughtExceptionHandler =
+    implicit def toUncaughtExceptionHandler[A](f: (Thread, Throwable) => A) =
             new Thread.UncaughtExceptionHandler {
         override def uncaughtException(t: Thread, e: Throwable) = f(t, e)
     }
 
-    implicit def toString(c: CharSequence) : String =
+    implicit def toString(c: CharSequence) =
             if (c == null) null else c.toString()
-    implicit def toString(t: TextView) : String = t.getText()
-    implicit def toInt(t: TextView) : Int = {
+    implicit def toString(t: TextView): String = t.getText()
+    implicit def toInt(t: TextView) = {
         val s: String = t.getText()
         if (s == null || s == "") -1
         else Integer.parseInt(s)
     }
-    implicit def toBoolean(c: CheckBox) : Boolean = c.isChecked()
+    implicit def toBoolean(c: CheckBox) = c.isChecked()
 
-    implicit def toRichView(v: View): RichView = new RichView(v)
-    implicit def toRichActivity(a: Activity): RichActivity =
-            new RichActivity(a)
+    implicit def toRichView(v: View) = new RichView(v)
+    implicit def toRichActivity(a: Activity) = new RichActivity(a)
 }
 
 class RichView(view: View) {

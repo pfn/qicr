@@ -61,5 +61,10 @@
             android:defaultValue="@string/pref_quit_message_default"
             android:singleLine="true"
         />
+        <CheckBoxPreference
+            android:key="@string/pref_show_join_part_quit"
+            android:title="@string/pref_show_join_part_quit_title"
+            android:defaultValue="false"
+        />
     </PreferenceCategory>
 </PreferenceScreen>
