@@ -12,7 +12,6 @@ import com.hanhuy.android.irc.R
 import scala.collection.mutable.Queue
 import scala.ref.WeakReference
 
-import android.os.Looper
 import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.util.Log
@@ -77,7 +76,7 @@ class MessageAdapter extends BaseAdapter {
     protected[model] def add(item: MessageLike) {
         messages += item
         ensureSize()
-        if (_context != null && Looper.getMainLooper.getThread == currentThread)
+        if (_context != null && AndroidConversions.isMainThread)
             _context.get.foreach { _ => notifyDataSetChanged() }
     }
 

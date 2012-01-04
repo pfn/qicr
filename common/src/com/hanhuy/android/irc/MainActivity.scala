@@ -9,7 +9,7 @@ import android.content.Intent
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.content.res.Configuration
-import android.os.{Bundle, Build, IBinder, Parcelable, Looper}
+import android.os.{Bundle, Build, IBinder, Parcelable}
 import android.util.Log
 import android.content.DialogInterface
 import android.speech.RecognizerIntent
@@ -1230,7 +1230,7 @@ extends ArrayAdapter[Server](
 abstract class EventBus(ui: Boolean = false)
 extends HashSet[PartialFunction[BusEvent,Unit]] {
     def send(e: BusEvent) {
-        if (!ui || Looper.getMainLooper.getThread == currentThread)
+        if (!ui || isMainThread)
             foreach { h => if (h.isDefinedAt(e)) h(e) }
         else
             Log.w(getClass.getSimpleName,

@@ -10,8 +10,6 @@ import android.preference.PreferenceManager
 import android.preference.PreferenceActivity
 import android.preference.PreferenceFragment
 
-import scala.collection.mutable.HashSet
-
 class Settings(c: Context)
 extends SharedPreferences.OnSharedPreferenceChangeListener {
     val p = PreferenceManager.getDefaultSharedPreferences(c)

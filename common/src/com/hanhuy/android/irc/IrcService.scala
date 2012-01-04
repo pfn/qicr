@@ -13,7 +13,6 @@ import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.Notice
 
 import scala.collection.mutable.HashMap
-import scala.collection.mutable.HashSet
 import scala.ref.WeakReference
 
 import android.app.Service

@@ -6,6 +6,7 @@ import com.hanhuy.android.irc.ServiceBus
 import MessageLike._
 
 object Channel {
+    // TODO fix this to be scala-style, use case classes
     object State extends Enumeration {
         type State = Value
         val NEW, JOINED, KICKED, PARTED = Value

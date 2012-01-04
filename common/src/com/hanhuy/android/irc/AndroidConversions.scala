@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.BroadcastReceiver
 import android.os.AsyncTask
 import android.os.Build
+import android.os.Looper
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -110,6 +111,8 @@ object AndroidConversions {
 
     implicit def toRichView(v: View) = new RichView(v)
     implicit def toRichActivity(a: Activity) = new RichActivity(a)
+
+    def isMainThread = Looper.getMainLooper.getThread == currentThread
 }
 
 class RichView(view: View) {

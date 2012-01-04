@@ -7,9 +7,8 @@ import com.hanhuy.android.irc.ServiceBus
 import android.content.ContentValues
 import android.provider.BaseColumns
 
-import scala.collection.mutable.HashSet
-
 object Server {
+    // TODO fix this to be scala-style, use case classes
     object State extends Enumeration {
         type State = Value
         val INITIAL, DISCONNECTED, CONNECTING, CONNECTED = Value
