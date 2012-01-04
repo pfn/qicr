@@ -19,6 +19,7 @@ import android.util.Log
 import com.sorcix.sirc.IrcConnection
 import com.sorcix.sirc.{User => SircUser}
 
+import scala.collection.mutable.HashSet
 import scala.collection.mutable.HashMap
 import scala.collection.JavaConversions._
 import scala.ref.WeakReference
@@ -47,12 +48,11 @@ class InputProcessor(activity: MainActivity) {
         case _ => (None, None)
         }
     }
-    def onEditorActionListener(v: View, action: Int, e: KeyEvent):
-            Boolean = {
+    def onEditorActionListener(v: View, action: Int, e: KeyEvent): Boolean = {
         Log.i(TAG, "editoraction: " + action + " e: " + e)
         val input = v.asInstanceOf[EditText]
         if (action == EditorInfo.IME_ACTION_SEND)
-            Unit // ignored
+            () // ignored
         if (action == EditorInfo.IME_NULL) {
             val line = input.getText()
             handleLine(line)
@@ -115,7 +115,7 @@ class InputProcessor(activity: MainActivity) {
             case KeyEvent.KEYCODE_I => pageTarget = 18
             case KeyEvent.KEYCODE_O => pageTarget = 19
             case KeyEvent.KEYCODE_P => pageTarget = 20
-            case _ => Unit
+            case _ => ()
             }
             if (altOn && pageTarget != -1) {
                 activity.tabhost.setCurrentTab(pageTarget)
@@ -130,9 +130,9 @@ class InputProcessor(activity: MainActivity) {
     }
 
     object TextListener extends TextWatcher {
-        override def afterTextChanged(s: Editable) = Unit
+        override def afterTextChanged(s: Editable) = ()
         override def beforeTextChanged(s: CharSequence,
-                start: Int, count: Int, after: Int) = Unit
+                start: Int, count: Int, after: Int) = ()
         override def onTextChanged(s: CharSequence,
                 start: Int, before: Int, count: Int) {
             if (start != 0 || count != s.length()) {
@@ -204,7 +204,7 @@ class InputProcessor(activity: MainActivity) {
         val users = ch.getUsers() map {
             u => ( u.getNick().toLowerCase(), u.getNick() )
         } toMap
-        val seenSet = new collection.mutable.HashSet[String]
+        val seenSet = new HashSet[String]
         val recent = c.messages.messages.reverse.collect {
             // side-effect cannot occur on the case side
             case ChatMessage(s, m) if !seenSet.contains(s.toLowerCase()) =>
@@ -403,7 +403,7 @@ sealed class CommandProcessor(ctx: Context) {
 
     // TODO implement
     object PartCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     object QuitCommand extends Command {
@@ -459,47 +459,47 @@ sealed class CommandProcessor(ctx: Context) {
 
     // TODO implement
     object PingCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object TopicCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object InviteCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object CtcpCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object NickCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object KickCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object WhowasCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object WhoisCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     // TODO implement
     object IgnoreCommand extends Command {
-        override def execute(args: Option[String]) = Unit
+        override def execute(args: Option[String]) = ()
     }
 
     object HelpCommand extends Command {

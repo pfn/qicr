@@ -19,7 +19,10 @@ object AndroidConversions {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH
     val honeycombAndNewer =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB
+    val gingerbreadAndNewer =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD
 
+    if (gingerbreadAndNewer) GingerbreadSupport.init()
     implicit def toBroadcastReceiver[A](f: (Context, Intent) => A) =
             new BroadcastReceiver() {
         def onReceive(c: Context, i: Intent) = f(c, i)
@@ -82,8 +85,8 @@ object AndroidConversions {
             task.execute()
     }
     // ok, param: => T can only be used if called directly, no implicits
-    def async(f: => Any): Unit = async(toAsyncTask(f))
-    private def toAsyncTask(f: => Any): AsyncTask[Object,Object,Unit] = {
+    def async(f: => Unit): Unit = async(toAsyncTask(f))
+    private def toAsyncTask(f: => Unit): AsyncTask[Object,Object,Unit] = {
         object Task extends AsyncTask[Object,Object,Unit] {
             override def doInBackground(args: Object*): Unit = f
         }

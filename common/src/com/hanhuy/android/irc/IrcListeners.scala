@@ -138,7 +138,7 @@ with ServerListener with MessageListener with ModeListener {
                 ch foreach {
                     _ match {
                     case c: QicrChannel => c.state = QicrChannel.State.PARTED
-                    case _ => Unit
+                    case _ => ()
                     }
                 }
             } else {
@@ -156,7 +156,7 @@ with ServerListener with MessageListener with ModeListener {
         }
     }
     override def onMode(c: IrcConnection, channel: Channel,
-            src: User, mode: String) = Unit // TODO
+            src: User, mode: String) = () // TODO
     override def onMotd(c: IrcConnection, motd: String) {
         val server = service._connections(c)
         service.runOnUI { server.add(Motd(motd)) }
@@ -169,30 +169,30 @@ with ServerListener with MessageListener with ModeListener {
             }
     }
     // TODO
-    override def onQuit(c: IrcConnection, user: User, msg: String) = Unit
+    override def onQuit(c: IrcConnection, user: User, msg: String) = ()
 
     // ModeListener
     // TODO
     override def onAdmin(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onDeAdmin(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onDeFounder(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onDeHalfop(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onDeOp(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onDeVoice(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onFounder(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onHalfop(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onOp(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
     override def onVoice(c: IrcConnection, channel: Channel,
-            src: User, user: User) = Unit
+            src: User, user: User) = ()
 
     // MessageListener
     override def onAction(c: IrcConnection, src: User, channel: Channel,
@@ -224,7 +224,7 @@ with ServerListener with MessageListener with ModeListener {
 
     // TODO
     override def onCtcpReply(c: IrcConnection, src: User,
-            cmd: String, reply: String) = Unit
+            cmd: String, reply: String) = ()
 
     override def onAction(c: IrcConnection, src: User, action: String) {
         service.runOnUI {
@@ -251,7 +251,7 @@ with ServerListener with MessageListener with ModeListener {
             // 366 = end of /names list
             line.getNumericCommand() match {
                 case 306 | 333 | 366 => return
-                case _ => Unit
+                case _ => ()
             }
         }
         service.runOnUI {

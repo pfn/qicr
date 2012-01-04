@@ -9,7 +9,7 @@ import android.content.Intent
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.content.res.Configuration
-import android.os.{Bundle, Build, IBinder, Parcelable}
+import android.os.{Bundle, Build, IBinder, Parcelable, Looper}
 import android.util.Log
 import android.content.DialogInterface
 import android.speech.RecognizerIntent
@@ -47,6 +47,7 @@ import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
 import com.hanhuy.android.irc.model.NickListAdapter
+import com.hanhuy.android.irc.model.BusEvent
 
 import MainActivity._
 
@@ -65,10 +66,11 @@ object MainActivity {
 }
 class MainActivity extends FragmentActivity with ServiceConnection {
     val _richactivity: RichActivity = this; import _richactivity._
+    UiBus.clear // everybody off!  does this affect retained fragments?
 
     lazy val settings = {
         val s = new Settings(this)
-        s.preferenceChangedListeners += { key =>
+        UiBus += { case BusEvent.PreferenceChanged(key) =>
             List(R.string.pref_show_nick_complete,
                     R.string.pref_show_speech_rec) foreach { r =>
                 if (getString(r) == key) {
@@ -145,15 +147,11 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
     var page = -1
 
-    val serviceConnectionListeners    = new HashSet[(IrcService) => Any]
-    val serviceDisconnectionListeners = new HashSet[() => Any]
-
     var _service: IrcService = _
     def service = _service
     def service_=(s: IrcService) {
         _service = s
-        serviceConnectionListeners.foreach(_(s))
-        serviceConnectionListeners.clear()
+        UiBus.send(BusEvent.ServiceConnected(s))
     }
 
     override def onCreate(bundle: Bundle) {
@@ -279,8 +277,9 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             }
         }
 
+        // TODO remove listener?
         if (service != null) refreshTabs()
-        else serviceConnectionListeners += refreshTabs
+        else UiBus += { case BusEvent.ServiceConnected(_) => refreshTabs() }
 
         pageChanged(adapter.page)
     }
@@ -290,15 +289,16 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
     override def onStart() {
         super.onStart()
-        serviceConnectionListeners += servers.onIrcServiceConnected
-        serviceDisconnectionListeners += servers.onIrcServiceDisconnected _
+        UiBus += { case BusEvent.ServiceConnected(s) =>
+            servers.onIrcServiceConnected(s)
+        }
 
         bindService(new Intent(this, classOf[IrcService]), this,
                 Context.BIND_AUTO_CREATE)
     }
 
     override def onServiceConnected(name : ComponentName, binder : IBinder) {
-        service = binder.asInstanceOf[LocalIrcService].instance
+        service = binder.asInstanceOf[LocalIrcBinder].service
         service.bind(this)
         service.showing = true
         if (page != -1) {
@@ -310,17 +310,19 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         }
     }
     override def onServiceDisconnected(name : ComponentName) {
-        serviceDisconnectionListeners.foreach(_())
-        serviceDisconnectionListeners.clear()
+        UiBus.send(BusEvent.ServiceDisconnected())
     }
 
+    override def onStop() {
+        super.onStop()
+        if (service != null)
+            service.unbind()
+        unbindService(this)
+    }
     override def onDestroy() {
         super.onDestroy()
         if (honeycombAndNewer)
             HoneycombSupport.close()
-        if (service != null)
-            service.unbind()
-        unbindService(this)
     }
 
     def postOnUiThread[A](r: => A) = async { runOnUiThread(r _) }
@@ -359,7 +361,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                                 "Failed to set list position", e)
                     }
                 }
-            case _ => Unit
+            case _ => ()
         }
 
         if (f.isInstanceOf[QueryFragment]) {
@@ -632,7 +634,9 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
             setListAdapter(adapter)
         }
         if (activity.service == null)
-            activity.serviceConnectionListeners += onServiceConnected
+            UiBus += { case BusEvent.ServiceConnected(s) =>
+                onServiceConnected(s)
+            }
         else
             onServiceConnected(activity.service)
     }
@@ -742,7 +746,7 @@ extends MessagesFragment(a) {
             if (activity.service != null)
                 setChannel(activity.service)
             else
-                activity.serviceConnectionListeners += (setChannel(_))
+                UiBus += { case BusEvent.ServiceConnected(s) => setChannel(s) }
         //} else {
             //Log.d(TAG, format(
             //        "Created ChannelFragment: %d => %s => %s",
@@ -980,9 +984,11 @@ class ServersFragment extends ListFragment {
             service.getServers.foreach(adapter.add(_))
             adapter.notifyDataSetChanged()
         }
-        service.serverChangedListeners += changeListener
-        service.serverAddedListeners   += addListener
-        service.serverRemovedListeners += removeListener
+        UiBus += {
+            case e: BusEvent.ServerAdded => addListener(e.server)
+            case e: BusEvent.ServerChanged => changeListener(e.server)
+            case e: BusEvent.ServerRemoved => removeListener(e.server)
+        }
     }
 
     def clearServerMessagesFragment(mgr: FragmentManager,
@@ -1074,12 +1080,6 @@ class ServersFragment extends ListFragment {
                     HoneycombSupport.invalidateActionBar()
             }
     }
-    def onIrcServiceDisconnected() {
-        service.serverChangedListeners -= changeListener
-        service.serverAddedListeners   -= addListener
-        service.serverRemovedListeners -= removeListener
-    }
-
     def changeListener(server: Server) {
         if (!_server.isEmpty && _server.get == server &&
                 server.state == Server.State.CONNECTED && getActivity() != null)
@@ -1226,3 +1226,16 @@ extends ArrayAdapter[Server](
         v
     }
 }
+
+abstract class EventBus(ui: Boolean = false)
+extends HashSet[PartialFunction[BusEvent,Unit]] {
+    def send(e: BusEvent) {
+        if (!ui || Looper.getMainLooper.getThread == currentThread)
+            foreach { h => if (h.isDefinedAt(e)) h(e) }
+        else
+            Log.w(getClass.getSimpleName,
+                    "Not on main thread, aborting: " + e, new StackTrace)
+    }
+}
+object UiBus extends EventBus(true)
+object ServiceBus extends EventBus

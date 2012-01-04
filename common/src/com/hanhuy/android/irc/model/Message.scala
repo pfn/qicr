@@ -1,5 +1,7 @@
 package com.hanhuy.android.irc.model
 
+import com.hanhuy.android.irc.IrcService
+
 import java.util.Date
 
 object MessageLike {
@@ -44,6 +46,22 @@ object MessageLike {
     }
 }
 
-abstract class MessageLike {
+trait MessageLike {
     val ts: Date = new Date()
+}
+
+trait BusEvent
+object BusEvent {
+    case class ServerChanged(server: Server) extends BusEvent
+    case class ServerAdded(server: Server) extends BusEvent
+    case class ServerRemoved(server: Server) extends BusEvent
+    case class ServerStateChanged(
+        server: Server, oldstate: Server.State.State) extends BusEvent
+    case class PreferenceChanged(pref: String) extends BusEvent
+    case class ServiceConnected(service: IrcService) extends BusEvent
+    case class ServiceDisconnected() extends BusEvent
+    case class ChannelMessage(
+        channel: ChannelLike, msg: MessageLike) extends BusEvent
+    case class ChannelStateChanged(
+        channel: Channel, oldstate: Channel.State.State) extends BusEvent
 }

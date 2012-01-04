@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc.model
 
+import com.hanhuy.android.irc.UiBus
 import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.IrcService
 import com.hanhuy.android.irc.R
@@ -21,7 +22,7 @@ class NickListAdapter(a: MainActivity, channel: Channel) extends BaseAdapter {
         notifyDataSetChanged()
     }
     if (a.service == null)
-        a.serviceConnectionListeners += (getc(_))
+        UiBus += { case BusEvent.ServiceConnected(s) => getc(s) }
     else
         getc(a.service)
 

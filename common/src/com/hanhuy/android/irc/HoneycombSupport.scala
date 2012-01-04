@@ -4,6 +4,8 @@ import com.hanhuy.android.irc.model.Server
 
 import scala.ref.WeakReference
 
+import android.os.StrictMode
+
 import android.view.ActionMode
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.util.Log
@@ -28,7 +30,7 @@ object HoneycombSupport {
         if (_actionmode == null) return
         _actionmode.get match {
             case Some(actionmode) => actionmode.finish()
-            case _ => Unit
+            case _ => ()
         }
         _actionmode = null
     }
@@ -58,7 +60,7 @@ object HoneycombSupport {
                                  MenuItem.SHOW_AS_ACTION_WITH_TEXT))
             true
         }
-        override def onDestroyActionMode(mode: ActionMode) = Unit
+        override def onDestroyActionMode(mode: ActionMode) = ()
         override def onPrepareActionMode(mode: ActionMode, menu: Menu) :
                 Boolean = {
 
@@ -73,7 +75,7 @@ object HoneycombSupport {
                     menu.findItem(R.id.server_connect).setVisible(!connected)
                     menu.findItem(R.id.server_disconnect).setVisible(connected)
                 }
-                case None => Unit
+                case None => ()
             }
             true
         }
@@ -104,7 +106,18 @@ object HoneycombSupport {
                                  MenuItem.SHOW_AS_ACTION_WITH_TEXT))
             true
         }
-        override def onDestroyActionMode(mode: ActionMode) = Unit
+        override def onDestroyActionMode(mode: ActionMode) = ()
         override def onPrepareActionMode(mode: ActionMode, menu: Menu) = true
+    }
+}
+
+object GingerbreadSupport {
+    var _init = false
+    val DEVELOPMENT_MODE = true
+    def init() {
+        if (_init) return
+        _init = true
+        if (DEVELOPMENT_MODE) StrictMode.setVmPolicy(
+                new StrictMode.VmPolicy.Builder().detectAll.penaltyLog.build)
     }
 }

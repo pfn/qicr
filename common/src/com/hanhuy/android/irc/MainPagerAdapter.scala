@@ -7,6 +7,7 @@ import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.ChannelLikeComparator
 import com.hanhuy.android.irc.model.FragmentPagerAdapter
 import com.hanhuy.android.irc.model.NickListAdapter
+import com.hanhuy.android.irc.model.BusEvent
 
 import android.app.NotificationManager
 import android.content.Context
@@ -55,7 +56,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     if (activity.service != null)
         onServiceConnected(activity.service)
     else
-        activity.serviceConnectionListeners += onServiceConnected
+        UiBus += { case BusEvent.ServiceConnected(s) => onServiceConnected(s) }
 
     def refreshTabs(service: IrcService) {
         if (service.channels.size > channels.size)
@@ -65,7 +66,9 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
 
     def onServiceConnected(service: IrcService) {
         refreshTabs(service)
-        service.serverChangedListeners += serverStateChanged
+        UiBus += {
+            case e: BusEvent.ServerChanged => serverStateChanged(e.server)
+        }
     }
 
     def serverStateChanged(server: Server) {
@@ -87,7 +90,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
                 }
             }
         }
-        case _ => Unit
+        case _ => ()
         }
     }
 
@@ -181,7 +184,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     }
 
     // OnPageChangeListener
-    override def onPageScrolled(pos: Int, posOff: Float, posOffPix: Int) = Unit
+    override def onPageScrolled(pos: Int, posOff: Float, posOffPix: Int) = ()
     override def onPageSelected(pos: Int) {
         page = pos
 
@@ -194,7 +197,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val offset = v.getLeft() - hsv.getWidth() / 2 + v.getWidth() / 2
         hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
     }
-    override def onPageScrollStateChanged(state: Int) = Unit
+    override def onPageScrollStateChanged(state: Int) = ()
 
     private def addTab(title: String) {
         var spec : TabHost#TabSpec = null

@@ -1,6 +1,8 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.Config
+import com.hanhuy.android.irc.UiBus
+import com.hanhuy.android.irc.ServiceBus
 
 import android.content.ContentValues
 import android.provider.BaseColumns
@@ -16,8 +18,6 @@ object Server {
 class Server {
 
     import Server.State._
-    val stateChangedListeners = new HashSet[(Server, State) => Any]
-
     val messages = new MessageAdapter
 
     def add(m: MessageLike) = messages.add(m)
@@ -27,7 +27,7 @@ class Server {
         val oldstate = _state
         _state = state
         if (oldstate != state)
-            stateChangedListeners.foreach(_(this, oldstate))
+            ServiceBus.send(BusEvent.ServerStateChanged(this, oldstate))
     }
 
     var id: Long = -1

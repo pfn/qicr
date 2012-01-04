@@ -12,6 +12,7 @@ import com.hanhuy.android.irc.R
 import scala.collection.mutable.Queue
 import scala.ref.WeakReference
 
+import android.os.Looper
 import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.util.Log
@@ -61,9 +62,8 @@ class MessageAdapter extends BaseAdapter {
         case Some(c) => c
         case None => throw new IllegalStateException
     }
-    lazy val font = {
-        Typeface.createFromAsset(context.getAssets(), "DejaVuSansMono.ttf")
-    }
+    lazy val font =
+            Typeface.createFromAsset(context.getAssets(), "DejaVuSansMono.ttf")
 
     def clear() {
         messages.clear()
@@ -77,7 +77,7 @@ class MessageAdapter extends BaseAdapter {
     protected[model] def add(item: MessageLike) {
         messages += item
         ensureSize()
-        if (_context != null)
+        if (_context != null && Looper.getMainLooper.getThread == currentThread)
             _context.get.foreach { _ => notifyDataSetChanged() }
     }
 
@@ -96,8 +96,8 @@ class MessageAdapter extends BaseAdapter {
     override def getItem(pos: Int) : MessageLike = filteredMessages(pos)
     override def getCount() : Int = filteredMessages.size
 
-    override def getView(pos: Int, convertView: View, container: ViewGroup) :
-            View = createViewFromResource(pos, convertView, container)
+    override def getView(pos: Int, convertView: View, container: ViewGroup) =
+            createViewFromResource(pos, convertView, container)
     private def createViewFromResource(
             pos: Int, convertView: View, container: ViewGroup): View = {
         var view: TextView = convertView.asInstanceOf[TextView]

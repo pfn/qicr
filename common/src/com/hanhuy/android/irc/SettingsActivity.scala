@@ -1,5 +1,7 @@
 package com.hanhuy.android.irc
 
+import com.hanhuy.android.irc.model.BusEvent
+
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
@@ -15,10 +17,10 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
     val p = PreferenceManager.getDefaultSharedPreferences(c)
     p.registerOnSharedPreferenceChangeListener(this)
 
-    val preferenceChangedListeners = new HashSet[String => Any]
-
     override def onSharedPreferenceChanged(p: SharedPreferences, key: String) {
-        preferenceChangedListeners.foreach(_(key))
+        val e = BusEvent.PreferenceChanged(key)
+        UiBus.send(e)
+        ServiceBus.send(e)
     }
 
     def getBoolean(key: Int, default: Boolean = false): Boolean =

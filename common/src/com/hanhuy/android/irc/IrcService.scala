@@ -5,6 +5,7 @@ import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.MessageAdapter
+import com.hanhuy.android.irc.model.BusEvent
 import com.hanhuy.android.irc.model.MessageLike
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
@@ -38,14 +39,14 @@ import IrcService._
 
 // practice doing this so as to prevent leaking the service instance
 //     irrelevant in this app
-class LocalIrcService extends Binder {
+class LocalIrcBinder extends Binder {
     var ref: WeakReference[IrcService] = _
     // can't use default constructor as it will save a strong-ref
     def this(s: IrcService) = {
         this()
         ref = new WeakReference(s)
     }
-    def instance: IrcService = ref.get.get
+    def service: IrcService = ref.get.get
 }
 object IrcService {
     val TAG = "IrcService"
@@ -61,6 +62,7 @@ object IrcService {
     val MENTION_ID = 4
 }
 class IrcService extends Service {
+    ServiceBus.clear
     var recreateActivity: Option[Int] = None
     var startId: Int = -1
     var messagesId = 0
@@ -87,10 +89,13 @@ class IrcService extends Service {
         }
         _showing = s
     }
+    ServiceBus += { case BusEvent.ServerStateChanged(s, o) =>
+        serverStateChanged(s, o)
+    }
     lazy val config   = new Config(this)
     lazy val settings = {
         val s = new Settings(this)
-        s.preferenceChangedListeners += { key =>
+        ServiceBus += { case BusEvent.PreferenceChanged(key) =>
             if (key == getString(R.string.pref_message_lines)) {
                 val max = s.getString(R.string.pref_message_lines,
                         MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
@@ -112,10 +117,6 @@ class IrcService extends Service {
     val channels  = new HashMap[ChannelLike,SircChannel]
     val _channels = new HashMap[SircChannel,ChannelLike]
     val queries   = new HashMap[(Server,String),Query]
-
-    val serverAddedListeners   = new HashSet[Server => Any]
-    val serverRemovedListeners = new HashSet[Server => Any]
-    val serverChangedListeners = new HashSet[Server => Any]
 
     // TODO find a way to automatically(?) purge the adapters
     // worst-case: leak memory on the int, but not the adapter
@@ -161,9 +162,6 @@ class IrcService extends Service {
     def unbind() {
         _activity = null
         // hopefully only UI uses these listeners
-        serverAddedListeners.clear()
-        serverChangedListeners.clear()
-        serverRemovedListeners.clear()
         recreateActivity foreach { page =>
             recreateActivity = None
             val intent = new Intent(this, classOf[MainActivity])
@@ -177,14 +175,7 @@ class IrcService extends Service {
         recreateActivity = Some(page)
     }
 
-    override def onBind(intent: Intent) : IBinder = {
-        new LocalIrcService(this)
-    }
-
-    override def onDestroy() {
-        _servers.foreach(_.stateChangedListeners -= serverStateChanged)
-        super.onDestroy()
-    }
+    override def onBind(intent: Intent) : IBinder = new LocalIrcBinder(this)
 
     def running = _running
 
@@ -283,21 +274,16 @@ class IrcService extends Service {
         }
     }
 
-    lazy val _servers = {
-        val servers = config.getServers()
-        servers.foreach(_.stateChangedListeners += serverStateChanged)
-        servers
-    }
+    lazy val _servers = config.getServers()
 
     private def serverStateChanged(server: Server, state: Server.State.State) =
-            serverChangedListeners.foreach(_(server))
+            UiBus.send(BusEvent.ServerChanged(server))
 
     def getServers() = _servers
     def addServer(server: Server) {
         config.addServer(server)
         _servers += server
-        server.stateChangedListeners += serverStateChanged
-        serverAddedListeners.foreach(_(server))
+        UiBus.send(BusEvent.ServerAdded(server))
     }
 
     def notifyNickListChanged(c: ChannelLike) {
@@ -305,6 +291,9 @@ class IrcService extends Service {
 
         val channel = c.asInstanceOf[Channel]
         activity foreach { _.adapter.updateNickList(channel) }
+    }
+    ServiceBus += { case BusEvent.ChannelMessage(c, m) =>
+        channelMessagesListener(c, m)
     }
     def channelMessagesListener(c: ChannelLike, m: MessageLike) {
         if (!showing) return
@@ -324,7 +313,6 @@ class IrcService extends Service {
             case None => {
                 val q = new Query(server, _nick)
                 queries += (((server, _nick.toLowerCase()),q))
-                q.channelMessagesListeners += channelMessagesListener
                 q
             }
         }
@@ -358,14 +346,13 @@ class IrcService extends Service {
         }
         channels  += ((channel,ch))
         _channels += ((ch,channel))
-        channel.channelMessagesListeners += channelMessagesListener
 
         runOnUI {
             if (showing)
                 activity foreach { _.adapter.addChannel(channel) }
             channel match {
                 case c: Channel => c.state = Channel.State.JOINED
-                case _ => Unit
+                case _ => ()
             }
         }
     }
@@ -376,12 +363,12 @@ class IrcService extends Service {
     }
     def updateServer(server: Server) = {
         config.updateServer(server)
-        serverChangedListeners.foreach(_(server))
+        UiBus.send(BusEvent.ServerChanged(server))
     }
     def deleteServer(server: Server) {
         config.deleteServer(server)
         _servers -= server
-        serverRemovedListeners.foreach(_(server))
+        UiBus.send(BusEvent.ServerRemoved(server))
     }
 
     // run on ui thread if an activity is visible, otherwise directly

@@ -1,8 +1,7 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.IrcListeners
-
-import scala.collection.mutable.HashSet
+import com.hanhuy.android.irc.ServiceBus
 
 import MessageLike._
 
@@ -18,7 +17,6 @@ abstract class ChannelLike(_server: Server, _name: String) {
     def name = _name
     def server = _server
 
-    val channelMessagesListeners = new HashSet[(ChannelLike,MessageLike) => Any]
     var newMessages = false
     var newMentions = false
     override def equals(o: Any): Boolean = {
@@ -40,18 +38,17 @@ abstract class ChannelLike(_server: Server, _name: String) {
 
         if (IrcListeners.matchesNick(server, msg))
             newMentions = true
-        channelMessagesListeners.foreach(_(this, m))
+        ServiceBus.send(BusEvent.ChannelMessage(this, m))
     }
 
     override def toString() = name
 }
 class Channel(s: Server, n: String) extends ChannelLike(s, n) {
     import Channel.State._
-    val stateChangedListeners = new HashSet[(Channel, State) => Any]
     private var _state = NEW
     def state = _state
     def state_=(state: State) = {
-        stateChangedListeners.foreach(_(this, _state))
+        ServiceBus.send(BusEvent.ChannelStateChanged(this, _state))
         _state = state
     }
 }

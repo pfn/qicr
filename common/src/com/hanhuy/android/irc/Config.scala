@@ -69,7 +69,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     override def onCreate(db: SQLiteDatabase) {
         db.execSQL(TABLE_SERVERS_DDL)
     }
-    override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) = Unit
+    override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) = ()
 
     def getServers() : ArrayBuffer[Server] = {
         val db = getReadableDatabase()
