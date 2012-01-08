@@ -436,8 +436,9 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 class ServerSetupFragment extends DialogFragment {
     var _server: Server = _
     var thisview: View = _
-    def server = {
+    def server: Server = {
         val s = _server
+        if (s == null) return _server
         s.name        = thisview.findView[EditText](R.id.add_server_name)
         s.hostname    = thisview.findView[EditText](R.id.add_server_host)
         s.port        = thisview.findView[EditText](R.id.add_server_port)
