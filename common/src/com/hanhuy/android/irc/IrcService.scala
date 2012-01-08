@@ -61,12 +61,13 @@ object IrcService {
     val MENTION_ID = 4
 }
 class IrcService extends Service {
-    ServiceBus.clear
-    var recreateActivity: Option[Int] = None
+    ServiceBus.clear // shouldn't be necessary
+    var recreateActivity: Option[Int] = None // int = page to flip to
     var startId: Int = -1
     var messagesId = 0
     def connected = connections.size > 0
     var _running = false
+
     var _showing = false
     def showing = _showing
     def showing_=(s: Boolean) = {
@@ -88,8 +89,11 @@ class IrcService extends Service {
         }
         _showing = s
     }
-    ServiceBus += { case BusEvent.ServerStateChanged(s, o) =>
-        serverStateChanged(s, o)
+    ServiceBus += {
+    case BusEvent.ServerStateChanged(server, oldstate) =>
+        UiBus.send(BusEvent.ServerChanged(server))
+    case BusEvent.ChannelMessage(c, m) =>
+        channelMessagesListener(c, m)
     }
     lazy val config   = new Config(this)
     lazy val settings = {
@@ -127,7 +131,7 @@ class IrcService extends Service {
         messagesId
     }
 
-    var _activity: WeakReference[MainActivity] = _
+    private var _activity: WeakReference[MainActivity] = _
     def activity = if (_activity == null) None else _activity.get
 
     def removeConnection(server: Server) {
@@ -143,7 +147,7 @@ class IrcService extends Service {
         connections  += ((server, connection))
         _connections += ((connection, server))
     }
-    def bind(main: MainActivity) = {
+    def bind(main: MainActivity) {
         _activity = new WeakReference(main)
         if (!running) {
             _servers.foreach { s =>
@@ -160,7 +164,6 @@ class IrcService extends Service {
     // fragment manager because it's removed onDestroy
     def unbind() {
         _activity = null
-        // hopefully only UI uses these listeners
         recreateActivity foreach { page =>
             recreateActivity = None
             val intent = new Intent(this, classOf[MainActivity])
@@ -170,9 +173,7 @@ class IrcService extends Service {
         }
     }
 
-    def queueCreateActivity(page: Int) {
-        recreateActivity = Some(page)
-    }
+    def queueCreateActivity(page: Int) = recreateActivity = Some(page)
 
     override def onBind(intent: Intent) : IBinder = new LocalIrcBinder(this)
 
@@ -214,10 +215,9 @@ class IrcService extends Service {
         connections.get(server).foreach { c =>
             async {
                 try {
-                    val m = message match {
-                    case Some(msg) => msg
-                    case None => settings.getString(R.string.pref_quit_message,
-                            R.string.pref_quit_message_default)
+                    val m = message getOrElse {
+                        settings.getString(R.string.pref_quit_message,
+                                R.string.pref_quit_message_default)
                     }
                     c.disconnect(m)
                 } catch {
@@ -275,9 +275,6 @@ class IrcService extends Service {
 
     lazy val _servers = config.getServers()
 
-    private def serverStateChanged(server: Server, state: Server.State.State) =
-            UiBus.send(BusEvent.ServerChanged(server))
-
     def getServers() = _servers
     def addServer(server: Server) {
         config.addServer(server)
@@ -285,50 +282,35 @@ class IrcService extends Service {
         UiBus.send(BusEvent.ServerAdded(server))
     }
 
-    def notifyNickListChanged(c: ChannelLike) {
-        if (!showing) return
-
-        val channel = c.asInstanceOf[Channel]
-        activity foreach { _.adapter.updateNickList(channel) }
-    }
-    ServiceBus += { case BusEvent.ChannelMessage(c, m) =>
-        channelMessagesListener(c, m)
-    }
     def channelMessagesListener(c: ChannelLike, m: MessageLike) {
         if (!showing) return
-        activity foreach { _.adapter.refreshTabTitle(c) }
+        runOnUI {
+            UiBus.send(BusEvent.ChannelMessage(c, m))
+        }
     }
 
     def addQuery(c: IrcConnection, _nick: String, msg: String,
             sending: Boolean = false, action: Boolean = false,
             notice: Boolean = false) {
-        val server = _connections.get(c) match {
-        case Some(s) => s
-        case None => return
-        }
+        val server = _connections.get(c) getOrElse { return }
 
-        val query = queries.get((server, _nick.toLowerCase())) match {
-            case Some(q) => q
-            case None => {
-                val q = new Query(server, _nick)
-                queries += (((server, _nick.toLowerCase()),q))
-                q
-            }
+        val query = queries.get((server, _nick.toLowerCase())) getOrElse {
+            val q = new Query(server, _nick)
+            queries += (((server, _nick.toLowerCase()),q))
+            q
         }
         channels += ((query,null))
 
         val nick = if (sending) server.currentNick else _nick
 
         runOnUI {
-            if (showing)
-                activity foreach { _.adapter.addChannel(query) }
-
             val m = if (notice) Notice(nick, msg)
             else if (action) CtcpAction(nick, msg)
             else Privmsg(nick, msg)
+            UiBus.send(BusEvent.PrivateMessage(query, m))
 
             query.add(m)
-            if (!showing)
+            if (activity.isEmpty)
                 showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
                         m.toString(), server.name + EXTRA_SPLITTER + query.name)
         }
@@ -347,14 +329,12 @@ class IrcService extends Service {
         _channels += ((ch,channel))
 
         runOnUI {
-            if (showing)
-                activity foreach { _.adapter.addChannel(channel) }
-            channel match {
-                case c: Channel => c.state = Channel.State.JOINED
-                case _ => ()
-            }
+            val chan = channel.asInstanceOf[Channel]
+            UiBus.send(BusEvent.ChannelAdded(chan))
+            chan.state = Channel.State.JOINED
         }
     }
+
     def removeChannel(ch: Channel) {
         val sircchannel = channels(ch)
         channels  -= ch
@@ -371,35 +351,35 @@ class IrcService extends Service {
     }
 
     // run on ui thread if an activity is visible, otherwise directly
-    def runOnUI[A](f: => A) {
-        // don't also check showing, !showing is possible, e.g. speech rec
-        activity match {
-        case Some(a) => a.runOnUiThread(f _)
-        case None => f
-        }
-    }
+    // don't also check showing, !showing is possible, e.g. speech rec
+    def runOnUI[A](f: => A) = UiBus.post(f)
+            //activity map { _.runOnUiThread(f _) } getOrElse { f }
 
+    // currently unused
     def uncaughtExceptionHandler(t: Thread, e: Throwable) {
         Log.e(TAG, "Uncaught exception in thread: " + t, e)
         Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show()
         if (!t.getName().startsWith("sIRC-")) throw e
     }
 
+    // TODO decouple
     def serverDisconnected(server: Server) {
         runOnUI { disconnect(server, disconnected = true) }
-        if (!showing)
+        if (activity.isEmpty)
             showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
                     getString(R.string.notif_server_disconnected, server.name),
                     "")
     }
 
+    // TODO decouple
     def addChannelMention(c: ChannelLike, m: MessageLike) {
-        if (!showing)
+        if (activity.isEmpty)
             showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
                     getString(R.string.notif_mention_template,
                             c.name, m.toString()),
                     c.server.name + EXTRA_SPLITTER + c.name)
     }
+
     def showNotification(id: Int, res: Int, text: String, extra: String) {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE)
                 .asInstanceOf[NotificationManager]

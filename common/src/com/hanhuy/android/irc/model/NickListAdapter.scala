@@ -15,18 +15,19 @@ import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
 
-class NickListAdapter(a: MainActivity, channel: Channel) extends BaseAdapter {
+class NickListAdapter(activity: MainActivity, channel: Channel)
+extends BaseAdapter {
     var c: SircChannel = _
     def getc(s: IrcService) {
         s.channels.get(channel).foreach(c = _)
         notifyDataSetChanged()
     }
-    if (a.service == null)
+    if (activity.service == null)
         UiBus += { case BusEvent.ServiceConnected(s) => getc(s) }
     else
-        getc(a.service)
+        getc(activity.service)
 
-    val inflater = a.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
+    val inflater = activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
             .asInstanceOf[LayoutInflater]
 
     var nicks: List[String] = _

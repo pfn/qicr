@@ -91,7 +91,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     var showNickComplete: Boolean = _
     var showSpeechRec: Boolean = _
 
-    // TODO remove tabhost?
+    // TODO remove tabhost and use tabwidget only?
     lazy val tabhost = {
         val t = findView[TabHost](android.R.id.tabhost)
         t.setup()
@@ -145,7 +145,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         getSupportFragmentManager().findFragmentByTag(adapter.tabs(0).tag.get)
                 .asInstanceOf[ServersFragment]
     }
-    var page = -1
+    var page = -1 // used for restoring tab selection on recreate
 
     var _service: IrcService = _
     def service = _service
@@ -156,15 +156,13 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
     override def onCreate(bundle: Bundle) {
         val mode = settings.getBoolean(R.string.pref_daynight_mode)
-        val theme = if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark
-        setTheme(theme)
+        setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
         super.onCreate(bundle);
+        setContentView(R.layout.main)
 
         if (bundle != null)
             page = bundle.getInt("page")
-
-        setContentView(R.layout.main)
 
         adapter.createTab(getString(R.string.tab_servers), servers)
 
@@ -180,14 +178,14 @@ class MainActivity extends FragmentActivity with ServiceConnection {
                     Toast.LENGTH_SHORT).show()
             return
         }
-        val results = i.getStringArrayListExtra(
-                RecognizerIntent.EXTRA_RESULTS)
+        val results = i.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
 
         if (results.size == 0) {
             Toast.makeText(this, R.string.speech_failed,
                     Toast.LENGTH_SHORT).show()
             return
         }
+
         val eol = settings.getString(
                 R.string.pref_speech_rec_eol,
                 R.string.pref_speech_rec_eol_default)
@@ -250,24 +248,15 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             val i = getIntent()
             if (i != null && i.hasExtra(IrcService.EXTRA_SUBJECT)) {
                 val subject = i.getStringExtra(IrcService.EXTRA_SUBJECT)
+                // why'd I do removeExtra?
                 i.removeExtra(IrcService.EXTRA_SUBJECT)
                 if (subject != null) {
                     if (subject == "")
                         tabhost.setCurrentTab(0)
                     else {
                         val parts = subject.split(IrcService.EXTRA_SPLITTER)
-                        if (parts.length == 2) {
-                            val tab = adapter.tabs.indexWhere(t => {
-                                t.channel match {
-                                case Some(c) => parts(1) == c.name &&
-                                        parts(0) == c.server.name
-                                case None => false
-                                }
-                            })
-                            //tabhost.setCurrentTab(tab)
-                            pager.setCurrentItem(tab)
-                            // onpagechanged will scroll the tab
-                        }
+                        if (parts.length == 2)
+                            adapter.selectTab(parts(1), parts(0))
                     }
                 }
             } else if (i != null && i.hasExtra(IrcService.EXTRA_PAGE)) {
@@ -281,6 +270,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (service != null) refreshTabs()
         else UiBus += { case BusEvent.ServiceConnected(_) => refreshTabs() }
 
+        // scroll tabwidget if necessary
         pageChanged(adapter.page)
     }
     override def onNewIntent(i: Intent) {
@@ -289,10 +279,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
     override def onStart() {
         super.onStart()
-        UiBus += { case BusEvent.ServiceConnected(s) =>
-            servers.onIrcServiceConnected(s)
-        }
-
         bindService(new Intent(this, classOf[IrcService]), this,
                 Context.BIND_AUTO_CREATE)
     }
@@ -301,17 +287,16 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         service = binder.asInstanceOf[LocalIrcBinder].service
         service.bind(this)
         service.showing = true
+        servers.onIrcServiceConnected(service)
         if (page != -1) {
             postOnUiThread {
-                // why did I do this?
-                runOnUiThread { () => tabhost.setCurrentTab(page) }
+                tabhost.setCurrentTab(page)
                 page = -1
             }
         }
     }
-    override def onServiceDisconnected(name : ComponentName) {
-        UiBus.send(BusEvent.ServiceDisconnected())
-    }
+    override def onServiceDisconnected(name : ComponentName) =
+        UiBus.send(BusEvent.ServiceDisconnected)
 
     override def onStop() {
         super.onStop()
@@ -364,31 +349,34 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             case _ => ()
         }
 
-        if (f.isInstanceOf[QueryFragment]) {
-            nickcomplete.setVisibility(View.GONE)
-            speechrec.setVisibility(if (showSpeechRec)
-                    View.VISIBLE else View.GONE)
-        } else if (f.isInstanceOf[ChannelFragment]) {
-            nickcomplete.setVisibility(if (showNickComplete)
-                    View.VISIBLE else View.GONE)
-            speechrec.setVisibility(if (showSpeechRec)
-                    View.VISIBLE else View.GONE)
-        } else {
-            nickcomplete.setVisibility(View.GONE)
-            speechrec.setVisibility(View.GONE)
+        f match {
+            case _: QueryFragment => {
+                nickcomplete.setVisibility(View.GONE)
+                speechrec.setVisibility(if (showSpeechRec)
+                        View.VISIBLE else View.GONE)
+            }
+            case _: ChannelFragment => {
+                nickcomplete.setVisibility(if (showNickComplete)
+                        View.VISIBLE else View.GONE)
+                speechrec.setVisibility(if (showSpeechRec)
+                        View.VISIBLE else View.GONE)
+            }
+            case _ => {
+                nickcomplete.setVisibility(View.GONE)
+                speechrec.setVisibility(View.GONE)
+            }
         }
     }
 
     override def onCreateOptionsMenu(menu: Menu): Boolean = {
         val inflater = new MenuInflater(this)
         inflater.inflate(R.menu.main_menu, menu)
-        List(R.id.exit, R.id.settings).foreach { item =>
+        // hide all items in overflow
+        List(R.id.exit, R.id.settings, R.id.toggle_theme).foreach { item =>
             MenuItemCompat.setShowAsAction(menu.findItem(item),
-                    MenuItem.SHOW_AS_ACTION_IF_ROOM |
+                    MenuItem.SHOW_AS_ACTION_NEVER |
                     MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         }
-        MenuItemCompat.setShowAsAction(menu.findItem(R.id.toggle_theme),
-                MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         true
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
@@ -399,7 +387,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         }
         case R.id.settings => {
             val clazz = if (honeycombAndNewer) classOf[SettingsFragmentActivity]
-            else classOf[SettingsActivity]
+                    else classOf[SettingsActivity]
             val intent = new Intent(this, clazz)
             startActivity(intent)
             true
@@ -410,7 +398,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             if (honeycombAndNewer)
                 HoneycombSupport.recreate()
             else {
-                service.queueCreateActivity(tabhost.getCurrentTab())
+                service.queueCreateActivity(adapter.page)
                 finish()
             }
             true
@@ -420,7 +408,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
     }
     override def onSaveInstanceState(state: Bundle) {
         super.onSaveInstanceState(state)
-        page = tabhost.getCurrentTab()
+        page = adapter.page
         state.putInt("page", page)
     }
 
@@ -552,9 +540,9 @@ class ServerSetupFragment extends DialogFragment {
     var dialogShown = false
     override def onCreateDialog(bundle: Bundle): Dialog = {
         dialogShown = true
-        import android.view.ContextThemeWrapper
         val activity = getActivity().asInstanceOf[MainActivity]
         val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
+        //import android.view.ContextThemeWrapper
         //val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
         //    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark))
         val d = new AlertDialog.Builder(activity)
@@ -587,18 +575,21 @@ class ServerSetupFragment extends DialogFragment {
 }
 
 // TODO convert to a Dialog fragment (checkpoint first!)
+// allow server messages to be displayed as a dialog on phones
 class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
     def this() = this(null)
-    var _adapter = _a
+
+    // eh?
     lazy val _service = getActivity().asInstanceOf[MainActivity].service
     var __service: IrcService = _
     def service = if (__service != null) __service else _service
 
+    var _adapter = _a
     def adapter = _adapter
     def adapter_=(a: MessageAdapter) = {
         _adapter = a
         if (getActivity() != null)
-            _adapter.context = getActivity().asInstanceOf[MainActivity]
+            _adapter.activity = getActivity().asInstanceOf[MainActivity]
 
         setListAdapter(_adapter)
         service.messages += ((id, _adapter))
@@ -606,30 +597,22 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
             getListView().setSelection(if (adapter.getCount() > 0)
                     _adapter.getCount()-1 else 0)
         } catch {
-            case e: Exception => Log.i(TAG, "Content view not ready", e)
+            case e: Exception => Log.d(TAG, "Content view not ready", e)
         }
     }
     var id = -1
 
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
+        val activity = getActivity().asInstanceOf[MainActivity]
         if (id == -1 && bundle != null)
             id = bundle.getInt("id")
         else
             id = service.newMessagesId()
-    }
 
-    override def onCreateView(inflater: LayoutInflater,
-            container: ViewGroup, bundle: Bundle) : View =
-        inflater.inflate(R.layout.fragment_messages, container, false)
-
-    override def onActivityCreated(bundle: Bundle) {
-        super.onActivityCreated(bundle)
-
-        val activity = getActivity().asInstanceOf[MainActivity]
-        if (adapter != null) {
-            val service = activity.service
-            adapter.context = activity
+        if (adapter != null) { // this works by way of the network being slow
+            val service = activity.service // assuming service is ready?
+            adapter.activity = activity // sets a weakref
             service.messages += ((id, adapter))
             setListAdapter(adapter)
         }
@@ -641,9 +624,13 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
             onServiceConnected(activity.service)
     }
 
+    override def onCreateView(inflater: LayoutInflater,
+            container: ViewGroup, bundle: Bundle) : View =
+        inflater.inflate(R.layout.fragment_messages, container, false)
+
     override def onResume() {
         super.onResume()
-        if (adapter != null)
+        if (adapter != null) // scroll to bottom on resume
             getListView().setSelection(adapter.getCount()-1)
     }
     override def onSaveInstanceState(bundle: Bundle) {
@@ -661,21 +648,22 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
 class NickListFragment extends DialogFragment
 with AdapterView.OnItemClickListener {
     // sucky hack because of using the view directly
-    var activity: MainActivity = _
-    var listview: ListView = _
-    var showAsDialog = true
-    var adapter: Option[NickListAdapter] = None
+    // when used directly, external caller will need to set activity
+    private var _activity: MainActivity = _
+    def activity = if (_activity != null) _activity
+            else getActivity().asInstanceOf[MainActivity]
+    def activity_=(a: MainActivity) = _activity = a
 
-    override def onActivityCreated(bundle: Bundle) {
-        super.onActivityCreated(bundle)
-        activity = getActivity().asInstanceOf[MainActivity]
-    }
+    var listview: ListView = _
+    var showAsDialog = true // default unless we're on large+
+    var adapter: Option[NickListAdapter] = None // Some if on large+
+
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         listview = inflater.inflate(R.layout.fragment_nicklist,
                 container, false).asInstanceOf[ListView]
         if (showAsDialog && adapter.isEmpty)
-            getActivity().asInstanceOf[MainActivity].postOnUiThread(dismiss _)
+            activity.postOnUiThread(dismiss _)
         if (showAsDialog || !honeycombAndNewer)
             registerForContextMenu(listview)
         listview.setOnItemClickListener(this)
@@ -709,6 +697,7 @@ with AdapterView.OnItemClickListener {
         if (c == '@' || c == '+')
             nick = nick.substring(1)
         val cursor = activity.input.getSelectionStart
+        // TODO make ", " a preference
         nick += (if (cursor == 0) ", " else " ")
         activity.input.getText.insert(cursor, nick)
     }
@@ -728,14 +717,15 @@ class ChannelFragment(a: MessageAdapter, c: Channel)
 extends MessagesFragment(a) {
     def this() = this(null, null)
     var channel = c
-    var nicklist: Option[ListView] = None
+    // TODO get rid of this reference through use of UiBus
+    var nicklist: Option[ListView] = None // Some when large+
     //Log.d(TAG, "Creating ChannelFragment: " + this, new StackTrace)
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
 
+        val activity = getActivity().asInstanceOf[MainActivity]
         if (channel == null) {
-            val activity = getActivity().asInstanceOf[MainActivity]
             def setChannel(s: IrcService) {
                 val c = s.chans.get(bundle.getInt("id"))
                 c.foreach(ch => channel = ch.asInstanceOf[Channel])
@@ -752,14 +742,16 @@ extends MessagesFragment(a) {
             //        "Created ChannelFragment: %d => %s => %s",
             //        id, channel, this))
         }
+        // this apparently works by virtue of the network being slow
+        if (id != -1 && channel != null && a != null) {
+            activity.service.chans += ((id, channel))
+            a.channel = channel
+        }
     }
 
     private def setNickListAdapter(list: ListView) {
         val activity = getActivity().asInstanceOf[MainActivity]
-
-        val adapter = new NickListAdapter(activity, channel)
-        list.setAdapter(adapter)
-        adapter
+        list.setAdapter(new NickListAdapter(activity, channel))
     }
 
     override def onCreateView(inflater: LayoutInflater,
@@ -781,28 +773,22 @@ extends MessagesFragment(a) {
             val list = view.asInstanceOf[ListView]
             nicklist = Some(list)
             setNickListAdapter(list)
-            v.findView[ViewGroup](R.id.nicklist_container).addView(view)
+            // doesn't appear if added via onCreateView
+            v.findView[ViewGroup](R.id.nicklist_container).addView(list)
             // TODO this puts them one atop the other, even when horizontal?
             //v.asInstanceOf[ViewGroup].addView(view)
         }
         v
     }
 
-    override def onActivityCreated(bundle: Bundle) {
-        super.onActivityCreated(bundle)
-        val activity = getActivity().asInstanceOf[MainActivity]
-        if (id != -1 && channel != null && a != null) {
-            activity.service.chans += ((id, channel))
-            a.channel = channel
-        }
-    }
-
+    /*
     override def onSaveInstanceState(bundle: Bundle) {
         super.onSaveInstanceState(bundle)
         //Log.d(TAG, format(
         //        "Saving instance state: %d => %s => %s",
         //        id, channel, this))
     }
+    */
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
         if (menu.findItem(R.id.channel_close) != null) return
         inflater.inflate(R.menu.channel_menu, menu)
@@ -811,16 +797,20 @@ extends MessagesFragment(a) {
                      MenuItemCompat.setShowAsAction(menu.findItem(item),
                              MenuItem.SHOW_AS_ACTION_IF_ROOM |
                              MenuItem.SHOW_AS_ACTION_WITH_TEXT))
+        val names = menu.findItem(R.id.channel_names)
+        if (names != null)
+            MenuItemCompat.setShowAsAction(names,
+                    MenuItem.SHOW_AS_ACTION_IF_ROOM |
+                    MenuItem.SHOW_AS_ACTION_WITH_TEXT)
     }
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
-        //if (!(getUserVisibleHint() && isVisible() && isResumed() && isAdded() && isInLayout())) return false
         if (R.id.channel_close == item.getItemId()) {
             val activity = getActivity().asInstanceOf[MainActivity]
             val prompt = activity.settings.getBoolean(
                     R.string.pref_close_tab_prompt, true)
 
-            Log.i(TAG, "Requesting tab close for: " + channel + " <= " + id)
+            Log.d(TAG, "Requesting tab close for: " + channel + " <= " + id)
             def removeChannel() {
                 if (channel.state == Channel.State.JOINED) {
                     activity.service.channels.get(channel) foreach { _.part() }
@@ -836,8 +826,7 @@ extends MessagesFragment(a) {
                 var builder = new AlertDialog.Builder(activity)
                 builder.setTitle(R.string.channel_close_confirm_title)
                 builder.setMessage(getString(R.string.channel_close_confirm))
-                builder.setPositiveButton(R.string.yes,
-                        (d: DialogInterface, id: Int) => {
+                builder.setPositiveButton(R.string.yes, () => {
                     removeChannel()
                     channel.state = Channel.State.PARTED
                 })
@@ -874,9 +863,7 @@ extends MessagesFragment(a) {
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
-    }
-    override def onActivityCreated(bundle: Bundle) {
-        super.onActivityCreated(bundle)
+        // again, works by virtue of the network being slow
         if (id != -1 && q != null) {
             val activity = getActivity().asInstanceOf[MainActivity]
             activity.service.chans += ((id, q))
@@ -912,10 +899,7 @@ extends MessagesFragment(a) {
                 var builder = new AlertDialog.Builder(activity)
                 builder.setTitle(R.string.query_close_confirm_title)
                 builder.setMessage(getString(R.string.query_close_confirm))
-                builder.setPositiveButton(R.string.yes,
-                        (d: DialogInterface, resid: Int) => {
-                    removeQuery()
-                })
+                builder.setPositiveButton(R.string.yes, removeQuery _)
                 builder.setNegativeButton(R.string.no, null)
                 builder.create().show()
                 return true
@@ -933,6 +917,13 @@ class ServersFragment extends ListFragment {
     var adapter: ServerArrayAdapter = _
     var _server: Option[Server] = None // currently selected server
     var serverMessagesFragmentShowing: Option[String] = None
+
+    UiBus += {
+        case e: BusEvent.ServerAdded => addListener(e.server)
+        case e: BusEvent.ServerChanged => changeListener(e.server)
+        case e: BusEvent.ServerRemoved => removeListener(e.server)
+    }
+
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
@@ -952,7 +943,7 @@ class ServersFragment extends ListFragment {
     }
 
     override def onCreateView(inflater: LayoutInflater,
-            container: ViewGroup, bundle: Bundle) : View = {
+            container: ViewGroup, bundle: Bundle) = {
         thisview = inflater.inflate(R.layout.fragment_servers, container, false)
         thisview
     }
@@ -984,17 +975,12 @@ class ServersFragment extends ListFragment {
             service.getServers.foreach(adapter.add(_))
             adapter.notifyDataSetChanged()
         }
-        UiBus += {
-            case e: BusEvent.ServerAdded => addListener(e.server)
-            case e: BusEvent.ServerChanged => changeListener(e.server)
-            case e: BusEvent.ServerRemoved => removeListener(e.server)
-        }
     }
 
     def clearServerMessagesFragment(mgr: FragmentManager,
             tx: FragmentTransaction = null) {
         var mytx: FragmentTransaction = null
-        if (tx == null)
+        if (tx == null) // need mytx to commit if set
             mytx = mgr.beginTransaction()
 
         serverMessagesFragmentShowing foreach { name =>
@@ -1011,8 +997,8 @@ class ServersFragment extends ListFragment {
             mytx.commit()
     }
     def addServerMessagesFragment(server: Server) {
-        val main = getActivity().asInstanceOf[MainActivity]
-        val mgr = main.getSupportFragmentManager()
+        val activity = getActivity().asInstanceOf[MainActivity]
+        val mgr = activity.getSupportFragmentManager()
         val name = SERVER_MESSAGES_FRAGMENT_PREFIX + server.name
         var fragment = mgr.findFragmentByTag(name)
                 .asInstanceOf[MessagesFragment]
@@ -1028,7 +1014,9 @@ class ServersFragment extends ListFragment {
             tx.add(R.id.servers_container, fragment, name)
         } else {
             fragment.adapter = server.messages
-            if (fragment.isVisible()) return
+            // fragment is sometimes visible without being shown?
+            // showing again shouldn't hurt?
+            //if (fragment.isVisible()) return
             tx.show(fragment)
         }
 
@@ -1036,8 +1024,8 @@ class ServersFragment extends ListFragment {
     }
 
     def addServerSetupFragment(_s: Option[Server] = None) {
-        val main = getActivity().asInstanceOf[MainActivity]
-        val mgr = main.getSupportFragmentManager()
+        val activity = getActivity().asInstanceOf[MainActivity]
+        val mgr = activity.getSupportFragmentManager()
         var fragment: ServerSetupFragment = null
         fragment = mgr.findFragmentByTag(SERVER_SETUP_FRAGMENT)
                 .asInstanceOf[ServerSetupFragment]
@@ -1045,15 +1033,12 @@ class ServersFragment extends ListFragment {
             fragment = new ServerSetupFragment
         if (fragment.isVisible()) return
 
-        val server = _s match {
-            case Some(s) => s
-            case None => {
-                val listview = getListView()
-                val checked = listview.getCheckedItemPosition()
-                if (AdapterView.INVALID_POSITION != checked)
-                    listview.setItemChecked(checked, false)
-                new Server
-            }
+        val server = _s getOrElse {
+            val listview = getListView()
+            val checked = listview.getCheckedItemPosition()
+            if (AdapterView.INVALID_POSITION != checked)
+                listview.setItemChecked(checked, false)
+            new Server
         }
         val tx = mgr.beginTransaction()
         clearServerMessagesFragment(mgr, tx)
@@ -1068,7 +1053,7 @@ class ServersFragment extends ListFragment {
             tx.addToBackStack(SERVER_SETUP_STACK)
             tx.commit() // can't commit a show
         } else {
-            val m = main.settings.getBoolean(R.string.pref_daynight_mode)
+            val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
             fragment.setStyle(DialogFragment.STYLE_NO_TITLE,
                     if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
             fragment.show(tx, SERVER_SETUP_FRAGMENT)
@@ -1123,18 +1108,16 @@ class ServersFragment extends ListFragment {
                 true
             }
             case R.id.server_connect => {
-                server match {
-                case Some(s) => service.connect(s)
-                case None => Toast.makeText(getActivity(),
-                        R.string.server_not_selected, Toast.LENGTH_SHORT).show()
+                server map { service.connect(_) } getOrElse {
+                    Toast.makeText(getActivity(), R.string.server_not_selected,
+                            Toast.LENGTH_SHORT).show()
                 }
                 true
             }
             case R.id.server_disconnect => {
-                server match {
-                case Some(s) => service.disconnect(s)
-                case None => Toast.makeText(getActivity(),
-                        R.string.server_not_selected, Toast.LENGTH_SHORT).show()
+                server map { service.disconnect(_) } getOrElse {
+                    Toast.makeText(getActivity(), R.string.server_not_selected,
+                            Toast.LENGTH_SHORT).show()
                 }
                 true
             }
@@ -1200,8 +1183,7 @@ class ServersFragment extends ListFragment {
 class ServerArrayAdapter(context: Context)
 extends ArrayAdapter[Server](
         context, R.layout.server_item, R.id.server_item_text) {
-    override def getView(pos: Int, reuseView: View, parent: ViewGroup) :
-            View = {
+    override def getView(pos: Int, reuseView: View, parent: ViewGroup) = {
         import Server.State._
         val server = getItem(pos)
         val list = parent.asInstanceOf[ListView]
@@ -1229,13 +1211,14 @@ extends ArrayAdapter[Server](
 
 abstract class EventBus(ui: Boolean = false)
 extends HashSet[PartialFunction[BusEvent,Unit]] {
+    import android.os.{Handler, Looper}
+    val handler = if (ui) new Handler(Looper.getMainLooper) else null
+    def broadcast(e: BusEvent) = foreach { h => if (h.isDefinedAt(e)) h(e) }
     def send(e: BusEvent) {
-        if (!ui || isMainThread)
-            foreach { h => if (h.isDefinedAt(e)) h(e) }
-        else
-            Log.w(getClass.getSimpleName,
-                    "Not on main thread, aborting: " + e, new StackTrace)
+        if (!ui || isMainThread) broadcast(e)
+        else handler.post { () => broadcast(e) }
     }
+    def post(f: => Unit) = handler.post(f _)
 }
 object UiBus extends EventBus(true)
 object ServiceBus extends EventBus

@@ -17,7 +17,7 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
 
     override def onSharedPreferenceChanged(p: SharedPreferences, key: String) {
         val e = BusEvent.PreferenceChanged(key)
-        UiBus.send(e)
+        UiBus.send(e) // already on main thread
         ServiceBus.send(e)
     }
 

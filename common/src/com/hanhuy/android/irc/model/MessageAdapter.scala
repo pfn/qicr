@@ -40,29 +40,26 @@ class MessageAdapter extends BaseAdapter {
     }
 
     var _inflater: WeakReference[LayoutInflater] = _
-    def inflater = _inflater.get match {
-        case Some(i) => i
-        case None => throw new IllegalStateException
-    }
-    var _context: WeakReference[MainActivity] = _
-    def context_= (c: MainActivity) = {
+    def inflater = _inflater.get getOrElse { throw new IllegalStateException }
+    var _activity: WeakReference[MainActivity] = _
+    def activity_= (c: MainActivity) = {
         if (c != null) {
-            _context = new WeakReference(c)
+            _activity = new WeakReference(c)
             _inflater = new WeakReference(c.getSystemService(
                     Context.LAYOUT_INFLATER_SERVICE)
                             .asInstanceOf[LayoutInflater])
             val s = new Settings(c)
+            // It'd be nice to register a ServiceBus listener, but no way
+            // to clean up when this adapter goes away?
+            // add it to UiBus here maybe?
             maximumSize = s.getString(R.string.pref_message_lines,
                     DEFAULT_MAXIMUM_SIZE.toString).toInt
             showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
         }
     }
-    def context = _context.get match {
-        case Some(c) => c
-        case None => throw new IllegalStateException
-    }
+    def activity = _activity.get getOrElse { throw new IllegalStateException }
     lazy val font =
-            Typeface.createFromAsset(context.getAssets(), "DejaVuSansMono.ttf")
+            Typeface.createFromAsset(activity.getAssets(), "DejaVuSansMono.ttf")
 
     def clear() {
         messages.clear()
@@ -76,8 +73,8 @@ class MessageAdapter extends BaseAdapter {
     protected[model] def add(item: MessageLike) {
         messages += item
         ensureSize()
-        if (_context != null && AndroidConversions.isMainThread)
-            _context.get.foreach { _ => notifyDataSetChanged() }
+        if (_activity != null && AndroidConversions.isMainThread)
+            _activity.get.foreach { _ => notifyDataSetChanged() }
     }
 
     def filteredMessages = {
@@ -112,12 +109,9 @@ class MessageAdapter extends BaseAdapter {
                         {if (o) "@" else if (v) "+" else ""} + s, m)
             case Notice(s, m)        => gets(R.string.notice_template, s, m)
             case CtcpAction(s, m)    => gets(R.string.action_template, s, m)
-            case Topic(chan, src, t) => {
-                src match {
-                case Some(s) => getString(R.string.topic_template_2, s, chan, t)
-                case None    => getString(R.string.topic_template_1, chan, t)
-                }
-            }
+            case Topic(chan, src, t) => src map {
+                    getString(R.string.topic_template_2, _, chan, t)
+                } getOrElse { getString(R.string.topic_template_1, chan, t) }
             case NickChange(o, n) =>
                 getString(R.string.nick_change_template, o, n)
             case Join(n, u)    => getString(R.string.join_template, n, u)
@@ -160,5 +154,5 @@ class MessageAdapter extends BaseAdapter {
             Html.fromHtml(getString(res, src, msg))
     }
     private def getString(res: Int, args: String*) =
-            context.getString(res, args: _*)
+            activity.getString(res, args: _*)
 }

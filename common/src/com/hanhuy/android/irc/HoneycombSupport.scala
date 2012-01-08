@@ -12,45 +12,40 @@ import android.util.Log
 
 object HoneycombSupport {
     val TAG = "HoneycombSupport"
-    var _main: MainActivity = _
+    var activity: MainActivity = _
     var _server: WeakReference[Server] = _
     var _actionmode: WeakReference[ActionMode] = _
     var menuItemListener: (MenuItem, Option[Server]) => Boolean = _
-    def init(main: MainActivity) = _main = main
+    def init(main: MainActivity) = activity = main
     def close() {
         menuItemListener = null
-        _main = null
+        activity = null
     }
 
     def invalidateActionBar() {
-        if (_main != null)
-            _main.invalidateOptionsMenu()
+        if (activity != null)
+            activity.invalidateOptionsMenu()
     }
     def stopActionMode() {
         if (_actionmode == null) return
-        _actionmode.get match {
-            case Some(actionmode) => actionmode.finish()
-            case _ => ()
-        }
+        _actionmode.get foreach { _.finish() }
         _actionmode = null
     }
-    def recreate() = _main.recreate()
+    def recreate() = activity.recreate()
 
     def startActionMode(server: Server) {
         _server = new WeakReference(server)
         _actionmode = new WeakReference(
-                _main.startActionMode(ServerActionModeSetup))
+                activity.startActionMode(ServerActionModeSetup))
     }
 
     object ServerActionModeSetup extends ActionMode.Callback {
-        override def onActionItemClicked(mode: ActionMode, item: MenuItem) :
-                Boolean = {
+        override def onActionItemClicked(mode: ActionMode, item: MenuItem) = {
             mode.finish()
             menuItemListener(item, _server.get)
         }
-        override def onCreateActionMode(mode: ActionMode, menu: Menu) :
-                Boolean = {
-            val inflater = new MenuInflater(_main)
+        override def onCreateActionMode(mode: ActionMode, menu: Menu) = {
+            val inflater = new MenuInflater(activity)
             inflater.inflate(R.menu.server_menu, menu)
             List(R.id.server_connect,
                  R.id.server_disconnect,
@@ -61,9 +56,7 @@ object HoneycombSupport {
             true
         }
         override def onDestroyActionMode(mode: ActionMode) = ()
-        override def onPrepareActionMode(mode: ActionMode, menu: Menu) :
-                Boolean = {
-
+        override def onPrepareActionMode(mode: ActionMode, menu: Menu) = {
             _server.get match {
                 case Some(server) => {
                     val connected = server.state match {
@@ -84,20 +77,18 @@ object HoneycombSupport {
     def startActionMode(f: NickListFragment) {
         NickListActionModeSetup.fragment = new WeakReference(f)
         _actionmode = new WeakReference(
-                _main.startActionMode(NickListActionModeSetup))
+                activity.startActionMode(NickListActionModeSetup))
     }
 
     object NickListActionModeSetup extends ActionMode.Callback {
         var fragment: WeakReference[NickListFragment] = _
-        override def onActionItemClicked(mode: ActionMode, item: MenuItem) :
-                Boolean = {
+        override def onActionItemClicked(mode: ActionMode, item: MenuItem) = {
             mode.finish()
             fragment.get.foreach(_.onContextItemSelected(item))
             true
         }
-        override def onCreateActionMode(mode: ActionMode, menu: Menu) :
-                Boolean = {
-            val inflater = new MenuInflater(_main)
+        override def onCreateActionMode(mode: ActionMode, menu: Menu) = {
+            val inflater = new MenuInflater(activity)
             inflater.inflate(R.menu.nicklist_menu, menu)
             List(R.id.nick_insert,
                  R.id.nick_start_chat).foreach(

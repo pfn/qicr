@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import com.hanhuy.android.irc.model.BusEvent
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.{Channel => QicrChannel}
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
@@ -51,9 +52,9 @@ object IrcListeners {
 
         if (matches) idx else -1
     }
-    def matchesNick(server: Server, msg: String): Boolean = {
-        return matchesNickIndex(server, msg) != -1
-    }
+    def matchesNick(server: Server, msg: String) =
+            matchesNickIndex(server, msg) != -1
+
     class EnhancedUser(u: User) {
         def address = u.getUserName() + "@" + u.getHostName()
     }
@@ -62,6 +63,7 @@ object IrcListeners {
 class IrcListeners(service: IrcService) extends AdvancedListener
 with ServerListener with MessageListener with ModeListener {
     // ServerListener
+    // TODO send BusEvents instead
     override def onConnect(c: IrcConnection) {
         val server = service._connections(c)
         service.runOnUI {
@@ -108,8 +110,8 @@ with ServerListener with MessageListener with ModeListener {
         if (user.isUs())
             service.addChannel(c, channel)
         service.runOnUI {
-            val ch = service._channels(channel)
-            service.notifyNickListChanged(ch)
+            val ch = service._channels(channel).asInstanceOf[QicrChannel]
+            UiBus.send(BusEvent.NickListChanged(ch))
             if (!user.isUs())
                 ch.add(Join(user.getNick(), user.address))
         }
@@ -118,33 +120,27 @@ with ServerListener with MessageListener with ModeListener {
     override def onKick(c: IrcConnection, channel: Channel,
             user: User, op: User, msg: String) {
         service.runOnUI {
-            val ch = service._channels(channel)
+            val ch = service._channels(channel).asInstanceOf[QicrChannel]
             if (user.isUs()) {
                 // TODO update adapter's channel state
-                ch match {
-                case c: QicrChannel => c.state = QicrChannel.State.KICKED
-                }
+                ch.state = QicrChannel.State.KICKED
             } else {
-                service.notifyNickListChanged(ch)
+                UiBus.send(BusEvent.NickListChanged(ch))
             }
             ch.add(Kick(op.getNick(), user.getNick(), msg))
         }
     }
     override def onPart(c: IrcConnection, channel: Channel,
             user: User, msg: String) {
+        if (!service._channels.contains(channel)) return
         service.runOnUI {
-            val ch = service._channels.get(channel)
+            val ch = service._channels(channel).asInstanceOf[QicrChannel]
             if (user.isUs()) {
-                ch foreach {
-                    _ match {
-                    case c: QicrChannel => c.state = QicrChannel.State.PARTED
-                    case _ => ()
-                    }
-                }
+                ch.state = QicrChannel.State.PARTED
             } else {
-                ch.foreach { service.notifyNickListChanged(_) }
+                UiBus.send(BusEvent.NickListChanged(ch))
             }
-            ch.foreach { _.add(Part(user.getNick(), user.address, msg)) }
+            ch.add(Part(user.getNick(), user.address, msg))
         }
     }
     override def onTopic(c: IrcConnection, channel: Channel,
@@ -243,21 +239,22 @@ with ServerListener with MessageListener with ModeListener {
     // AdvancedListener
     // TODO
     override def onUnknown(c: IrcConnection, line: IrcDecoder) {
-        val server = service._connections.get(c)
-        if (server.isEmpty) return
-        if (line.isNumeric()) {
-            // 306 = away
-            // 333 = topic change info
-            // 366 = end of /names list
-            line.getNumericCommand() match {
-                case 306 | 333 | 366 => return
-                case _ => ()
+        service._connections.get(c) foreach { server =>
+            if (line.isNumeric()) {
+                // 306 = away
+                // 333 = topic change info
+                // 366 = end of /names list
+                line.getNumericCommand() match {
+                    case 306 | 333 | 366 => return
+                    case _ => ()
+                }
             }
-        }
-        service.runOnUI {
-            server.get.add(ServerInfo(
-                    format("Unknown command: [%s](%s):[%s]",
-                    line.getCommand(), line.getArguments(), line.getMessage())))
+            service.runOnUI {
+                server.add(ServerInfo(
+                        format("Unknown command: [%s](%s):[%s]",
+                        line.getCommand(), line.getArguments(),
+                        line.getMessage())))
+            }
         }
                 
     }

@@ -135,7 +135,7 @@ class InputProcessor(activity: MainActivity) {
                 start: Int, count: Int, after: Int) = ()
         override def onTextChanged(s: CharSequence,
                 start: Int, before: Int, count: Int) {
-            if (start != 0 || count != s.length()) {
+            if (start != 0 || (count != s.length() && count != 0)) {
                 completionPrefix = None
                 completionOffset = None
             }
@@ -185,6 +185,7 @@ class InputProcessor(activity: MainActivity) {
                 p
             }
         }
+        // TODO make ", " a preference
         val suffix = ", "
         val offset = completionOffset.get
         val lowerp  = prefix.toLowerCase()
@@ -247,8 +248,7 @@ sealed class CommandProcessor(ctx: Context) {
     val TAG = "CommandProcessor"
     val commands = new HashMap[String,Command]
 
-    def getString(res: Int, args: String*) =
-            ctx.getString(res, args: _*)
+    def getString(res: Int, args: String*) = ctx.getString(res, args: _*)
     var channel: Option[ChannelLike] = None
     var server: Option[Server] = None
 
@@ -295,13 +295,13 @@ sealed class CommandProcessor(ctx: Context) {
     }
 
     def addCommandError(error: String) {
-        if (!channel.isEmpty)
-            channel.get.add(CommandError(error))
-        else if (!server.isEmpty)
-            server.get.add(CommandError(error))
-        else Log.w(TAG, "Unable to addCommandError, no server or channel")
+        channel map { _.add _ } orElse (server map { _.add _}) map
+                { _(CommandError(error)) } getOrElse {
+            Log.w(TAG, "Unable to addCommandError, no server or channel")
+        }
     }
 
+    // TODO also improve me, avoid Option.get
     def sendMessage(line: Option[String], action: Boolean = false) {
         if (line.isEmpty) return
 
@@ -344,29 +344,20 @@ sealed class CommandProcessor(ctx: Context) {
                 user.sendMessage(line.get)
             }
         }
-        case _ =>
-                addCommandError(getString(R.string.error_no_channel))
+        case _ => addCommandError(getString(R.string.error_no_channel))
         }
     }
 
-    def sendAction(line: Option[String]) {
-        sendMessage(line, true)
-    }
+    def sendAction(line: Option[String]) = sendMessage(line, true)
 
     def executeCommand(cmd: String, args: Option[String]) {
-        commands.get(cmd) match {
-        case Some(c) => c.execute(args)
-        case None => addCommandError(
-                getString(R.string.error_command_unknown, cmd, "foo"))
+        commands.get(cmd) map { _.execute(args) } getOrElse {
+            addCommandError(getString(R.string.error_command_unknown, cmd))
         }
     }
 
-    def getCurrentServer() = {
-        channel match {
-        case Some(c) => Some(c.server)
-        case None => server
-        }
-    }
+    def getCurrentServer() = channel map { _.server } orElse (server)
+
     object JoinCommand extends Command {
         override def execute(args: Option[String]) {
             if (args.isEmpty)

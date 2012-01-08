@@ -59,9 +59,12 @@ object BusEvent {
         server: Server, oldstate: Server.State.State) extends BusEvent
     case class PreferenceChanged(pref: String) extends BusEvent
     case class ServiceConnected(service: IrcService) extends BusEvent
-    case class ServiceDisconnected() extends BusEvent
+    case object ServiceDisconnected extends BusEvent
     case class ChannelMessage(
         channel: ChannelLike, msg: MessageLike) extends BusEvent
     case class ChannelStateChanged(
         channel: Channel, oldstate: Channel.State.State) extends BusEvent
+    case class NickListChanged(channel: Channel) extends BusEvent
+    case class ChannelAdded(channel: Channel) extends BusEvent
+    case class PrivateMessage(query: Query, msg: MessageLike) extends BusEvent
 }

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.hanhuy.android.irc.lite"
-      android:versionCode="13"
-      android:versionName="0.01k">
+      android:versionCode="14"
+      android:versionName="0.01l">
     <application android:label="@string/app_name"
             android:icon="@drawable/ic_appicon"
             android:logo="@drawable/ic_actionlogo"
@@ -27,4 +27,6 @@
     </application>
     <uses-sdk android:minSdkVersion="5" android:targetSdkVersion="15"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-hardware android:name="android.hardware.touchscreen"
+        android:required="false"/>
 </manifest>
