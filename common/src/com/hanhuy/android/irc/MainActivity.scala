@@ -558,7 +558,7 @@ class ServerSetupFragment extends DialogFragment {
             b.setOnClickListener { () =>
                 val manager = activity.getSupportFragmentManager()
                 val s = server
-                if (s.valid) {
+                if (s != null && s.valid) {
                     if (s.id == -1)
                         activity.service.addServer(s)
                     else
