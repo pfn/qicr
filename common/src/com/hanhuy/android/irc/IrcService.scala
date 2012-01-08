@@ -71,6 +71,8 @@ class IrcService extends Service {
     var _showing = false
     def showing = _showing
     def showing_=(s: Boolean) = {
+        // would be nicer to show notif on activity.isEmpty
+        // but speech rec -> home will not trigger this?
         if (!s) {
             if (_running) {
                 val notif = new Notification(R.drawable.ic_notify_mono,
