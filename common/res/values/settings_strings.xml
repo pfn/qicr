@@ -13,6 +13,7 @@
     <string name="pref_speech_rec_clearline">speech_cmd_clear_line</string>
     <string name="pref_message_lines">ui_message_lines</string>
     <string name="pref_daynight_mode">ui_daynight_mode</string>
+    <string name="pref_show_timestamp">ui_show_timestamp</string>
     <string name="pref_quit_message">irc_quit_message</string>
     <string name="pref_show_join_part_quit">irc_show_join_part_quit</string>
     <!-- end of pref names that should not be localized -->
@@ -58,6 +59,10 @@
     <string name="pref_speech_rec_eol_summary">
         Send the input line by saying this command</string>
     <string name="pref_speech_rec_eol_default">over</string>
+
+    <string name="pref_show_timestamp_title">Show timestamps</string>
+    <string name="pref_show_timestamp_summary">
+        Show a timestamp before every line</string>
 
     <string name="pref_show_join_part_quit_title">
         Show Join/Part/Quit messages</string>

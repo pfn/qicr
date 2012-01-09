@@ -19,6 +19,12 @@
             android:summary="@string/pref_quit_prompt_summary"
             android:defaultValue="true"
         />
+        <CheckBoxPreference
+            android:key="@string/pref_show_timestamp"
+            android:title="@string/pref_show_timestamp_title"
+            android:summary="@string/pref_show_timestamp_summary"
+            android:defaultValue="false"
+        />
         <EditTextPreference
             android:key="@string/pref_message_lines"
             android:title="@string/pref_message_lines_title"

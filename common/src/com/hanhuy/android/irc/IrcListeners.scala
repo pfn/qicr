@@ -157,7 +157,7 @@ with ServerListener with MessageListener with ModeListener {
         val server = service._connections(c)
         UiBus.run { server.add(Motd(motd)) }
     }
-    // TODO this runs twice?  FIXME
+
     override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
         val server = service._connections(c)
         if (oldnick.isUs() || newnick.isUs()) {

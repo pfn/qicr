@@ -92,24 +92,8 @@ class IrcService extends Service {
         _showing = s
     }
     lazy val config   = new Config(this)
-    lazy val settings = {
-        val s = new Settings(this)
-        ServiceBus += { case BusEvent.PreferenceChanged(key) =>
-            if (key == getString(R.string.pref_message_lines)) {
-                val max = s.getString(R.string.pref_message_lines,
-                        MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
-                _servers.foreach { _.messages.maximumSize = max }
-                messages.values.foreach { _.maximumSize = max }
-            } else if (key == getString(R.string.pref_show_join_part_quit)) {
-                val show = s.getBoolean(R.string.pref_show_join_part_quit)
-                messages.values.foreach { a =>
-                    a.showJoinPartQuit = show
-                    a.notifyDataSetChanged()
-                }
-            }
-        }
-        s
-    }
+    lazy val settings = new Settings(this)
+
     val connections   = new HashMap[Server,IrcConnection]
     val _connections  = new HashMap[IrcConnection,Server]
 

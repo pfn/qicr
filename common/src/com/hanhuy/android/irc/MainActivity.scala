@@ -244,7 +244,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
             HoneycombSupport.init(this)
 
         def refreshTabs(s: IrcService = null) {
-            adapter.refreshTabs(service)
+            adapter.refreshTabs(if (s != null) s else service)
             val i = getIntent()
             if (i != null && i.hasExtra(IrcService.EXTRA_SUBJECT)) {
                 val subject = i.getStringExtra(IrcService.EXTRA_SUBJECT)
@@ -268,7 +268,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         // TODO remove listener?
         if (service != null) refreshTabs()
-        else UiBus += { case BusEvent.ServiceConnected(_) => refreshTabs() }
+        else UiBus += { case BusEvent.ServiceConnected(s) => refreshTabs(s) }
 
         // scroll tabwidget if necessary
         pageChanged(adapter.page)
@@ -1208,8 +1208,11 @@ extends ArrayAdapter[Server](
     }
 }
 
+object EventBus {
+    type Handler = PartialFunction[BusEvent,Unit]
+}
 abstract class EventBus(ui: Boolean = false)
-extends HashSet[PartialFunction[BusEvent,Unit]] {
+extends HashSet[EventBus.Handler] {
     import android.os.{Handler, Looper}
     val handler = if (ui) new Handler(Looper.getMainLooper) else null
     def broadcast(e: BusEvent) = foreach { h => if (h.isDefinedAt(e)) h(e) }
