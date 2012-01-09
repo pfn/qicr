@@ -25,8 +25,7 @@ object MessageLike {
     case class SslInfo(message: String) extends MessageLike
     case class SslError(message: String) extends MessageLike
     case class Motd(message: String) extends MessageLike
-    case class Topic(chan: String, sender: Option[String],
-            topic: String) extends MessageLike
+    case class Topic(sender: Option[String], topic: String) extends MessageLike
 
     // too hard to reference R.string, hardcode <> -- and *
     case class Privmsg(sender: String, message: String,
@@ -65,6 +64,8 @@ object BusEvent {
     case class ChannelStateChanged(
         channel: Channel, oldstate: Channel.State.State) extends BusEvent
     case class NickListChanged(channel: Channel) extends BusEvent
+    case class NickChanged(channel: Channel, oldnick: String, newnick: String)
+    extends BusEvent
     case class ChannelAdded(channel: Channel) extends BusEvent
     case class PrivateMessage(query: Query, msg: MessageLike) extends BusEvent
 }

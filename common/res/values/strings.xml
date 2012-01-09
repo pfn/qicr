@@ -64,8 +64,9 @@
     <string name="query_close_confirm">
         Are you sure you would like to close and leave this query?</string>
 
+    <string name="usage_nick">Usage: /nick &lt;nick&gt;</string>
     <string name="usage_join">Usage: /join &lt;channel&gt; [password]</string>
-    <string name="usage_msg">Usage: /msg &lt;nick&gt; [message]</string>
+    <string name="usage_msg">Usage: /msg &lt;new nick&gt; [message]</string>
     <string name="usage_notice">Usage: /notice &lt;nick&gt; [message]</string>
 
     <string name="message_template">&amp;lt;%1$s&amp;gt; %2$s</string>
@@ -73,7 +74,7 @@
     <string name="action_template"> * %1$s %2$s</string>
 
     <!-- TODO colorize? -->
-    <string name="nick_change_template">-!- %1$s is not known as %2$s</string>
+    <string name="nick_change_template">-!- %1$s is now known as %2$s</string>
     <string name="join_template">-!- %1$s [%2$s] has joined</string>
     <string name="quit_template">-!- %1$s [%2$s] has quit [%3$s]</string>
     <string name="part_template">-!- %1$s [%2$s] has left [%3$s]</string>

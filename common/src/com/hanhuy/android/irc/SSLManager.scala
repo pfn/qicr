@@ -42,7 +42,7 @@ extends X509TrustManager {
             trustManager.checkClientTrusted(chain, authType)
     override def checkServerTrusted(
             chain: Array[X509Certificate], authType: String) {
-        service.runOnUI {
+        UiBus.run {
             server.add(SslInfo(
                     chain(0).getSubjectX500Principal().toString()))
             server.add(SslInfo(
@@ -56,7 +56,7 @@ extends X509TrustManager {
             chain(0).checkValidity()
         } catch {
             case e: Exception => {
-                service.runOnUI {
+                UiBus.run {
                     server.add(SslError(
                             service.getString(R.string.ssl_expired)))
                     server.add(SslError(e.getMessage()))

@@ -289,7 +289,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         service.showing = true
         servers.onIrcServiceConnected(service)
         if (page != -1) {
-            postOnUiThread {
+            UiBus.post {
                 tabhost.setCurrentTab(page)
                 page = -1
             }
@@ -309,8 +309,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (honeycombAndNewer)
             HoneycombSupport.close()
     }
-
-    def postOnUiThread[A](r: => A) = async { runOnUiThread(r _) }
 
     def pageChanged(idx: Int) {
         input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
@@ -332,12 +330,12 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         if (honeycombAndNewer) {
             HoneycombSupport.stopActionMode()
-            postOnUiThread { HoneycombSupport.invalidateActionBar() }
+            UiBus.post { HoneycombSupport.invalidateActionBar() }
         }
 
         f match {
             // post to thread to make sure it shows up when done paging
-            case m: MessagesFragment => postOnUiThread {
+            case m: MessagesFragment => UiBus.post {
                     try {
                         m.getListView.setSelection(
                                 m.getListAdapter.getCount() - 1)
@@ -664,7 +662,7 @@ with AdapterView.OnItemClickListener {
         listview = inflater.inflate(R.layout.fragment_nicklist,
                 container, false).asInstanceOf[ListView]
         if (showAsDialog && adapter.isEmpty)
-            activity.postOnUiThread(dismiss _)
+            UiBus.post { dismiss() }
         if (showAsDialog || !honeycombAndNewer)
             registerForContextMenu(listview)
         listview.setOnItemClickListener(this)
@@ -1220,6 +1218,7 @@ extends HashSet[PartialFunction[BusEvent,Unit]] {
         else handler.post { () => broadcast(e) }
     }
     def post(f: => Unit) = handler.post(f _)
+    def run(f: => Unit) = if (isMainThread) f else post(f)
 }
 object UiBus extends EventBus(true)
 object ServiceBus extends EventBus

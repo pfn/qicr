@@ -294,6 +294,7 @@ sealed class CommandProcessor(ctx: Context) {
         }
     }
 
+    def addCommandError(error: Int): Unit = addCommandError(getString(error))
     def addCommandError(error: String) {
         channel map { _.add _ } orElse (server map { _.add _}) map
                 { _(CommandError(error)) } getOrElse {
@@ -306,17 +307,15 @@ sealed class CommandProcessor(ctx: Context) {
         if (line.isEmpty) return
 
         if (channel.isEmpty)
-            return addCommandError(getString(R.string.error_no_channel))
+            return addCommandError(R.string.error_no_channel)
 
         channel.get match {
         case ch: Channel => {
             val chan = service.channels(ch)
             if (ch.server.state != Server.State.CONNECTED)
-                return addCommandError(getString(
-                        R.string.error_server_disconnected))
+                return addCommandError(R.string.error_server_disconnected)
             if (ch.state != Channel.State.JOINED)
-                return addCommandError(getString(
-                        R.string.error_channel_disconnected))
+                return addCommandError(R.string.error_channel_disconnected)
             if (action) {
                 ch.add(CtcpAction(ch.server.currentNick, line.get))
                 chan.sendAction(line.get)
@@ -332,8 +331,7 @@ sealed class CommandProcessor(ctx: Context) {
         }
         case query: Query => {
             if (query.server.state != Server.State.CONNECTED)
-                return addCommandError(getString(
-                        R.string.error_server_disconnected))
+                return addCommandError(R.string.error_server_disconnected)
             val conn = service.connections(query.server)
             val user = conn.createUser(query.name)
             if (action) {
@@ -344,7 +342,7 @@ sealed class CommandProcessor(ctx: Context) {
                 user.sendMessage(line.get)
             }
         }
-        case _ => addCommandError(getString(R.string.error_no_channel))
+        case _ => addCommandError(R.string.error_no_channel)
         }
     }
 
@@ -361,7 +359,7 @@ sealed class CommandProcessor(ctx: Context) {
     object JoinCommand extends Command {
         override def execute(args: Option[String]) {
             if (args.isEmpty)
-                return addCommandError(getString(R.string.usage_join))
+                return addCommandError(R.string.usage_join)
 
             var chan = args.get
             val idx = chan.indexOf(" ")
@@ -387,14 +385,14 @@ sealed class CommandProcessor(ctx: Context) {
                 else
                     c.join()
             } else {
-                addCommandError(getString(R.string.error_join_unknown))
+                addCommandError(R.string.error_join_unknown)
             }
         }
     }
 
     // TODO implement
     object PartCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     object QuitCommand extends Command {
@@ -409,20 +407,19 @@ sealed class CommandProcessor(ctx: Context) {
         val usage = if (notice) R.string.usage_notice else R.string.usage_msg
 
         if (args.isEmpty)
-            return addCommandError(getString(usage))
+            return addCommandError(usage)
         val a = args.get
         val idx = a.indexOf(" ")
         if (idx == -1)
-            return addCommandError(getString(usage))
+            return addCommandError(usage)
         val target = a.substring(0, idx)
         val line = a.substring(idx + 1)
         if (line.trim().length() == 0)
-            return addCommandError(getString(usage))
+            return addCommandError(usage)
         getCurrentServer() match {
         case Some(s) => {
             if (s.state != Server.State.CONNECTED)
-                return addCommandError(getString(
-                        R.string.error_server_disconnected))
+                return addCommandError(R.string.error_server_disconnected)
 
             val c = service.connections(s)
             service.addQuery(c, target, line, sending = true)
@@ -430,10 +427,11 @@ sealed class CommandProcessor(ctx: Context) {
             if (notice) user.sendNotice(line)
             else user.sendMessage(line)
         }
-        case None => addCommandError(getString(
-                R.string.error_server_disconnected))
+        case None => addCommandError(R.string.error_server_disconnected)
         }
     }
+
+    def TODO = addCommandError("This command has not been implemented yet")
 
     object MessageCommand extends Command {
         override def execute(args: Option[String]) = messageCommandSend(args)
@@ -450,52 +448,63 @@ sealed class CommandProcessor(ctx: Context) {
 
     // TODO implement
     object PingCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     // TODO implement
     object TopicCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     // TODO implement
     object InviteCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     // TODO implement
     object CtcpCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
-    // TODO implement
     object NickCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) {
+            val newnick = args.getOrElse {
+                return addCommandError(R.string.usage_nick)
+            }
+            getCurrentServer() map { s =>
+                if (s.state != Server.State.CONNECTED)
+                    return addCommandError(R.string.error_server_disconnected)
+                val conn = service.connections(s)
+                async { conn.setNick(newnick) }
+            } getOrElse {
+                addCommandError(R.string.error_server_disconnected)
+            }
+        }
     }
 
     // TODO implement
     object KickCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     // TODO implement
     object WhowasCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     // TODO implement
     object WhoisCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     // TODO implement
     object IgnoreCommand extends Command {
-        override def execute(args: Option[String]) = ()
+        override def execute(args: Option[String]) = TODO
     }
 
     object HelpCommand extends Command {
         override def execute(args: Option[String]) =
-                addCommandError(getString(R.string.help_text))
+                addCommandError(R.string.help_text)
     }
 
     commands += ((getString(R.string.command_ignore),   IgnoreCommand)

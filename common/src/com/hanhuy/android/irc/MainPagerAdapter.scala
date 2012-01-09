@@ -297,7 +297,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         val idx = Math.max(0, pos-1)
         tabhost.setCurrentTab(idx)
         notifyDataSetChanged()
-        activity.postOnUiThread { showTabIndicator(idx) }
+        UiBus.post { showTabIndicator(idx) }
     }
 
     object TabInfo {

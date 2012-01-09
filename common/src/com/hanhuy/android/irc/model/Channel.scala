@@ -2,6 +2,7 @@ package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.IrcListeners
 import com.hanhuy.android.irc.ServiceBus
+import com.hanhuy.android.irc.UiBus
 
 import MessageLike._
 
@@ -40,6 +41,7 @@ abstract class ChannelLike(_server: Server, _name: String) {
         if (IrcListeners.matchesNick(server, msg))
             newMentions = true
         ServiceBus.send(BusEvent.ChannelMessage(this, m))
+        UiBus.send(BusEvent.ChannelMessage(this, m))
     }
 
     override def toString() = name

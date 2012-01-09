@@ -91,12 +91,6 @@ class IrcService extends Service {
         }
         _showing = s
     }
-    ServiceBus += {
-    case BusEvent.ServerStateChanged(server, oldstate) =>
-        UiBus.send(BusEvent.ServerChanged(server))
-    case BusEvent.ChannelMessage(c, m) =>
-        channelMessagesListener(c, m)
-    }
     lazy val config   = new Config(this)
     lazy val settings = {
         val s = new Settings(this)
@@ -197,7 +191,7 @@ class IrcService extends Service {
                 }
             }
             Log.d(TAG, "All disconnects completed, running callback: " + cb)
-            cb.foreach { callback => runOnUI { callback() } }
+            cb.foreach { callback => UiBus.run { callback() } }
             stopSelf()
             if (startId != -1) {
                 stopForeground(true)
@@ -284,13 +278,6 @@ class IrcService extends Service {
         UiBus.send(BusEvent.ServerAdded(server))
     }
 
-    def channelMessagesListener(c: ChannelLike, m: MessageLike) {
-        if (!showing) return
-        runOnUI {
-            UiBus.send(BusEvent.ChannelMessage(c, m))
-        }
-    }
-
     def addQuery(c: IrcConnection, _nick: String, msg: String,
             sending: Boolean = false, action: Boolean = false,
             notice: Boolean = false) {
@@ -305,7 +292,7 @@ class IrcService extends Service {
 
         val nick = if (sending) server.currentNick else _nick
 
-        runOnUI {
+        UiBus.run {
             val m = if (notice) Notice(nick, msg)
             else if (action) CtcpAction(nick, msg)
             else Privmsg(nick, msg)
@@ -330,7 +317,7 @@ class IrcService extends Service {
         channels  += ((channel,ch))
         _channels += ((ch,channel))
 
-        runOnUI {
+        UiBus.run {
             val chan = channel.asInstanceOf[Channel]
             UiBus.send(BusEvent.ChannelAdded(chan))
             chan.state = Channel.State.JOINED
@@ -352,11 +339,6 @@ class IrcService extends Service {
         UiBus.send(BusEvent.ServerRemoved(server))
     }
 
-    // run on ui thread if an activity is visible, otherwise directly
-    // don't also check showing, !showing is possible, e.g. speech rec
-    def runOnUI[A](f: => A) = UiBus.post(f)
-            //activity map { _.runOnUiThread(f _) } getOrElse { f }
-
     // currently unused
     def uncaughtExceptionHandler(t: Thread, e: Throwable) {
         Log.e(TAG, "Uncaught exception in thread: " + t, e)
@@ -366,7 +348,7 @@ class IrcService extends Service {
 
     // TODO decouple
     def serverDisconnected(server: Server) {
-        runOnUI { disconnect(server, disconnected = true) }
+        UiBus.run { disconnect(server, disconnected = true) }
         if (activity.isEmpty)
             showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
                     getString(R.string.notif_server_disconnected, server.name),

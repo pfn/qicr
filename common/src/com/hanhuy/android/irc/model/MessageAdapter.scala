@@ -109,9 +109,11 @@ class MessageAdapter extends BaseAdapter {
                         {if (o) "@" else if (v) "+" else ""} + s, m)
             case Notice(s, m)        => gets(R.string.notice_template, s, m)
             case CtcpAction(s, m)    => gets(R.string.action_template, s, m)
-            case Topic(chan, src, t) => src map {
-                    getString(R.string.topic_template_2, _, chan, t)
-                } getOrElse { getString(R.string.topic_template_1, chan, t) }
+            case Topic(src, t) => src map {
+                    getString(R.string.topic_template_2, _, channel.name, t)
+                } getOrElse {
+                    getString(R.string.topic_template_1, channel.name, t)
+                }
             case NickChange(o, n) =>
                 getString(R.string.nick_change_template, o, n)
             case Join(n, u)    => getString(R.string.join_template, n, u)
