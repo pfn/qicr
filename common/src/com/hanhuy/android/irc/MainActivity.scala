@@ -55,6 +55,7 @@ import AndroidConversions._
 
 object MainActivity {
     val MAIN_FRAGMENT         = "mainfrag"
+    val SERVERS_FRAGMENT      = "servers-fragment"
     val SERVER_SETUP_FRAGMENT = "serversetupfrag"
     val SERVER_SETUP_STACK    = "serversetup"
     val SERVER_MESSAGES_FRAGMENT_PREFIX = "servermessagesfrag"
@@ -97,7 +98,10 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         t.setup()
         t
     }
-    lazy val servers = new ServersFragment
+    lazy val servers = { // because of retain instance
+        val f = getSupportFragmentManager().findFragmentByTag(SERVERS_FRAGMENT)
+        if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
+    }
     lazy val pager = findView[ViewPager](R.id.pager)
     lazy val adapter = new MainPagerAdapter(
             getSupportFragmentManager(), tabhost, pager)
@@ -268,7 +272,10 @@ class MainActivity extends FragmentActivity with ServiceConnection {
 
         // TODO remove listener?
         if (service != null) refreshTabs()
-        else UiBus += { case BusEvent.ServiceConnected(s) => refreshTabs(s) }
+        else UiBus += { case BusEvent.ServiceConnected(s) =>
+            refreshTabs(s)
+            EventBus.Remove
+        }
 
         // scroll tabwidget if necessary
         pageChanged(adapter.page)
@@ -618,6 +625,7 @@ class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
         if (activity.service == null)
             UiBus += { case BusEvent.ServiceConnected(s) =>
                 onServiceConnected(s)
+                EventBus.Remove
             }
         else
             onServiceConnected(activity.service)
@@ -735,7 +743,10 @@ extends MessagesFragment(a) {
             if (activity.service != null)
                 setChannel(activity.service)
             else
-                UiBus += { case BusEvent.ServiceConnected(s) => setChannel(s) }
+                UiBus += { case BusEvent.ServiceConnected(s) =>
+                    setChannel(s)
+                    EventBus.Remove
+                }
         //} else {
             //Log.d(TAG, format(
             //        "Created ChannelFragment: %d => %s => %s",
@@ -927,6 +938,12 @@ class ServersFragment extends ListFragment {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
         setRetainInstance(true)
+    }
+
+    override def onActivityCreated(bundle: Bundle) {
+        super.onActivityCreated(bundle)
+        // retain instance results in the list items having the wrong theme?
+        // so recreate the adapter here
         adapter = new ServerArrayAdapter(getActivity())
         setListAdapter(adapter)
         if (service != null) {
@@ -1013,6 +1030,8 @@ class ServersFragment extends ListFragment {
             tx.add(R.id.servers_container, fragment, name)
         } else {
             fragment.adapter = server.messages
+            if (fragment.isDetached())
+                tx.attach(fragment)
             // fragment is sometimes visible without being shown?
             // showing again shouldn't hurt?
             //if (fragment.isVisible()) return
@@ -1209,13 +1228,19 @@ extends ArrayAdapter[Server](
 }
 
 object EventBus {
-    type Handler = PartialFunction[BusEvent,Unit]
+    // this is terribad -- only EventBus.Remove has any meaning
+    type Handler = PartialFunction[BusEvent,Any]
+    object Remove // result object for Handler, if present, remove after exec
 }
 abstract class EventBus(ui: Boolean = false)
 extends HashSet[EventBus.Handler] {
     import android.os.{Handler, Looper}
     val handler = if (ui) new Handler(Looper.getMainLooper) else null
-    def broadcast(e: BusEvent) = foreach { h => if (h.isDefinedAt(e)) h(e) }
+    def broadcast(e: BusEvent) = foreach { h =>
+        if (h.isDefinedAt(e)) {
+            if (h(e) == EventBus.Remove) this -= h
+        }
+    }
     def send(e: BusEvent) {
         if (!ui || isMainThread) broadcast(e)
         else handler.post { () => broadcast(e) }

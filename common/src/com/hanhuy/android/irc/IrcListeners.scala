@@ -186,7 +186,7 @@ with ServerListener with MessageListener with ModeListener {
             }
         }
     }
-    // TODO
+
     override def onQuit(c: IrcConnection, user: User, msg: String) {
         if (user.isUs()) return
         val server = service._connections(c)

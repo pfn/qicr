@@ -56,7 +56,10 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     if (activity.service != null)
         onServiceConnected(activity.service)
     else
-        UiBus += { case BusEvent.ServiceConnected(s) => onServiceConnected(s) }
+        UiBus += { case BusEvent.ServiceConnected(s) =>
+            onServiceConnected(s)
+            EventBus.Remove
+        }
 
     UiBus += {
     case BusEvent.NickListChanged(c)    => updateNickList(c)
@@ -342,6 +345,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         f match {
         case c: ChannelFragment => getFragmentTag(c.channel)
         case q: QueryFragment   => getFragmentTag(q.query)
+        case _: ServersFragment => MainActivity.SERVERS_FRAGMENT
         case _ => "viewpager:" + System.identityHashCode(f)
         }
     }

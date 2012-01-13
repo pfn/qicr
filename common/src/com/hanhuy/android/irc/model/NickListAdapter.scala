@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc.model
 
+import com.hanhuy.android.irc.EventBus
 import com.hanhuy.android.irc.UiBus
 import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.IrcService
@@ -23,7 +24,10 @@ extends BaseAdapter {
         notifyDataSetChanged()
     }
     if (activity.service == null)
-        UiBus += { case BusEvent.ServiceConnected(s) => getc(s) }
+        UiBus += { case BusEvent.ServiceConnected(s) =>
+            getc(s)
+            EventBus.Remove
+        }
     else
         getc(activity.service)
 
