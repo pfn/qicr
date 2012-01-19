@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver
+import android.content.res.Configuration
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Looper
@@ -75,9 +76,7 @@ object AndroidConversions {
             f(v, action, e)
     }
 
-    implicit def toRunnable[A](f: () => A) = new Runnable() {
-        def run() = f()
-    }
+    implicit def toRunnable[A](f: () => A) = new Runnable() { def run() = f() }
 
     def async(task: AsyncTask[_,_,_]) {
         if (honeycombAndNewer)
@@ -85,14 +84,10 @@ object AndroidConversions {
         else
             task.execute()
     }
+    def async(r: Runnable) = _threadpool.execute(r)
     // ok, param: => T can only be used if called directly, no implicits
-    def async(f: => Unit): Unit = async(toAsyncTask(f))
-    private def toAsyncTask(f: => Unit): AsyncTask[Object,Object,Unit] = {
-        object Task extends AsyncTask[Object,Object,Unit] {
-            override def doInBackground(args: Object*): Unit = f
-        }
-        Task
-    }
+    def async(f: => Unit): Unit = async(byNameToRunnable(f))
+    private def byNameToRunnable(f: => Unit) = new Runnable() { def run() = f }
 
     implicit def toUncaughtExceptionHandler[A](f: (Thread, Throwable) => A) =
             new Thread.UncaughtExceptionHandler {
@@ -112,6 +107,23 @@ object AndroidConversions {
     implicit def toRichView(v: View) = new RichView(v)
     implicit def toRichActivity(a: Activity) = new RichActivity(a)
 
+    lazy val _threadpool = {
+        if (honeycombAndNewer) AsyncTask.THREAD_POOL_EXECUTOR
+        else { // basically how THREAD_POOL_EXECUTOR is defined in api11+
+            import java.util.concurrent._
+            import java.util.concurrent.atomic._
+            // initial, max, keep-alive time
+            new ThreadPoolExecutor(5, 128, 1, TimeUnit.SECONDS,
+                    new LinkedBlockingQueue[Runnable](10),
+                    new ThreadFactory() {
+                        val count = new AtomicInteger(1)
+                        override def newThread(r: Runnable) =
+                                new Thread(r,
+                                        "AsyncPool #" + count.getAndIncrement)
+                    }
+            )
+        }
+    }
     def isMainThread = Looper.getMainLooper.getThread == currentThread
 }
 
@@ -119,5 +131,15 @@ class RichView(view: View) {
     def findView[T](id: Int): T = view.findViewById(id).asInstanceOf[T]
 }
 class RichActivity(activity: Activity) {
+    import Configuration._
+    lazy val config = activity.getResources.getConfiguration
+
     def findView[T](id: Int): T = activity.findViewById(id).asInstanceOf[T]
+
+    lazy val isLargeScreen =
+            (config.screenLayout & SCREENLAYOUT_SIZE_LARGE) ==
+                    SCREENLAYOUT_SIZE_LARGE
+    lazy val isXLargeScreen =
+            (config.screenLayout & SCREENLAYOUT_SIZE_XLARGE) ==
+                    SCREENLAYOUT_SIZE_XLARGE
 }

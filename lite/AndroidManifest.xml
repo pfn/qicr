@@ -29,4 +29,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-feature android:name="android.hardware.touchscreen"
         android:required="false"/>
+
+    <meta-data android:name="com.google.android.backup.api_key"
+        android:value="AEdPqrEAAAAIKU_SLiEP2MRhsncxderquUs47kYTlDzgSHpggQ" />
 </manifest>

@@ -239,6 +239,8 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         super.onPause()
         if (service != null)
             service.showing = false
+        if (honeycombAndNewer)
+            HoneycombSupport.close()
     }
     override def onResume() {
         super.onResume()
@@ -310,11 +312,6 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (service != null)
             service.unbind()
         unbindService(this)
-    }
-    override def onDestroy() {
-        super.onDestroy()
-        if (honeycombAndNewer)
-            HoneycombSupport.close()
     }
 
     def pageChanged(idx: Int) {
@@ -582,7 +579,8 @@ class ServerSetupFragment extends DialogFragment {
 
 // TODO convert to a Dialog fragment (checkpoint first!)
 // allow server messages to be displayed as a dialog on phones
-class MessagesFragment(_a: MessageAdapter = null) extends ListFragment {
+abstract class MessagesFragment(_a: MessageAdapter = null)
+extends ListFragment {
     def this() = this(null)
 
     // eh?
@@ -736,9 +734,6 @@ extends MessagesFragment(a) {
             def setChannel(s: IrcService) {
                 val c = s.chans.get(bundle.getInt("id"))
                 c.foreach(ch => channel = ch.asInstanceOf[Channel])
-                //Log.d(TAG, format(
-                //        "Loading instance state: %d => %s => %s",
-                //        id, channel, this))
             }
             if (activity.service != null)
                 setChannel(activity.service)
@@ -747,10 +742,6 @@ extends MessagesFragment(a) {
                     setChannel(s)
                     EventBus.Remove
                 }
-        //} else {
-            //Log.d(TAG, format(
-            //        "Created ChannelFragment: %d => %s => %s",
-            //        id, channel, this))
         }
         // this apparently works by virtue of the network being slow
         if (id != -1 && channel != null && a != null) {
@@ -761,21 +752,16 @@ extends MessagesFragment(a) {
 
     private def setNickListAdapter(list: ListView) {
         val activity = getActivity().asInstanceOf[MainActivity]
-        list.setAdapter(new NickListAdapter(activity, channel))
+        list.setAdapter(new NickListAdapter(activity.service, channel))
     }
 
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         val v = inflater.inflate(R.layout.fragment_channel, container, false)
         val activity = getActivity().asInstanceOf[MainActivity]
-        val config = activity.getResources().getConfiguration()
         // show via dialogfragment if < size_large
         if (channel != null && channel.isInstanceOf[Channel] &&
-                (config.screenLayout &
-                        Configuration.SCREENLAYOUT_SIZE_LARGE) == 
-                                Configuration.SCREENLAYOUT_SIZE_LARGE
-                || (config.screenLayout &
-                        Configuration.SCREENLAYOUT_SIZE_XLARGE) != 0) {
+                (activity.isLargeScreen || activity.isXLargeScreen)) {
             val f = new NickListFragment
             f.showAsDialog = false
             f.activity = activity
@@ -848,13 +834,13 @@ extends MessagesFragment(a) {
             return true
         } else if (R.id.channel_names == item.getItemId()) {
             val activity = getActivity().asInstanceOf[MainActivity]
-            val adapter = new NickListAdapter(activity, channel)
+            val adapter = new NickListAdapter(activity.service, channel)
             val tx = activity.getSupportFragmentManager().beginTransaction()
 
             val f = new NickListFragment
             val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
-            f.setStyle(DialogFragment.STYLE_NO_TITLE,
-                    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
+            f.setStyle(DialogFragment.STYLE_NO_TITLE, 0)
+                    //if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
             // should be set in onCreateDialog
             //f.getDialog().setTitle("Names")
             f.adapter = Some(adapter)
@@ -921,15 +907,20 @@ extends MessagesFragment(a) {
     }
 }
 
+class ServerMessagesFragment(_s: Server)
+extends MessagesFragment(if (_s != null) _s.messages else null) {
+    var server = _s
+    def this() = this(null)
+}
+
 class ServersFragment extends ListFragment {
-    var thisview: View = _
     var service: IrcService = _
     var adapter: ServerArrayAdapter = _
     var _server: Option[Server] = None // currently selected server
     var serverMessagesFragmentShowing: Option[String] = None
 
     UiBus += {
-        case e: BusEvent.ServerAdded => addListener(e.server)
+        case e: BusEvent.ServerAdded   => addListener(e.server)
         case e: BusEvent.ServerChanged => changeListener(e.server)
         case e: BusEvent.ServerRemoved => removeListener(e.server)
     }
@@ -960,8 +951,10 @@ class ServersFragment extends ListFragment {
 
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) = {
-        thisview = inflater.inflate(R.layout.fragment_servers, container, false)
-        thisview
+        val v = inflater.inflate(R.layout.fragment_servers, container, false)
+        if (!honeycombAndNewer)
+            registerForContextMenu(v.findView[ListView](android.R.id.list))
+        v
     }
 
     override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
@@ -1026,7 +1019,7 @@ class ServersFragment extends ListFragment {
 
         serverMessagesFragmentShowing = Some(name)
         if (fragment == null) {
-            fragment = new MessagesFragment(server.messages)
+            fragment = new ServerMessagesFragment(server)
             tx.add(R.id.servers_container, fragment, name)
         } else {
             fragment.adapter = server.messages
@@ -1061,12 +1054,7 @@ class ServersFragment extends ListFragment {
         val tx = mgr.beginTransaction()
         clearServerMessagesFragment(mgr, tx)
 
-        val config = getActivity().getResources().getConfiguration()
-
-        if ((config.screenLayout & Configuration.SCREENLAYOUT_SIZE_LARGE) == 
-                Configuration.SCREENLAYOUT_SIZE_LARGE // 0x3, ugh
-                || (config.screenLayout &
-                        Configuration.SCREENLAYOUT_SIZE_XLARGE) != 0) {
+        if (activity.isLargeScreen || activity.isXLargeScreen) {
             tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
             tx.addToBackStack(SERVER_SETUP_STACK)
             tx.commit() // can't commit a show
@@ -1079,9 +1067,7 @@ class ServersFragment extends ListFragment {
 
         fragment.server = server
         if (honeycombAndNewer)
-            thisview.getHandler().post { () =>
-                    HoneycombSupport.invalidateActionBar()
-            }
+            UiBus.post { HoneycombSupport.invalidateActionBar() }
     }
     def changeListener(server: Server) {
         if (!_server.isEmpty && _server.get == server &&
@@ -1100,8 +1086,7 @@ class ServersFragment extends ListFragment {
         adapter.notifyDataSetChanged()
     }
 
-    def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
-            Boolean = {
+    def onServerMenuItemClicked(item: MenuItem, server: Option[Server]) = {
         item.getItemId() match {
             case R.id.server_delete => {
                 server match {
@@ -1146,6 +1131,30 @@ class ServersFragment extends ListFragment {
             case _ => false
         }
     }
+    override def onCreateContextMenu(menu: ContextMenu, v: View,
+            info: ContextMenu.ContextMenuInfo) {
+        if (!honeycombAndNewer) { // newer uses actionmode
+            getActivity.getMenuInflater.inflate(R.menu.server_menu, menu)
+            val i = info.asInstanceOf[AdapterView.AdapterContextMenuInfo]
+            _server = if (i.position == -1)
+                None
+            else
+                Some(adapter.getItem(i.position))
+
+            val connected = _server map { _.state match {
+                case Server.State.INITIAL      => false
+                case Server.State.DISCONNECTED => false
+                case _                         => true
+            }} getOrElse { false }
+
+            menu.findItem(R.id.server_connect).setVisible(
+                    !connected && !_server.isEmpty)
+            menu.findItem(R.id.server_disconnect).setVisible(connected)
+        }
+    }
+    override def onContextItemSelected(item: MenuItem) =
+            onServerMenuItemClicked(item, _server)
+
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         if (menu.findItem(R.id.add_server) != null) return
         inflater.inflate(R.menu.servers_menu, menu)
@@ -1153,8 +1162,6 @@ class ServersFragment extends ListFragment {
         MenuItemCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
                                          MenuItem.SHOW_AS_ACTION_WITH_TEXT)
 
-        if (!honeycombAndNewer)
-            inflater.inflate(R.menu.server_menu, menu)
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         val activity = getActivity().asInstanceOf[MainActivity]
@@ -1162,8 +1169,7 @@ class ServersFragment extends ListFragment {
             activity.serversFragment.addServerSetupFragment()
             return true
         }
-        getActivity().asInstanceOf[MainActivity]
-                .serversFragment.onServerMenuItemClicked(item, _server)
+        onServerMenuItemClicked(item, _server)
     }
     override def onPrepareOptionsMenu(menu: Menu) {
         val activity = getActivity().asInstanceOf[MainActivity]
@@ -1179,22 +1185,6 @@ class ServersFragment extends ListFragment {
 
         menu.findItem(R.id.add_server).setVisible(!found)
 
-        if (!honeycombAndNewer) {
-            if (getListView().getCheckedItemPosition() == -1)
-                _server = None
-
-            val connected = !_server.isEmpty && { _server.get.state match {
-                case Server.State.INITIAL      => false
-                case Server.State.DISCONNECTED => false
-                case _                         => true
-            }}
-
-            menu.findItem(R.id.server_options).setVisible(!_server.isEmpty)
-            menu.findItem(R.id.server_delete).setVisible(!_server.isEmpty)
-            menu.findItem(R.id.server_connect).setVisible(
-                    !connected && !_server.isEmpty)
-            menu.findItem(R.id.server_disconnect).setVisible(connected)
-        }
     }
 }
 

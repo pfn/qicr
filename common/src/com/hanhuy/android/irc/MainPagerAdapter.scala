@@ -102,7 +102,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
 
     def updateNickList(c: Channel) {
         val idx = Collections.binarySearch(channels, c, comp)
-        if (idx == -1) return
+        if (idx < 0) return
 
         val f = tabs(idx+1).fragment.asInstanceOf[ChannelFragment]
         f.nicklist.foreach(_.getAdapter
@@ -110,7 +110,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     }
     def refreshTabTitle(c: ChannelLike) {
         val idx = Collections.binarySearch(channels, c, comp)
-        if (idx == -1) return
+        if (idx < 0) return
         val t = tabs(idx + 1)
 
         // disconnected flag needs to be set before returning because page ==
@@ -314,6 +314,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         def fragment = _fragment
         var tag: Option[String] = None
         var channel: Option[ChannelLike] = None
+        var server: Option[Server] = None
         var flags = TabInfo.FLAG_NONE
         override def toString =
                 title + " fragment=" + fragment + " channel=" + channel
@@ -345,10 +346,12 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         f match {
         case c: ChannelFragment => getFragmentTag(c.channel)
         case q: QueryFragment   => getFragmentTag(q.query)
+        case s: ServerMessagesFragment => getFragmentTag(s.server)
         case _: ServersFragment => MainActivity.SERVERS_FRAGMENT
         case _ => "viewpager:" + System.identityHashCode(f)
         }
     }
+    private def getFragmentTag(s: Server) = "viewpager:server:" + s.name
     private def getFragmentTag(c: ChannelLike) = {
         if (c == null) Log.d(TAG, "Channel object is null", new StackTrace)
         val s = if (c == null) null else c.server

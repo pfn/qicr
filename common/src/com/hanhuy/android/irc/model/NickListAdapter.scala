@@ -2,7 +2,6 @@ package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.EventBus
 import com.hanhuy.android.irc.UiBus
-import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.IrcService
 import com.hanhuy.android.irc.R
 
@@ -16,22 +15,13 @@ import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
 
-class NickListAdapter(activity: MainActivity, channel: Channel)
+class NickListAdapter(service: IrcService, channel: Channel)
 extends BaseAdapter {
     var c: SircChannel = _
-    def getc(s: IrcService) {
-        s.channels.get(channel).foreach(c = _)
-        notifyDataSetChanged()
-    }
-    if (activity.service == null)
-        UiBus += { case BusEvent.ServiceConnected(s) =>
-            getc(s)
-            EventBus.Remove
-        }
-    else
-        getc(activity.service)
+    service.channels.get(channel).foreach(c = _)
+    notifyDataSetChanged()
 
-    val inflater = activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
+    val inflater = service.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
             .asInstanceOf[LayoutInflater]
 
     var nicks: List[String] = _
@@ -45,12 +35,13 @@ extends BaseAdapter {
         }.toList.filter {
             _ != "***" // znc playback user
         } sortWith { (a, b) =>
-            val (x,y) = (a.charAt(0), b.charAt(0))
-            if      (x == '@' && y != '@')             true
-            else if (x != '@' && y == '@')             false
-            else if (x == '+' && y != '@' && y != '+') true
-            else if (y == '+' && x != '@' && x != '+') false
-            else a.toLowerCase.compareTo(b.toLowerCase) < 0
+            (a.charAt(0), b.charAt(0)) match {
+            case ('@', y) if y != '@'             => true
+            case (x, '@') if x != '@'             => false
+            case ('+', y) if y != '@' && y != '+' => true
+            case (x, '+') if x != '@' && x != '+' => false
+            case (_,_) => a.toLowerCase.compareTo(b.toLowerCase) < 0
+            }
         }
 
         super.notifyDataSetChanged()

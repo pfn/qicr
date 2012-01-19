@@ -13,6 +13,7 @@ import scala.collection.mutable.ArrayBuffer
 import Config._
 
 object Config {
+    // TODO encrypt the password with pbkdf2 on primary account username + salt
     val DATABASE_VERSION = 1
     val DATABASE_NAME = "config"
     val TABLE_SERVERS = "servers"

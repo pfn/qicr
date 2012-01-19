@@ -81,6 +81,7 @@ class MessageAdapter extends BaseAdapter {
         }
     }
     def activity = _activity.get getOrElse { throw new IllegalStateException }
+    // would be nice to move this into the companion
     lazy val font =
             Typeface.createFromAsset(activity.getAssets(), "DejaVuSansMono.ttf")
 

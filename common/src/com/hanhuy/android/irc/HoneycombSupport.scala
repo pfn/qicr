@@ -35,6 +35,7 @@ object HoneycombSupport {
 
     def startActionMode(server: Server) {
         _server = new WeakReference(server)
+        if (activity == null) return
         _actionmode = new WeakReference(
                 activity.startActionMode(ServerActionModeSetup))
     }

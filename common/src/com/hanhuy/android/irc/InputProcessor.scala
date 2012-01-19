@@ -282,11 +282,8 @@ sealed class CommandProcessor(ctx: Context) {
             cmd = cmd.toLowerCase()
             if (cmd.length() == 0 || cmd.charAt(0) == ' ') {
                 cmd = getString(R.string.command_quote)
-                val a = line.substring(2)
-                if (a.trim().length() == 0)
-                    args = None
-                else
-                    args = Some(a)
+                val a = if (line.length() > 2) line.substring(2) else ""
+                args = if (a.trim().length() == 0) None else Some(a)
             }
             executeCommand(cmd, args)
         } else {
