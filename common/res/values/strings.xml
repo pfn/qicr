@@ -25,6 +25,7 @@
     <string name="server_disconnect">Disconnect</string>
     <string name="server_delete">Delete server</string>
     <string name="server_options">Edit server</string>
+    <string name="server_messages">Server messages</string>
     <string name="server_confirm_delete">Delete server?</string>
     <string name="server_confirm_delete_message">
         Are you sure you want to permanently remove %s?</string>

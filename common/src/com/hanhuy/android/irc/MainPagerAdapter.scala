@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.Server
+import com.hanhuy.android.irc.model.ServerComparator
 import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
 import com.hanhuy.android.irc.model.ChannelLike
@@ -40,7 +41,11 @@ class MainPagerAdapter(manager: FragmentManager,
 extends FragmentPagerAdapter(manager)
 with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     val channels = new ArrayBuffer[ChannelLike]
-    lazy val comp = new ChannelLikeComparator
+    val servers  = new ArrayBuffer[Server]
+    lazy val channelcomp = new ChannelLikeComparator
+    lazy val servercomp  = new ServerComparator
+
+    def channelBase = servers.size + 1
 
     tabhost.setOnTabChangedListener(this)
     pager.setOnPageChangeListener(this)
@@ -83,16 +88,16 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             // iterate channels and flag them as disconnected
             (0 until channels.size) foreach { i =>
                 if (channels(i).server == server) {
-                    tabs(i+1).flags |= TabInfo.FLAG_DISCONNECTED
-                    refreshTabTitle(i+1)
+                    tabs(i + channelBase).flags |= TabInfo.FLAG_DISCONNECTED
+                    refreshTabTitle(i + channelBase)
                 }
             }
         }
         case Server.State.CONNECTED => {
             (0 until channels.size) foreach { i =>
                 if (channels(i).server == server) {
-                    tabs(i+1).flags &= ~TabInfo.FLAG_DISCONNECTED
-                    refreshTabTitle(i+1)
+                    tabs(i + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
+                    refreshTabTitle(i + channelBase)
                 }
             }
         }
@@ -101,23 +106,23 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     }
 
     def updateNickList(c: Channel) {
-        val idx = Collections.binarySearch(channels, c, comp)
+        val idx = Collections.binarySearch(channels, c, channelcomp)
         if (idx < 0) return
 
-        val f = tabs(idx+1).fragment.asInstanceOf[ChannelFragment]
+        val f = tabs(idx + channelBase).fragment.asInstanceOf[ChannelFragment]
         f.nicklist.foreach(_.getAdapter
                 .asInstanceOf[NickListAdapter].notifyDataSetChanged())
     }
     def refreshTabTitle(c: ChannelLike) {
-        val idx = Collections.binarySearch(channels, c, comp)
+        val idx = Collections.binarySearch(channels, c, channelcomp)
         if (idx < 0) return
-        val t = tabs(idx + 1)
+        val t = tabs(idx + channelBase)
 
         // disconnected flag needs to be set before returning because page ==
         if (c.server.state == Server.State.DISCONNECTED)
             t.flags |= TabInfo.FLAG_DISCONNECTED
 
-        if (page == idx + 1) {
+        if (page == idx + channelBase) {
             // make sure they're cleared when coming back
             c.newMentions = false
             c.newMessages = false
@@ -132,7 +137,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             t.flags |= TabInfo.FLAG_NEW_MESSAGES
         if (c.newMentions)
             t.flags |= TabInfo.FLAG_NEW_MENTIONS
-        refreshTabTitle(idx + 1)
+        refreshTabTitle(idx + channelBase)
     }
 
     def refreshTabTitle(pos: Int) {
@@ -198,7 +203,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     def goToNewMessages() {
         val pos = channels.indexWhere(_.newMentions)
         if (pos != -1)
-            tabhost.setCurrentTab(pos + 1)
+            tabhost.setCurrentTab(pos + channelBase)
     }
 
     // OnPageChangeListener
@@ -215,6 +220,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     }
     override def onPageScrollStateChanged(state: Int) = ()
 
+    private var tabnum = 0
     private def addTab(title: String) {
         var spec : TabHost#TabSpec = null
 
@@ -237,23 +243,26 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         if (!honeycombAndNewer)
             tabhost.getTabWidget().setStripEnabled(true)
     }
-    private var tabnum = 0
+
     def createTab(title: String, fragment: Fragment) {
         tabs += new TabInfo(title, fragment)
         addTab(title)
         notifyDataSetChanged()
     }
 
-    private def insertTab(title: String, fragment: Fragment, pos: Int):
-            TabInfo = {
+    private def insertTab(title: String, fragment: Fragment, pos: Int) = {
         val info = new TabInfo(title, fragment)
-        tabs.insert(pos + 1, info)
+        val base = fragment match {
+        case _: QueryFragment | _: ChannelFragment => channelBase
+        case _: ServerMessagesFragment => 1
+        }
+        tabs.insert(pos + base, info)
         addTab(title)
-        if (tabs.size == 1) return info
-
-        val tw = tabhost.getTabWidget()
-        (0 until tw.getTabCount) foreach { refreshTabTitle(_) }
-        notifyDataSetChanged()
+        if (tabs.size > 1) {
+            val tw = tabhost.getTabWidget()
+            (0 until tw.getTabCount) foreach { refreshTabTitle(_) }
+            notifyDataSetChanged()
+        }
         info
     }
 
@@ -266,7 +275,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     }
 
     private def addChannel(c: ChannelLike) {
-        var idx = Collections.binarySearch(channels, c, comp)
+        var idx = Collections.binarySearch(channels, c, channelcomp)
         if (idx < 0) {
             idx = idx * -1
             channels.insert(idx - 1, c)
@@ -280,8 +289,8 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
             refreshTabTitle(idx)
             info.channel = Some(c)
         } else {
-            tabs(idx+1).flags &= ~TabInfo.FLAG_DISCONNECTED
-            refreshTabTitle(idx+1)
+            tabs(idx + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
+            refreshTabTitle(idx + channelBase)
         }
     }
 
@@ -294,7 +303,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         }
         tabhost.setCurrentTab(0)
         tabhost.clearAllTabs()
-        channels.remove(pos-1)
+        channels.remove(pos-1) // TODO FIXME account for servers
         tabs.remove(pos)
         (0 until tabs.length) foreach { i => addTab(tabs(i).title) }
         val idx = Math.max(0, pos-1)
@@ -373,5 +382,48 @@ class DummyTabFactory(c : Context) extends TabHost.TabContentFactory {
         v.setMinimumWidth(0)
         v.setMinimumHeight(0)
         v
+    }
+}
+
+class TabWidget(c: Context, attrs: android.util.AttributeSet, defStyle: Int)
+extends android.widget.TabWidget(c, attrs, defStyle) {
+    def this(c: Context, attrs: android.util.AttributeSet) =
+            this(c, null, android.R.attr.tabWidgetStyle)
+    def this(c: Context) = this(c, null)
+    setStripEnabled(true)
+
+    var tabSelectionChangeListener: Function2[Int,Boolean,Unit] = (_,_) => Unit
+
+    override def onFocusChange(v: View, hasFocus: Boolean) {
+        super.onFocusChange(v, hasFocus)
+
+        (0 until getTabCount) find {
+            i => getChildTabViewAt(i) == v
+        } foreach {
+            tabSelectionChangeListener(_, false)
+        }
+    }
+
+    override def addView(child: View) {
+        super.addView(child)
+        val index = getTabCount - 1
+        child.setOnClickListener { () =>
+            tabSelectionChangeListener(index, true)
+        }
+    }
+
+    def addTab(title: String) {
+        val inflater = c.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
+                .asInstanceOf[LayoutInflater]
+        val (indicator,text) = if (!honeycombAndNewer) {
+            val ind = inflater.inflate(R.layout.tab_indicator, this, false)
+            (ind, ind.findView[TextView](R.id.title))
+        } else {
+            val ind = inflater.inflate(R.layout.tab_indicator_holo,
+                    this, false)
+            (ind, ind.findView[TextView](R.id.title))
+        }
+        text.setText(title)
+        addView(indicator)
     }
 }

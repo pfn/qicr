@@ -7,6 +7,11 @@
       <item name="android:textColor">@color/secondary_text_dark</item>
     </style>
 
+    <!-- @android:style/TextAppearance.Holo.Medium substitute -->
+    <style name="TextAppearance.Medium">
+      <item name="android:textSize">18sp</item>
+    </style>
+
     <style name="TextAppearance.TabWidget_Light">
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">normal</item>
@@ -21,5 +26,19 @@
       <!-- seems to break autoLink text...
       <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
       -->
+    </style>
+
+    <style name="WidgetHoloTabText" parent="@android:style/Widget">
+        <!-- Widget.Holo.ActionBar.TabText -->
+        <item name="android:textAppearance">@style/TextAppearance.Medium</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:ellipsize">marquee</item>
+        <item name="android:maxLines">2</item>
+
+        <!-- Widget.Holo.TabText -->
+        <item name="android:maxWidth">180dip</item>
     </style>
 </resources>

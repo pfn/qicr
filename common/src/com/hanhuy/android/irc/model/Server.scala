@@ -104,3 +104,14 @@ class Server {
         values
     }
 }
+
+class ServerComparator extends java.util.Comparator[Server] {
+    override def compare(s1: Server, s2: Server): Int = {
+        var s1name = s1.name
+        var s2name = s2.name
+        var r = s1name.compareTo(s2name)
+        if (r == 0)
+            r = s1.username.compareTo(s2.username)
+        r
+    }
+}

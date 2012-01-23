@@ -22,7 +22,7 @@ import android.view.MotionEvent
 import android.view.ContextMenu
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.widget.LinearLayout
-import android.widget.{TabHost, TabWidget}
+import android.widget.TabHost
 import android.widget.CheckedTextView
 import android.widget.AdapterView
 import android.widget.TextView
@@ -973,7 +973,9 @@ class ServersFragment extends ListFragment {
             activity.input.setVisibility(View.VISIBLE)
             activity.input.setFocusable(true)
         }
-        addServerMessagesFragment(server)
+        if (activity.isLargeScreen || activity.isXLargeScreen)
+            addServerMessagesFragment(server)
+
         _server = Some(server)
     }
 
@@ -1086,7 +1088,8 @@ class ServersFragment extends ListFragment {
         adapter.notifyDataSetChanged()
     }
 
-    def onServerMenuItemClicked(item: MenuItem, server: Option[Server]) = {
+    def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
+            Boolean = {
         item.getItemId() match {
             case R.id.server_delete => {
                 server match {
@@ -1126,6 +1129,9 @@ class ServersFragment extends ListFragment {
             }
             case R.id.server_options => {
                 addServerSetupFragment(server)
+                true
+            }
+            case R.id.server_messages => {
                 true
             }
             case _ => false
