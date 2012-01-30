@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.app.Activity
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver
@@ -8,6 +9,7 @@ import android.content.res.Configuration
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Looper
+import android.view.LayoutInflater
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -25,36 +27,36 @@ object AndroidConversions {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD
 
     if (gingerbreadAndNewer) GingerbreadSupport.init()
-    implicit def toBroadcastReceiver[A](f: (Context, Intent) => A) =
+    implicit def toBroadcastReceiver(f: (Context, Intent) => Unit) =
             new BroadcastReceiver() {
         def onReceive(c: Context, i: Intent) = f(c, i)
     }
 
-    implicit def toViewOnClickListener1[A](f: () => A) =
+    implicit def toViewOnClickListener1(f: () => Unit) =
             new View.OnClickListener() { def onClick(v: View) = f() }
-    implicit def toViewOnClickListener[A](f: View => A) =
+    implicit def toViewOnClickListener(f: View => Unit) =
             new View.OnClickListener() { def onClick(v: View) = f(v) }
 
-    implicit def toDialogInterfaceOnClickListener[A](
-            f: (DialogInterface, Int) => A) = {
+    implicit def toDialogInterfaceOnClickListener(
+            f: (DialogInterface, Int) => Unit) = {
         new DialogInterface.OnClickListener() {
             def onClick(d: DialogInterface, id: Int) = f(d, id)
         }
     }
-    implicit def toDialogInterfaceOnClickListener1[A](f: () => A) = {
+    implicit def toDialogInterfaceOnClickListener1(f: () => Unit) = {
         new DialogInterface.OnClickListener() {
             def onClick(d: DialogInterface, id: Int) = f()
         }
     }
 
-    implicit def toDialogInterfaceOnShowListener[A](f: () => A) = {
+    implicit def toDialogInterfaceOnShowListener(f: () => Unit) = {
         new DialogInterface.OnShowListener() {
             def onShow(d: DialogInterface) = f()
         }
     }
 
-    implicit def toAdapterViewOnItemClickListener[A](
-            f: (AdapterView[_], View, Int, Long) => A) =
+    implicit def toAdapterViewOnItemClickListener(
+            f: (AdapterView[_], View, Int, Long) => Unit) =
                     new AdapterView.OnItemClickListener() {
                 def onItemClick(
                         av: AdapterView[_], v: View, pos: Int, id: Long) =
@@ -76,7 +78,7 @@ object AndroidConversions {
             f(v, action, e)
     }
 
-    implicit def toRunnable[A](f: () => A) = new Runnable() { def run() = f() }
+    implicit def toRunnable(f: () => Unit) = new Runnable() { def run() = f() }
 
     def async(task: AsyncTask[_,_,_]) {
         if (honeycombAndNewer)
@@ -89,7 +91,7 @@ object AndroidConversions {
     def async(f: => Unit): Unit = async(byNameToRunnable(f))
     private def byNameToRunnable(f: => Unit) = new Runnable() { def run() = f }
 
-    implicit def toUncaughtExceptionHandler[A](f: (Thread, Throwable) => A) =
+    implicit def toUncaughtExceptionHandler(f: (Thread, Throwable) => Unit) =
             new Thread.UncaughtExceptionHandler {
         override def uncaughtException(t: Thread, e: Throwable) = f(t, e)
     }
@@ -105,6 +107,7 @@ object AndroidConversions {
     implicit def toBoolean(c: CheckBox) = c.isChecked()
 
     implicit def toRichView(v: View) = new RichView(v)
+    implicit def toRichContext(c: Context) = new RichContext(c)
     implicit def toRichActivity(a: Activity) = new RichActivity(a)
 
     lazy val _threadpool = {
@@ -127,10 +130,23 @@ object AndroidConversions {
     def isMainThread = Looper.getMainLooper.getThread == currentThread
 }
 
-class RichView(view: View) {
-    def findView[T](id: Int): T = view.findViewById(id).asInstanceOf[T]
+case class SystemService[T](name: String)
+object SystemService {
+    implicit val layoutInflaterService =
+            SystemService[LayoutInflater](Context.LAYOUT_INFLATER_SERVICE)
+    implicit val notificationService =
+            SystemService[NotificationManager](Context.NOTIFICATION_SERVICE)
 }
-class RichActivity(activity: Activity) {
+class RichContext(context: Context) {
+    def systemService[T](implicit s: SystemService[T]): T =
+            context.getSystemService(s.name).asInstanceOf[T]
+}
+class RichView(view: View) {
+    import AndroidConversions._
+    def findView[T](id: Int): T = view.findViewById(id).asInstanceOf[T]
+    def onClick_= (f: => Unit) = view.setOnClickListener { () => f }
+}
+class RichActivity(activity: Activity) extends RichContext(activity) {
     import Configuration._
     lazy val config = activity.getResources.getConfiguration
 

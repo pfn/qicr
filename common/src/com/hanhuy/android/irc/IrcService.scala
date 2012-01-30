@@ -60,8 +60,9 @@ object IrcService {
     val PRIVMSG_ID = 3
     val MENTION_ID = 4
 }
-class IrcService extends Service {
-    ServiceBus.clear // shouldn't be necessary
+class IrcService extends Service with EventBus.RefOwner {
+    ServiceBus.clear // just in case
+    val _richcontext: RichContext = this; import _richcontext._
     var recreateActivity: Option[Int] = None // int = page to flip to
     var startId: Int = -1
     var messagesId = 0
@@ -93,6 +94,15 @@ class IrcService extends Service {
     }
     lazy val config   = new Config(this)
     lazy val settings = new Settings(this)
+    ServiceBus += {
+    case BusEvent.PreferenceChanged(k) =>
+        if (k == getString(R.string.pref_irc_debug)) {
+            val debug = settings.getBoolean(R.string.pref_irc_debug)
+            if (debug)
+                IrcDebug.setLogStream(PrintStream)
+            IrcDebug.setEnabled(debug)
+        }
+    }
 
     val connections   = new HashMap[Server,IrcConnection]
     val _connections  = new HashMap[IrcConnection,Server]
@@ -182,8 +192,7 @@ class IrcService extends Service {
                 stopSelfResult(startId)
                 startId = -1
             }
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE)
-                    .asInstanceOf[NotificationManager]
+            val nm = systemService[NotificationManager]
             nm.cancel(DISCON_ID)
             nm.cancel(MENTION_ID)
             nm.cancel(PRIVMSG_ID)
@@ -235,6 +244,13 @@ class IrcService extends Service {
                 }
             }
         }
+    }
+    override def onCreate() {
+        super.onCreate()
+        val ircdebug = settings.getBoolean(R.string.pref_irc_debug)
+        if (ircdebug)
+            IrcDebug.setLogStream(PrintStream)
+        IrcDebug.setEnabled(ircdebug)
     }
     override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
         startId = id
@@ -349,8 +365,7 @@ class IrcService extends Service {
     }
 
     def showNotification(id: Int, res: Int, text: String, extra: String) {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE)
-                .asInstanceOf[NotificationManager]
+        val nm = systemService[NotificationManager]
         val notif = new Notification(res, text, System.currentTimeMillis())
         val intent = new Intent(this, classOf[MainActivity])
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -448,6 +463,13 @@ extends AsyncTask[Object, Object, Server.State.State] {
             server.add(ServerInfo(
                     if (progress(0) == null) "" else progress(0).toString()))
     }
+}
+
+object PrintStream
+extends java.io.PrintStream(new java.io.ByteArrayOutputStream) {
+    val TAG = "sIRC"
+    override def println(line: String) = Log.d(TAG, line)
+    override def flush() = ()
 }
 
 class StackTrace extends Exception

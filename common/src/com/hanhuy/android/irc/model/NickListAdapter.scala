@@ -4,6 +4,7 @@ import com.hanhuy.android.irc.EventBus
 import com.hanhuy.android.irc.UiBus
 import com.hanhuy.android.irc.IrcService
 import com.hanhuy.android.irc.R
+import com.hanhuy.android.irc.AndroidConversions._
 
 import android.view.LayoutInflater
 import android.content.Context
@@ -16,13 +17,12 @@ import scala.collection.JavaConversions._
 import com.sorcix.sirc.{Channel => SircChannel}
 
 class NickListAdapter(service: IrcService, channel: Channel)
-extends BaseAdapter {
+extends BaseAdapter with EventBus.RefOwner {
     var c: SircChannel = _
     service.channels.get(channel).foreach(c = _)
     notifyDataSetChanged()
 
-    val inflater = service.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
-            .asInstanceOf[LayoutInflater]
+    val inflater = service.systemService[LayoutInflater]
 
     var nicks: List[String] = _
     override def notifyDataSetChanged() {

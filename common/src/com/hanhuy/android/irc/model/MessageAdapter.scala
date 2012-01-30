@@ -3,8 +3,9 @@ package com.hanhuy.android.irc.model
 import com.hanhuy.android.irc.IrcListeners
 import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.Settings
+import com.hanhuy.android.irc.EventBus
 import com.hanhuy.android.irc.UiBus
-import com.hanhuy.android.irc.AndroidConversions
+import com.hanhuy.android.irc.AndroidConversions._
 
 import MessageLike._
 
@@ -31,7 +32,7 @@ object MessageAdapter {
     val DEFAULT_MAXIMUM_SIZE = 256
 }
 
-class MessageAdapter extends BaseAdapter {
+class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     var channel: ChannelLike = _
     var showJoinPartQuit = false
     var showTimestamp = false
@@ -51,9 +52,7 @@ class MessageAdapter extends BaseAdapter {
     def activity_= (c: MainActivity) = {
         if (c != null) {
             _activity = new WeakReference(c)
-            _inflater = new WeakReference(c.getSystemService(
-                    Context.LAYOUT_INFLATER_SERVICE)
-                            .asInstanceOf[LayoutInflater])
+            _inflater = new WeakReference(c.systemService[LayoutInflater])
             val s = new Settings(c)
             // It'd be nice to register a ServiceBus listener, but no way
             // to clean up when this adapter goes away?
@@ -97,7 +96,7 @@ class MessageAdapter extends BaseAdapter {
     protected[model] def add(item: MessageLike) {
         messages += item
         ensureSize()
-        if (_activity != null && AndroidConversions.isMainThread)
+        if (_activity != null && isMainThread)
             _activity.get.foreach { _ => notifyDataSetChanged() }
     }
 
@@ -124,7 +123,7 @@ class MessageAdapter extends BaseAdapter {
         if (view == null) {
             view = inflater.inflate(R.layout.message_item, container, false)
                     .asInstanceOf[TextView]
-            if (!AndroidConversions.icsAndNewer)
+            if (!icsAndNewer)
                 view.setTypeface(font)
         }
 

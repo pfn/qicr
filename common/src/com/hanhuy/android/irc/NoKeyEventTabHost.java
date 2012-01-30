@@ -30,7 +30,8 @@ public class NoKeyEventTabHost extends TabHost {
     }
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
-        if (getCurrentTab() != 0) {
+        View input = getInput();
+        if (input.getVisibility() == View.VISIBLE) {
             getInput().requestFocus(View.FOCUS_DOWN);
             return getInput().dispatchKeyEvent(e);
         }

@@ -147,7 +147,7 @@ class InputProcessor(activity: MainActivity) {
     def nickComplete(_input: Option[EditText] = None) {
         val input = _input match {
         case Some(i) => i
-        case None => activity.findViewById(R.id.input).asInstanceOf[EditText]
+        case None => activity.findView[EditText](R.id.input)
         }
         val (server, channel) = currentState
         val c = channel match {
@@ -365,6 +365,9 @@ sealed class CommandProcessor(ctx: Context) {
                 password = Some(chan.substring(idx + 1))
                 chan = chan.substring(0, idx)
             }
+            if (chan.length == 0)
+                return addCommandError(R.string.usage_join)
+
             val first = chan.charAt(0)
             if (first != '#' && first != '&')
                 chan = "#" + chan

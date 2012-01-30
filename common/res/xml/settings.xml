@@ -72,5 +72,11 @@
             android:title="@string/pref_show_join_part_quit_title"
             android:defaultValue="false"
         />
+        <CheckBoxPreference
+            android:key="@string/pref_irc_debug"
+            android:title="@string/pref_irc_debug_title"
+            android:summary="@string/pref_irc_debug_summary"
+            android:defaultValue="false"
+        />
     </PreferenceCategory>
 </PreferenceScreen>

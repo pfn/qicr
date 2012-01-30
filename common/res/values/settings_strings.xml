@@ -16,6 +16,7 @@
     <string name="pref_show_timestamp">ui_show_timestamp</string>
     <string name="pref_quit_message">irc_quit_message</string>
     <string name="pref_show_join_part_quit">irc_show_join_part_quit</string>
+    <string name="pref_irc_debug">irc_debug_log</string>
     <!-- end of pref names that should not be localized -->
 
     <string name="pref_show_nick_complete_title">
@@ -66,6 +67,10 @@
 
     <string name="pref_show_join_part_quit_title">
         Show Join/Part/Quit messages</string>
+    <string name="pref_irc_debug_summary">
+        To help the developer figure out weird IRC/connection issues</string>
+    <string name="pref_irc_debug_title">
+        Enable IRC debugging</string>
 
     <!-- default here because it's true on honeycomb -v11 and newer -->
     <bool name="pref_show_nick_complete_default">false</bool>

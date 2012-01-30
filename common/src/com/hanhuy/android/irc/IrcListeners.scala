@@ -2,6 +2,7 @@ package com.hanhuy.android.irc
 
 import com.hanhuy.android.irc.model.BusEvent
 import com.hanhuy.android.irc.model.Server
+import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.{Channel => QicrChannel}
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
@@ -60,6 +61,7 @@ object IrcListeners {
         def address = u.getUserName() + "@" + u.getHostName()
     }
     implicit def toEnhancedUser(u: User) = new EnhancedUser(u)
+    implicit def toQicrChannel(c: ChannelLike) = c.asInstanceOf[QicrChannel]
 }
 class IrcListeners(service: IrcService) extends AdvancedListener
 with ServerListener with MessageListener with ModeListener {
@@ -111,7 +113,7 @@ with ServerListener with MessageListener with ModeListener {
         if (user.isUs())
             service.addChannel(c, channel)
         UiBus.run {
-            val ch = service._channels(channel).asInstanceOf[QicrChannel]
+            val ch = service._channels(channel)
             UiBus.send(BusEvent.NickListChanged(ch))
             if (!user.isUs())
                 ch.add(Join(user.getNick(), user.address))
@@ -121,7 +123,7 @@ with ServerListener with MessageListener with ModeListener {
     override def onKick(c: IrcConnection, channel: Channel,
             user: User, op: User, msg: String) {
         UiBus.run {
-            val ch = service._channels(channel).asInstanceOf[QicrChannel]
+            val ch = service._channels(channel)
             if (user.isUs()) {
                 // TODO update adapter's channel state
                 ch.state = QicrChannel.State.KICKED
@@ -135,7 +137,7 @@ with ServerListener with MessageListener with ModeListener {
             user: User, msg: String) {
         if (!service._channels.contains(channel)) return
         UiBus.run {
-            val ch = service._channels(channel).asInstanceOf[QicrChannel]
+            val ch = service._channels(channel)
             if (user.isUs()) {
                 ch.state = QicrChannel.State.PARTED
             } else {
@@ -166,8 +168,7 @@ with ServerListener with MessageListener with ModeListener {
             UiBus.run {
                 service._channels.values foreach { c =>
                     if (c.server == server) {
-                        UiBus.send(BusEvent.NickListChanged(
-                                c.asInstanceOf[QicrChannel]))
+                        UiBus.send(BusEvent.NickListChanged(c))
                         c.add(NickChange(oldnick.getNick(), newnick.getNick()))
                     }
                 }
@@ -176,7 +177,7 @@ with ServerListener with MessageListener with ModeListener {
             UiBus.run {
                 service.channels.values collect {
                     case c: Channel if c.hasUser(newnick) =>
-                        service._channels(c).asInstanceOf[QicrChannel]
+                        service._channels(c)
                 } foreach { c =>
                     if (c.server == server) {
                         UiBus.send(BusEvent.NickListChanged(c))
@@ -193,7 +194,7 @@ with ServerListener with MessageListener with ModeListener {
         UiBus.run {
             service.channels.values collect {
                 case c: Channel if c.hasUser(user) =>
-                    service._channels(c).asInstanceOf[QicrChannel]
+                    service._channels(c)
             } foreach { c =>
                 if (c.server == server) {
                     UiBus.send(BusEvent.NickListChanged(c))

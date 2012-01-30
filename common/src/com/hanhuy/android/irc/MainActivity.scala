@@ -39,7 +39,6 @@ import android.support.v4.app.{ListFragment, FragmentPagerAdapter}
 import android.support.v4.view.{ViewPager, MenuItemCompat}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.HashSet
 
 import com.hanhuy.android.irc.model.MessageAdapter
 import com.hanhuy.android.irc.model.Server
@@ -64,10 +63,13 @@ object MainActivity {
     val TAG = "MainActivity"
 
     val REQUEST_SPEECH_RECOGNITION = 1
+
+    implicit def toMainActivity(a: Activity) = a.asInstanceOf[MainActivity]
 }
-class MainActivity extends FragmentActivity with ServiceConnection {
+class MainActivity extends FragmentActivity with ServiceConnection
+with EventBus.RefOwner {
+    UiBus.clear // weakrefs aren't enough to clear it  :-(
     val _richactivity: RichActivity = this; import _richactivity._
-    UiBus.clear // everybody off!  does this affect retained fragments?
 
     lazy val settings = {
         val s = new Settings(this)
@@ -103,8 +105,7 @@ class MainActivity extends FragmentActivity with ServiceConnection {
         if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
     }
     lazy val pager = findView[ViewPager](R.id.pager)
-    lazy val adapter = new MainPagerAdapter(
-            getSupportFragmentManager(), tabhost, pager)
+    lazy val adapter = new MainPagerAdapter(this)
 
     lazy val newmessages = {
         val v = findView[View](R.id.btn_new_messages)
@@ -503,7 +504,7 @@ class ServerSetupFragment extends DialogFragment {
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         item.getItemId() match {
             case R.id.save_server => {
-                val activity = getActivity().asInstanceOf[MainActivity]
+                val activity = getActivity()
                 val manager = activity.getSupportFragmentManager()
                 val s = server
                 if (s.valid) {
@@ -519,8 +520,7 @@ class ServerSetupFragment extends DialogFragment {
                 true
             }
             case R.id.cancel_server => {
-                val activity = getActivity().asInstanceOf[MainActivity]
-                val manager = activity.getSupportFragmentManager()
+                val manager = getActivity().getSupportFragmentManager()
                 manager.popBackStack()
                 true
             }
@@ -543,7 +543,7 @@ class ServerSetupFragment extends DialogFragment {
     var dialogShown = false
     override def onCreateDialog(bundle: Bundle): Dialog = {
         dialogShown = true
-        val activity = getActivity().asInstanceOf[MainActivity]
+        val activity = getActivity()
         val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
         //import android.view.ContextThemeWrapper
         //val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
@@ -580,11 +580,11 @@ class ServerSetupFragment extends DialogFragment {
 // TODO convert to a Dialog fragment (checkpoint first!)
 // allow server messages to be displayed as a dialog on phones
 abstract class MessagesFragment(_a: MessageAdapter = null)
-extends ListFragment {
+extends ListFragment with EventBus.RefOwner {
     def this() = this(null)
 
     // eh?
-    lazy val _service = getActivity().asInstanceOf[MainActivity].service
+    lazy val _service = getActivity().service
     var __service: IrcService = _
     def service = if (__service != null) __service else _service
 
@@ -593,7 +593,7 @@ extends ListFragment {
     def adapter_=(a: MessageAdapter) = {
         _adapter = a
         if (getActivity() != null)
-            _adapter.activity = getActivity().asInstanceOf[MainActivity]
+            _adapter.activity = getActivity()
 
         setListAdapter(_adapter)
         service.messages += ((id, _adapter))
@@ -601,14 +601,14 @@ extends ListFragment {
             getListView().setSelection(if (adapter.getCount() > 0)
                     _adapter.getCount()-1 else 0)
         } catch {
-            case e: Exception => Log.d(TAG, "Content view not ready", e)
+            case _ => Log.d(TAG, "Content view not ready")
         }
     }
     var id = -1
 
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
-        val activity = getActivity().asInstanceOf[MainActivity]
+        val activity = getActivity()
         if (id == -1 && bundle != null)
             id = bundle.getInt("id")
         else
@@ -655,8 +655,7 @@ with AdapterView.OnItemClickListener {
     // sucky hack because of using the view directly
     // when used directly, external caller will need to set activity
     private var _activity: MainActivity = _
-    def activity = if (_activity != null) _activity
-            else getActivity().asInstanceOf[MainActivity]
+    def activity = if (_activity != null) _activity else getActivity()
     def activity_=(a: MainActivity) = _activity = a
 
     var listview: ListView = _
@@ -719,18 +718,36 @@ with AdapterView.OnItemClickListener {
 }
 
 class ChannelFragment(a: MessageAdapter, c: Channel)
-extends MessagesFragment(a) {
+extends MessagesFragment(a) with EventBus.RefOwner {
     def this() = this(null, null)
-    var channel = c
+    var _channel = c
+    def channelReady = _channel != null
+    def channel = {
+        /* TODO FIXME is retain instance enough?
+        synchronized {
+            while (_channel == null) {
+                Log.w(TAG, "Ugh, _channel is null, waiting", new StackTrace)
+                wait
+            }
+        }*/
+        _channel
+    }
+    def channel_= (c: Channel) = synchronized {
+        _channel = c
+        notifyAll
+    }
+
+
     // TODO get rid of this reference through use of UiBus
     var nicklist: Option[ListView] = None // Some when large+
     //Log.d(TAG, "Creating ChannelFragment: " + this, new StackTrace)
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
+        setRetainInstance(true)
 
-        val activity = getActivity().asInstanceOf[MainActivity]
-        if (channel == null) {
+        val activity = getActivity()
+        if (_channel == null) {
             def setChannel(s: IrcService) {
                 val c = s.chans.get(bundle.getInt("id"))
                 c.foreach(ch => channel = ch.asInstanceOf[Channel])
@@ -744,35 +761,45 @@ extends MessagesFragment(a) {
                 }
         }
         // this apparently works by virtue of the network being slow
-        if (id != -1 && channel != null && a != null) {
+        if (id != -1 && channelReady && a != null) {
             activity.service.chans += ((id, channel))
             a.channel = channel
         }
     }
 
     private def setNickListAdapter(list: ListView) {
-        val activity = getActivity().asInstanceOf[MainActivity]
-        list.setAdapter(new NickListAdapter(activity.service, channel))
+        list.setAdapter(new NickListAdapter(getActivity.service, channel))
     }
 
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
         val v = inflater.inflate(R.layout.fragment_channel, container, false)
-        val activity = getActivity().asInstanceOf[MainActivity]
+        val activity = getActivity()
         // show via dialogfragment if < size_large
-        if (channel != null && channel.isInstanceOf[Channel] &&
+        if (channelReady &&
                 (activity.isLargeScreen || activity.isXLargeScreen)) {
-            val f = new NickListFragment
-            f.showAsDialog = false
-            f.activity = activity
-            val view = f.onCreateView(inflater, null, null)
-            val list = view.asInstanceOf[ListView]
-            nicklist = Some(list)
-            setNickListAdapter(list)
-            // doesn't appear if added via onCreateView
-            v.findView[ViewGroup](R.id.nicklist_container).addView(list)
-            // TODO this puts them one atop the other, even when horizontal?
-            //v.asInstanceOf[ViewGroup].addView(view)
+            def addNickList() {
+                if (!channel.isInstanceOf[Channel]) return
+                val f = new NickListFragment
+                f.showAsDialog = false
+                f.activity = activity
+                val view = f.onCreateView(inflater, null, null)
+                val list = view.asInstanceOf[ListView]
+                nicklist = Some(list)
+                setNickListAdapter(list)
+                // doesn't appear if added via onCreateView
+                v.findView[ViewGroup](R.id.nicklist_container).addView(list)
+                // TODO this puts them one atop the other, even when horizontal?
+                //v.asInstanceOf[ViewGroup].addView(view)
+            }
+            if (channelReady && getActivity.service != null)
+                addNickList()
+            else {
+                UiBus += { case BusEvent.ServiceConnected(_) =>
+                    addNickList()
+                    EventBus.Remove
+                }
+            }
         }
         v
     }
@@ -802,7 +829,7 @@ extends MessagesFragment(a) {
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
         if (R.id.channel_close == item.getItemId()) {
-            val activity = getActivity().asInstanceOf[MainActivity]
+            val activity = getActivity()
             val prompt = activity.settings.getBoolean(
                     R.string.pref_close_tab_prompt, true)
 
@@ -833,7 +860,7 @@ extends MessagesFragment(a) {
             }
             return true
         } else if (R.id.channel_names == item.getItemId()) {
-            val activity = getActivity().asInstanceOf[MainActivity]
+            val activity = getActivity()
             val adapter = new NickListAdapter(activity.service, channel)
             val tx = activity.getSupportFragmentManager().beginTransaction()
 
@@ -859,12 +886,26 @@ extends MessagesFragment(a) {
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
-        // again, works by virtue of the network being slow
         if (id != -1 && q != null) {
-            val activity = getActivity().asInstanceOf[MainActivity]
+            val activity = getActivity()
             activity.service.chans += ((id, q))
             a.channel = q
         }
+        /*
+        if (channel == null) {
+            def setChannel(s: IrcService) {
+                val c = s.chans.get(bundle.getInt("id"))
+                c.foreach(ch => channel = ch.asInstanceOf[Channel])
+            }
+            if (activity.service != null)
+                setChannel(activity.service)
+            else
+                UiBus += { case BusEvent.ServiceConnected(s) =>
+                    setChannel(s)
+                    EventBus.Remove
+                }
+        }
+        */
     }
 
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
@@ -878,7 +919,7 @@ extends MessagesFragment(a) {
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
         if (R.id.query_close == item.getItemId()) {
-            val activity = getActivity().asInstanceOf[MainActivity]
+            val activity = getActivity()
             val prompt = activity.settings.getBoolean(
                     R.string.pref_close_tab_prompt, true)
             def removeQuery() {
@@ -913,7 +954,7 @@ extends MessagesFragment(if (_s != null) _s.messages else null) {
     def this() = this(null)
 }
 
-class ServersFragment extends ListFragment {
+class ServersFragment extends ListFragment with EventBus.RefOwner {
     var service: IrcService = _
     var adapter: ServerArrayAdapter = _
     var _server: Option[Server] = None // currently selected server
@@ -959,7 +1000,7 @@ class ServersFragment extends ListFragment {
 
     override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
         v.findView[CheckedTextView](R.id.server_item_text).setChecked(true)
-        val activity = getActivity().asInstanceOf[MainActivity]
+        val activity = getActivity()
         val manager = activity.getSupportFragmentManager()
         manager.popBackStack(SERVER_SETUP_STACK,
                 FragmentManager.POP_BACK_STACK_INCLUSIVE)
@@ -1008,8 +1049,7 @@ class ServersFragment extends ListFragment {
             mytx.commit()
     }
     def addServerMessagesFragment(server: Server) {
-        val activity = getActivity().asInstanceOf[MainActivity]
-        val mgr = activity.getSupportFragmentManager()
+        val mgr = getActivity.getSupportFragmentManager()
         val name = SERVER_MESSAGES_FRAGMENT_PREFIX + server.name
         var fragment = mgr.findFragmentByTag(name)
                 .asInstanceOf[MessagesFragment]
@@ -1037,7 +1077,7 @@ class ServersFragment extends ListFragment {
     }
 
     def addServerSetupFragment(_s: Option[Server] = None) {
-        val activity = getActivity().asInstanceOf[MainActivity]
+        val activity = getActivity()
         val mgr = activity.getSupportFragmentManager()
         var fragment: ServerSetupFragment = null
         fragment = mgr.findFragmentByTag(SERVER_SETUP_FRAGMENT)
@@ -1074,8 +1114,7 @@ class ServersFragment extends ListFragment {
     def changeListener(server: Server) {
         if (!_server.isEmpty && _server.get == server &&
                 server.state == Server.State.CONNECTED && getActivity() != null)
-            getActivity().asInstanceOf[MainActivity]
-                    .input.setVisibility(View.VISIBLE)
+            getActivity().input.setVisibility(View.VISIBLE)
         if (adapter != null)
             adapter.notifyDataSetChanged()
     }
@@ -1170,15 +1209,14 @@ class ServersFragment extends ListFragment {
 
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
-        val activity = getActivity().asInstanceOf[MainActivity]
         if (R.id.add_server == item.getItemId()) {
-            activity.serversFragment.addServerSetupFragment()
+            getActivity.serversFragment.addServerSetupFragment()
             return true
         }
         onServerMenuItemClicked(item, _server)
     }
     override def onPrepareOptionsMenu(menu: Menu) {
-        val activity = getActivity().asInstanceOf[MainActivity]
+        val activity = getActivity()
         val m = activity.getSupportFragmentManager()
 
         var page = 0
@@ -1222,27 +1260,3 @@ extends ArrayAdapter[Server](
         v
     }
 }
-
-object EventBus {
-    // this is terribad -- only EventBus.Remove has any meaning
-    type Handler = PartialFunction[BusEvent,Any]
-    object Remove // result object for Handler, if present, remove after exec
-}
-abstract class EventBus(ui: Boolean = false)
-extends HashSet[EventBus.Handler] {
-    import android.os.{Handler, Looper}
-    val handler = if (ui) new Handler(Looper.getMainLooper) else null
-    def broadcast(e: BusEvent) = foreach { h =>
-        if (h.isDefinedAt(e)) {
-            if (h(e) == EventBus.Remove) this -= h
-        }
-    }
-    def send(e: BusEvent) {
-        if (!ui || isMainThread) broadcast(e)
-        else handler.post { () => broadcast(e) }
-    }
-    def post(f: => Unit) = handler.post(f _)
-    def run(f: => Unit) = if (isMainThread) f else post(f)
-}
-object UiBus extends EventBus(true)
-object ServiceBus extends EventBus

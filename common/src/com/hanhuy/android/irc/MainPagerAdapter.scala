@@ -36,10 +36,10 @@ import AndroidConversions._
 object MainPagerAdapter {
     val TAG = "MainPagerAdapter"
 }
-class MainPagerAdapter(manager: FragmentManager,
-        tabhost: TabHost, pager: ViewPager)
-extends FragmentPagerAdapter(manager)
-with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
+class MainPagerAdapter(activity: MainActivity)
+extends FragmentPagerAdapter(activity.getSupportFragmentManager)
+with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener
+with EventBus.RefOwner {
     val channels = new ArrayBuffer[ChannelLike]
     val servers  = new ArrayBuffer[Server]
     lazy val channelcomp = new ChannelLikeComparator
@@ -50,10 +50,11 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     tabhost.setOnTabChangedListener(this)
     pager.setOnPageChangeListener(this)
     pager.setAdapter(this)
+    lazy val manager = activity.getSupportFragmentManager
+    lazy val tabhost = activity.tabhost
+    lazy val pager = activity.pager
     lazy val hsv = activity.findView[HorizontalScrollView](R.id.tab_scroller)
-    lazy val activity = tabhost.getContext().asInstanceOf[MainActivity]
-    lazy val nm = activity.getSystemService(Context.NOTIFICATION_SERVICE)
-            .asInstanceOf[NotificationManager]
+    lazy val nm = activity.systemService[NotificationManager]
 
     val tabs = new ArrayBuffer[TabInfo]()
     var page = 0
@@ -157,7 +158,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
 
     // PagerAdapter
     override def getCount() = tabs.length
-    override def getItem(pos: Int) = tabs(pos).fragment
+    override def getItem(pos: Int): Fragment = tabs(pos).fragment
 
     // OnTabChangeListener
     override def onTabChanged(tabId: String) {
@@ -225,9 +226,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
         var spec : TabHost#TabSpec = null
 
         if (!honeycombAndNewer) {
-            val inflater = tabhost.getContext().getSystemService(
-                    Context.LAYOUT_INFLATER_SERVICE)
-                    .asInstanceOf[LayoutInflater]
+            val inflater = activity.systemService[LayoutInflater]
             val ind = inflater.inflate(R.layout.tab_indicator,
                     tabhost.getTabWidget(), false)
             ind.findView[TextView](R.id.title).setText(title)
@@ -337,7 +336,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     override def instantiateItem(container: ViewGroup, pos: Int) = {
         if (mCurTransaction == null)
             mCurTransaction = mFragmentManager.beginTransaction()
-        val f = getItem(pos).asInstanceOf[Fragment]
+        val f = getItem(pos)
         val name = makeFragmentTag(f)
         tabs(pos).tag = Some(name)
         if (f.isDetached())
@@ -362,7 +361,8 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener {
     }
     private def getFragmentTag(s: Server) = "viewpager:server:" + s.name
     private def getFragmentTag(c: ChannelLike) = {
-        if (c == null) Log.d(TAG, "Channel object is null", new StackTrace)
+        // TODO FIXME block fragment creation until c is not null?
+        if (c == null) Log.w(TAG, "Channel object is null", new StackTrace)
         val s = if (c == null) null else c.server
         val sinfo = if (s == null) "server-object-null:"
             else format("%s::%s::%d::%s::%s::",
@@ -382,48 +382,5 @@ class DummyTabFactory(c : Context) extends TabHost.TabContentFactory {
         v.setMinimumWidth(0)
         v.setMinimumHeight(0)
         v
-    }
-}
-
-class TabWidget(c: Context, attrs: android.util.AttributeSet, defStyle: Int)
-extends android.widget.TabWidget(c, attrs, defStyle) {
-    def this(c: Context, attrs: android.util.AttributeSet) =
-            this(c, null, android.R.attr.tabWidgetStyle)
-    def this(c: Context) = this(c, null)
-    setStripEnabled(true)
-
-    var tabSelectionChangeListener: Function2[Int,Boolean,Unit] = (_,_) => Unit
-
-    override def onFocusChange(v: View, hasFocus: Boolean) {
-        super.onFocusChange(v, hasFocus)
-
-        (0 until getTabCount) find {
-            i => getChildTabViewAt(i) == v
-        } foreach {
-            tabSelectionChangeListener(_, false)
-        }
-    }
-
-    override def addView(child: View) {
-        super.addView(child)
-        val index = getTabCount - 1
-        child.setOnClickListener { () =>
-            tabSelectionChangeListener(index, true)
-        }
-    }
-
-    def addTab(title: String) {
-        val inflater = c.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
-                .asInstanceOf[LayoutInflater]
-        val (indicator,text) = if (!honeycombAndNewer) {
-            val ind = inflater.inflate(R.layout.tab_indicator, this, false)
-            (ind, ind.findView[TextView](R.id.title))
-        } else {
-            val ind = inflater.inflate(R.layout.tab_indicator_holo,
-                    this, false)
-            (ind, ind.findView[TextView](R.id.title))
-        }
-        text.setText(title)
-        addView(indicator)
     }
 }
