@@ -66,7 +66,9 @@ object MainActivity {
 
     implicit def toMainActivity(a: Activity) = a.asInstanceOf[MainActivity]
 
-    def getFragmentTag(s: Server) = "fragment:server:" + s.name
+    def getFragmentTag(s: Server) = if (s != null) "fragment:server:" + s.name
+            else "fragment:server:null-server-input"
+
     def getFragmentTag(c: ChannelLike) = {
         // TODO FIXME block fragment creation until c is not null?
         //if (c == null) Log.w(TAG, "Channel object is null", new StackTrace)
@@ -375,6 +377,11 @@ with EventBus.RefOwner {
                 speechrec.setVisibility(if (showSpeechRec)
                         View.VISIBLE else View.GONE)
             }
+            case _: ServerMessagesFragment => {
+                input.setVisibility(View.VISIBLE)
+                nickcomplete.setVisibility(View.GONE)
+                speechrec.setVisibility(View.GONE)
+            }
             case _ => {
                 nickcomplete.setVisibility(View.GONE)
                 speechrec.setVisibility(View.GONE)
@@ -446,6 +453,7 @@ with EventBus.RefOwner {
     }
 }
 
+// TODO remove retainInstance -- messes up with theme change
 // TODO fix dialog dismiss on-recreate
 class ServerSetupFragment extends DialogFragment {
     var _server: Server = _
@@ -1002,7 +1010,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
-        setRetainInstance(true)
+        setRetainInstance(true) // retain for serverMessagesFragmentShowing
     }
 
     override def onActivityCreated(bundle: Bundle) {

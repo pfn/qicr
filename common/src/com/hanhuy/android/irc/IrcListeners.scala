@@ -157,7 +157,8 @@ with ServerListener with MessageListener with ModeListener {
             src: User, mode: String) = () // TODO
     override def onMotd(c: IrcConnection, motd: String) {
         val server = service._connections(c)
-        UiBus.run { server.add(Motd(motd)) }
+        // sIRC sends motd as one big blob of lines, split before adding
+        UiBus.run { motd.split("\r?\n") foreach { m => server.add(Motd(m)) } }
     }
 
     override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
