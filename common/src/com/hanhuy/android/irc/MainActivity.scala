@@ -65,10 +65,25 @@ object MainActivity {
     val REQUEST_SPEECH_RECOGNITION = 1
 
     implicit def toMainActivity(a: Activity) = a.asInstanceOf[MainActivity]
+
+    def getFragmentTag(s: Server) = "fragment:server:" + s.name
+    def getFragmentTag(c: ChannelLike) = {
+        // TODO FIXME block fragment creation until c is not null?
+        //if (c == null) Log.w(TAG, "Channel object is null", new StackTrace)
+        val s = if (c == null) null else c.server
+        val sinfo = if (s == null) "server-object-null:"
+            else format("%s::%s::%d::%s::%s::",
+                    s.name, s.hostname, s.port, s.username, s.nickname)
+        "fragment:" + sinfo + (c match {
+        case ch: Channel => ch.name 
+        case qu: Query   => qu.name
+        case _ => "null"
+        })
+    }
 }
 class MainActivity extends FragmentActivity with ServiceConnection
 with EventBus.RefOwner {
-    UiBus.clear // weakrefs aren't enough to clear it  :-(
+    UiBus.clear // weak refs aren't enough  :-(
     val _richactivity: RichActivity = this; import _richactivity._
 
     lazy val settings = {
@@ -145,10 +160,6 @@ with EventBus.RefOwner {
         i.setOnKeyListener(proc.onKeyListener _)
         i.addTextChangedListener(proc.TextListener)
         i
-    }
-    lazy val serversFragment = {
-        getSupportFragmentManager().findFragmentByTag(adapter.tabs(0).tag.get)
-                .asInstanceOf[ServersFragment]
     }
     var page = -1 // used for restoring tab selection on recreate
 
@@ -238,8 +249,6 @@ with EventBus.RefOwner {
 
     override def onPause() {
         super.onPause()
-        if (service != null)
-            service.showing = false
         if (honeycombAndNewer)
             HoneycombSupport.close()
     }
@@ -310,8 +319,10 @@ with EventBus.RefOwner {
 
     override def onStop() {
         super.onStop()
-        if (service != null)
+        if (service != null) {
+            service.showing = false
             service.unbind()
+        }
         unbindService(this)
     }
 
@@ -583,6 +594,8 @@ abstract class MessagesFragment(_a: MessageAdapter = null)
 extends ListFragment with EventBus.RefOwner {
     def this() = this(null)
 
+    var tag: String
+
     // eh?
     lazy val _service = getActivity().service
     var __service: IrcService = _
@@ -614,6 +627,9 @@ extends ListFragment with EventBus.RefOwner {
         else
             id = service.newMessagesId()
 
+        if (bundle != null)
+            tag = bundle.getString("tag")
+
         if (adapter != null) { // this works by way of the network being slow
             val service = activity.service // assuming service is ready?
             adapter.activity = activity // sets a weakref
@@ -641,6 +657,7 @@ extends ListFragment with EventBus.RefOwner {
     override def onSaveInstanceState(bundle: Bundle) {
         super.onSaveInstanceState(bundle)
         bundle.putInt("id", id)
+        bundle.putString("tag", tag)
     }
     def onServiceConnected(service: IrcService) {
         if (adapter == null && id != -1) {
@@ -719,6 +736,7 @@ with AdapterView.OnItemClickListener {
 
 class ChannelFragment(a: MessageAdapter, c: Channel)
 extends MessagesFragment(a) with EventBus.RefOwner {
+    var tag = getFragmentTag(c)
     def this() = this(null, null)
     var _channel = c
     def channelReady = _channel != null
@@ -744,7 +762,6 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
-        setRetainInstance(true)
 
         val activity = getActivity()
         if (_channel == null) {
@@ -760,7 +777,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
                     EventBus.Remove
                 }
         }
-        // this apparently works by virtue of the network being slow
+        // this apparently works by virtue of the network being slow?
         if (id != -1 && channelReady && a != null) {
             activity.service.chans += ((id, channel))
             a.channel = channel
@@ -880,6 +897,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
 
 class QueryFragment(a: MessageAdapter, q: Query)
 extends MessagesFragment(a) {
+    var tag = getFragmentTag(q)
     def query = q
     def this() = this(null, null)
 
@@ -950,8 +968,23 @@ extends MessagesFragment(a) {
 
 class ServerMessagesFragment(_s: Server)
 extends MessagesFragment(if (_s != null) _s.messages else null) {
+    var tag = getFragmentTag(_s)
     var server = _s
     def this() = this(null)
+    override def onCreate(bundle: Bundle) {
+        super.onCreate(bundle)
+        setHasOptionsMenu(true)
+    }
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
+            inflater.inflate(R.menu.server_messages_menu, menu)
+    override def onOptionsItemSelected(item: MenuItem) : Boolean = {
+        if (R.id.server_close == item.getItemId()) {
+            getActivity.adapter.removeTab(
+                    getActivity.adapter.getItemPosition(this))
+            return true
+        }
+        return false
+    }
 }
 
 class ServersFragment extends ListFragment with EventBus.RefOwner {
@@ -1171,6 +1204,10 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
                 true
             }
             case R.id.server_messages => {
+                server map { getActivity.adapter.addServer(_) } getOrElse {
+                    Toast.makeText(getActivity(), R.string.server_not_selected,
+                            Toast.LENGTH_SHORT).show()
+                }
                 true
             }
             case _ => false
@@ -1210,7 +1247,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         if (R.id.add_server == item.getItemId()) {
-            getActivity.serversFragment.addServerSetupFragment()
+            getActivity.servers.addServerSetupFragment()
             return true
         }
         onServerMenuItemClicked(item, _server)

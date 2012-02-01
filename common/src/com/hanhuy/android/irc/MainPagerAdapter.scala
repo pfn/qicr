@@ -278,18 +278,35 @@ with EventBus.RefOwner {
         if (idx < 0) {
             idx = idx * -1
             channels.insert(idx - 1, c)
-            val tag = getFragmentTag(c)
+            val tag = MainActivity.getFragmentTag(c)
             val f = manager.findFragmentByTag(tag)
             val frag = if (f != null) f else c match {
                 case ch: Channel => new ChannelFragment(ch.messages, ch)
                 case qu: Query   => new QueryFragment(qu.messages, qu)
             }
             val info = insertTab(c.name, frag, idx - 1)
-            refreshTabTitle(idx)
+            refreshTabTitle(idx + channelBase - 1) // why -1?
             info.channel = Some(c)
         } else {
             tabs(idx + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
             refreshTabTitle(idx + channelBase)
+        }
+    }
+    def addServer(s: Server) {
+        var idx = Collections.binarySearch(servers, s, servercomp)
+        if (idx < 0) {
+            idx = idx * -1
+            servers.insert(idx - 1, s)
+            val tag = MainActivity.getFragmentTag(s)
+            val f = manager.findFragmentByTag(tag)
+            val frag = if (f != null) f else new ServerMessagesFragment(s)
+            val info = insertTab(s.name, frag, idx - 1)
+            refreshTabTitle(idx + 1)
+            tabhost.setCurrentTab(idx)
+            info.server = Some(s)
+        } else {
+            tabs(idx).flags &= ~TabInfo.FLAG_DISCONNECTED
+            refreshTabTitle(idx + 1)
         }
     }
 
@@ -302,10 +319,14 @@ with EventBus.RefOwner {
         }
         tabhost.setCurrentTab(0)
         tabhost.clearAllTabs()
-        channels.remove(pos-1) // TODO FIXME account for servers
+        val i = pos - 1
+        if (i < servers.size)
+            servers.remove(i)
+        else
+            channels.remove(i - servers.size)
         tabs.remove(pos)
         (0 until tabs.length) foreach { i => addTab(tabs(i).title) }
-        val idx = Math.max(0, pos-1)
+        val idx = Math.max(0, i)
         tabhost.setCurrentTab(idx)
         notifyDataSetChanged()
         UiBus.post { showTabIndicator(idx) }
@@ -352,26 +373,15 @@ with EventBus.RefOwner {
 
     private def makeFragmentTag(f: Fragment) = {
         f match {
+        /*
         case c: ChannelFragment => getFragmentTag(c.channel)
         case q: QueryFragment   => getFragmentTag(q.query)
         case s: ServerMessagesFragment => getFragmentTag(s.server)
+        */
+        case m: MessagesFragment => m.tag
         case _: ServersFragment => MainActivity.SERVERS_FRAGMENT
         case _ => "viewpager:" + System.identityHashCode(f)
         }
-    }
-    private def getFragmentTag(s: Server) = "viewpager:server:" + s.name
-    private def getFragmentTag(c: ChannelLike) = {
-        // TODO FIXME block fragment creation until c is not null?
-        if (c == null) Log.w(TAG, "Channel object is null", new StackTrace)
-        val s = if (c == null) null else c.server
-        val sinfo = if (s == null) "server-object-null:"
-            else format("%s::%s::%d::%s::%s::",
-                    s.name, s.hostname, s.port, s.username, s.nickname)
-        "viewpager:" + sinfo + (c match {
-        case ch: Channel => ch.name 
-        case qu: Query   => qu.name
-        case _ => "null"
-        })
     }
 }
 

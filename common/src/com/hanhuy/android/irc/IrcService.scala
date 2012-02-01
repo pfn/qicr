@@ -199,6 +199,13 @@ class IrcService extends Service with EventBus.RefOwner {
         }
         connections.keys.foreach(disconnect(_, message, false, true))
     }
+    override def onDestroy() {
+        super.onDestroy()
+        val nm = systemService[NotificationManager]
+        nm.cancel(DISCON_ID)
+        nm.cancel(MENTION_ID)
+        nm.cancel(PRIVMSG_ID)
+    }
     def disconnect(server: Server, message: Option[String] = None,
             disconnected: Boolean = false, quitting: Boolean = false) {
         connections.get(server).foreach { c =>

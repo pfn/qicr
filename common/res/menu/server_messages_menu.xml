@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/server_close"
+        android:icon="@drawable/ic_menu_end_conversation"
+        android:title="@string/server_close"
+        android:showAsAction="ifRoom|withText"
+        android:visible="@bool/is_phone"/>
+</menu>
