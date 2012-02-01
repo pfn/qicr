@@ -12,7 +12,7 @@ import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.Notice
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable.{HashMap, HashSet}
 import scala.ref.WeakReference
 
 import android.app.Service
@@ -107,14 +107,15 @@ class IrcService extends Service with EventBus.RefOwner {
     val connections   = new HashMap[Server,IrcConnection]
     val _connections  = new HashMap[IrcConnection,Server]
 
-    val channels  = new HashMap[ChannelLike,SircChannel]
-    val _channels = new HashMap[SircChannel,ChannelLike]
-    val queries   = new HashMap[(Server,String),Query]
+    val channels      = new HashMap[ChannelLike,SircChannel]
+    val _channels     = new HashMap[SircChannel,ChannelLike]
+    val queries       = new HashMap[(Server,String),Query]
 
     // TODO find a way to automatically(?) purge the adapters
     // worst-case: leak memory on the int, but not the adapter
     val messages = new HashMap[Int,MessageAdapter]
     val chans    = new HashMap[Int,ChannelLike]
+    val servs    = new HashMap[Int,Server]
 
     def newMessagesId(): Int = {
         messagesId += 1

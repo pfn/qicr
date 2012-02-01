@@ -982,11 +982,32 @@ extends MessagesFragment(if (_s != null) _s.messages else null) {
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
+
+        val activity = getActivity
+        if (id != -1 && server != null)
+            activity.service.servs += ((id, server))
+
+        if (server == null) {
+            def setServer(s: IrcService) {
+                val _s = s.servs.get(bundle.getInt("id"))
+                _s.foreach(srv => server = srv)
+            }
+            if (activity.service != null)
+                setServer(activity.service)
+            else
+                UiBus += { case BusEvent.ServiceConnected(s) =>
+                    setServer(s)
+                    EventBus.Remove
+                }
+        }
     }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
             inflater.inflate(R.menu.server_messages_menu, menu)
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         if (R.id.server_close == item.getItemId()) {
+            val service = getActivity.service
+            service.servs    -= id
+            service.messages -= id
             getActivity.adapter.removeTab(
                     getActivity.adapter.getItemPosition(this))
             return true

@@ -76,8 +76,11 @@ with EventBus.RefOwner {
     }
 
     def refreshTabs(service: IrcService) {
+        if (service.servs.size > servers.size)
+            (service.servs.values.toSet -- servers) foreach addServer
+
         if (service.channels.size > channels.size)
-            (service.channels.keySet -- channels).foreach(addChannel(_))
+            (service.channels.keySet -- channels) foreach addChannel
         channels.foreach(refreshTabTitle(_))
     }
 
@@ -301,7 +304,7 @@ with EventBus.RefOwner {
             val f = manager.findFragmentByTag(tag)
             val frag = if (f != null) f else new ServerMessagesFragment(s)
             val info = insertTab(s.name, frag, idx - 1)
-            refreshTabTitle(idx + 1)
+            refreshTabTitle(idx)
             tabhost.setCurrentTab(idx)
             info.server = Some(s)
         } else {
