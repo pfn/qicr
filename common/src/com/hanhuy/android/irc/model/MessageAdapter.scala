@@ -49,11 +49,12 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     var _inflater: WeakReference[LayoutInflater] = _
     def inflater = _inflater.get getOrElse { throw new IllegalStateException }
     var _activity: WeakReference[MainActivity] = _
+    // can't make this IrcService due to resource changes on recreation
     def activity_= (c: MainActivity) = {
         if (c != null) {
             _activity = new WeakReference(c)
             _inflater = new WeakReference(c.systemService[LayoutInflater])
-            val s = new Settings(c)
+            val s = c.service.settings
             // It'd be nice to register a ServiceBus listener, but no way
             // to clean up when this adapter goes away?
             // add it to UiBus here maybe?
@@ -61,8 +62,6 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
                     DEFAULT_MAXIMUM_SIZE.toString).toInt
             showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
             showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
-            // this will strongly reference settings(activity) until a new
-            // activity is created
             UiBus += { case BusEvent.PreferenceChanged(k) =>
                 if (k == getString(R.string.pref_message_lines)) {
                     val max = s.getString(R.string.pref_message_lines,

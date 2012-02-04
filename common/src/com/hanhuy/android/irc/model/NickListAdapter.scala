@@ -2,7 +2,7 @@ package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.EventBus
 import com.hanhuy.android.irc.UiBus
-import com.hanhuy.android.irc.IrcService
+import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.R
 import com.hanhuy.android.irc.AndroidConversions._
 
@@ -16,13 +16,14 @@ import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
 
-class NickListAdapter(service: IrcService, channel: Channel)
+// must reference activity for resources
+class NickListAdapter(activity: MainActivity, channel: Channel)
 extends BaseAdapter with EventBus.RefOwner {
     var c: SircChannel = _
-    service.channels.get(channel).foreach(c = _)
+    activity.service.channels.get(channel).foreach(c = _)
     notifyDataSetChanged()
 
-    val inflater = service.systemService[LayoutInflater]
+    val inflater = activity.systemService[LayoutInflater]
 
     var nicks: List[String] = _
     override def notifyDataSetChanged() {

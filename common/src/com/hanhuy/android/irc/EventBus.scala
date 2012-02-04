@@ -4,8 +4,9 @@ import model.BusEvent
 import AndroidConversions._
 
 import android.os.{Handler, Looper}
+import android.util.Log
+import scala.collection.mutable.{ArrayBuffer,WeakHashMap,SynchronizedBuffer}
 
-import scala.collection.mutable.{ArrayBuffer,WeakHashMap}
 
 object EventBus {
     class Owner {
@@ -18,11 +19,14 @@ object EventBus {
     // this is terribad -- only EventBus.Remove has any meaning
     type Handler = PartialFunction[BusEvent,Any]
     object Remove // result object for Handler, if present, remove after exec
+    private val TAG = "EventBus"
 }
 abstract class EventBus(ui: Boolean = false) {
+    import EventBus.TAG
     import ref.WeakReference
     //private val queue = new ArrayBuffer[WeakReference[EventBus.Handler]]
     private val queue = new ArrayBuffer[EventBus.Handler]
+            with SynchronizedBuffer[EventBus.Handler]
 
     private lazy val handler =
             if (ui) new Handler(Looper.getMainLooper) else null
@@ -33,7 +37,8 @@ abstract class EventBus(ui: Boolean = false) {
         } getOrElse { this -= r }
     }
     */
-    private def broadcast(e: BusEvent) = queue.foreach { h =>
+    // make immutable prior to dispatch
+    private def broadcast(e: BusEvent) = (Seq.empty ++ queue) foreach { h =>
         if (h.isDefinedAt(e)) if (h(e) == EventBus.Remove) this -= h
     }
 
@@ -45,12 +50,14 @@ abstract class EventBus(ui: Boolean = false) {
 
     // users of += must have trait EventBus.RefOwner
     def +=(handler: EventBus.Handler)(implicit owner: EventBus.Owner) {
+        // long-lived objects that use EventBus must purge their owner list
         // ugh causing a memory leak--think *hard* on this
         // keep the handler only for as long as the weak reference is valid
         //owner.handlers += handler
         //queue += new WeakReference(handler)
         queue += handler
     }
+    def size = queue.size
     //private def -=(e: WeakReference[EventBus.Handler]) = queue -= e
     private def -=(e: EventBus.Handler) = queue -= e
 }

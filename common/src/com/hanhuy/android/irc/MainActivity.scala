@@ -70,8 +70,6 @@ object MainActivity {
             else "fragment:server:null-server-input"
 
     def getFragmentTag(c: ChannelLike) = {
-        // TODO FIXME block fragment creation until c is not null?
-        //if (c == null) Log.w(TAG, "Channel object is null", new StackTrace)
         val s = if (c == null) null else c.server
         val sinfo = if (s == null) "server-object-null:"
             else format("%s::%s::%d::%s::%s::",
@@ -284,7 +282,6 @@ with EventBus.RefOwner {
             }
         }
 
-        // TODO remove listener?
         if (service != null) refreshTabs()
         else UiBus += { case BusEvent.ServiceConnected(s) =>
             refreshTabs(s)
@@ -596,8 +593,6 @@ class ServerSetupFragment extends DialogFragment {
     }
 }
 
-// TODO convert to a Dialog fragment (checkpoint first!)
-// allow server messages to be displayed as a dialog on phones
 abstract class MessagesFragment(_a: MessageAdapter = null)
 extends ListFragment with EventBus.RefOwner {
     def this() = this(null)
@@ -613,8 +608,7 @@ extends ListFragment with EventBus.RefOwner {
     def adapter = _adapter
     def adapter_=(a: MessageAdapter) = {
         _adapter = a
-        if (getActivity() != null)
-            _adapter.activity = getActivity()
+        if (getActivity != null) _adapter.activity = getActivity
 
         setListAdapter(_adapter)
         service.messages += ((id, _adapter))
@@ -640,7 +634,7 @@ extends ListFragment with EventBus.RefOwner {
 
         if (adapter != null) { // this works by way of the network being slow
             val service = activity.service // assuming service is ready?
-            adapter.activity = activity // sets a weakref
+            adapter.activity = getActivity
             service.messages += ((id, adapter))
             setListAdapter(adapter)
         }
@@ -746,22 +740,8 @@ class ChannelFragment(a: MessageAdapter, c: Channel)
 extends MessagesFragment(a) with EventBus.RefOwner {
     var tag = getFragmentTag(c)
     def this() = this(null, null)
-    var _channel = c
-    def channelReady = _channel != null
-    def channel = {
-        /* TODO FIXME is retain instance enough?
-        synchronized {
-            while (_channel == null) {
-                Log.w(TAG, "Ugh, _channel is null, waiting", new StackTrace)
-                wait
-            }
-        }*/
-        _channel
-    }
-    def channel_= (c: Channel) = synchronized {
-        _channel = c
-        notifyAll
-    }
+    var channel = c
+    def channelReady = channel != null
 
 
     // TODO get rid of this reference through use of UiBus
@@ -772,18 +752,19 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         setHasOptionsMenu(true)
 
         val activity = getActivity()
-        if (_channel == null) {
+        if (channel == null) {
             def setChannel(s: IrcService) {
                 val c = s.chans.get(bundle.getInt("id"))
                 c.foreach(ch => channel = ch.asInstanceOf[Channel])
             }
             if (activity.service != null)
                 setChannel(activity.service)
-            else
+            else {
                 UiBus += { case BusEvent.ServiceConnected(s) =>
                     setChannel(s)
                     EventBus.Remove
                 }
+            }
         }
         // this apparently works by virtue of the network being slow?
         if (id != -1 && channelReady && a != null) {
@@ -792,9 +773,8 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         }
     }
 
-    private def setNickListAdapter(list: ListView) {
-        list.setAdapter(new NickListAdapter(getActivity.service, channel))
-    }
+    private def setNickListAdapter(list: ListView) =
+            list.setAdapter(new NickListAdapter(getActivity, channel))
 
     override def onCreateView(inflater: LayoutInflater,
             container: ViewGroup, bundle: Bundle) : View = {
@@ -886,7 +866,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
             return true
         } else if (R.id.channel_names == item.getItemId()) {
             val activity = getActivity()
-            val adapter = new NickListAdapter(activity.service, channel)
+            val adapter = new NickListAdapter(activity, channel)
             val tx = activity.getSupportFragmentManager().beginTransaction()
 
             val f = new NickListFragment
