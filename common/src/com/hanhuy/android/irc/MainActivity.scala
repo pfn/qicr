@@ -781,8 +781,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         val v = inflater.inflate(R.layout.fragment_channel, container, false)
         val activity = getActivity()
         // show via dialogfragment if < size_large
-        if (channelReady &&
-                (activity.isLargeScreen || activity.isXLargeScreen)) {
+        if (activity.isLargeScreen || activity.isXLargeScreen) {
             def addNickList() {
                 if (!channel.isInstanceOf[Channel]) return
                 val f = new NickListFragment
