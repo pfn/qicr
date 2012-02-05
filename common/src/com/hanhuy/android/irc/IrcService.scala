@@ -150,9 +150,6 @@ class IrcService extends Service with EventBus.RefOwner {
         }
     }
 
-    // TODO identify if this is the cause of memory leaks
-    // potentially putting stuff into the wrong activity's
-    // fragment manager because it's removed onDestroy
     def unbind() {
         _activity = null
         recreateActivity foreach { page =>

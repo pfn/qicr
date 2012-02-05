@@ -7,12 +7,14 @@ import android.content.ContentValues
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
+import android.util.Log
 
 import scala.collection.mutable.ArrayBuffer
 
 import Config._
 
 object Config {
+    val TAG = "QicrConfig"
     // TODO encrypt the password with pbkdf2 on primary account username + salt
     val DATABASE_VERSION = 1
     val DATABASE_NAME = "config"
@@ -122,7 +124,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
                 BaseColumns._ID + " = ?", Array[String]("" + server.id))
         db.close()
         if (rows != 1)
-            throw new IllegalStateException("Wrong rows updated: " + rows)
+            Log.e(TAG, "Wrong rows updated: " + rows, new StackTrace)
     }
     def deleteServer(server: Server) {
         val db = getWritableDatabase()
@@ -130,6 +132,6 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
                 BaseColumns._ID + " = ?", Array[String]("" + server.id))
         db.close()
         if (rows != 1)
-            throw new IllegalStateException("Wrong rows deleted: " + rows)
+            Log.e(TAG, "Wrong rows deleted: " + rows, new StackTrace)
     }
 }

@@ -109,7 +109,8 @@ with EventBus.RefOwner {
     var showNickComplete: Boolean = _
     var showSpeechRec: Boolean = _
 
-    // TODO remove tabhost and use tabwidget only?
+    // stuck with tabhost because pulling out tabwidget is a massive pita
+    // consider viewpagerindicator in the future?
     lazy val tabhost = {
         val t = findView[TabHost](android.R.id.tabhost)
         t.setup()

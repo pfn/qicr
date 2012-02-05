@@ -113,10 +113,12 @@ with ServerListener with MessageListener with ModeListener {
         if (user.isUs())
             service.addChannel(c, channel)
         UiBus.run {
-            val ch = service._channels(channel)
-            UiBus.send(BusEvent.NickListChanged(ch))
-            if (!user.isUs())
-                ch.add(Join(user.getNick(), user.address))
+            // sometimes channel hasn't been set yet (on connect)
+            service._channels.get(channel) foreach { ch =>
+                UiBus.send(BusEvent.NickListChanged(ch))
+                if (!user.isUs())
+                    ch.add(Join(user.getNick(), user.address))
+            }
         }
     }
 
