@@ -25,6 +25,14 @@
             android:summary="@string/pref_show_timestamp_summary"
             android:defaultValue="false"
         />
+        <CheckBoxPreference
+            android:key="@string/pref_selector_mode"
+            android:title="@string/pref_selector_mode_title"
+            android:summaryOn="@string/pref_selector_mode_summary_on"
+            android:summaryOff="@string/pref_selector_mode_summary_off"
+            android:enabled="@bool/is_v11plus"
+            android:defaultValue="@bool/is_phone"
+        />
         <EditTextPreference
             android:key="@string/pref_message_lines"
             android:title="@string/pref_message_lines_title"

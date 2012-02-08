@@ -2,11 +2,27 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/toggle_theme"
         android:icon="@drawable/ic_menu_copy"
+        android:showAsAction="never"
+        android:menuCategory="container"
+        android:orderInCategory="96"
         android:title="@string/toggle_theme"/>
+    <item android:id="@+id/toggle_rotate_lock"
+        android:icon="@android:drawable/ic_menu_always_landscape_portrait"
+        android:checkable="true"
+        android:showAsAction="never"
+        android:menuCategory="container"
+        android:orderInCategory="97"
+        android:title="@string/toggle_rotate_lock"/>
     <item android:id="@+id/settings"
         android:icon="@android:drawable/ic_menu_preferences"
+        android:showAsAction="never"
+        android:menuCategory="container"
+        android:orderInCategory="98"
         android:title="@string/settings"/>
     <item android:id="@+id/exit"
         android:icon="@android:drawable/ic_menu_close_clear_cancel"
+        android:showAsAction="never"
+        android:menuCategory="container"
+        android:orderInCategory="99"
         android:title="@string/exit"/>
 </menu>

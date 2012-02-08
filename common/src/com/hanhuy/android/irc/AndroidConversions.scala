@@ -1,7 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.app.Activity
-import android.app.NotificationManager
+import android.app.ActionBar
 import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver
@@ -9,7 +9,6 @@ import android.content.res.Configuration
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Looper
-import android.view.LayoutInflater
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -17,6 +16,8 @@ import android.widget.AdapterView
 import android.widget.TextView
 import android.widget.CheckBox
 import android.content.DialogInterface
+import android.app.NotificationManager
+import android.view.LayoutInflater
 
 object AndroidConversions {
     val icsAndNewer =
@@ -26,11 +27,16 @@ object AndroidConversions {
     val gingerbreadAndNewer =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD
 
-    if (gingerbreadAndNewer) GingerbreadSupport.init()
     implicit def toBroadcastReceiver(f: (Context, Intent) => Unit) =
             new BroadcastReceiver() {
         def onReceive(c: Context, i: Intent) = f(c, i)
     }
+
+    implicit def toOnNavigationListener(f: (Int, Long) => Boolean) =
+            new ActionBar.OnNavigationListener() {
+                override def onNavigationItemSelected(pos: Int, id: Long) =
+                        f(pos, id)
+            }
 
     implicit def toViewOnClickListener1(f: () => Unit) =
             new View.OnClickListener() { def onClick(v: View) = f() }

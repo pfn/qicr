@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="pref_category_interface">Interface</string>
+    <string name="pref_category_interface">User Interface</string>
     <string name="pref_category_speech_rec">Speech Recognition</string>
     <string name="pref_category_irc">IRC</string>
 
@@ -17,6 +17,8 @@
     <string name="pref_quit_message">irc_quit_message</string>
     <string name="pref_show_join_part_quit">irc_show_join_part_quit</string>
     <string name="pref_irc_debug">irc_debug_log</string>
+    <string name="pref_selector_mode">ui_selector_mode</string>
+    <string name="pref_rotate_lock">ui_rotate_lock</string>
     <!-- end of pref names that should not be localized -->
 
     <string name="pref_show_nick_complete_title">
@@ -64,6 +66,12 @@
     <string name="pref_show_timestamp_title">Show timestamps</string>
     <string name="pref_show_timestamp_summary">
         Show a timestamp before every line</string>
+
+    <string name="pref_selector_mode_title">Channel selector mode</string>
+    <string name="pref_selector_mode_summary_on">
+        Show channel list in the action bar</string>
+    <string name="pref_selector_mode_summary_off">
+        Show channel list using tabs</string>
 
     <string name="pref_show_join_part_quit_title">
         Show Join/Part/Quit messages</string>

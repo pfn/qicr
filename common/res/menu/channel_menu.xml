@@ -3,8 +3,14 @@
     <item android:id="@+id/channel_names"
         android:icon="@drawable/ic_menu_friendslist"
         android:title="@string/channel_names"
+        android:showAsAction="ifRoom|withText"
+        android:menuCategory="container"
+        android:orderInCategory="1"
         android:visible="@bool/is_phone"/>
     <item android:id="@+id/channel_close"
+        android:showAsAction="never"
         android:icon="@drawable/ic_menu_end_conversation"
+        android:menuCategory="container"
+        android:orderInCategory="2"
         android:title="@string/channel_close"/>
 </menu>

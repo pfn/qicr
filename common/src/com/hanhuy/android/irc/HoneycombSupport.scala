@@ -6,9 +6,13 @@ import scala.ref.WeakReference
 
 import android.os.StrictMode
 
+import android.app.ActionBar
 import android.view.ActionMode
 import android.view.{Menu, MenuItem, MenuInflater}
+import android.view.View
 import android.util.Log
+
+import AndroidConversions._
 
 object HoneycombSupport {
     val TAG = "HoneycombSupport"
@@ -38,6 +42,22 @@ object HoneycombSupport {
         if (activity == null) return
         _actionmode = new WeakReference(
                 activity.startActionMode(ServerActionModeSetup))
+    }
+
+    def setupSpinnerNavigation(a: MainPagerAdapter) {
+        val bar = activity.getActionBar
+        a.hsv.setVisibility(View.GONE)
+        bar.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST)
+        bar.setDisplayOptions(0, ActionBar.DISPLAY_SHOW_TITLE)
+        bar.setListNavigationCallbacks(
+                a.DropDownAdapter, a.actionBarNavigationListener _)
+    }
+
+    def setSelectedNavigationItem(pos: Int) {
+        if (activity == null) return
+        val bar = activity.getActionBar
+        if (bar.getNavigationItemCount > pos)
+            activity.getActionBar.setSelectedNavigationItem(pos)
     }
 
     object ServerActionModeSetup extends ActionMode.Callback {

@@ -4,5 +4,7 @@
         android:icon="@drawable/ic_menu_end_conversation"
         android:title="@string/server_close"
         android:showAsAction="ifRoom|withText"
+        android:menuCategory="container"
+        android:orderInCategory="1"
         android:visible="@bool/is_phone"/>
 </menu>

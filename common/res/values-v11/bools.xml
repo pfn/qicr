@@ -1,4 +1,3 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
-    <bool name="is_phone">true</bool>
-    <bool name="is_v11plus">false</bool>
+    <bool name="is_v11plus">true</bool>
 </resources>

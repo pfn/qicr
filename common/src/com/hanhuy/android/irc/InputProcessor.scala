@@ -502,6 +502,26 @@ sealed class CommandProcessor(ctx: Context) {
         override def execute(args: Option[String]) = TODO
     }
 
+    object RawCommand extends Command {
+        override def execute(args: Option[String]) {
+            if (args.isEmpty) return addCommandError(R.string.usage_raw)
+
+            val line = args.get
+
+            if (line.trim().length() == 0)
+                return addCommandError(R.string.usage_raw)
+            getCurrentServer() match {
+            case Some(s) => {
+                if (s.state != Server.State.CONNECTED)
+                    return addCommandError(R.string.error_server_disconnected)
+
+                val c = service.connections(s)
+                c.sendRaw(line)
+            }
+            case None => addCommandError(R.string.error_server_disconnected)
+            }
+        }
+    }
     object HelpCommand extends Command {
         override def execute(args: Option[String]) =
                 addCommandError(R.string.help_text)
@@ -531,5 +551,6 @@ sealed class CommandProcessor(ctx: Context) {
                 ,(getString(R.string.command_ctcp),     CtcpCommand)
                 ,(getString(R.string.command_topic),    TopicCommand)
                 ,(getString(R.string.command_invite),   InviteCommand)
+                ,(getString(R.string.command_raw),      RawCommand)
                 )
 }

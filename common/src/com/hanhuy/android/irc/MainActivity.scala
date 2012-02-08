@@ -64,6 +64,8 @@ object MainActivity {
 
     val REQUEST_SPEECH_RECOGNITION = 1
 
+    if (gingerbreadAndNewer) GingerbreadSupport.init()
+
     implicit def toMainActivity(a: Activity) = a.asInstanceOf[MainActivity]
 
     def getFragmentTag(s: Server) = if (s != null) "fragment:server:" + s.name
@@ -90,13 +92,16 @@ with EventBus.RefOwner {
         val s = new Settings(this)
         UiBus += { case BusEvent.PreferenceChanged(key) =>
             List(R.string.pref_show_nick_complete,
-                    R.string.pref_show_speech_rec) foreach { r =>
+                    R.string.pref_show_speech_rec,
+                    R.string.pref_selector_mode) foreach { r =>
                 if (getString(r) == key) {
                     r match {
                     case R.string.pref_show_nick_complete =>
                         showNickComplete = s.getBoolean(r, honeycombAndNewer)
                     case R.string.pref_show_speech_rec =>
                         showSpeechRec = s.getBoolean(r, true)
+                    case R.string.pref_selector_mode =>
+                        toggleSelectorMode = true // flag recreate onResume
                     }
                 }
             }
@@ -106,8 +111,9 @@ with EventBus.RefOwner {
         showSpeechRec = s.getBoolean(R.string.pref_show_speech_rec, true)
         s
     }
-    var showNickComplete: Boolean = _
-    var showSpeechRec: Boolean = _
+    private var toggleSelectorMode = false;
+    private var showNickComplete = false
+    private var showSpeechRec = false
 
     // stuck with tabhost because pulling out tabwidget is a massive pita
     // consider viewpagerindicator in the future?
@@ -183,8 +189,15 @@ with EventBus.RefOwner {
 
         adapter.createTab(getString(R.string.tab_servers), servers)
 
-        if (honeycombAndNewer)
+        if (honeycombAndNewer) {
             HoneycombSupport.init(this)
+            if (settings.getBoolean(R.string.pref_selector_mode))
+                HoneycombSupport.setupSpinnerNavigation(adapter)
+        }
+        import android.content.pm.ActivityInfo._
+        setRequestedOrientation(
+                if (settings.getBoolean(R.string.pref_rotate_lock))
+                    SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
     }
 
     override def onActivityResult(req: Int, res: Int, i: Intent) {
@@ -250,15 +263,14 @@ with EventBus.RefOwner {
 
     override def onPause() {
         super.onPause()
-        if (honeycombAndNewer)
-            HoneycombSupport.close()
     }
     override def onResume() {
         super.onResume()
+        if (honeycombAndNewer && toggleSelectorMode)
+            UiBus.post { HoneycombSupport.recreate() }
+
         if (service != null)
             service.showing = true
-        if (honeycombAndNewer)
-            HoneycombSupport.init(this)
 
         def refreshTabs(s: IrcService = null) {
             adapter.refreshTabs(if (s != null) s else service)
@@ -298,6 +310,8 @@ with EventBus.RefOwner {
     }
     override def onStart() {
         super.onStart()
+        if (honeycombAndNewer)
+            HoneycombSupport.init(this)
         bindService(new Intent(this, classOf[IrcService]), this,
                 Context.BIND_AUTO_CREATE)
     }
@@ -319,6 +333,8 @@ with EventBus.RefOwner {
 
     override def onStop() {
         super.onStop()
+        if (honeycombAndNewer)
+            HoneycombSupport.close()
         if (service != null) {
             service.showing = false
             service.unbind()
@@ -390,14 +406,16 @@ with EventBus.RefOwner {
     override def onCreateOptionsMenu(menu: Menu): Boolean = {
         val inflater = new MenuInflater(this)
         inflater.inflate(R.menu.main_menu, menu)
-        // hide all items in overflow
-        List(R.id.exit, R.id.settings, R.id.toggle_theme).foreach { item =>
-            MenuItemCompat.setShowAsAction(menu.findItem(item),
-                    MenuItem.SHOW_AS_ACTION_NEVER |
-                    MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+        val item = menu.findItem(R.id.toggle_rotate_lock)
+        val locked = settings.getBoolean(R.string.pref_rotate_lock)
+        if (!honeycombAndNewer) {
+            item.setTitle(if (locked) R.string.toggle_rotate_unlock
+                    else R.string.toggle_rotate_lock)
         }
+        item.setChecked(locked)
         true
     }
+
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         item.getItemId() match {
         case R.id.exit => {
@@ -414,17 +432,32 @@ with EventBus.RefOwner {
         case R.id.toggle_theme => {
             val mode = settings.getBoolean(R.string.pref_daynight_mode)
             settings.set(R.string.pref_daynight_mode, !mode)
-            if (honeycombAndNewer)
-                HoneycombSupport.recreate()
-            else {
-                service.queueCreateActivity(adapter.page)
-                finish()
-            }
+            _recreate()
+            true
+        }
+        case R.id.toggle_rotate_lock => {
+            import android.content.pm.ActivityInfo._
+            val locked = !item.isChecked()
+            item.setChecked(locked)
+            settings.set(R.string.pref_rotate_lock, locked)
+            setRequestedOrientation(
+                    if (locked) SCREEN_ORIENTATION_NOSENSOR
+                            else SCREEN_ORIENTATION_SENSOR)
             true
         }
         case _ => false
         }
     }
+
+    private def _recreate() { // _recreate for name clash
+        if (honeycombAndNewer)
+            HoneycombSupport.recreate()
+        else {
+            service.queueCreateActivity(adapter.page)
+            finish()
+        }
+    }
+
     override def onSaveInstanceState(state: Bundle) {
         super.onSaveInstanceState(state)
         page = adapter.page
@@ -510,14 +543,9 @@ class ServerSetupFragment extends DialogFragment {
         setRetainInstance(true)
     }
 
-    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        if (menu.findItem(R.id.save_server) != null) return
-        inflater.inflate(R.menu.server_setup_menu, menu)
-        List(R.id.save_server, R.id.cancel_server).foreach(item =>
-                 MenuItemCompat.setShowAsAction(menu.findItem(item),
-                         MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                         MenuItem.SHOW_AS_ACTION_WITH_TEXT))
-    }
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
+            inflater.inflate(R.menu.server_setup_menu, menu)
+
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         item.getItemId() match {
             case R.id.save_server => {
@@ -817,20 +845,8 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         //        id, channel, this))
     }
     */
-    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
-        if (menu.findItem(R.id.channel_close) != null) return
-        inflater.inflate(R.menu.channel_menu, menu)
-        List(/*R.id.channel_leave,*/
-             R.id.channel_close).foreach(item =>
-                     MenuItemCompat.setShowAsAction(menu.findItem(item),
-                             MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                             MenuItem.SHOW_AS_ACTION_WITH_TEXT))
-        val names = menu.findItem(R.id.channel_names)
-        if (names != null)
-            MenuItemCompat.setShowAsAction(names,
-                    MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                    MenuItem.SHOW_AS_ACTION_WITH_TEXT)
-    }
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
+            inflater.inflate(R.menu.channel_menu, menu)
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
         if (R.id.channel_close == item.getItemId()) {
@@ -897,31 +913,10 @@ extends MessagesFragment(a) {
             activity.service.chans += ((id, q))
             a.channel = q
         }
-        /*
-        if (channel == null) {
-            def setChannel(s: IrcService) {
-                val c = s.chans.get(bundle.getInt("id"))
-                c.foreach(ch => channel = ch.asInstanceOf[Channel])
-            }
-            if (activity.service != null)
-                setChannel(activity.service)
-            else
-                UiBus += { case BusEvent.ServiceConnected(s) =>
-                    setChannel(s)
-                    EventBus.Remove
-                }
-        }
-        */
     }
 
-    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater)  {
-        if (menu.findItem(R.id.query_close) != null) return
-        inflater.inflate(R.menu.query_menu, menu)
-        List(R.id.query_close).foreach(item =>
-                     MenuItemCompat.setShowAsAction(menu.findItem(item),
-                             MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                             MenuItem.SHOW_AS_ACTION_WITH_TEXT))
-    }
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
+            inflater.inflate(R.menu.query_menu, menu)
 
     override def onOptionsItemSelected(item: MenuItem): Boolean = {
         if (R.id.query_close == item.getItemId()) {
@@ -983,6 +978,7 @@ extends MessagesFragment(if (_s != null) _s.messages else null) {
     }
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
             inflater.inflate(R.menu.server_messages_menu, menu)
+
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         if (R.id.server_close == item.getItemId()) {
             val service = getActivity.service
@@ -1246,14 +1242,9 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     override def onContextItemSelected(item: MenuItem) =
             onServerMenuItemClicked(item, _server)
 
-    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        if (menu.findItem(R.id.add_server) != null) return
-        inflater.inflate(R.menu.servers_menu, menu)
-        val item = menu.findItem(R.id.add_server)
-        MenuItemCompat.setShowAsAction(item, MenuItem.SHOW_AS_ACTION_IF_ROOM |
-                                         MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
+            inflater.inflate(R.menu.servers_menu, menu)
 
-    }
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         if (R.id.add_server == item.getItemId()) {
             getActivity.servers.addServerSetupFragment()

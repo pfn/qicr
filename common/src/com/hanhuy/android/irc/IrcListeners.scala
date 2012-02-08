@@ -195,14 +195,17 @@ with ServerListener with MessageListener with ModeListener {
         if (user.isUs()) return
         val server = service._connections(c)
         UiBus.run {
-            service.channels.values collect {
-                case c: Channel if c.hasUser(user) =>
-                    service._channels(c)
-            } foreach { c =>
-                if (c.server == server) {
-                    UiBus.send(BusEvent.NickListChanged(c))
-                    c.add(Quit(user.getNick(), user.address, msg))
+            try { // guard can change values if slow...
+                service.channels.values collect {
+                    case c: Channel if c.hasUser(user) => service._channels(c)
+                } foreach { c =>
+                    if (c.server == server) {
+                        UiBus.send(BusEvent.NickListChanged(c))
+                        c.add(Quit(user.getNick(), user.address, msg))
+                    }
                 }
+            } catch {
+                case _: MatchError => ()
             }
         }
     }
@@ -287,6 +290,11 @@ with ServerListener with MessageListener with ModeListener {
                 line.getNumericCommand() match {
                     case 306 | 333 | 366 => return
                     case _ => ()
+                }
+            } else {
+                line.getCommand match {
+                case "PONG" => ()
+                case _ => ()
                 }
             }
             UiBus.run {

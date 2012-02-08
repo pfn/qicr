@@ -18,6 +18,7 @@ import android.view.{View, ViewGroup}
 import android.view.LayoutInflater;
 import android.widget.HorizontalScrollView
 import android.widget.TextView
+import android.widget.BaseAdapter
 import android.widget.TabHost
 import android.widget.EditText
 
@@ -145,6 +146,11 @@ with EventBus.RefOwner {
     }
 
     def refreshTabTitle(pos: Int) {
+        setTabTitle(makeTabTitle(pos), pos)
+        DropDownAdapter.notifyDataSetChanged
+    }
+
+    def makeTabTitle(pos: Int) = {
         val t = tabs(pos)
         var title = t.title
 
@@ -155,8 +161,14 @@ with EventBus.RefOwner {
 
         if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
             title = "(" + title + ")"
+        Html.fromHtml(title)
+    }
 
-        setTabTitle(Html.fromHtml(title), pos)
+    def actionBarNavigationListener(pos: Int, id: Long) = {
+        pager.setCurrentItem(pos)
+        tabhost.setCurrentTab(pos)
+        pageChanged(pos)
+        true
     }
 
     // PagerAdapter
@@ -192,6 +204,7 @@ with EventBus.RefOwner {
                 if (channels.find(_.newMentions).isEmpty) View.GONE
                 else View.VISIBLE)
 
+        if (honeycombAndNewer) HoneycombSupport.setSelectedNavigationItem(pos)
         refreshTabTitle(pos)
     }
 
@@ -384,6 +397,40 @@ with EventBus.RefOwner {
         case m: MessagesFragment => m.tag
         case _: ServersFragment => MainActivity.SERVERS_FRAGMENT
         case _ => "viewpager:" + System.identityHashCode(f)
+        }
+    }
+
+    object DropDownAdapter extends BaseAdapter {
+        lazy val inflater = activity.systemService[LayoutInflater]
+        override def getItem(pos: Int) = tabs(pos)
+        override def getCount() = tabs.length
+        override def getItemId(pos: Int) = tabs(pos).fragment.getId
+        override def getView(pos: Int, convert: View, container: ViewGroup) = {
+            val id = if (convert != null) convert.getId else -1
+            val tab = tabs(pos)
+
+            val channelOrServer = !tab.channel.isEmpty || !tab.server.isEmpty
+            // ugh, ugly!
+            val view = id match {
+            case R.id.two_line_item if channelOrServer => convert
+            case -1 | _ if channelOrServer => inflater.inflate(
+                    R.layout.simple_dropdown_item_2line, container, false)
+            case R.id.two_line_item | -1 => inflater.inflate(
+                    R.layout.simple_dropdown_item_1line, container, false)
+            case _ => convert
+            }
+
+            view.findView[TextView](android.R.id.text1).setText(
+                    makeTabTitle(pos))
+
+            val line2 = view.findView[TextView](android.R.id.text2)
+            tab.channel map { c =>
+                val s = c.server
+                line2 setText format(" - %s: %s", s.name, s.currentNick)
+            } getOrElse (tab.server map { s =>
+                line2 setText format(" - %s", s.currentNick)
+            })
+            view
         }
     }
 }
