@@ -65,12 +65,12 @@ class Query(s: Server, n: String) extends ChannelLike(s, n) {
 class ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
     private def stripInitial(_name: String): String = {
         var name = _name
-        name = name.charAt(0) match {
+        name = if (name.length == 0) "" else (name.charAt(0) match {
             case '#' => name.substring(1)
             case '&' => name.substring(1)
             case _   => name
-        }
-        return if (name == _name) name else stripInitial(name)
+        })
+        if (name == _name) name else stripInitial(name)
     }
     override def compare(c1: ChannelLike, c2: ChannelLike): Int = {
         if (c1.isInstanceOf[Channel] && c2.isInstanceOf[Query])
