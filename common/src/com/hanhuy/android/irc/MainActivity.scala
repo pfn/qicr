@@ -227,9 +227,9 @@ with EventBus.RefOwner {
             case Some(c) => {
                 if (c == eol) {
                     proc.handleLine(input.getText())
-                    input.setText(null)
+                    InputProcessor.clear(input)
                 } else if (c == clearLine) {
-                    input.setText(null)
+                    InputProcessor.clear(input)
                 }
             }
             case None => {
@@ -245,9 +245,9 @@ with EventBus.RefOwner {
                         val t = input.getText()
                         val line = t.substring(0, t.length() - eol.length() - 1)
                         proc.handleLine(line)
-                        input.setText(null)
+                        InputProcessor.clear(input)
                     } else if (rec == clearLine) {
-                        input.setText(null)
+                        InputProcessor.clear(input)
                     }
                 })
                 builder.setNegativeButton(R.string.speech_cancel, null)

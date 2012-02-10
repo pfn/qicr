@@ -14,6 +14,7 @@ import android.view.View
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.text.method.TextKeyListener
 import android.util.Log
 
 import com.sorcix.sirc.IrcConnection
@@ -29,7 +30,11 @@ import AndroidConversions._
 trait Command {
     def execute(args: Option[String])
 }
+object InputProcessor {
+    def clear(input: EditText) = TextKeyListener.clear(input.getText)
+}
 class InputProcessor(activity: MainActivity) {
+    import InputProcessor._
     val TAG = "InputProcessor"
 
     val processor = CommandProcessor(activity)
@@ -56,8 +61,9 @@ class InputProcessor(activity: MainActivity) {
         if (action == EditorInfo.IME_NULL) {
             val line = input.getText()
             handleLine(line)
-            input.setText(null)
+            clear(input)
         }
+        // TODO turn this into a preference
         false // return false so the keyboard can collapse
     }
 
