@@ -7,10 +7,12 @@ import com.hanhuy.android.irc.UiBus
 import MessageLike._
 
 object Channel {
-    // TODO fix this to be scala-style, use case classes
-    object State extends Enumeration {
-        type State = Value
-        val NEW, JOINED, KICKED, PARTED = Value
+    trait State
+    object State {
+        case object NEW extends State
+        case object JOINED extends State
+        case object KICKED extends State
+        case object PARTED extends State
     }
 }
 
@@ -47,8 +49,8 @@ abstract class ChannelLike(_server: Server, _name: String) {
     override def toString() = name
 }
 class Channel(s: Server, n: String) extends ChannelLike(s, n) {
-    import Channel.State._
-    private var _state = NEW
+    import Channel._
+    private var _state: State = State.NEW
     def state = _state
     def state_=(state: State) = {
         ServiceBus.send(BusEvent.ChannelStateChanged(this, _state))

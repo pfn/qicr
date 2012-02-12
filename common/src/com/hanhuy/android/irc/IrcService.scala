@@ -389,11 +389,10 @@ class IrcService extends Service with EventBus.RefOwner {
 // use Object due to java<->scala varargs interop bug
 // https://issues.scala-lang.org/browse/SI-1459
 class ConnectTask(server: Server, service: IrcService)
-extends AsyncTask[Object, Object, Server.State.State] {
+extends AsyncTask[Object, Object, Server.State] {
     IrcConnection.ABOUT = service.getString(R.string.version, "0.1alpha")
     //IrcDebug.setEnabled(true)
-    protected override def doInBackground(args: Object*) :
-            Server.State.State = {
+    protected override def doInBackground(args: Object*): Server.State = {
         val ircserver = new IrcServer(server.hostname, server.port,
                 server.password, server.ssl)
         val connection = new IrcConnection
@@ -459,7 +458,7 @@ extends AsyncTask[Object, Object, Server.State.State] {
         state
     }
 
-    protected override def onPostExecute(state: Server.State.State) {
+    protected override def onPostExecute(state: Server.State) {
         server.state = state
     }
 

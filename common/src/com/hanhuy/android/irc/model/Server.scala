@@ -8,19 +8,21 @@ import android.content.ContentValues
 import android.provider.BaseColumns
 
 object Server {
-    // TODO fix this to be scala-style, use case classes
-    object State extends Enumeration {
-        type State = Value
-        val INITIAL, DISCONNECTED, CONNECTING, CONNECTED = Value
+    trait State
+    object State {
+        case object INITIAL extends State
+        case object DISCONNECTED extends State
+        case object CONNECTING extends State
+        case object CONNECTED extends State
     }
 }
 class Server {
 
-    import Server.State._
+    import Server._
     val messages = new MessageAdapter
 
     def add(m: MessageLike) = messages.add(m)
-    private var _state = INITIAL
+    private var _state: State = State.INITIAL
     def state = _state
     def state_=(state: State) = {
         val oldstate = _state

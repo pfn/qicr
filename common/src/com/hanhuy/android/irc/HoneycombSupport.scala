@@ -78,18 +78,15 @@ object HoneycombSupport {
         }
         override def onDestroyActionMode(mode: ActionMode) = ()
         override def onPrepareActionMode(mode: ActionMode, menu: Menu) = {
-            _server.get match {
-                case Some(server) => {
-                    val connected = server.state match {
-                        case Server.State.INITIAL      => false
-                        case Server.State.DISCONNECTED => false
-                        case _                         => true
-                    }
-
-                    menu.findItem(R.id.server_connect).setVisible(!connected)
-                    menu.findItem(R.id.server_disconnect).setVisible(connected)
+            _server.get map { s =>
+                val connected = s.state match {
+                    case Server.State.INITIAL      => false
+                    case Server.State.DISCONNECTED => false
+                    case _                         => true
                 }
-                case None => ()
+
+                menu.findItem(R.id.server_connect).setVisible(!connected)
+                menu.findItem(R.id.server_disconnect).setVisible(connected)
             }
             true
         }

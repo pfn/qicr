@@ -151,10 +151,7 @@ class InputProcessor(activity: MainActivity) {
     var completionPrefix: Option[String] = None
     var completionOffset: Option[Int]    = None
     def nickComplete(_input: Option[EditText] = None) {
-        val input = _input match {
-        case Some(i) => i
-        case None => activity.findView[EditText](R.id.input)
-        }
+        val input = _input getOrElse activity.input
         val (server, channel) = currentState
         val c = channel match {
         case Some(c: Channel) => c
@@ -179,17 +176,14 @@ class InputProcessor(activity: MainActivity) {
         // prefix and start index get unset by key events or page change
         // do nothing if no match
         //   fell off the end? revert to prefix/start over
-        val prefix = completionPrefix match {
-            case Some(p) => p
-            case None => {
-                val start = input.getSelectionStart()
-                val beginning = in.lastIndexOf(" ", start - 1)
-                val p = in.substring(if (beginning == -1) 0
-                        else (beginning + 1), start)
-                completionPrefix = Some(p)
-                completionOffset = Some(start - p.length())
-                p
-            }
+        val prefix = completionPrefix getOrElse {
+            val start = input.getSelectionStart()
+            val beginning = in.lastIndexOf(" ", start - 1)
+            val p = in.substring(if (beginning == -1) 0
+                    else (beginning + 1), start)
+            completionPrefix = Some(p)
+            completionOffset = Some(start - p.length())
+            p
         }
         // TODO make ", " a preference
         val suffix = ", "
@@ -234,10 +228,9 @@ class InputProcessor(activity: MainActivity) {
             } else None
         }
 
-        val replacement = candidate match {
-        case Some(nick) => nick + (if (offset == 0) suffix else "")
-        case None       => prefix
-        }
+        val replacement = candidate map { nick =>
+            nick + (if (offset == 0) suffix else "")
+        } getOrElse prefix
         // replace offset to cursor with replacement
         // move cursor to end of replacement
         val out = in.substring(0, offset) + replacement + in.substring(caret)
@@ -305,47 +298,44 @@ sealed class CommandProcessor(ctx: Context) {
         }
     }
 
-    // TODO also improve me, avoid Option.get
     def sendMessage(line: Option[String], action: Boolean = false) {
-        if (line.isEmpty) return
+        line foreach { l =>
 
-        if (channel.isEmpty)
-            return addCommandError(R.string.error_no_channel)
-
-        channel.get match {
-        case ch: Channel => {
-            val chan = service.channels(ch)
-            if (ch.server.state != Server.State.CONNECTED)
-                return addCommandError(R.string.error_server_disconnected)
-            if (ch.state != Channel.State.JOINED)
-                return addCommandError(R.string.error_channel_disconnected)
-            if (action) {
-                ch.add(CtcpAction(ch.server.currentNick, line.get))
-                chan.sendAction(line.get)
-            } else {
-                val u = chan.getUs()
-                if (u != null) // I doubt this will ever be null
-                    ch.add(Privmsg(ch.server.currentNick, line.get,
-                            u.hasOperator(), u.hasVoice()))
-                else
-                    ch.add(Privmsg(ch.server.currentNick, line.get))
-                chan.sendMessage(line.get)
+            channel match {
+            case Some(ch: Channel) => {
+                val chan = service.channels(ch)
+                if (ch.server.state != Server.State.CONNECTED)
+                    return addCommandError(R.string.error_server_disconnected)
+                if (ch.state != Channel.State.JOINED)
+                    return addCommandError(R.string.error_channel_disconnected)
+                if (action) {
+                    ch.add(CtcpAction(ch.server.currentNick, l))
+                    chan.sendAction(l)
+                } else {
+                    val u = chan.getUs()
+                    if (u != null) // I doubt this will ever be null
+                        ch.add(Privmsg(ch.server.currentNick, l,
+                                u.hasOperator(), u.hasVoice()))
+                    else
+                        ch.add(Privmsg(ch.server.currentNick, l))
+                    chan.sendMessage(l)
+                }
             }
-        }
-        case query: Query => {
-            if (query.server.state != Server.State.CONNECTED)
-                return addCommandError(R.string.error_server_disconnected)
-            val conn = service.connections(query.server)
-            val user = conn.createUser(query.name)
-            if (action) {
-                query.add(CtcpAction(query.server.currentNick, line.get))
-                user.sendAction(line.get)
-            } else {
-                query.add(Privmsg(query.server.currentNick, line.get))
-                user.sendMessage(line.get)
+            case Some(query: Query)=> {
+                if (query.server.state != Server.State.CONNECTED)
+                    return addCommandError(R.string.error_server_disconnected)
+                val conn = service.connections(query.server)
+                val user = conn.createUser(query.name)
+                if (action) {
+                    query.add(CtcpAction(query.server.currentNick, l))
+                    user.sendAction(l)
+                } else {
+                    query.add(Privmsg(query.server.currentNick, l))
+                    user.sendMessage(l)
+                }
             }
-        }
-        case _ => addCommandError(R.string.error_no_channel)
+            case _ => addCommandError(R.string.error_no_channel)
+            }
         }
     }
 
@@ -361,42 +351,29 @@ sealed class CommandProcessor(ctx: Context) {
 
     object JoinCommand extends Command {
         override def execute(args: Option[String]) {
-            if (args.isEmpty)
-                return addCommandError(R.string.usage_join)
+            args map { chan =>
+                var chan = args.get
+                val idx = chan.indexOf(" ")
+                var password: Option[String] = None
+                if (idx != -1) {
+                    password = Some(chan.substring(idx + 1))
+                    chan = chan.substring(0, idx)
+                }
+                if (chan.length == 0)
+                    return addCommandError(R.string.usage_join)
 
-            var chan = args.get
-            val idx = chan.indexOf(" ")
-            var password: Option[String] = None
-            if (idx != -1) {
-                password = Some(chan.substring(idx + 1))
-                chan = chan.substring(0, idx)
-            }
-            if (chan.length == 0)
-                return addCommandError(R.string.usage_join)
+                val first = chan.charAt(0)
+                if (first != '#' && first != '&')
+                    chan = "#" + chan
 
-            val first = chan.charAt(0)
-            if (first != '#' && first != '&')
-                chan = "#" + chan
-
-            var conn: Option[IrcConnection] = None
-
-            val s = getCurrentServer()
-            if (!s.isEmpty)
-                conn = service.connections.get(s.get)
-
-            if (!conn.isEmpty) {
-                val c = conn.get.createChannel(chan)
-                if (!password.isEmpty)
-                    c.join(password.get)
-                else
-                    c.join()
-            } else {
-                addCommandError(R.string.error_join_unknown)
-            }
+                withConnection { conn =>
+                    val c = conn.createChannel(chan)
+                    password map { p => c.join(p) } getOrElse c.join()
+                }
+            } getOrElse addCommandError(R.string.usage_join)
         }
     }
 
-    // TODO implement
     object PartCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
@@ -412,29 +389,32 @@ sealed class CommandProcessor(ctx: Context) {
     def messageCommandSend(args: Option[String], notice: Boolean = false) {
         val usage = if (notice) R.string.usage_notice else R.string.usage_msg
 
-        if (args.isEmpty)
-            return addCommandError(usage)
-        val a = args.get
-        val idx = a.indexOf(" ")
-        if (idx == -1)
-            return addCommandError(usage)
-        val target = a.substring(0, idx)
-        val line = a.substring(idx + 1)
-        if (line.trim().length() == 0)
-            return addCommandError(usage)
-        getCurrentServer() match {
-        case Some(s) => {
+        args map { a =>
+            val a = args.get
+            val idx = a.indexOf(" ")
+            if (idx == -1)
+                return addCommandError(usage)
+            val target = a.substring(0, idx)
+            val line = a.substring(idx + 1)
+            if (line.trim().length() == 0)
+                return addCommandError(usage)
+
+            withConnection { c =>
+                service.addQuery(c, target, line, sending = true)
+                val user = c.createUser(target)
+                if (notice) user.sendNotice(line)
+                else user.sendMessage(line)
+            }
+        } getOrElse addCommandError(usage)
+    }
+
+    def withConnection(f: IrcConnection => Unit) {
+        getCurrentServer map { s =>
             if (s.state != Server.State.CONNECTED)
                 return addCommandError(R.string.error_server_disconnected)
 
-            val c = service.connections(s)
-            service.addQuery(c, target, line, sending = true)
-            val user = c.createUser(target)
-            if (notice) user.sendNotice(line)
-            else user.sendMessage(line)
-        }
-        case None => addCommandError(R.string.error_server_disconnected)
-        }
+            f(service.connections(s))
+        } getOrElse addCommandError(R.string.error_server_disconnected)
     }
 
     def TODO = addCommandError("This command has not been implemented yet")
@@ -452,22 +432,18 @@ sealed class CommandProcessor(ctx: Context) {
         override def execute(args: Option[String]) = sendAction(args)
     }
 
-    // TODO implement
     object PingCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
 
-    // TODO implement
     object TopicCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
 
-    // TODO implement
     object InviteCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
 
-    // TODO implement
     object CtcpCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
@@ -477,55 +453,34 @@ sealed class CommandProcessor(ctx: Context) {
             val newnick = args.getOrElse {
                 return addCommandError(R.string.usage_nick)
             }
-            getCurrentServer() map { s =>
-                if (s.state != Server.State.CONNECTED)
-                    return addCommandError(R.string.error_server_disconnected)
-                val conn = service.connections(s)
-                async { conn.setNick(newnick) }
-            } getOrElse {
-                addCommandError(R.string.error_server_disconnected)
-            }
+            withConnection (conn => async { conn.setNick(newnick) })
         }
     }
 
-    // TODO implement
     object KickCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
 
-    // TODO implement
     object WhowasCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
 
-    // TODO implement
     object WhoisCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
 
-    // TODO implement
     object IgnoreCommand extends Command {
         override def execute(args: Option[String]) = TODO
     }
 
     object RawCommand extends Command {
         override def execute(args: Option[String]) {
-            if (args.isEmpty) return addCommandError(R.string.usage_raw)
-
-            val line = args.get
-
-            if (line.trim().length() == 0)
-                return addCommandError(R.string.usage_raw)
-            getCurrentServer() match {
-            case Some(s) => {
-                if (s.state != Server.State.CONNECTED)
-                    return addCommandError(R.string.error_server_disconnected)
-
-                val c = service.connections(s)
-                c.sendRaw(line)
-            }
-            case None => addCommandError(R.string.error_server_disconnected)
-            }
+            args map { line =>
+                if (line.trim().length() == 0)
+                    addCommandError(R.string.usage_raw)
+                else
+                    withConnection { c => c.sendRaw(line) }
+            } getOrElse addCommandError(R.string.usage_raw)
         }
     }
     object HelpCommand extends Command {

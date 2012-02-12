@@ -261,9 +261,6 @@ with EventBus.RefOwner {
         true // prevent KEYCODE_SEARCH being sent to onKey
     }
 
-    override def onPause() {
-        super.onPause()
-    }
     override def onResume() {
         super.onResume()
         if (honeycombAndNewer && toggleSelectorMode)
@@ -765,11 +762,10 @@ with AdapterView.OnItemClickListener {
     }
 }
 
-class ChannelFragment(a: MessageAdapter, c: Channel)
+class ChannelFragment(a: MessageAdapter, var channel: Channel)
 extends MessagesFragment(a) with EventBus.RefOwner {
-    var tag = getFragmentTag(c)
+    var tag = getFragmentTag(channel)
     def this() = this(null, null)
-    var channel = c
     def channelReady = channel != null
 
 
@@ -899,19 +895,18 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     }
 }
 
-class QueryFragment(a: MessageAdapter, q: Query)
+class QueryFragment(a: MessageAdapter, val query: Query)
 extends MessagesFragment(a) {
-    var tag = getFragmentTag(q)
-    def query = q
+    var tag = getFragmentTag(query)
     def this() = this(null, null)
 
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
         setHasOptionsMenu(true)
-        if (id != -1 && q != null) {
+        if (id != -1 && query != null) {
             val activity = getActivity()
-            activity.service.chans += ((id, q))
-            a.channel = q
+            activity.service.chans += ((id, query))
+            a.channel = query
         }
     }
 
@@ -949,10 +944,9 @@ extends MessagesFragment(a) {
     }
 }
 
-class ServerMessagesFragment(_s: Server)
-extends MessagesFragment(if (_s != null) _s.messages else null) {
-    var tag = getFragmentTag(_s)
-    var server = _s
+class ServerMessagesFragment(var server: Server)
+extends MessagesFragment(if (server != null) server.messages else null) {
+    var tag = getFragmentTag(server)
     def this() = this(null)
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
@@ -976,8 +970,17 @@ extends MessagesFragment(if (_s != null) _s.messages else null) {
                 }
         }
     }
-    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
-            inflater.inflate(R.menu.server_messages_menu, menu)
+    override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.server_messages_menu, menu)
+        val connected = server.state match {
+            case Server.State.INITIAL      => false
+            case Server.State.DISCONNECTED => false
+            case _                         => true
+        }
+
+        menu.findItem(R.id.server_connect).setVisible(!connected)
+        menu.findItem(R.id.server_disconnect).setVisible(connected)
+    }
 
     override def onOptionsItemSelected(item: MenuItem) : Boolean = {
         if (R.id.server_close == item.getItemId()) {
@@ -986,9 +989,13 @@ extends MessagesFragment(if (_s != null) _s.messages else null) {
             service.messages -= id
             getActivity.adapter.removeTab(
                     getActivity.adapter.getItemPosition(this))
-            return true
+            true
+        } else {
+            val r = getActivity.servers.onServerMenuItemClicked(
+                    item, Option(server))
+            if (r && honeycombAndNewer) HoneycombSupport.invalidateActionBar()
+            r
         }
-        return false
     }
 }
 
@@ -1150,9 +1157,11 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
             UiBus.post { HoneycombSupport.invalidateActionBar() }
     }
     def changeListener(server: Server) {
-        if (!_server.isEmpty && _server.get == server &&
-                server.state == Server.State.CONNECTED && getActivity() != null)
-            getActivity().input.setVisibility(View.VISIBLE)
+        _server map { s =>
+            val a = getActivity
+            if (s == server && s.state == Server.State.CONNECTED && a != null)
+                a.input.setVisibility(View.VISIBLE)
+        }
         if (adapter != null)
             adapter.notifyDataSetChanged()
     }
