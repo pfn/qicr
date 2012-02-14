@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.res.Configuration
 import android.os.AsyncTask
 import android.os.Build
+import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.KeyEvent
@@ -95,7 +96,7 @@ object AndroidConversions {
     def async(r: Runnable) = _threadpool.execute(r)
     // ok, param: => T can only be used if called directly, no implicits
     def async(f: => Unit): Unit = async(byNameToRunnable(f))
-    private def byNameToRunnable(f: => Unit) = new Runnable() { def run() = f }
+    def byNameToRunnable(f: => Unit) = new Runnable() { def run() = f }
 
     implicit def toUncaughtExceptionHandler(f: (Thread, Throwable) => Unit) =
             new Thread.UncaughtExceptionHandler {
@@ -115,6 +116,7 @@ object AndroidConversions {
     implicit def toRichView(v: View) = new RichView(v)
     implicit def toRichContext(c: Context) = new RichContext(c)
     implicit def toRichActivity(a: Activity) = new RichActivity(a)
+    implicit def toRichHandler(h: Handler) = new RichHandler(h)
 
     lazy val _threadpool = {
         if (honeycombAndNewer) AsyncTask.THREAD_POOL_EXECUTOR
@@ -138,10 +140,9 @@ object AndroidConversions {
 
 case class SystemService[T](name: String)
 object SystemService {
-    implicit val layoutInflaterService =
-            SystemService[LayoutInflater](Context.LAYOUT_INFLATER_SERVICE)
-    implicit val notificationService =
-            SystemService[NotificationManager](Context.NOTIFICATION_SERVICE)
+    import Context._
+    implicit val ls = SystemService[LayoutInflater](LAYOUT_INFLATER_SERVICE)
+    implicit val ns = SystemService[NotificationManager](NOTIFICATION_SERVICE)
 }
 class RichContext(context: Context) {
     def systemService[T](implicit s: SystemService[T]): T =
@@ -158,10 +159,13 @@ class RichActivity(activity: Activity) extends RichContext(activity) {
 
     def findView[T](id: Int): T = activity.findViewById(id).asInstanceOf[T]
 
-    lazy val isLargeScreen =
-            (config.screenLayout & SCREENLAYOUT_SIZE_LARGE) ==
-                    SCREENLAYOUT_SIZE_LARGE
-    lazy val isXLargeScreen =
-            (config.screenLayout & SCREENLAYOUT_SIZE_XLARGE) ==
-                    SCREENLAYOUT_SIZE_XLARGE
+    private def atLeast(size: Int) =
+            (config.screenLayout & SCREENLAYOUT_SIZE_MASK) >= size
+    lazy val isLargeScreen  = atLeast(SCREENLAYOUT_SIZE_LARGE)
+    lazy val isXLargeScreen = atLeast(SCREENLAYOUT_SIZE_XLARGE)
+}
+
+class RichHandler(handler: Handler) {
+    def delayed(delay: Long)(f: => Unit) = handler.postDelayed(
+            AndroidConversions.byNameToRunnable(f), delay)
 }

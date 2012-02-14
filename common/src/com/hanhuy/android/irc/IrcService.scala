@@ -21,6 +21,7 @@ import android.content.Intent
 import android.content.Context
 import android.os.{Binder, IBinder}
 import android.os.AsyncTask
+import android.os.{Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
 import android.widget.Toast
@@ -92,6 +93,13 @@ class IrcService extends Service with EventBus.RefOwner {
         }
         _showing = s
     }
+    lazy val handlerThread = {
+        val t = new HandlerThread("IrcServiceHandler")
+        t.start();
+        t
+    }
+    lazy val handler = new Handler(handlerThread.getLooper)
+
     lazy val config   = new Config(this)
     lazy val settings = new Settings(this)
     ServiceBus += {
@@ -196,6 +204,7 @@ class IrcService extends Service with EventBus.RefOwner {
             nm.cancel(PRIVMSG_ID)
         }
         connections.keys.foreach(disconnect(_, message, false, true))
+        handlerThread.quit()
     }
     override def onDestroy() {
         super.onDestroy()
@@ -382,6 +391,12 @@ class IrcService extends Service with EventBus.RefOwner {
         notif.flags |= Notification.FLAG_AUTO_CANCEL
         nm.notify(id, notif)
     }
+
+    def ping(c: IrcConnection, server: Server) {
+        val now = System.currentTimeMillis
+        server.currentPing = Some(now)
+        c.sendRaw(format("PING %d", now))
+    }
 }
 
 // TODO when cancelled, disconnect if still in process
@@ -455,6 +470,9 @@ extends AsyncTask[Object, Object, Server.State] {
             }
             if (service.connections.size == 0) service._running = false
         }
+        if (state == Server.State.CONNECTED)
+            service.ping(connection, server)
+
         state
     }
 

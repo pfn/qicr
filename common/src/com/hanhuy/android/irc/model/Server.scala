@@ -71,6 +71,8 @@ class Server {
     var saslUser: String = _
     var saslPass: String = _
 
+    var currentPing: Option[Long] = None
+    var currentLag: Float = Float.NaN
     var currentNick = nickname
     override def toString() = name
 

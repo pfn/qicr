@@ -806,7 +806,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         val v = inflater.inflate(R.layout.fragment_channel, container, false)
         val activity = getActivity()
         // show via dialogfragment if < size_large
-        if (activity.isLargeScreen || activity.isXLargeScreen) {
+        if (activity.isLargeScreen) {
             def addNickList() {
                 if (!channel.isInstanceOf[Channel]) return
                 val f = new NickListFragment
@@ -970,6 +970,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
                 }
         }
     }
+
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.server_messages_menu, menu)
         val connected = server.state match {
@@ -1044,7 +1045,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     }
 
     override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
-        v.findView[CheckedTextView](R.id.server_item_text).setChecked(true)
+        v.findView[CheckedTextView](R.id.server_checked_text).setChecked(true)
         val activity = getActivity()
         val manager = activity.getSupportFragmentManager()
         manager.popBackStack(SERVER_SETUP_STACK,
@@ -1059,7 +1060,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
             activity.input.setVisibility(View.VISIBLE)
             activity.input.setFocusable(true)
         }
-        if (activity.isLargeScreen || activity.isXLargeScreen)
+        if (activity.isLargeScreen)
             addServerMessagesFragment(server)
 
         _server = Some(server)
@@ -1141,7 +1142,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
         val tx = mgr.beginTransaction()
         clearServerMessagesFragment(mgr, tx)
 
-        if (activity.isLargeScreen || activity.isXLargeScreen) {
+        if (activity.isLargeScreen) {
             tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
             tx.addToBackStack(SERVER_SETUP_STACK)
             tx.commit() // can't commit a show
@@ -1274,7 +1275,6 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
             } isDefined)
 
         menu.findItem(R.id.add_server).setVisible(!found)
-
     }
 }
 
@@ -1301,8 +1301,17 @@ extends ArrayAdapter[Server](
         img.setVisibility(if (server.state != Server.State.CONNECTING)
                 View.VISIBLE else View.INVISIBLE)
 
-        v.findView[CheckedTextView](R.id.server_item_text).setChecked(
-                pos == checked)
+        val t = v.findView[CheckedTextView](R.id.server_checked_text)
+        t.setChecked(pos == checked)
+        val lag = if (server.state == CONNECTED) {
+            val l = server.currentPing flatMap { p =>
+                if (server.currentLag.isNaN) None
+                    else Some((System.currentTimeMillis - p) / 1000.0f)
+            } getOrElse server.currentLag
+            // TODO show something other than NaN when undefined
+            format("%.1fs", l)
+        } else ""
+        t.setText(lag)
         v
     }
 }

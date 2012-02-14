@@ -280,31 +280,76 @@ with ServerListener with MessageListener with ModeListener {
     }
 
     // AdvancedListener
-    // TODO
     override def onUnknown(c: IrcConnection, line: IrcDecoder) {
+        import scala.util.control.Exception._
         service._connections.get(c) foreach { server =>
             if (line.isNumeric()) {
                 // 306 = away
                 // 333 = topic change info
                 // 366 = end of /names list
                 line.getNumericCommand() match {
-                    case 306 | 333 | 366 => return
+                    case 005 => return // server capabilities list
+                    case 251 => () // msg, network users info
+                    case 252 => () // args[1] ircops online
+                    case 254 => () // args[1] channel count
+                    case 255 => () // msg, local clients info
+                    case 261 => () // msg, highest connection count
+                    case 265 => () // args[1], local users, args[2], local max
+                    case 266 => () // args[1], global users, args[2], max
+                    case 301 => () // args[1], target nick, away msg (reply)
+                    case 305 => () // unaway (user)
+                    case 306 => () // nowaway (user)
+                    // whois response line1
+                    // 1: nick, 2: username, 3: host, 4: ?; msg = realname
+                    case 311 => ()
+                    case 312 => () // 1: server, 2: server comment (whois l2)
+                    case 313 => () // 1: nick, whois operator
+                    case 314 => () // like 311, whowas
+                    case 318 => () // args[1], nick, end of whois
+                    case 319 => () // args[1], nick, msg channels, whois
+                    case 333 => return // topic change timestamp
+                    case 338 => () // args[1], host/ip, whois l3
+                    case 317 => () // args[1], idle, args[2], signon whois l4
+                    case 366 => return // end of names list
+                    case 369 => () // args[1], nick, end of whowas
+                    case 375 => return // motd start
+                    case 401 => () // args[1], nick, whois not there
                     case _ => ()
                 }
             } else {
                 line.getCommand match {
-                case "PONG" => ()
+                case "PONG" =>
+                    server.currentPing map { ping =>
+                        server.currentPing = None
+                        catching(classOf[Exception]) opt {
+                            (Option(line.getMessage) getOrElse
+                                    line.getArgumentsArray()(1)).toLong
+                        } map { p =>
+                            // non-numeric should pass through
+                            // should always match if the lag timer is working
+                            if (p == ping) {
+                                val t = System.currentTimeMillis
+                                server.currentLag = (t - p) / 1000.0f
+                                // only schedule the next ping if it works
+                                // need another job to update if no response?
+                                // TODO make interval into a pref?
+                                service.handler.delayed(30000) {
+                                    service.ping(c, server)
+                                }
+                                UiBus.send(BusEvent.ServerChanged(server))
+                                return // don't print
+                            }
+                        }
+                    }
                 case _ => ()
                 }
             }
             UiBus.run {
-                server.add(ServerInfo(
-                        format("Unknown command: [%s](%s):[%s]",
+                server.add(ServerInfo(format("[%s](%s):[%s]",
                         line.getCommand(), line.getArguments(),
                         line.getMessage())))
             }
         }
-                
     }
     // Never happens
     override def onUnknownReply(c: IrcConnection, line: IrcDecoder) = ()
