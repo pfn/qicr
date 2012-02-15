@@ -24,25 +24,19 @@ object EventBus {
 abstract class EventBus(ui: Boolean = false) {
     import EventBus.TAG
     import ref.WeakReference
-    //private val queue = new ArrayBuffer[WeakReference[EventBus.Handler]]
-    private val queue = new ArrayBuffer[EventBus.Handler]
-            with SynchronizedBuffer[EventBus.Handler]
+    private val queue = new ArrayBuffer[WeakReference[EventBus.Handler]]
+            with SynchronizedBuffer[WeakReference[EventBus.Handler]]
 
     private lazy val handler =
             if (ui) new Handler(Looper.getMainLooper) else null
-    /*
-    private def broadcast(e: BusEvent) = queue.foreach { r =>
+    // copy prior to dispatch
+    private def broadcast(e: BusEvent) = (Seq.empty ++ queue) foreach { r =>
         r.get map { h =>
             if (h.isDefinedAt(e)) if (h(e) == EventBus.Remove) this -= r
         } getOrElse { this -= r }
     }
-    */
-    // make immutable prior to dispatch
-    private def broadcast(e: BusEvent) = (Seq.empty ++ queue) foreach { h =>
-        if (h.isDefinedAt(e)) if (h(e) == EventBus.Remove) this -= h
-    }
 
-    def clear() = queue.clear
+    def clear() = () //queue.clear
     def send(e: BusEvent) =
             if (!ui || isMainThread) broadcast(e) else post { broadcast(e) }
     def post(f: => Unit) = handler.post(f _)
@@ -51,15 +45,12 @@ abstract class EventBus(ui: Boolean = false) {
     // users of += must have trait EventBus.RefOwner
     def +=(handler: EventBus.Handler)(implicit owner: EventBus.Owner) {
         // long-lived objects that use EventBus must purge their owner list
-        // ugh causing a memory leak--think *hard* on this
         // keep the handler only for as long as the weak reference is valid
-        //owner.handlers += handler
-        //queue += new WeakReference(handler)
-        queue += handler
+        owner.handlers += handler
+        queue += new WeakReference(handler)
     }
     def size = queue.size
-    //private def -=(e: WeakReference[EventBus.Handler]) = queue -= e
-    private def -=(e: EventBus.Handler) = queue -= e
+    private def -=(e: WeakReference[EventBus.Handler]) = queue -= e
 }
 object UiBus extends EventBus(true)
 object ServiceBus extends EventBus

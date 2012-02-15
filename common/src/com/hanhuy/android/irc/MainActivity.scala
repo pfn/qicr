@@ -90,7 +90,7 @@ with EventBus.RefOwner {
 
     lazy val settings = {
         val s = new Settings(this)
-        UiBus += { case BusEvent.PreferenceChanged(key) =>
+        UiBus += { case BusEvent.PreferenceChanged(_, key) =>
             List(R.string.pref_show_nick_complete,
                     R.string.pref_show_speech_rec,
                     R.string.pref_selector_mode) foreach { r =>
@@ -972,6 +972,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
     }
 
     override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        if (server == null) return // presumably on a tablet?
         inflater.inflate(R.menu.server_messages_menu, menu)
         val connected = server.state match {
             case Server.State.INITIAL      => false

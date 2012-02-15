@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.IrcService
+import com.hanhuy.android.irc.Settings
 
 import java.util.Date
 
@@ -56,7 +57,8 @@ object BusEvent {
     case class ServerRemoved(server: Server) extends BusEvent
     case class ServerStateChanged(
         server: Server, oldstate: Server.State) extends BusEvent
-    case class PreferenceChanged(pref: String) extends BusEvent
+    case class PreferenceChanged(settings: Settings, pref: String)
+    extends BusEvent
     case class ServiceConnected(service: IrcService) extends BusEvent
     case object ServiceDisconnected extends BusEvent
     case class ChannelMessage(

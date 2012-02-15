@@ -10,32 +10,32 @@ import android.preference.PreferenceManager
 import android.preference.PreferenceActivity
 import android.preference.PreferenceFragment
 
-class Settings(c: Context)
+class Settings(val context: Context)
 extends SharedPreferences.OnSharedPreferenceChangeListener {
-    val p = PreferenceManager.getDefaultSharedPreferences(c)
+    val p = PreferenceManager.getDefaultSharedPreferences(context)
     p.registerOnSharedPreferenceChangeListener(this)
 
     override def onSharedPreferenceChanged(p: SharedPreferences, key: String) {
-        val e = BusEvent.PreferenceChanged(key)
+        val e = BusEvent.PreferenceChanged(this, key)
         UiBus.send(e) // already on main thread
         ServiceBus.send(e)
     }
 
     def getBoolean(key: Int, default: Boolean = false): Boolean =
-            p.getBoolean(c.getString(key), default)
+            p.getBoolean(context.getString(key), default)
     def getFloat(key: Int, default: Float = 0f): Float =
-            p.getFloat(c.getString(key), default)
+            p.getFloat(context.getString(key), default)
     def getInt(key: Int, default: Int = 0): Int =
-            p.getInt(c.getString(key), default)
+            p.getInt(context.getString(key), default)
     def getLong(key: Int, default: Long = 0l): Long =
-            p.getLong(c.getString(key), default)
+            p.getLong(context.getString(key), default)
     def getString(key: Int, default: String = ""): String =
-            p.getString(c.getString(key), default)
+            p.getString(context.getString(key), default)
     def getString(key: Int, default: Int): String =
-            p.getString(c.getString(key), c.getString(default))
+            p.getString(context.getString(key), context.getString(default))
 
     def set(key: Int, value: Boolean) =
-            p.edit().putBoolean(c.getString(key), value).commit()
+            p.edit().putBoolean(context.getString(key), value).commit()
 }
 
 // android2.3-

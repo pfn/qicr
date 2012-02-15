@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.IrcListeners
+import com.hanhuy.android.irc.IrcService
 import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.Settings
 import com.hanhuy.android.irc.EventBus
@@ -43,6 +44,22 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
         _maximumSize = s
         ensureSize()
     }
+    // only register once to prevent memory leak
+    UiBus += { case BusEvent.PreferenceChanged(s, k) =>
+        val c = s.context
+        if (k == c.getString(R.string.pref_message_lines)) {
+            val max = s.getString(R.string.pref_message_lines,
+                    MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
+            maximumSize = max
+        } else if (k == c.getString(R.string.pref_show_join_part_quit)) {
+            showJoinPartQuit = s.getBoolean(
+                    R.string.pref_show_join_part_quit)
+            notifyDataSetChanged()
+        } else if (k == c.getString(R.string.pref_show_timestamp)) {
+            showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
+            notifyDataSetChanged()
+        }
+    }
 
     lazy val sdf = new SimpleDateFormat("HH:mm ")
 
@@ -62,20 +79,6 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
                     DEFAULT_MAXIMUM_SIZE.toString).toInt
             showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
             showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
-            UiBus += { case BusEvent.PreferenceChanged(k) =>
-                if (k == getString(R.string.pref_message_lines)) {
-                    val max = s.getString(R.string.pref_message_lines,
-                            MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
-                    maximumSize = max
-                } else if (k == getString(R.string.pref_show_join_part_quit)) {
-                    showJoinPartQuit = s.getBoolean(
-                            R.string.pref_show_join_part_quit)
-                    notifyDataSetChanged()
-                } else if (k == getString(R.string.pref_show_timestamp)) {
-                    showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
-                    notifyDataSetChanged()
-                }
-            }
         }
     }
     def activity = _activity.get getOrElse { throw new IllegalStateException }
