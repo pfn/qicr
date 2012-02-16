@@ -85,7 +85,6 @@ object MainActivity {
 }
 class MainActivity extends FragmentActivity with ServiceConnection
 with EventBus.RefOwner {
-    UiBus.clear // weak refs aren't enough  :-(
     val _richactivity: RichActivity = this; import _richactivity._
 
     lazy val settings = {

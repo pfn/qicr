@@ -62,7 +62,6 @@ object IrcService {
     val MENTION_ID = 4
 }
 class IrcService extends Service with EventBus.RefOwner {
-    ServiceBus.clear // just in case
     val _richcontext: RichContext = this; import _richcontext._
     var recreateActivity: Option[Int] = None // int = page to flip to
     var startId: Int = -1

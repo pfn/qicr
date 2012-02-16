@@ -50,6 +50,7 @@ abstract class EventBus(ui: Boolean = false) {
         queue += new WeakReference(handler)
     }
     def size = queue.size
+    // don't know the owner to remove it from  :-/
     private def -=(e: WeakReference[EventBus.Handler]) = queue -= e
 }
 object UiBus extends EventBus(true)

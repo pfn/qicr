@@ -81,6 +81,13 @@ class ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
             return -1
         var c1name = c1.name
         var c2name = c2.name
+        val ch1 = if (c1name.length > 0) c1name.charAt(0)
+        val ch2 = if (c2name.length > 0) c2name.charAt(0)
+        (ch1, ch2) match {
+        case ('&', '#') => return -1
+        case ('#', '&') => return 1
+        case          _ => ()
+        }
         var r = stripInitial(c1.name).compareTo(stripInitial(c2.name))
         if (r == 0)
             r = c1.server.name.compareTo(c2.server.name)
