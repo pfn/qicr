@@ -2,3 +2,6 @@
 local.properties
 gen
 bin
+target/
+.history
+project/project/
