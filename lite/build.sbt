@@ -6,6 +6,6 @@ name := "qicr-lite"
 
 seq(androidBuildSettings: _*)
 
-useProguard in Android := true
+proguardScala in Android := true
 
 proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize")
