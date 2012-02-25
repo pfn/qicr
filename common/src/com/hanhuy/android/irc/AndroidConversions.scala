@@ -135,7 +135,7 @@ object AndroidConversions {
             )
         }
     }
-    def isMainThread = Looper.getMainLooper.getThread == currentThread
+    def isMainThread = Looper.getMainLooper.getThread == Thread.currentThread
 }
 
 case class SystemService[T](name: String)

@@ -1171,6 +1171,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
         adapter.notifyDataSetChanged()
     }
     def addListener(server: Server) {
+        if (adapter == null) return
         adapter.add(server)
         adapter.notifyDataSetChanged()
     }

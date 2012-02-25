@@ -43,12 +43,14 @@ class InputProcessor(activity: MainActivity) {
         activity.adapter.getItem(activity.adapter.page) match {
         case s: ServersFragment => (s._server, None)
         case c: ChannelFragment => {
-            val ch = activity.service.chans(c.id)
-            (Some(ch.server), Some(ch))
+            activity.service.chans.get(c.id) map { ch =>
+                (Some(ch.server), Some(ch))
+            } getOrElse (None, None)
         }
         case q: QueryFragment => {
-            val qu = activity.service.chans(q.id)
-            (Some(qu.server), Some(qu))
+            activity.service.chans.get(q.id) map { qu =>
+                (Some(qu.server), Some(qu))
+            } getOrElse (None, None)
         }
         case _ => (None, None)
         }
@@ -413,7 +415,7 @@ sealed class CommandProcessor(ctx: Context) {
             if (s.state != Server.State.CONNECTED)
                 return addCommandError(R.string.error_server_disconnected)
 
-            f(service.connections(s))
+            service.connections.get(s) foreach f
         } getOrElse addCommandError(R.string.error_server_disconnected)
     }
 
