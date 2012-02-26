@@ -68,36 +68,39 @@ with ServerListener with MessageListener with ModeListener {
     // ServerListener
     // TODO send BusEvents instead
     override def onConnect(c: IrcConnection) {
-        val server = service._connections(c)
-        UiBus.run {
-            // ugh, need to do it here so that the auto commands can run
-            server.state = Server.State.CONNECTED
-            server.add(ServerInfo(
-                    service.getString(R.string.server_connected)))
-        }
-        if (server.autorun != null || server.autojoin != null) {
-            val proc = CommandProcessor(service)
-            proc.server = Some(server)
-            if (server.autorun != null) {
-                server.autorun.split(";") foreach { cmd =>
-                    if (cmd.trim().length() > 0) {
-                        var command = cmd.trim()
-                        if (command.charAt(0) != '/')
-                            command = "/" + command
-                        UiBus.run { proc.executeLine(command) }
+        service._connections.get(c) map { server =>
+            UiBus.run {
+                // ugh, need to do it here so that the auto commands can run
+                server.state = Server.State.CONNECTED
+                server.add(ServerInfo(
+                        service.getString(R.string.server_connected)))
+            }
+            if (server.autorun != null || server.autojoin != null) {
+                val proc = CommandProcessor(service)
+                proc.server = Some(server)
+                if (server.autorun != null) {
+                    server.autorun.split(";") foreach { cmd =>
+                        if (cmd.trim().length() > 0) {
+                            var command = cmd.trim()
+                            if (command.charAt(0) != '/')
+                                command = "/" + command
+                            UiBus.run { proc.executeLine(command) }
+                        }
+                    }
+                }
+                if (server.autojoin != null) {
+                    val join = service.getString(R.string.command_join_1)
+                    val channels = server.autojoin.split(";")
+                    channels foreach { c =>
+                        if (c.trim().length() > 0)
+                            UiBus.run {
+                                proc.executeCommand(join, Some(c.trim()))
+                            }
                     }
                 }
             }
-            if (server.autojoin != null) {
-                val join = service.getString(R.string.command_join_1)
-                val channels = server.autojoin.split(";")
-                channels foreach { c =>
-                    if (c.trim().length() > 0)
-                        UiBus.run {
-                            proc.executeCommand(join, Some(c.trim()))
-                        }
-                }
-            }
+        } getOrElse {
+            Log.w(TAG, "server not found in onConnect?!", new StackTrace)
         }
     }
     override def onDisconnect(c: IrcConnection) {
