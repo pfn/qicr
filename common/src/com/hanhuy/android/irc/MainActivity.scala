@@ -918,12 +918,17 @@ extends MessagesFragment(a) {
             val prompt = activity.settings.getBoolean(
                     R.string.pref_close_tab_prompt, true)
             def removeQuery() {
-                val query = activity.service.chans(id).asInstanceOf[Query]
-                activity.service.queries  -=
-                        ((query.server, query.name.toLowerCase()))
+                activity.service.chans.get(id) foreach { q =>
+                    val query = q.asInstanceOf[Query]
+                    activity.service.queries  -=
+                            ((query.server, query.name.toLowerCase()))
+
+                    activity.service.channels -= query
+                }
+
                 activity.service.messages -= id
                 activity.service.chans    -= id
-                activity.service.channels -= query
+
                 activity.adapter.removeTab(
                         activity.adapter.getItemPosition(this))
             }
