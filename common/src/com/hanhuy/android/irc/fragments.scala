@@ -855,12 +855,16 @@ extends ArrayAdapter[Server](
 
     val lag = if (server.state == CONNECTED) {
       val l = server.currentPing flatMap { p =>
-        if (server.currentLag.isNaN) None
-          else Some((System.currentTimeMillis - p) / 1000.0f)
+        if (server.currentLag == 0) None
+          else Some((System.currentTimeMillis - p).toInt)
       } getOrElse server.currentLag
 
       // TODO show something other than NaN when undefined
-      format("%.1fs", l)
+      val (fmt, lag) = l match {
+        case x if x < 1000 => ("%dms",1)
+        case x => ("%.1fs", x / 1000.0f)
+      }
+      format(fmt, lag)
     } else ""
     t.setText(lag)
 

@@ -333,7 +333,7 @@ with ServerListener with MessageListener with ModeListener {
                 // should always match if the lag timer is working
                 if (p == ping) {
                   val t = System.currentTimeMillis
-                  server.currentLag = (t - p) / 1000.0f
+                  server.currentLag = (t - p).toInt
                   // only schedule the next ping if it works
                   // need another job to update if no response?
                   // TODO make interval into a pref?
