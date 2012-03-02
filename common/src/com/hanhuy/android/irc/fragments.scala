@@ -861,7 +861,7 @@ extends ArrayAdapter[Server](
 
       // TODO show something other than NaN when undefined
       val (fmt, lag) = l match {
-        case x if x < 1000 => ("%dms",1)
+        case x if x < 1000 => ("%dms",x)
         case x => ("%.1fs", x / 1000.0f)
       }
       format(fmt, lag)
