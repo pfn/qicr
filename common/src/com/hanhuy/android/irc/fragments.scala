@@ -858,13 +858,7 @@ extends ArrayAdapter[Server](
         if (server.currentLag == 0) None
           else Some((System.currentTimeMillis - p).toInt)
       } getOrElse server.currentLag
-
-      // TODO show something other than NaN when undefined
-      val (fmt, lag) = l match {
-        case x if x < 1000 => ("%dms",x)
-        case x => ("%.1fs", x / 1000.0f)
-      }
-      format(fmt, lag)
+      server.lagString(l)
     } else ""
     t.setText(lag)
 

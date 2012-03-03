@@ -204,8 +204,15 @@ with EventBus.RefOwner {
     activity.newmessages.setVisibility(
       if (channels.find(_.newMentions).isEmpty) View.GONE else View.VISIBLE)
 
-    if (honeycombAndNewer) HoneycombSupport.setSelectedNavigationItem(pos)
-      refreshTabTitle(pos)
+    if (honeycombAndNewer) {
+      HoneycombSupport.setSelectedNavigationItem(pos)
+      HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
+        t.server map { s =>
+          " - %s: %s" format(s.name, s.lagString(s.currentLag))
+        } getOrElse null)
+    }
+
+    refreshTabTitle(pos)
   }
 
   def selectTab(cname: String, sname: String) {
@@ -423,9 +430,21 @@ with EventBus.RefOwner {
       val line2 = view.findView[TextView](android.R.id.text2)
       tab.channel map { c =>
         val s = c.server
-        line2 setText format(" - %s: %s", s.name, s.currentNick)
+
+        if (pos == page) { // show lag for the selected item
+          line2.setText(format(" - %s: %s",
+            s.name, s.lagString(s.currentLag)))
+        } else {
+          line2.setText(format(" - %s: %s", s.name, s.currentNick))
+        }
       } getOrElse (tab.server map { s =>
-        line2 setText format(" - %s", s.currentNick)
+
+        if (pos == page) {
+          line2.setText(format(" - %s (%s)",
+            s.currentNick, s.lagString(s.currentLag)))
+        } else {
+          line2.setText(format(" - %s", s.currentNick))
+        }
       })
       view
     }

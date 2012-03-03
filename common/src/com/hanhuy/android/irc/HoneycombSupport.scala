@@ -48,6 +48,10 @@ object HoneycombSupport {
       activity.startActionMode(ServerActionModeSetup))
   }
 
+  def setSubtitle(s: String) = if (activity != null) {
+    activity.getActionBar.setSubtitle(s)
+  }
+
   def setupSpinnerNavigation(a: MainPagerAdapter) {
     val bar = activity.getActionBar
     a.hsv.setVisibility(View.GONE)

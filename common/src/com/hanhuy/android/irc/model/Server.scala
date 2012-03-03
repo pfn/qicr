@@ -74,6 +74,15 @@ class Server {
 
   var currentPing: Option[Long] = None
   var currentLag: Int = 0
+
+  def lagString(l: Long) = {
+      val (fmt, lag) = l match {
+        case x if x < 1000 => ("%dms",x)
+        case x => ("%.1fs", x / 1000.0f)
+      }
+      format(fmt, lag)
+  }
+
   var currentNick = nickname
   override def toString() = name
 
