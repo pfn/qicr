@@ -70,14 +70,16 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
       if (c != null) {
         _activity = new WeakReference(c)
         _inflater = new WeakReference(c.systemService[LayoutInflater])
-        val s = c.service.settings
-        // It'd be nice to register a ServiceBus listener, but no way
-        // to clean up when this adapter goes away?
-        // add it to UiBus here maybe?
-        maximumSize = s.getString(R.string.pref_message_lines,
-          DEFAULT_MAXIMUM_SIZE.toString).toInt
-        showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
-        showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
+        if (c.service != null) {
+          val s = c.service.settings
+          // It'd be nice to register a ServiceBus listener, but no way
+          // to clean up when this adapter goes away?
+          // add it to UiBus here maybe?
+          maximumSize = s.getString(R.string.pref_message_lines,
+            DEFAULT_MAXIMUM_SIZE.toString).toInt
+          showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
+          showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
+        }
       }
   }
 

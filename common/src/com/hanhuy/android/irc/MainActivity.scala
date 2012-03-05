@@ -273,6 +273,8 @@ with EventBus.RefOwner {
         //tabhost.setCurrentTab(page)
         pager.setCurrentItem(page)
       }
+      // scroll tabwidget if necessary
+      pageChanged(adapter.page)
     }
 
     if (service != null) refreshTabs()
@@ -280,9 +282,6 @@ with EventBus.RefOwner {
       refreshTabs(s)
       EventBus.Remove
     }
-
-    // scroll tabwidget if necessary
-    pageChanged(adapter.page)
   }
 
   override def onNewIntent(i: Intent) {
