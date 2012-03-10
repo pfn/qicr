@@ -9,3 +9,5 @@ seq(androidBuildSettings: _*)
 proguardScala in Android := true
 
 proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize")
+
+aaptNonConstantId in Android := false
