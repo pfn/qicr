@@ -477,7 +477,7 @@ sealed class CommandProcessor(ctx: Context) {
     override def execute(args: Option[String]) {
       args map { newnick =>
         withConnection (conn => async { conn.setNick(newnick) })
-      } getOrElse { return addCommandError(R.string.usage_nick) }
+      } getOrElse addCommandError(R.string.usage_nick)
     }
   }
 
