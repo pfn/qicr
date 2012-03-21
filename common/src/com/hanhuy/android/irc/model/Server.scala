@@ -15,6 +15,20 @@ object Server {
     case object CONNECTING extends State
     case object CONNECTED extends State
   }
+
+  def intervalString(l: Long) = {
+      // ms if under 1s
+      // x.xxs if under 5s
+      // x.xs if under 10s
+      // xs if over 10s
+      val (fmt, lag) = l match {
+        case x if x < 1000 => ("%dms",x)
+        case x if x > 9999 => ("%ds", x / 1000)
+        case x if x < 5000 => ("%.2fs", x / 1000.0f)
+        case x => ("%.1fs", x / 1000.0f)
+      }
+      fmt format lag
+  }
 }
 class Server {
 
@@ -74,14 +88,6 @@ class Server {
 
   var currentPing: Option[Long] = None
   var currentLag: Int = 0
-
-  def lagString(l: Long) = {
-      val (fmt, lag) = l match {
-        case x if x < 1000 => ("%dms",x)
-        case x => ("%.1fs", x / 1000.0f)
-      }
-      format(fmt, lag)
-  }
 
   var currentNick = nickname
   override def toString() = name

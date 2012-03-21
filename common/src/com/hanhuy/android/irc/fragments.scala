@@ -858,7 +858,7 @@ extends ArrayAdapter[Server](
         if (server.currentLag == 0) None
           else Some((System.currentTimeMillis - p).toInt)
       } getOrElse server.currentLag
-      server.lagString(l)
+      Server.intervalString(l)
     } else ""
     t.setText(lag)
 

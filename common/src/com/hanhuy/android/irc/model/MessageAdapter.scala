@@ -31,12 +31,102 @@ import MessageAdapter._
 object MessageAdapter {
   val TAG = "MessageAdapter"
   val DEFAULT_MAXIMUM_SIZE = 256
+  private var showTimestamp = false
+  private lazy val sdf = new SimpleDateFormat("HH:mm ")
+
+  def formatText(c: Context, msg: MessageLike)
+      (implicit channel: ChannelLike = null): CharSequence = {
+    val ch = Option(channel)
+    msg match {
+      case Privmsg(s, m, o, v) => gets(c, R.string.message_template, msg,
+        {if (o) "@" else if (v) "+" else ""} + s, m)
+      case Notice(s, m) => gets(c, R.string.notice_template, msg, s, m)
+      case CtcpAction(s, m) => gets(c, R.string.action_template, msg, s, m)
+      case CtcpReply(server, s, cmd, a) => a map { arg =>
+        ch flatMap { chan =>
+          if (chan.server != server)
+            Some(getString(c, R.string.ctcp_response_template_s_3,
+              cmd, s, arg, server.name))
+          else
+            None
+        } getOrElse {
+          getString(c, R.string.ctcp_response_template_s_3,
+            cmd, s, arg, server.name)
+        }
+      } getOrElse {
+        ch flatMap { chan =>
+          if (chan.server != server)
+            Some(getString(c, R.string.ctcp_response_template_s_2,
+              cmd, s, server.name))
+          else
+            None
+        } getOrElse {
+          getString(c, R.string.ctcp_response_template_s_2, cmd, s, server.name)
+        }
+      }
+      case Topic(src, t) => src map {
+        formatText(c, msg, R.string.topic_template_2, _, channel.name, t)
+      } getOrElse {
+        formatText(c, msg, R.string.topic_template_1, channel.name, t)
+      }
+      case NickChange(o, n) =>
+        formatText(c, msg, R.string.nick_change_template, o, n)
+      case Join(n, u)    => formatText(c, msg, R.string.join_template, n, u)
+      case Part(n, u, m) => formatText(c, msg, R.string.part_template, n, u,
+        if (m == null) "" else m)
+      case Quit(n, u, m) => formatText(c, msg, R.string.quit_template, n, u, m)
+      case Kick(o, n, m) => formatText(c, msg, R.string.kick_template, o, n,
+        if (m == null) "" else m)
+
+      case CommandError(m)  => formatText(c, msg, -1, m)
+      case ServerInfo(m)    => formatText(c, msg, -1, m)
+      case Motd(m)          => formatText(c, msg, -1, m)
+      case SslInfo(m)       => formatText(c, msg, -1, m)
+      case SslError(m)      => formatText(c, msg, -1, m)
+    }
+  }
+
+  private def formatText(c: Context, msg: MessageLike, res: Int,
+      args: String*) =
+    (if (showTimestamp) sdf.format(msg.ts) else "") + c.getString(res, args:_*)
+
+  private def getString(c: Context, res: Int, args: String*) = {
+    res match {
+    case -1 => args(0)
+    case _ => c.getString(res, args: _*)
+    }
+  }
+
+  private def gets(c: Context, res: Int, m: MessageLike, src: String,
+      _msg: String)(implicit channel: ChannelLike) = {
+    val server = channel.server
+    // escape HTML
+    val msg = _msg.replace("&", "&amp;")
+      .replace("<", "&lt;")
+      .replace(">", "&gt;")
+
+    if (channel.isInstanceOf[Query]) {
+      if (server.currentNick.toLowerCase() == src.toLowerCase())
+        Html.fromHtml(formatText(c, m, res,
+          "<font color=#00ffff>" + src + "</font>", msg))
+      else
+        Html.fromHtml(formatText(c, m, res,
+          "<font color=#ff0000>" + src + "</font>", msg))
+    } else if (server.currentNick.toLowerCase() == src.toLowerCase()) {
+      Html.fromHtml(formatText(c, m, res, "<b>" + src + "</b>", msg))
+    } else if (IrcListeners.matchesNick(server, msg) &&
+        server.currentNick.toLowerCase() != src.toLowerCase()) {
+      Html.fromHtml(formatText(c, m, res,
+        "<font color=#00ff00>" + src + "</font>", msg))
+    } else
+      Html.fromHtml(formatText(c, m, res, src, msg))
+  }
 }
 
 class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
-  var channel: ChannelLike = _
+  implicit var channel: ChannelLike = _
+
   var showJoinPartQuit = false
-  var showTimestamp = false
   val messages = new Queue[MessageLike]
   var _maximumSize = DEFAULT_MAXIMUM_SIZE
   def maximumSize = _maximumSize
@@ -55,12 +145,12 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
         showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
         notifyDataSetChanged()
       } else if (k == c.getString(R.string.pref_show_timestamp)) {
-        showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
+        MessageAdapter.showTimestamp =
+          s.getBoolean(R.string.pref_show_timestamp)
         notifyDataSetChanged()
       }
     }
 
-    lazy val sdf = new SimpleDateFormat("HH:mm ")
 
     var _inflater: WeakReference[LayoutInflater] = _
     def inflater = _inflater.get getOrElse { throw new IllegalStateException }
@@ -78,7 +168,8 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
           maximumSize = s.getString(R.string.pref_message_lines,
             DEFAULT_MAXIMUM_SIZE.toString).toInt
           showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
-          showTimestamp = s.getBoolean(R.string.pref_show_timestamp)
+          MessageAdapter.showTimestamp =
+            s.getBoolean(R.string.pref_show_timestamp)
         }
       }
   }
@@ -137,67 +228,6 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     view
   }
 
-  private def gets(res: Int, m: MessageLike, src: String, _msg: String) = {
-    val server = channel.server
-    // escape HTML
-    val msg = _msg.replace("&", "&amp;")
-      .replace("<", "&lt;")
-      .replace(">", "&gt;")
-
-    if (channel.isInstanceOf[Query]) {
-      if (server.currentNick.toLowerCase() == src.toLowerCase())
-        Html.fromHtml(formatText(m, res,
-          "<font color=#00ffff>" + src + "</font>", msg))
-      else
-        Html.fromHtml(formatText(m, res,
-          "<font color=#ff0000>" + src + "</font>", msg))
-    } else if (server.currentNick.toLowerCase() == src.toLowerCase()) {
-      Html.fromHtml(formatText(m, res, "<b>" + src + "</b>", msg))
-    } else if (IrcListeners.matchesNick(server, msg) &&
-        server.currentNick.toLowerCase() != src.toLowerCase()) {
-      Html.fromHtml(formatText(m, res,
-        "<font color=#00ff00>" + src + "</font>", msg))
-    } else
-      Html.fromHtml(formatText(m, res, src, msg))
-  }
-
-  private def getString(res: Int, args: String*): String = {
-    res match {
-    case -1 => args(0)
-    case _ => activity.getString(res, args: _*)
-    }
-  }
-
-  private def formatText(msg: MessageLike, res: Int, args: String*): String = {
-    (if (showTimestamp) sdf.format(msg.ts) else "") +
-      getString(res, args: _*)
-  }
-
-  private def formatText(msg: MessageLike): CharSequence = {
-    msg match {
-      case Privmsg(s, m, o, v) => gets(R.string.message_template, msg,
-        {if (o) "@" else if (v) "+" else ""} + s, m)
-      case Notice(s, m) => gets(R.string.notice_template, msg, s, m)
-      case CtcpAction(s, m) => gets(R.string.action_template, msg, s, m)
-      case Topic(src, t) => src map {
-        formatText(msg, R.string.topic_template_2, _, channel.name, t)
-      } getOrElse {
-        formatText(msg, R.string.topic_template_1, channel.name, t)
-      }
-      case NickChange(o, n) =>
-        formatText(msg, R.string.nick_change_template, o, n)
-      case Join(n, u)    => formatText(msg, R.string.join_template, n, u)
-      case Part(n, u, m) => formatText(msg, R.string.part_template, n, u,
-        if (m == null) "" else m)
-      case Quit(n, u, m) => formatText(msg, R.string.quit_template, n, u, m)
-      case Kick(o, n, m) => formatText(msg, R.string.kick_template, o, n,
-        if (m == null) "" else m)
-
-      case CommandError(m)  => formatText(msg, -1, m)
-      case ServerInfo(m)    => formatText(msg, -1, m)
-      case Motd(m)          => formatText(msg, -1, m)
-      case SslInfo(m)       => formatText(msg, -1, m)
-      case SslError(m)      => formatText(msg, -1, m)
-    }
-  }
+  private def formatText(msg: MessageLike) =
+    MessageAdapter.formatText(activity, msg)
 }

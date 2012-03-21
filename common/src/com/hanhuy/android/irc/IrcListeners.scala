@@ -4,9 +4,11 @@ import com.hanhuy.android.irc.model.BusEvent
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.{Channel => QicrChannel}
+import com.hanhuy.android.irc.model.MessageAdapter
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
+import com.hanhuy.android.irc.model.MessageLike.CtcpReply
 import com.hanhuy.android.irc.model.MessageLike.Motd
 import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.MessageLike.Topic
@@ -16,10 +18,13 @@ import com.hanhuy.android.irc.model.MessageLike.Part
 import com.hanhuy.android.irc.model.MessageLike.NickChange
 import com.hanhuy.android.irc.model.MessageLike.Quit
 
+import android.widget.Toast
+
 import android.util.Log
 
 import com.sorcix.sirc._
 
+import scala.util.control.Exception._
 import AndroidConversions._
 import IrcListeners._
 
@@ -240,7 +245,7 @@ with ServerListener with MessageListener with ModeListener {
   override def onVoice(c: IrcConnection, channel: Channel,
       src: User, user: User) = ()
 
-    // MessageListener
+  // MessageListener
   override def onAction(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
     val c = service._channels(channel)
@@ -270,9 +275,34 @@ with ServerListener with MessageListener with ModeListener {
       service.addChannelMention(c, notice)
   }
 
-  // TODO
+  val CtcpPing = """(\d+)\s+(\d+)""".r
   override def onCtcpReply(c: IrcConnection, src: User,
-      cmd: String, reply: String) = ()
+      cmd: String, reply: String) {
+    val s = service._connections(c)
+    val r = CtcpReply(s, src.getNick, cmd, cmd match {
+      case "PING" => reply match {
+        case CtcpPing(seconds, micros) =>
+          catching(classOf[Exception]) opt {
+            // prevent malicious overflow causing a crash
+            val ts = seconds.toLong * 1000 + (micros.toLong / 1000)
+            Server.intervalString(System.currentTimeMillis - ts)
+          } orElse Option(reply)
+        case _ => Option(reply)
+      }
+      case _ => Option(reply)
+    })
+    s.add(r)
+    if (service.showing) {
+      UiBus.run {
+        val msg = MessageAdapter.formatText(service, r)
+        // TODO display in currently visible tab
+        //   Show server name if not on same-server tab
+        //   Display a Toast if not on a Message tab
+
+        Toast.makeText(service, msg, Toast.LENGTH_LONG).show()
+      }
+    }
+  }
 
   override def onAction(c: IrcConnection, src: User, action: String) =
     UiBus.run { service.addQuery(c, src.getNick(), action, action = true) }
@@ -285,7 +315,6 @@ with ServerListener with MessageListener with ModeListener {
 
   // AdvancedListener
   override def onUnknown(c: IrcConnection, line: IrcDecoder) {
-    import scala.util.control.Exception._
     service._connections.get(c) foreach { server =>
       if (line.isNumeric()) {
         // 306 = away

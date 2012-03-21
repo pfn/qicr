@@ -60,14 +60,14 @@ class InputProcessor(activity: MainActivity) {
     Log.i(TAG, "editoraction: " + action + " e: " + e)
     val input = v.asInstanceOf[EditText]
     if (action == EditorInfo.IME_ACTION_SEND)
-      () // ignored
-    if (action == EditorInfo.IME_NULL) {
+      false // ignored for now
+    else if (action == EditorInfo.IME_NULL) {
       val line = input.getText()
       handleLine(line)
       clear(input)
-    }
-    // TODO turn this into a preference
-    false // return false so the keyboard can collapse
+      !activity.settings.getBoolean(R.string.pref_hide_keyboard)
+    } else
+      false
   }
 
   def handleLine(line: String) {
@@ -392,23 +392,21 @@ sealed class CommandProcessor(ctx: Context) {
   }
 
   def messageCommandSend(args: Option[String], notice: Boolean = false) {
+    val CommandPattern = """(\S+)\s(.*)""".r
     val usage = if (notice) R.string.usage_notice else R.string.usage_msg
 
-    args map { a =>
-      val a = args.get
-      val idx = a.indexOf(" ")
-      if (idx == -1)
-        return addCommandError(usage)
-      val target = a.substring(0, idx)
-      val line = a.substring(idx + 1)
+    args collect {
+      case CommandPattern(target, line) =>
       if (line.trim().length() == 0)
         return addCommandError(usage)
 
       withConnection { c =>
-        service.addQuery(c, target, line, sending = true)
+        target.charAt(0) match {
+          case '&' | '#' => () // do nothing if it's a channel
+          case _ => service.addQuery(c, target, line, sending = true)
+        }
         val user = c.createUser(target)
-        if (notice) user.sendNotice(line)
-        else user.sendMessage(line)
+        if (notice) user.sendNotice(line) else user.sendMessage(line)
       }
     } getOrElse addCommandError(usage)
   }
@@ -437,7 +435,15 @@ sealed class CommandProcessor(ctx: Context) {
   }
 
   object PingCommand extends Command {
-    override def execute(args: Option[String]) = TODO
+    val CommandPattern = """\s*(\S+)\s*""".r
+    override def execute(args: Option[String]) {
+      args collect {
+        case CommandPattern(target) =>
+          val now = System.currentTimeMillis
+          CtcpCommand.execute(
+            Some("PING %s %d %03d000" format(target, now / 1000, now & 999)))
+      } getOrElse addCommandError(R.string.usage_ping)
+    }
   }
 
   object TopicCommand extends Command {
@@ -449,15 +455,29 @@ sealed class CommandProcessor(ctx: Context) {
   }
 
   object CtcpCommand extends Command {
-    override def execute(args: Option[String]) = TODO
+    val CommandPattern = """(\S+)\s+(\S+)\s*(.*?)\s*""".r
+    override def execute(args: Option[String]) {
+      args collect {
+        case CommandPattern(command, target, arg) => withConnection { c =>
+          val trimmedArg = arg.trim
+          val line = command.toUpperCase + (
+            if (trimmedArg.length == 0) "" else " " + trimmedArg)
+
+          // TODO add message to display
+          // CtcpRequest(service._connections(c),
+          //   target, command.toUpperCase,
+          //   Option(if (trimmedArglength == 0) null else trimmedArg))
+          c.createUser(target).sendCtcp(line)
+        }
+      } getOrElse addCommandError(R.string.usage_ctcp)
+    }
   }
 
   object NickCommand extends Command {
     override def execute(args: Option[String]) {
-      val newnick = args.getOrElse {
-        return addCommandError(R.string.usage_nick)
-      }
-      withConnection (conn => async { conn.setNick(newnick) })
+      args map { newnick =>
+        withConnection (conn => async { conn.setNick(newnick) })
+      } getOrElse { return addCommandError(R.string.usage_nick) }
     }
   }
 

@@ -19,6 +19,7 @@
     <string name="pref_irc_debug">irc_debug_log</string>
     <string name="pref_selector_mode">ui_selector_mode</string>
     <string name="pref_rotate_lock">ui_rotate_lock</string>
+    <string name="pref_hide_keyboard">ui_hide_kbd_after_send</string>
     <!-- end of pref names that should not be localized -->
 
     <string name="pref_show_nick_complete_title">
@@ -75,10 +76,16 @@
 
     <string name="pref_show_join_part_quit_title">
         Show Join/Part/Quit messages</string>
+
     <string name="pref_irc_debug_summary">
         To help the developer figure out weird IRC/connection issues</string>
     <string name="pref_irc_debug_title">
         Enable IRC debugging</string>
+
+    <string name="pref_hide_keyboard_summary">
+        Automatically hide the soft keyboard after sending a message</string>
+    <string name="pref_hide_keyboard_title">
+        Hide keyboard</string>
 
     <!-- default here because it's true on honeycomb -v11 and newer -->
     <bool name="pref_show_nick_complete_default">false</bool>

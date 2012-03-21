@@ -20,6 +20,11 @@ object MessageLike {
     case class Quit(nick: String, uhost: String, msg: String)
     extends MessageLike
 
+    case class CtcpRequest(server: Server, target: String, cmd: String,
+      args: Option[String])
+    extends MessageLike
+    case class CtcpReply(server: Server, src: String, cmd: String,
+      args: Option[String]) extends MessageLike
     case class NickChange(oldnick: String, newnick: String) extends MessageLike
     case class CommandError(message: String) extends MessageLike
     case class ServerInfo(message: String) extends MessageLike

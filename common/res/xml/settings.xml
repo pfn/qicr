@@ -33,6 +33,12 @@
             android:enabled="@bool/is_v11plus"
             android:defaultValue="@bool/is_phone"
         />
+        <CheckBoxPreference
+            android:key="@string/pref_hide_keyboard"
+            android:title="@string/pref_hide_keyboard_title"
+            android:summary="@string/pref_hide_keyboard_summary"
+            android:defaultValue="@bool/is_phone"
+        />
         <EditTextPreference
             android:key="@string/pref_message_lines"
             android:title="@string/pref_message_lines_title"

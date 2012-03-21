@@ -71,10 +71,21 @@
     <string name="usage_join">Usage: /join &lt;channel&gt; [password]</string>
     <string name="usage_msg">Usage: /msg &lt;new nick&gt; [message]</string>
     <string name="usage_notice">Usage: /notice &lt;nick&gt; [message]</string>
+    <string name="usage_ping">
+        Usage /ping &lt;nick/channel&gt;</string>
+    <string name="usage_ctcp">
+        Usage /ctcp &lt;nick/channel&gt; &lt;command&gt; [args]</string>
 
     <string name="message_template">&amp;lt;%1$s&amp;gt; %2$s</string>
     <string name="notice_template">-%1$s- %2$s</string>
     <string name="action_template"> * %1$s %2$s</string>
+    <string name="ctcp_response_template_3">
+        CTCP %1$s reply from %2$s: %3$s</string>
+    <string name="ctcp_response_template_2">CTCP %1$s reply from %2$s</string>
+    <string name="ctcp_response_template_s_3">
+        [%4$s] CTCP %1$s reply from %2$s: %3$s</string>
+    <string name="ctcp_response_template_s_2">
+        [%3$s] CTCP %1$s reply from %2$s</string>
 
     <!-- TODO colorize? -->
     <string name="nick_change_template">-!- %1$s is now known as %2$s</string>
@@ -130,10 +141,13 @@
     <string name="help_text">
       available commands:\n
       /action /me\n
+      /ctcp\n
       /h /help\n
       /j /join\n
       /m /msg\n
+      /nick\n
       /notice\n
+      /ping\n
       /raw\n
       /quit\n
       / /quote\n

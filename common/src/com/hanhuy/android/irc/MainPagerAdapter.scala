@@ -208,7 +208,7 @@ with EventBus.RefOwner {
       HoneycombSupport.setSelectedNavigationItem(pos)
       HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
         t.server map { s =>
-          " - %s: %s" format(s.name, s.lagString(s.currentLag))
+          " - %s: %s" format(s.name, Server.intervalString(s.currentLag))
         } getOrElse null)
     }
 
@@ -433,7 +433,7 @@ with EventBus.RefOwner {
 
         if (pos == page) { // show lag for the selected item
           line2.setText(format(" - %s: %s",
-            s.name, s.lagString(s.currentLag)))
+            s.name, Server.intervalString(s.currentLag)))
         } else {
           line2.setText(format(" - %s: %s", s.name, s.currentNick))
         }
@@ -441,7 +441,7 @@ with EventBus.RefOwner {
 
         if (pos == page) {
           line2.setText(format(" - %s (%s)",
-            s.currentNick, s.lagString(s.currentLag)))
+            s.currentNick, Server.intervalString(s.currentLag)))
         } else {
           line2.setText(format(" - %s", s.currentNick))
         }
