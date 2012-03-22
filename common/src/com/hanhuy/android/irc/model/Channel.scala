@@ -16,7 +16,8 @@ object Channel {
     }
 }
 
-abstract class ChannelLike(_server: Server, _name: String) {
+abstract class ChannelLike(_server: Server, _name: String)
+extends MessageAppender {
     val messages = new MessageAdapter
     def name = _name
     def server = _server

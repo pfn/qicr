@@ -352,7 +352,7 @@ sealed class CommandProcessor(ctx: Context) {
     }
   }
 
-  def getCurrentServer() = channel map { _.server } orElse (server)
+  def currentServer = channel map { _.server } orElse (server)
 
   object JoinCommand extends Command {
     override def execute(args: Option[String]) {
@@ -412,7 +412,7 @@ sealed class CommandProcessor(ctx: Context) {
   }
 
   def withConnection(f: IrcConnection => Unit) {
-    getCurrentServer map { s =>
+    currentServer map { s =>
       if (s.state != Server.State.CONNECTED)
         return addCommandError(R.string.error_server_disconnected)
 
@@ -440,8 +440,9 @@ sealed class CommandProcessor(ctx: Context) {
       args collect {
         case CommandPattern(target) =>
           val now = System.currentTimeMillis
+          // irssi seems to use microseconds for the second part, emulate
           CtcpCommand.execute(
-            Some("PING %s %d %03d000" format(target, now / 1000, now & 999)))
+            Some("PING %s %d %d000" format(target, now / 1000, now & 999)))
       } getOrElse addCommandError(R.string.usage_ping)
     }
   }
@@ -463,10 +464,16 @@ sealed class CommandProcessor(ctx: Context) {
           val line = command.toUpperCase + (
             if (trimmedArg.length == 0) "" else " " + trimmedArg)
 
-          // TODO add message to display
-          // CtcpRequest(service._connections(c),
-          //   target, command.toUpperCase,
-          //   Option(if (trimmedArglength == 0) null else trimmedArg))
+          val r = CtcpRequest(service._connections(c),
+             target, command.toUpperCase,
+             Option(if (trimmedArg.length == 0) null else trimmedArg))
+          val tab = activity.adapter.currentTab
+
+          // show in currently visible tab or the server's message tab
+          // if not currently on a message tab
+          tab.channel orElse tab.server map { _.add(r) } getOrElse {
+            currentServer map { _.add(r) }
+          }
           c.createUser(target).sendCtcp(line)
         }
       } getOrElse addCommandError(R.string.usage_ctcp)

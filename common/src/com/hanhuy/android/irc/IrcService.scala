@@ -445,7 +445,8 @@ extends AsyncTask[Object, Object, Server.State] {
           connection.connect(sslctx)
           state = Server.State.CONNECTED
         } catch {
-          case n: NickNameException =>
+          case e: Exception =>
+            Log.w(TAG, "Failed to connect, nick exception?", e)
             publishProgress(service.getString(R.string.server_nick_error))
             state = Server.State.DISCONNECTED
             connection.disconnect()

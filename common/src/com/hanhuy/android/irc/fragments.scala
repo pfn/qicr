@@ -86,8 +86,8 @@ class ServerSetupFragment extends DialogFragment {
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
     inflater.inflate(R.menu.server_setup_menu, menu)
 
-  override def onOptionsItemSelected(item: MenuItem) : Boolean = {
-    item.getItemId() match {
+  override def onOptionsItemSelected(item: MenuItem) = {
+    item.getItemId match {
       case R.id.save_server => {
         val activity = getActivity()
         val manager = activity.getSupportFragmentManager()
@@ -109,6 +109,7 @@ class ServerSetupFragment extends DialogFragment {
         manager.popBackStack()
         true
       }
+      case _ => false
     }
   }
 

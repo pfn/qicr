@@ -28,6 +28,10 @@ import java.text.SimpleDateFormat
 
 import MessageAdapter._
 
+trait MessageAppender {
+  def add(m: MessageLike): Unit
+}
+
 object MessageAdapter {
   val TAG = "MessageAdapter"
   val DEFAULT_MAXIMUM_SIZE = 256
@@ -42,6 +46,17 @@ object MessageAdapter {
         {if (o) "@" else if (v) "+" else ""} + s, m)
       case Notice(s, m) => gets(c, R.string.notice_template, msg, s, m)
       case CtcpAction(s, m) => gets(c, R.string.action_template, msg, s, m)
+      case CtcpRequest(server, t, cmd, args) =>
+        ch flatMap { chan =>
+          if (chan.server != server)
+            Some(getString(c, R.string.ctcp_request_template_s,
+              t, cmd, args getOrElse "", server.name))
+          else
+            None
+        } getOrElse {
+          getString(c, R.string.ctcp_request_template,
+            t, cmd, args getOrElse "")
+        }
       case CtcpReply(server, s, cmd, a) => a map { arg =>
         ch flatMap { chan =>
           if (chan.server != server)
@@ -50,8 +65,7 @@ object MessageAdapter {
           else
             None
         } getOrElse {
-          getString(c, R.string.ctcp_response_template_s_3,
-            cmd, s, arg, server.name)
+          getString(c, R.string.ctcp_response_template_3, cmd, s, arg)
         }
       } getOrElse {
         ch flatMap { chan =>
@@ -61,7 +75,7 @@ object MessageAdapter {
           else
             None
         } getOrElse {
-          getString(c, R.string.ctcp_response_template_s_2, cmd, s, server.name)
+          getString(c, R.string.ctcp_response_template_2, cmd, s)
         }
       }
       case Topic(src, t) => src map {

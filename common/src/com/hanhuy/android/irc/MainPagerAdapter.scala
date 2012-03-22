@@ -36,6 +36,23 @@ import AndroidConversions._
 
 object MainPagerAdapter {
   val TAG = "MainPagerAdapter"
+
+  object TabInfo {
+    val FLAG_NONE         = 0
+    val FLAG_DISCONNECTED = 1
+    val FLAG_NEW_MESSAGES = 2
+    val FLAG_NEW_MENTIONS = 4
+  }
+  class TabInfo(t: String, _fragment: Fragment) {
+    var title    = t
+    def fragment = _fragment
+    var tag: Option[String] = None
+    var channel: Option[ChannelLike] = None
+    var server: Option[Server] = None
+    var flags = TabInfo.FLAG_NONE
+    override def toString =
+      title + " fragment=" + fragment + " channel=" + channel
+  }
 }
 class MainPagerAdapter(activity: MainActivity)
 extends FragmentPagerAdapter(activity.getSupportFragmentManager)
@@ -47,6 +64,7 @@ with EventBus.RefOwner {
   lazy val servercomp  = new ServerComparator
 
   def channelBase = servers.size + 1
+  def currentTab = tabs(page)
 
   tabhost.setOnTabChangedListener(this)
   pager.setOnPageChangeListener(this)
@@ -356,23 +374,6 @@ with EventBus.RefOwner {
     tabhost.setCurrentTab(idx)
     notifyDataSetChanged()
     UiBus.post { showTabIndicator(idx) }
-  }
-
-  object TabInfo {
-    val FLAG_NONE         = 0
-    val FLAG_DISCONNECTED = 1
-    val FLAG_NEW_MESSAGES = 2
-    val FLAG_NEW_MENTIONS = 4
-  }
-  class TabInfo(t: String, _fragment: Fragment) {
-    var title    = t
-    def fragment = _fragment
-    var tag: Option[String] = None
-    var channel: Option[ChannelLike] = None
-    var server: Option[Server] = None
-    var flags = TabInfo.FLAG_NONE
-    override def toString =
-      title + " fragment=" + fragment + " channel=" + channel
   }
 
   override def getItemPosition(item: Object): Int = {

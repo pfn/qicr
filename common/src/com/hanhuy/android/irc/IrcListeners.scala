@@ -291,16 +291,20 @@ with ServerListener with MessageListener with ModeListener {
       }
       case _ => Option(reply)
     })
-    s.add(r)
+
     if (service.showing) {
       UiBus.run {
         val msg = MessageAdapter.formatText(service, r)
-        // TODO display in currently visible tab
-        //   Show server name if not on same-server tab
-        //   Display a Toast if not on a Message tab
-
-        Toast.makeText(service, msg, Toast.LENGTH_LONG).show()
+        service.activity map { activity =>
+          val tab = activity.adapter.currentTab
+          tab.channel orElse tab.server map { _.add(r) } getOrElse {
+            s.add(r)
+            Toast.makeText(service, msg, Toast.LENGTH_LONG).show()
+          }
+        }
       }
+    } else {
+      s.add(r)
     }
   }
 

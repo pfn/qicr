@@ -87,6 +87,11 @@
     <string name="ctcp_response_template_s_2">
         [%3$s] CTCP %1$s reply from %2$s</string>
 
+    <string name="ctcp_request_template_s">
+        [%4$s] [ctcp(%1$s)] %2$s %3$s</string>
+    <string name="ctcp_request_template">
+        [ctcp(%1$s)] %2$s %3$s</string>
+
     <!-- TODO colorize? -->
     <string name="nick_change_template">-!- %1$s is now known as %2$s</string>
     <string name="join_template">-!- %1$s [%2$s] has joined</string>
