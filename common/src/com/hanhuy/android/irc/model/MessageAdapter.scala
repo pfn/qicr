@@ -102,7 +102,7 @@ object MessageAdapter {
 
   private def formatText(c: Context, msg: MessageLike, res: Int,
       args: String*) =
-    (if (showTimestamp) sdf.format(msg.ts) else "") + c.getString(res, args:_*)
+    (if (showTimestamp) sdf.format(msg.ts) else "") + getString(c, res, args:_*)
 
   private def getString(c: Context, res: Int, args: String*) = {
     res match {
