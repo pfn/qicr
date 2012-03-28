@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
 import android.util.Log
+import android.widget.Toast
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -72,44 +73,52 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
   override def onCreate(db: SQLiteDatabase) = db.execSQL(TABLE_SERVERS_DDL)
   override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) = ()
 
-  def getServers() : ArrayBuffer[Server] = {
-    val db = getReadableDatabase()
-    val list = new ArrayBuffer[Server]
-    val c = db.query(TABLE_SERVERS, null, null, null, null, null, null)
-    val col_id          = c.getColumnIndexOrThrow(BaseColumns._ID)
-    val col_name        = c.getColumnIndexOrThrow(FIELD_NAME)
-    val col_autoconnect = c.getColumnIndexOrThrow(FIELD_AUTOCONNECT)
-    val col_hostname    = c.getColumnIndexOrThrow(FIELD_HOSTNAME)
-    val col_port        = c.getColumnIndexOrThrow(FIELD_PORT)
-    val col_ssl         = c.getColumnIndexOrThrow(FIELD_SSL)
-    val col_nickname    = c.getColumnIndexOrThrow(FIELD_NICKNAME)
-    val col_altnick     = c.getColumnIndexOrThrow(FIELD_ALTNICK)
-    val col_username    = c.getColumnIndexOrThrow(FIELD_USERNAME)
-    val col_password    = c.getColumnIndexOrThrow(FIELD_PASSWORD)
-    val col_realname    = c.getColumnIndexOrThrow(FIELD_REALNAME)
-    val col_autorun     = c.getColumnIndexOrThrow(FIELD_AUTORUN)
-    val col_autojoin    = c.getColumnIndexOrThrow(FIELD_AUTOJOIN)
+  def servers = {
+    try {
+      val db = getReadableDatabase()
+      val list = new ArrayBuffer[Server]
+      val c = db.query(TABLE_SERVERS, null, null, null, null, null, null)
+      val col_id          = c.getColumnIndexOrThrow(BaseColumns._ID)
+      val col_name        = c.getColumnIndexOrThrow(FIELD_NAME)
+      val col_autoconnect = c.getColumnIndexOrThrow(FIELD_AUTOCONNECT)
+      val col_hostname    = c.getColumnIndexOrThrow(FIELD_HOSTNAME)
+      val col_port        = c.getColumnIndexOrThrow(FIELD_PORT)
+      val col_ssl         = c.getColumnIndexOrThrow(FIELD_SSL)
+      val col_nickname    = c.getColumnIndexOrThrow(FIELD_NICKNAME)
+      val col_altnick     = c.getColumnIndexOrThrow(FIELD_ALTNICK)
+      val col_username    = c.getColumnIndexOrThrow(FIELD_USERNAME)
+      val col_password    = c.getColumnIndexOrThrow(FIELD_PASSWORD)
+      val col_realname    = c.getColumnIndexOrThrow(FIELD_REALNAME)
+      val col_autorun     = c.getColumnIndexOrThrow(FIELD_AUTORUN)
+      val col_autojoin    = c.getColumnIndexOrThrow(FIELD_AUTOJOIN)
 
-    while (c.moveToNext()) {
-      val s = new Server
-      s.id          = c.getLong(col_id)
-      s.name        = c.getString(col_name)
-      s.autoconnect = c.getInt(col_autoconnect) != 0
-      s.hostname    = c.getString(col_hostname)
-      s.port        = c.getInt(col_port)
-      s.ssl         = c.getInt(col_ssl) != 0
-      s.nickname    = c.getString(col_nickname)
-      s.altnick     = c.getString(col_altnick)
-      s.username    = c.getString(col_username)
-      s.password    = c.getString(col_password)
-      s.realname    = c.getString(col_realname)
-      s.autorun     = c.getString(col_autorun)
-      s.autojoin    = c.getString(col_autojoin)
-      list += s
+      while (c.moveToNext()) {
+        val s = new Server
+        s.id          = c.getLong(col_id)
+        s.name        = c.getString(col_name)
+        s.autoconnect = c.getInt(col_autoconnect) != 0
+        s.hostname    = c.getString(col_hostname)
+        s.port        = c.getInt(col_port)
+        s.ssl         = c.getInt(col_ssl) != 0
+        s.nickname    = c.getString(col_nickname)
+        s.altnick     = c.getString(col_altnick)
+        s.username    = c.getString(col_username)
+        s.password    = c.getString(col_password)
+        s.realname    = c.getString(col_realname)
+        s.autorun     = c.getString(col_autorun)
+        s.autojoin    = c.getString(col_autojoin)
+        list += s
+      }
+      c.close()
+      db.close()
+      list
+    } catch {
+      case e: Exception =>
+        Toast.makeText(context,
+          "Failed to open database", Toast.LENGTH_LONG).show()
+        Log.e(TAG, "Unable to open database", e)
+        ArrayBuffer.empty[Server]
     }
-    c.close()
-    db.close()
-    list
   }
 
   def addServer(server: Server) {

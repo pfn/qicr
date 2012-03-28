@@ -287,7 +287,7 @@ class IrcService extends Service with EventBus.RefOwner {
     }
   }
 
-  lazy val _servers = config.getServers()
+  lazy val _servers = config.servers
 
   def getServers = _servers
 
