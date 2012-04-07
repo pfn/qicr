@@ -1,6 +1,6 @@
 import AndroidKeys._
 
-scalaVersion := "2.8.1"
+scalaVersion := "2.8.2"
 
 name := "qicr-lite"
 

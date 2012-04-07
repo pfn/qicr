@@ -2,7 +2,7 @@ import AndroidKeys._
 
 name := "qicr-common"
 
-scalaVersion := "2.8.1"
+scalaVersion := "2.8.2"
 
 seq(androidBuildSettings: _*)
 
