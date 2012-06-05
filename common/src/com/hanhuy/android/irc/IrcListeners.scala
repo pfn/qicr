@@ -318,7 +318,7 @@ with ServerListener with MessageListener with ModeListener {
     UiBus.run { service.addQuery(c, src.getNick(), msg) }
 
   // AdvancedListener
-  override def onUnknown(c: IrcConnection, line: IrcDecoder) {
+  override def onUnknown(c: IrcConnection, line: IrcPacket) {
     service._connections.get(c) foreach { server =>
       if (line.isNumeric()) {
         // 306 = away
@@ -390,5 +390,5 @@ with ServerListener with MessageListener with ModeListener {
   }
 
   // Never happens
-  override def onUnknownReply(c: IrcConnection, line: IrcDecoder) = ()
+  override def onUnknownReply(c: IrcConnection, line: IrcPacket) = ()
 }
