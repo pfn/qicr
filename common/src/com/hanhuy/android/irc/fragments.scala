@@ -389,7 +389,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
 
       Log.d(TAG, "Requesting tab close for: " + channel + " <= " + id)
       def removeChannel() {
-        if (channel.state == Channel.State.JOINED) {
+        if (channel != null && channel.state == Channel.State.JOINED) {
           activity.service.channels.get(channel) foreach { _.part() }
         }
         activity.service.messages -= id
@@ -397,7 +397,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         activity.service.channels -= channel
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
-      if (channel.state == Channel.State.JOINED && prompt) {
+      if (channel != null && channel.state == Channel.State.JOINED && prompt) {
         var builder = new AlertDialog.Builder(activity)
         builder.setTitle(R.string.channel_close_confirm_title)
         builder.setMessage(getString(R.string.channel_close_confirm))
