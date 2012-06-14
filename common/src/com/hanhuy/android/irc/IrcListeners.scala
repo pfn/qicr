@@ -35,33 +35,36 @@ object IrcListeners {
   // match later on in the string.  e.g. with a nick of "foo"
   // and a message of "foobar sucks bad, foo" -- the line will not report
   // a match
-  def matchesNickIndex(server: Server, msg: String): Int = {
-    val m = msg.toLowerCase()
-    val nick = server.currentNick.toLowerCase()
+  def matchesNickIndex(server: Server, m: Option[String]): Int = {
+    m map { msg =>
+      val m = msg.toLowerCase()
+      val nick = server.currentNick.toLowerCase()
 
-    val idx = m.indexOf(nick)
-    val nlen = nick.length()
-    val mlen = m.length()
-    var matches = false
-    if (idx != -1) {
-      matches = true
-      if (idx > 0) { // matches intra-line
-        matches = !Character.isJavaIdentifierPart(msg.charAt(idx-1))
-        if (idx + nlen < mlen) { // if not at end of line
-          matches = matches && !Character.isJavaIdentifierPart(
-            msg.charAt(idx+nlen))
+      val idx = m.indexOf(nick)
+      val nlen = nick.length()
+      val mlen = m.length()
+      var matches = false
+      if (idx != -1) {
+        matches = true
+        if (idx > 0) { // matches intra-line
+          matches = !Character.isJavaIdentifierPart(msg.charAt(idx-1))
+          if (idx + nlen < mlen) { // if not at end of line
+            matches = matches && !Character.isJavaIdentifierPart(
+              msg.charAt(idx+nlen))
+          }
+        } else {
+          if (nlen < mlen) // matches at start of line
+            matches = !Character.isJavaIdentifierPart(msg.charAt(nlen))
+          }
         }
-      } else {
-        if (nlen < mlen) // matches at start of line
-          matches = !Character.isJavaIdentifierPart(msg.charAt(nlen))
-        }
-      }
 
-      if (matches) idx else -1
+        idx
+      } getOrElse -1
   }
 
+  // sometimes a null is passed in...
   def matchesNick(server: Server, msg: String) =
-    matchesNickIndex(server, msg) != -1
+    matchesNickIndex(server, Option(msg)) != -1
 
   class EnhancedUser(u: User) {
     def address = u.getUserName() + "@" + u.getHostName()
