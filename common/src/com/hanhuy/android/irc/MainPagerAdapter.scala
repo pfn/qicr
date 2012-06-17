@@ -417,11 +417,13 @@ with EventBus.RefOwner {
 
       val channelOrServer = !tab.channel.isEmpty || !tab.server.isEmpty
       // ugh, ugly!
+      val R_id_two_line_item = R.id.two_line_item
+
       val view = id match {
-      case R.id.two_line_item if channelOrServer => convert
+      case R_id_two_line_item if channelOrServer => convert
       case -1 | _ if channelOrServer => inflater.inflate(
         R.layout.simple_dropdown_item_2line, container, false)
-      case R.id.two_line_item | -1 => inflater.inflate(
+      case R_id_two_line_item | -1 => inflater.inflate(
         R.layout.simple_dropdown_item_1line, container, false)
       case _ => convert
       }

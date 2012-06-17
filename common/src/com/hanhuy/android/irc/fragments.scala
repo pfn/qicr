@@ -87,8 +87,10 @@ class ServerSetupFragment extends DialogFragment {
     inflater.inflate(R.menu.server_setup_menu, menu)
 
   override def onOptionsItemSelected(item: MenuItem) = {
+    val R_id_cancel_server = R.id.cancel_server
+    val R_id_save_server = R.id.save_server
     item.getItemId match {
-      case R.id.save_server => {
+      case R_id_save_server => {
         val activity = getActivity()
         val manager = activity.getSupportFragmentManager()
         val s = server
@@ -104,7 +106,7 @@ class ServerSetupFragment extends DialogFragment {
         }
         true
       }
-      case R.id.cancel_server => {
+      case R_id_cancel_server => {
         val manager = getActivity().getSupportFragmentManager()
         manager.popBackStack()
         true
@@ -267,9 +269,11 @@ with AdapterView.OnItemClickListener {
 
   var contextPos: Int = _
   override def onContextItemSelected(item: MenuItem): Boolean = {
+    val R_id_nick_insert = R.id.nick_insert
+    val R_id_nick_start_chat = R.id.nick_start_chat
     item.getItemId match {
-    case R.id.nick_insert => insertNick()
-    case R.id.nick_start_chat =>
+    case R_id_nick_insert => insertNick()
+    case R_id_nick_start_chat =>
       Toast.makeText(activity,
       "Not implemented yet, use /msg",
       Toast.LENGTH_SHORT).show()
@@ -719,8 +723,13 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
 
   def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
       Boolean = {
+    val R_id_server_delete = R.id.server_delete
+    val R_id_server_messages = R.id.server_messages
+    val R_id_server_options = R.id.server_options
+    val R_id_server_connect = R.id.server_connect
+    val R_id_server_disconnect = R.id.server_disconnect
     item.getItemId() match {
-      case R.id.server_delete => {
+      case R_id_server_delete => {
         server match {
         case Some(s) => {
           var builder = new AlertDialog.Builder(getActivity())
@@ -743,25 +752,25 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
         }
         true
       }
-      case R.id.server_connect => {
+      case R_id_server_connect => {
         server map { service.connect(_) } getOrElse {
           Toast.makeText(getActivity(), R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
       }
-      case R.id.server_disconnect => {
+      case R_id_server_disconnect => {
         server map { service.disconnect(_) } getOrElse {
           Toast.makeText(getActivity(), R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
       }
-      case R.id.server_options => {
+      case R_id_server_options => {
         addServerSetupFragment(server)
         true
       }
-      case R.id.server_messages => {
+      case R_id_server_messages => {
         server map { getActivity.adapter.addServer(_) } getOrElse {
           Toast.makeText(getActivity(), R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()

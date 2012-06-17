@@ -82,12 +82,15 @@ with EventBus.RefOwner {
         R.string.pref_show_speech_rec,
         R.string.pref_selector_mode) foreach { r =>
         if (getString(r) == key) {
+          val R_string_pref_show_nick_complete = R.string.pref_show_nick_complete
+          val R_string_pref_show_speech_rec = R.string.pref_show_speech_rec
+          val R_string_pref_selector_mode = R.string.pref_selector_mode
           r match {
-          case R.string.pref_show_nick_complete =>
+          case R_string_pref_show_nick_complete =>
             showNickComplete = s.getBoolean(r, honeycombAndNewer)
-          case R.string.pref_show_speech_rec =>
+          case R_string_pref_show_speech_rec =>
             showSpeechRec = s.getBoolean(r, true)
-          case R.string.pref_selector_mode =>
+          case R_string_pref_selector_mode =>
             toggleSelectorMode = true // flag recreate onResume
           }
         }
@@ -397,25 +400,29 @@ with EventBus.RefOwner {
   }
 
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
+    val R_id_exit = R.id.exit
+    val R_id_settings = R.id.settings
+    val R_id_toggle_theme = R.id.toggle_theme
+    val R_id_toggle_rotate_lock = R.id.toggle_rotate_lock
     item.getItemId() match {
-    case R.id.exit => {
+    case R_id_exit => {
             exit()
             true
     }
-    case R.id.settings => {
+    case R_id_settings => {
       val clazz = if (honeycombAndNewer) classOf[SettingsFragmentActivity]
         else classOf[SettingsActivity]
       val intent = new Intent(this, clazz)
       startActivity(intent)
       true
     }
-    case R.id.toggle_theme => {
+    case R_id_toggle_theme => {
       val mode = settings.getBoolean(R.string.pref_daynight_mode)
       settings.set(R.string.pref_daynight_mode, !mode)
       _recreate()
       true
     }
-    case R.id.toggle_rotate_lock => {
+    case R_id_toggle_rotate_lock => {
       import android.content.pm.ActivityInfo._
       val locked = !item.isChecked()
       item.setChecked(locked)
