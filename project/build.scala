@@ -21,6 +21,7 @@ object QicrBuild extends Build {
   lazy val common = Project(id = "common", base = file("common")) settings(Seq(
     scalacOptions in Compile += "-deprecation",
     organization         := "com.hanhuy.android",
-    javacOptions in Compile += "-deprecation"
-  ) ++ android.Plugin.androidBuildAar: _*)
+    javacOptions in Compile += "-deprecation",
+    libraryDependencies += "com.android.support" % "support-v4" % "13.0.0"
+  ) ++ android.Plugin.androidBuild: _*)
 }
