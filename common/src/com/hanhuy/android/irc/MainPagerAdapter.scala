@@ -60,6 +60,7 @@ with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener
 with EventBus.RefOwner {
   val channels = new ArrayBuffer[ChannelLike]
   val servers  = new ArrayBuffer[Server]
+  val tabs = new ArrayBuffer[TabInfo]()
   lazy val channelcomp = new ChannelLikeComparator
   lazy val servercomp  = new ServerComparator
 
@@ -72,10 +73,9 @@ with EventBus.RefOwner {
   lazy val manager = activity.getSupportFragmentManager
   lazy val tabhost = activity.tabhost
   lazy val pager = activity.pager
-  lazy val hsv = activity.findView[HorizontalScrollView](R.id.tab_scroller)
+  lazy val hsv = activity.findView(TR.tab_scroller)
   lazy val nm = activity.systemService[NotificationManager]
 
-  val tabs = new ArrayBuffer[TabInfo]()
   var page = 0
 
   if (activity.service != null)
@@ -273,7 +273,7 @@ with EventBus.RefOwner {
       val inflater = activity.systemService[LayoutInflater]
       val ind = inflater.inflate(R.layout.tab_indicator,
         tabhost.getTabWidget(), false)
-      ind.findView[TextView](R.id.title).setText(title)
+      ind.findView(TR.title).setText(title)
 
       spec = tabhost.newTabSpec("tabspec" + tabnum).setIndicator(ind)
     } else
@@ -435,18 +435,18 @@ with EventBus.RefOwner {
         val s = c.server
 
         if (pos == page) { // show lag for the selected item
-          line2.setText(format(" - %s: %s",
+          line2.setText(" - %s: %s" format(
             s.name, Server.intervalString(s.currentLag)))
         } else {
-          line2.setText(format(" - %s: %s", s.name, s.currentNick))
+          line2.setText(" - %s: %s" format (s.name, s.currentNick))
         }
       } getOrElse (tab.server map { s =>
 
         if (pos == page) {
-          line2.setText(format(" - %s (%s)",
+          line2.setText(" - %s (%s)" format (
             s.currentNick, Server.intervalString(s.currentLag)))
         } else {
-          line2.setText(format(" - %s", s.currentNick))
+          line2.setText(" - %s" format s.currentNick)
         }
       })
       view

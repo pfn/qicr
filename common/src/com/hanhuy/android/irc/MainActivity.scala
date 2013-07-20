@@ -62,7 +62,7 @@ object MainActivity {
   def getFragmentTag(c: ChannelLike) = {
     val s = if (c == null) null else c.server
     val sinfo = if (s == null) "server-object-null:"
-      else format("%s::%s::%d::%s::%s::",
+      else "%s::%s::%d::%s::%s::".format(
         s.name, s.hostname, s.port, s.username, s.nickname)
     "fragment:" + sinfo + (c match {
     case ch: Channel => ch.name 
@@ -116,22 +116,22 @@ with EventBus.RefOwner {
     val f = getSupportFragmentManager().findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
   }
-  lazy val pager = findView[ViewPager](R.id.pager)
+  lazy val pager = findView(TR.pager)
   lazy val adapter = new MainPagerAdapter(this)
 
   lazy val newmessages = {
-    val v = findView[View](R.id.btn_new_messages)
+    val v = findView(TR.btn_new_messages)
     v.setOnClickListener(adapter.goToNewMessages _)
     v
   }
 
   lazy val nickcomplete = {
-    val complete = findView[View](R.id.btn_nick_complete)
+    val complete = findView(TR.btn_nick_complete)
     complete.setOnClickListener { () => proc.nickComplete(Some(input)) }
     complete
   }
   lazy val speechrec = {
-    val speech = findView[View](R.id.btn_speech_rec)
+    val speech = findView(TR.btn_speech_rec)
     speech.setOnClickListener { () =>
       val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
       intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -152,7 +152,7 @@ with EventBus.RefOwner {
 
   lazy val proc = new InputProcessor(this)
   lazy val input = {
-    val i = findView[EditText](R.id.input)
+    val i = findView(TR.input)
     i.setOnEditorActionListener(proc.onEditorActionListener _)
     i.setOnKeyListener(proc.onKeyListener _)
     i.addTextChangedListener(proc.TextListener)

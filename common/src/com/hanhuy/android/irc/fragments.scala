@@ -44,36 +44,35 @@ class ServerSetupFragment extends DialogFragment {
   def server: Server = {
     val s = _server
     if (s == null) return _server
-    s.name        = thisview.findView[EditText](R.id.add_server_name)
-    s.hostname    = thisview.findView[EditText](R.id.add_server_host)
-    s.port        = thisview.findView[EditText](R.id.add_server_port)
-    s.ssl         = thisview.findView[CheckBox](R.id.add_server_ssl)
-    s.autoconnect = thisview.findView[CheckBox](R.id.add_server_autoconnect)
-    s.nickname    = thisview.findView[EditText](R.id.add_server_nickname)
-    s.altnick     = thisview.findView[EditText](R.id.add_server_altnick)
-    s.realname    = thisview.findView[EditText](R.id.add_server_realname)
-    s.username    = thisview.findView[EditText](R.id.add_server_username)
-    s.password    = thisview.findView[EditText](R.id.add_server_password)
-    s.autojoin    = thisview.findView[EditText](R.id.add_server_autojoin)
-    s.autorun     = thisview.findView[EditText](R.id.add_server_autorun)
+    s.name        = thisview.findView(TR.add_server_name)
+    s.hostname    = thisview.findView(TR.add_server_host)
+    s.port        = thisview.findView(TR.add_server_port)
+    s.ssl         = thisview.findView(TR.add_server_ssl)
+    s.autoconnect = thisview.findView(TR.add_server_autoconnect)
+    s.nickname    = thisview.findView(TR.add_server_nickname)
+    s.altnick     = thisview.findView(TR.add_server_altnick)
+    s.realname    = thisview.findView(TR.add_server_realname)
+    s.username    = thisview.findView(TR.add_server_username)
+    s.password    = thisview.findView(TR.add_server_password)
+    s.autojoin    = thisview.findView(TR.add_server_autojoin)
+    s.autorun     = thisview.findView(TR.add_server_autorun)
     _server
   }
   def server_=(s: Server) = {
     _server = s
     if (thisview != null && s != null) {
-      thisview.findView[EditText](R.id.add_server_name).setText(s.name)
-      thisview.findView[EditText](R.id.add_server_host).setText(s.hostname)
-      thisview.findView[EditText](R.id.add_server_port).setText("" + s.port)
-      thisview.findView[CheckBox](R.id.add_server_ssl).setChecked(s.ssl)
-      thisview.findView[CheckBox](
-                    R.id.add_server_autoconnect).setChecked(s.autoconnect)
-      thisview.findView[EditText](R.id.add_server_nickname).setText(s.nickname)
-      thisview.findView[EditText](R.id.add_server_altnick).setText(s.altnick)
-      thisview.findView[EditText](R.id.add_server_realname).setText(s.realname)
-      thisview.findView[EditText](R.id.add_server_username).setText(s.username)
-      thisview.findView[EditText](R.id.add_server_password).setText(s.password)
-      thisview.findView[EditText](R.id.add_server_autojoin).setText(s.autojoin)
-      thisview.findView[EditText](R.id.add_server_autorun).setText(s.autorun)
+      thisview.findView(TR.add_server_name).setText(s.name)
+      thisview.findView(TR.add_server_host).setText(s.hostname)
+      thisview.findView(TR.add_server_port).setText("" + s.port)
+      thisview.findView(TR.add_server_ssl).setChecked(s.ssl)
+      thisview.findView(TR.add_server_autoconnect).setChecked(s.autoconnect)
+      thisview.findView(TR.add_server_nickname).setText(s.nickname)
+      thisview.findView(TR.add_server_altnick).setText(s.altnick)
+      thisview.findView(TR.add_server_realname).setText(s.realname)
+      thisview.findView(TR.add_server_username).setText(s.username)
+      thisview.findView(TR.add_server_password).setText(s.password)
+      thisview.findView(TR.add_server_autojoin).setText(s.autojoin)
+      thisview.findView(TR.add_server_autorun).setText(s.autorun)
     }
   }
 
@@ -366,7 +365,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         nicklist = Some(list)
         setNickListAdapter(list)
         // doesn't appear if added via onCreateView
-        v.findView[ViewGroup](R.id.nicklist_container).addView(list)
+        v.findView(TR.nicklist_container).addView(list)
         // TODO this puts them one atop the other, even when horizontal?
         //v.asInstanceOf[ViewGroup].addView(view)
       }
@@ -581,13 +580,15 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
   override def onCreateView(inflater: LayoutInflater,
       container: ViewGroup, bundle: Bundle) = {
     val v = inflater.inflate(R.layout.fragment_servers, container, false)
+    val b = v.findView(TR.add_server)
+    b.setOnClickListener { () => getActivity.servers.addServerSetupFragment() }
     if (!honeycombAndNewer)
       registerForContextMenu(v.findView[ListView](android.R.id.list))
     v
   }
 
   override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
-    v.findView[CheckedTextView](R.id.server_checked_text).setChecked(true)
+    v.findView(TR.server_checked_text).setChecked(true)
     val activity = getActivity()
     val manager = activity.getSupportFragmentManager()
     manager.popBackStack(SERVER_SETUP_STACK,
@@ -845,9 +846,9 @@ extends ArrayAdapter[Server](
     val list = parent.asInstanceOf[ListView]
     val v = super.getView(pos, reuseView, parent)
     val checked = list.getCheckedItemPosition()
-    val img = v.findView[ImageView](R.id.server_item_status)
+    val img = v.findView(TR.server_item_status)
 
-    v.findView[View](R.id.server_item_progress).setVisibility(
+    v.findView(TR.server_item_progress).setVisibility(
       if (server.state == Server.State.CONNECTING) View.VISIBLE
         else View.INVISIBLE)
 
@@ -862,7 +863,7 @@ extends ArrayAdapter[Server](
       if (server.state != Server.State.CONNECTING)
         View.VISIBLE else View.INVISIBLE)
 
-    val t = v.findView[CheckedTextView](R.id.server_checked_text)
+    val t = v.findView(TR.server_checked_text)
     t.setChecked(pos == checked)
 
     val lag = if (server.state == CONNECTED) {

@@ -38,13 +38,6 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
             p.edit().putBoolean(context.getString(key), value).commit()
 }
 
-// android2.3-
-class SettingsActivity extends PreferenceActivity {
-    override def onCreate(bundle: Bundle) {
-        super.onCreate(bundle)
-        addPreferencesFromResource(R.xml.settings)
-    }
-}
 
 // android3.0+
 class SettingsFragmentActivity extends Activity {

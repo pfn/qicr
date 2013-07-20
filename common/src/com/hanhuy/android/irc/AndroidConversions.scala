@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.app.Activity
+
 import android.app.ActionBar
 import android.content.Intent
 import android.content.Context
@@ -149,16 +150,25 @@ class RichContext(context: Context) {
   def systemService[T](implicit s: SystemService[T]): T =
     context.getSystemService(s.name).asInstanceOf[T]
 }
-class RichView(view: View) {
+class RichView(view: View) extends TypedViewHolder {
   import AndroidConversions._
-  def findView[T](id: Int): T = view.findViewById(id).asInstanceOf[T]
+
+  def findViewById(id: Int): View = view.findViewById(id)
+
+  def findView[A <: View](id: Int): A =
+    view.findViewById(id).asInstanceOf[A]
+
   def onClick_= (f: => Unit) = view.setOnClickListener { () => f }
 }
-class RichActivity(activity: Activity) extends RichContext(activity) {
+class RichActivity(activity: Activity) extends RichContext(activity)
+with TypedViewHolder {
   import Configuration._
   lazy val config = activity.getResources.getConfiguration
 
-  def findView[T](id: Int): T = activity.findViewById(id).asInstanceOf[T]
+  def findView[A <: View](id: Int): A =
+    activity.findViewById(id).asInstanceOf[A]
+
+  def findViewById(id: Int): View = activity.findViewById(id)
 
   private def atLeast(size: Int) =
     (config.screenLayout & SCREENLAYOUT_SIZE_MASK) >= size

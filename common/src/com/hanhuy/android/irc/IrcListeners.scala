@@ -385,7 +385,7 @@ with ServerListener with MessageListener with ModeListener {
         }
       }
       UiBus.run {
-        server.add(ServerInfo(format("[%s](%s):[%s]",
+        server.add(ServerInfo("[%s](%s):[%s]" format (
           line.getCommand(), line.getArguments(),
           line.getMessage())))
       }

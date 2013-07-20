@@ -13,8 +13,7 @@
         Your nicknames are all unavailable, aborting.
     </string>
 
-    <string name="server_none">
-        No servers configured, tap menu -&gt; add a server to continue</string>
+    <string name="server_none">No servers configured</string>
     <string name="server_not_selected">No server selected</string>
     <string name="server_incomplete">
         Not all required server fields have been filled</string>

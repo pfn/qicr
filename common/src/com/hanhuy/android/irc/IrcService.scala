@@ -26,6 +26,7 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.widget.Toast
 import android.util.Log
+import android.support.v4.app.NotificationCompat
 
 import com.sorcix.sirc.IrcDebug
 import com.sorcix.sirc.IrcServer
@@ -76,13 +77,17 @@ class IrcService extends Service with EventBus.RefOwner {
     // but speech rec -> home will not trigger this?
     if (!s) {
       if (_running) {
-        val notif = new Notification(R.drawable.ic_notify_mono,
-          null, System.currentTimeMillis)
         val pending = PendingIntent.getActivity(this, 0,
-          new Intent(this, classOf[MainActivity]), 0)
-        notif.setLatestEventInfo(getApplicationContext(),
-          getString(R.string.notif_title),
-          getString(R.string.notif_running), pending)
+          new Intent(this, classOf[MainActivity]),
+          PendingIntent.FLAG_UPDATE_CURRENT)
+        val notif = new NotificationCompat.Builder(this)
+          .setSmallIcon(R.drawable.ic_notify_mono)
+          .setWhen(System.currentTimeMillis())
+          .setContentIntent(pending)
+          .setContentText(getString(R.string.notif_running))
+          .setContentTitle(getString(R.string.notif_title))
+          .build
+
         startForeground(RUNNING_ID, notif)
       } else {
         stopForeground(true)
@@ -184,7 +189,7 @@ class IrcService extends Service with EventBus.RefOwner {
       synchronized {
         // TODO wait for quit to actually complete?
         while (disconnectCount < count) {
-          Log.d(TAG, format("Waiting for disconnect: %d/%d",
+          Log.d(TAG, "Waiting for disconnect: %d/%d" format (
             disconnectCount, count))
           wait()
         }
@@ -383,16 +388,20 @@ class IrcService extends Service with EventBus.RefOwner {
         c.server.name + EXTRA_SPLITTER + c.name)
   }
 
-  def showNotification(id: Int, res: Int, text: String, extra: String) {
+  def showNotification(id: Int, icon: Int, text: String, extra: String) {
     val nm = systemService[NotificationManager]
-    val notif = new Notification(res, text, System.currentTimeMillis())
     val intent = new Intent(this, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     intent.putExtra(EXTRA_SUBJECT, extra)
     val pending = PendingIntent.getActivity(this, 0, intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
-    notif.setLatestEventInfo(getApplicationContext(),
-      getString(R.string.notif_title), text, pending)
+    val notif = new NotificationCompat.Builder(this)
+      .setSmallIcon(icon)
+      .setWhen(System.currentTimeMillis())
+      .setContentIntent(pending)
+      .setContentText(text)
+      .setContentTitle(getString(R.string.notif_title))
+      .build
     notif.flags |= Notification.FLAG_AUTO_CANCEL
     nm.notify(id, notif)
   }
@@ -400,7 +409,7 @@ class IrcService extends Service with EventBus.RefOwner {
   def ping(c: IrcConnection, server: Server) {
     val now = System.currentTimeMillis
     server.currentPing = Some(now)
-    c.sendRaw(format("PING %d", now))
+    c.sendRaw("PING %d" format now)
   }
 }
 
