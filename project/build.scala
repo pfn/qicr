@@ -9,12 +9,18 @@ object QicrBuild extends Build {
     packageT in Compile <<= packageT in Android in lite,
     packageRelease      <<= packageRelease in Android in lite,
     packageDebug        <<= packageDebug in Android in lite
-  ) aggregate(lite, common)
+  ) aggregate(lite, common, sirc)
+
+  lazy val sirc = RootProject(uri("https://github.com/sorcix/sIRC.git#7fa7cc7"))
+
+  override def settings = super.settings ++
+    (exportJars in (sirc,Compile) := true)
 
   lazy val lite = Project(id = "lite", base = file("lite")) settings(
       android.Plugin.androidBuild(common) ++ Seq(
         organization                := "com.hanhuy.android",
-        proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize"),
+        proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize",
+          "-dontwarn android.support.**"),
         proguardScala in Android := true
       ): _*) dependsOn(common)
 
@@ -27,7 +33,6 @@ object QicrBuild extends Build {
     resolvers += Resolver.mavenLocal,
     // mvn install sirc locally to use the below dep
     libraryDependencies ++= Seq(
-      "com.android.support" % "support-v4" % "13.0.0",
-      "com.sorcix" % "sirc" % "1.1.4")
-  ) ++ android.Plugin.androidBuild: _*)
+      "com.android.support" % "support-v4" % "18.0.0")
+  ) ++ android.Plugin.androidBuild: _*) dependsOn(sirc)
 }
