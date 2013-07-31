@@ -37,8 +37,8 @@ object IrcListeners {
   // a match
   def matchesNickIndex(server: Server, m: Option[String]): Int = {
     m map { msg =>
-      val m = msg.toLowerCase()
-      val nick = server.currentNick.toLowerCase()
+      val m = msg.toLowerCase
+      val nick = server.currentNick.toLowerCase
 
       val idx = m.indexOf(nick)
       val nlen = nick.length()
@@ -67,7 +67,7 @@ object IrcListeners {
     matchesNickIndex(server, Option(msg)) != -1
 
   class EnhancedUser(u: User) {
-    def address = u.getUserName() + "@" + u.getHostName()
+    def address = u.getUserName + "@" + u.getHostName
   }
 
   implicit def toEnhancedUser(u: User) = new EnhancedUser(u)
@@ -114,7 +114,7 @@ with ServerListener with MessageListener with ModeListener {
   }
   override def onDisconnect(c: IrcConnection) {
     //Log.w(TAG, "Connection dropped: " + c, new StackTrace)
-    service._connections.get(c) foreach { service.serverDisconnected(_) }
+    service._connections.get(c) foreach { service.serverDisconnected }
   }
   override def onInvite(c: IrcConnection, src: User, user: User,
       channel: Channel) {
@@ -122,14 +122,14 @@ with ServerListener with MessageListener with ModeListener {
   }
 
   override def onJoin(c: IrcConnection, channel: Channel, user: User) {
-    if (user.isUs())
+    if (user.isUs)
       service.addChannel(c, channel)
     UiBus.run {
       // sometimes channel hasn't been set yet (on connect)
       service._channels.get(channel) foreach { ch =>
         UiBus.send(BusEvent.NickListChanged(ch))
-        if (!user.isUs())
-          ch.add(Join(user.getNick(), user.address))
+        if (!user.isUs)
+          ch.add(Join(user.getNick, user.address))
       }
     }
   }
@@ -138,13 +138,13 @@ with ServerListener with MessageListener with ModeListener {
       user: User, op: User, msg: String) {
     UiBus.run {
       val ch = service._channels(channel)
-      if (user.isUs()) {
+      if (user.isUs) {
         // TODO update adapter's channel state
         ch.state = QicrChannel.State.KICKED
       } else {
         UiBus.send(BusEvent.NickListChanged(ch))
       }
-      ch.add(Kick(op.getNick(), user.getNick(), msg))
+      ch.add(Kick(op.getNick, user.getNick, msg))
     }
   }
 
@@ -153,12 +153,12 @@ with ServerListener with MessageListener with ModeListener {
     if (!service._channels.contains(channel)) return
       UiBus.run {
         val ch = service._channels(channel)
-        if (user.isUs()) {
+        if (user.isUs) {
           ch.state = QicrChannel.State.PARTED
         } else {
           UiBus.send(BusEvent.NickListChanged(ch))
       }
-      ch.add(Part(user.getNick(), user.address, msg))
+      ch.add(Part(user.getNick, user.address, msg))
     }
   }
 
@@ -166,7 +166,7 @@ with ServerListener with MessageListener with ModeListener {
       src: User, topic: String) {
     val c = service._channels(channel)
     UiBus.run {
-      c.add(Topic(if (src != null) Some(src.getNick()) else None, topic))
+      c.add(Topic(if (src != null) Some(src.getNick) else None, topic))
     }
   }
 
@@ -181,14 +181,14 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
     val server = service._connections(c)
-    if (oldnick.isUs() || newnick.isUs()) {
-      server.currentNick = newnick.getNick()
+    if (oldnick.isUs || newnick.isUs) {
+      server.currentNick = newnick.getNick
 
       UiBus.run {
         service._channels.values foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
-            c.add(NickChange(oldnick.getNick(), newnick.getNick()))
+            c.add(NickChange(oldnick.getNick, newnick.getNick))
           }
         }
       }
@@ -199,7 +199,7 @@ with ServerListener with MessageListener with ModeListener {
         } foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
-            c.add(NickChange(oldnick.getNick(), newnick.getNick()))
+            c.add(NickChange(oldnick.getNick, newnick.getNick))
           }
         }
       }
@@ -207,7 +207,7 @@ with ServerListener with MessageListener with ModeListener {
   }
 
   override def onQuit(c: IrcConnection, user: User, msg: String) {
-    if (user.isUs()) return
+    if (user.isUs) return
     val server = service._connections(c)
     UiBus.run {
       try { // guard can change values if slow...
@@ -216,7 +216,7 @@ with ServerListener with MessageListener with ModeListener {
         } foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
-            c.add(Quit(user.getNick(), user.address, msg))
+            c.add(Quit(user.getNick, user.address, msg))
           }
         }
       } catch {
@@ -252,7 +252,7 @@ with ServerListener with MessageListener with ModeListener {
   override def onAction(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
     val c = service._channels(channel)
-    val action = CtcpAction(src.getNick(), msg)
+    val action = CtcpAction(src.getNick, msg)
     UiBus.run { c.add(action) }
     if (matchesNick(c.server, msg))
       service.addChannelMention(c, action)
@@ -262,7 +262,7 @@ with ServerListener with MessageListener with ModeListener {
       msg: String) {
     val c = service._channels(channel)
 
-    val pm = Privmsg(src.getNick(), msg, src.hasOperator(), src.hasVoice())
+    val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice)
     if (matchesNick(c.server, msg))
       service.addChannelMention(c, pm)
 
@@ -272,7 +272,7 @@ with ServerListener with MessageListener with ModeListener {
   override def onNotice(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
     val c = service._channels(channel)
-    val notice = Notice(src.getNick(), msg)
+    val notice = Notice(src.getNick, msg)
     UiBus.run { c.add(notice) }
     if (matchesNick(c.server, msg))
       service.addChannelMention(c, notice)
@@ -312,22 +312,22 @@ with ServerListener with MessageListener with ModeListener {
   }
 
   override def onAction(c: IrcConnection, src: User, action: String) =
-    UiBus.run { service.addQuery(c, src.getNick(), action, action = true) }
+    UiBus.run { service.addQuery(c, src.getNick, action, action = true) }
 
   override def onNotice(c: IrcConnection, src: User, msg: String) =
-    UiBus.run { service.addQuery(c, src.getNick(), msg, notice = true) }
+    UiBus.run { service.addQuery(c, src.getNick, msg, notice = true) }
 
   override def onPrivateMessage(c: IrcConnection, src: User, msg: String) =
-    UiBus.run { service.addQuery(c, src.getNick(), msg) }
+    UiBus.run { service.addQuery(c, src.getNick, msg) }
 
   // AdvancedListener
   override def onUnknown(c: IrcConnection, line: IrcPacket) {
     service._connections.get(c) foreach { server =>
-      if (line.isNumeric()) {
+      if (line.isNumeric) {
         // 306 = away
         // 333 = topic change info
         // 366 = end of /names list
-        line.getNumericCommand() match {
+        line.getNumericCommand match {
           case 005 => return // server capabilities list
           case 251 => () // msg, network users info
           case 252 => () // args[1] ircops online
@@ -386,8 +386,8 @@ with ServerListener with MessageListener with ModeListener {
       }
       UiBus.run {
         server.add(ServerInfo("[%s](%s):[%s]" format (
-          line.getCommand(), line.getArguments(),
-          line.getMessage())))
+          line.getCommand, line.getArguments,
+          line.getMessage)))
       }
     }
   }

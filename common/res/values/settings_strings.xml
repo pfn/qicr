@@ -4,24 +4,6 @@
     <string name="pref_category_speech_rec">Speech Recognition</string>
     <string name="pref_category_irc">IRC</string>
 
-    <!-- these pref names should not be localized -->
-    <string name="pref_close_tab_prompt">ui_close_tab_prompt</string>
-    <string name="pref_quit_prompt">ui_quit_prompt</string>
-    <string name="pref_show_nick_complete">ui_show_nick_complete</string>
-    <string name="pref_show_speech_rec">ui_show_speech_rec</string>
-    <string name="pref_speech_rec_eol">speech_cmd_eol</string>
-    <string name="pref_speech_rec_clearline">speech_cmd_clear_line</string>
-    <string name="pref_message_lines">ui_message_lines</string>
-    <string name="pref_daynight_mode">ui_daynight_mode</string>
-    <string name="pref_show_timestamp">ui_show_timestamp</string>
-    <string name="pref_quit_message">irc_quit_message</string>
-    <string name="pref_show_join_part_quit">irc_show_join_part_quit</string>
-    <string name="pref_irc_debug">irc_debug_log</string>
-    <string name="pref_selector_mode">ui_selector_mode</string>
-    <string name="pref_rotate_lock">ui_rotate_lock</string>
-    <string name="pref_hide_keyboard">ui_hide_kbd_after_send</string>
-    <!-- end of pref names that should not be localized -->
-
     <string name="pref_show_nick_complete_title">
         Nick completion button</string>
     <string name="pref_show_nick_complete_summary">

@@ -68,6 +68,13 @@ object AndroidConversions {
         f(av, v, pos, id)
     }
 
+  implicit def toAdapterViewOnItemClickListener2(
+      f: (Int) => Unit) =
+    new AdapterView.OnItemClickListener() {
+      def onItemClick(av: AdapterView[_], v: View, pos: Int, id: Long) =
+        f(pos)
+    }
+
   implicit def toViewOnKeyListener(f: (View, Int, KeyEvent) => Boolean) =
     new View.OnKeyListener() {
       def onKey(v: View, key: Int, e: KeyEvent) = f(v, key, e)

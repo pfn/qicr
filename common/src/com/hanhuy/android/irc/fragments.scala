@@ -1,19 +1,13 @@
 package com.hanhuy.android.irc
 
-import android.app.NotificationManager
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
 import android.os.Bundle
-import android.view.LayoutInflater;
+import android.view.LayoutInflater
 import android.view.{View, ViewGroup}
 import android.view.{Menu, MenuItem, MenuInflater}
-import android.view.ContextMenu
-import android.widget.CheckedTextView
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.ImageView
 import android.widget.AdapterView
 import android.widget.{ListView, ArrayAdapter}
 import android.widget.Toast
@@ -21,7 +15,6 @@ import android.util.Log
 
 import android.support.v4.app.ListFragment
 import android.support.v4.app.DialogFragment
-import android.support.v4.app.Fragment
 import android.support.v4.app.{FragmentManager, FragmentTransaction}
 
 import com.hanhuy.android.irc.model.Channel
@@ -132,7 +125,7 @@ class ServerSetupFragment extends DialogFragment {
   override def onCreateDialog(bundle: Bundle): Dialog = {
     dialogShown = true
     val activity = getActivity()
-    val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
+    val m = activity.settings.get(Settings.DAYNIGHT_MODE)
     //import android.view.ContextThemeWrapper
     //val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
     //    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark))
@@ -293,8 +286,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
     if (R.id.channel_close == item.getItemId()) {
       val activity = getActivity()
-      val prompt = activity.settings.getBoolean(
-        R.string.pref_close_tab_prompt, true)
+      val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
 
       Log.d(TAG, "Requesting tab close for: " + channel + " <= " + id)
       def removeChannel() {
@@ -346,8 +338,7 @@ extends MessagesFragment(a) {
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
     if (R.id.query_close == item.getItemId()) {
       val activity = getActivity()
-      val prompt = activity.settings.getBoolean(
-        R.string.pref_close_tab_prompt, true)
+      val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
       def removeQuery() {
         activity.service.chans.get(id) foreach { q =>
           val query = q.asInstanceOf[Query]
@@ -577,7 +568,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
       tx.addToBackStack(SERVER_SETUP_STACK)
       tx.commit() // can't commit a show
     } else {
-      val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
+      val m = activity.settings.get(Settings.DAYNIGHT_MODE)
       fragment.setStyle(DialogFragment.STYLE_NO_TITLE,
         if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
       fragment.show(tx, SERVER_SETUP_FRAGMENT)

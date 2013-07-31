@@ -11,18 +11,15 @@ import com.hanhuy.android.irc.model.NickListAdapter
 import com.hanhuy.android.irc.model.BusEvent
 
 import android.app.NotificationManager
-import android.content.Context
 import android.util.Log
 import android.text.Html
 import android.view.{View, ViewGroup}
-import android.view.LayoutInflater;
-import android.widget.HorizontalScrollView
+import android.view.LayoutInflater
 import android.widget.TextView
 import android.widget.BaseAdapter
-import android.widget.EditText
 
 import android.support.v4.view.{ViewPager, PagerAdapter}
-import android.support.v4.app.{Fragment, FragmentActivity, FragmentManager}
+import android.support.v4.app.Fragment
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -99,7 +96,7 @@ with EventBus.RefOwner {
 
     if (service.channels.size > channels.size)
       (service.channels.keySet -- channels) foreach addChannel
-    channels.foreach(refreshTabTitle(_))
+    channels foreach refreshTabTitle
   }
 
   def onServiceConnected(service: IrcService) = refreshTabs(service)
@@ -189,7 +186,7 @@ with EventBus.RefOwner {
   }
 
   // PagerAdapter
-  override def getCount() = tabs.length
+  override def getCount = tabs.length
   override def getItem(pos: Int): Fragment = tabs(pos).fragment
 
   def pageChanged(pos: Int) {
@@ -245,8 +242,6 @@ with EventBus.RefOwner {
   }
 
   override def onPageScrollStateChanged(state: Int) = ()
-
-  private var tabnum = 0
 
   def createTab(title: String, fragment: Fragment) {
     tabs += new TabInfo(title, fragment)
@@ -325,7 +320,7 @@ with EventBus.RefOwner {
 
   override def getItemPosition(item: Object): Int = {
     val pos = tabs.indexWhere(_.fragment == item)
-    return if (pos == -1) PagerAdapter.POSITION_NONE else pos
+    if (pos == -1) PagerAdapter.POSITION_NONE else pos
   }
 
   override def instantiateItem(container: ViewGroup, pos: Int) = {

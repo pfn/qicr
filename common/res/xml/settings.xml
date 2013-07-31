@@ -2,44 +2,44 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <PreferenceCategory android:title="@string/pref_category_interface">
         <CheckBoxPreference
-            android:key="@string/pref_show_nick_complete"
+            android:key="ui_show_nick_complete"
             android:title="@string/pref_show_nick_complete_title"
             android:defaultValue="@bool/pref_show_nick_complete_default"
             android:summary="@string/pref_show_nick_complete_summary"
         />
         <CheckBoxPreference
-            android:key="@string/pref_close_tab_prompt"
+            android:key="ui_close_tab_prompt"
             android:title="@string/pref_close_tab_prompt_title"
             android:summary="@string/pref_close_tab_prompt_summary"
             android:defaultValue="true"
         />
         <CheckBoxPreference
-            android:key="@string/pref_quit_prompt"
+            android:key="ui_quit_prompt"
             android:title="@string/pref_quit_prompt_title"
             android:summary="@string/pref_quit_prompt_summary"
             android:defaultValue="true"
         />
         <CheckBoxPreference
-            android:key="@string/pref_show_timestamp"
+            android:key="ui_show_timestamp"
             android:title="@string/pref_show_timestamp_title"
             android:summary="@string/pref_show_timestamp_summary"
             android:defaultValue="false"
         />
         <CheckBoxPreference
-            android:key="@string/pref_selector_mode"
+            android:key="ui_selector_mode"
             android:title="@string/pref_selector_mode_title"
             android:summaryOn="@string/pref_selector_mode_summary_on"
             android:summaryOff="@string/pref_selector_mode_summary_off"
             android:defaultValue="@bool/is_phone"
         />
         <CheckBoxPreference
-            android:key="@string/pref_hide_keyboard"
+            android:key="ui_hide_kbd_after_send"
             android:title="@string/pref_hide_keyboard_title"
             android:summary="@string/pref_hide_keyboard_summary"
             android:defaultValue="@bool/is_phone"
         />
         <EditTextPreference
-            android:key="@string/pref_message_lines"
+            android:key="ui_message_lines"
             android:title="@string/pref_message_lines_title"
             android:summary="@string/pref_message_lines_summary"
             android:defaultValue="@integer/pref_message_lines_default"
@@ -50,22 +50,22 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_speech_rec">
         <CheckBoxPreference
-            android:key="@string/pref_show_speech_rec"
+            android:key="ui_show_speech_rec"
             android:title="@string/pref_show_speech_rec_title"
             android:summary="@string/pref_show_speech_rec_summary"
             android:defaultValue="true"
         />
         <EditTextPreference
-            android:dependency="@string/pref_show_speech_rec"
-            android:key="@string/pref_speech_rec_eol"
+            android:dependency="ui_show_speech_rec"
+            android:key="speech_cmd_eol"
             android:title="@string/pref_speech_rec_eol_title"
             android:summary="@string/pref_speech_rec_eol_summary"
             android:defaultValue="@string/pref_speech_rec_eol_default"
             android:singleLine="true"
         />
         <EditTextPreference
-            android:dependency="@string/pref_show_speech_rec"
-            android:key="@string/pref_speech_rec_clearline"
+            android:dependency="ui_show_speech-rec"
+            android:key="speech_cmd_clear_line"
             android:title="@string/pref_speech_rec_clearline_title"
             android:summary="@string/pref_speech_rec_clearline_summary"
             android:defaultValue="@string/pref_speech_rec_clearline_default"
@@ -74,19 +74,19 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_irc">
         <EditTextPreference
-            android:key="@string/pref_quit_message"
+            android:key="irc_quit_message"
             android:title="@string/pref_quit_message_title"
             android:summary="@string/pref_quit_message_summary"
             android:defaultValue="@string/pref_quit_message_default"
             android:singleLine="true"
         />
         <CheckBoxPreference
-            android:key="@string/pref_show_join_part_quit"
+            android:key="irc_show_join_part_quit"
             android:title="@string/pref_show_join_part_quit_title"
             android:defaultValue="false"
         />
         <CheckBoxPreference
-            android:key="@string/pref_irc_debug"
+            android:key="irc_debug_log"
             android:title="@string/pref_irc_debug_title"
             android:summary="@string/pref_irc_debug_summary"
             android:defaultValue="false"

@@ -1,7 +1,6 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.IrcListeners
-import com.hanhuy.android.irc.IrcService
 import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.Settings
 import com.hanhuy.android.irc.EventBus
@@ -17,7 +16,6 @@ import scala.ref.WeakReference
 
 import android.graphics.Typeface
 import android.view.LayoutInflater
-import android.util.Log
 import android.content.Context
 import android.text.Html
 import android.widget.BaseAdapter
@@ -151,20 +149,17 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     // only register once to prevent memory leak
   UiBus += { case BusEvent.PreferenceChanged(s, k) =>
       val c = s.context
-      if (k == c.getString(R.string.pref_message_lines)) {
-        val max = s.getString(R.string.pref_message_lines,
-          MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
+      if (k == Settings.MESSAGE_LINES) {
+        val max = s.get(Settings.MESSAGE_LINES).toInt
         maximumSize = max
-      } else if (k == c.getString(R.string.pref_show_join_part_quit)) {
-        showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
+      } else if (k == Settings.SHOW_JOIN_PART_QUIT) {
+        showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
         notifyDataSetChanged()
-      } else if (k == c.getString(R.string.pref_show_timestamp)) {
-        MessageAdapter.showTimestamp =
-          s.getBoolean(R.string.pref_show_timestamp)
+      } else if (k == Settings.SHOW_TIMESTAMP) {
+        MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
         notifyDataSetChanged()
       }
     }
-
 
     var _inflater: WeakReference[LayoutInflater] = _
     def inflater = _inflater.get getOrElse { throw new IllegalStateException }
@@ -179,11 +174,9 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
           // It'd be nice to register a ServiceBus listener, but no way
           // to clean up when this adapter goes away?
           // add it to UiBus here maybe?
-          maximumSize = s.getString(R.string.pref_message_lines,
-            DEFAULT_MAXIMUM_SIZE.toString).toInt
-          showJoinPartQuit = s.getBoolean(R.string.pref_show_join_part_quit)
-          MessageAdapter.showTimestamp =
-            s.getBoolean(R.string.pref_show_timestamp)
+          maximumSize = s.get(Settings.MESSAGE_LINES).toInt
+          showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
+          MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
         }
       }
   }

@@ -14,9 +14,10 @@
     </style>
 
     <style name="AppTheme.Light" parent="@style/Theme.AppCompat.Light">
-      <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
-      <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
-      <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix.Light</item>
+        <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
+        <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
+        <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix.Light</item>
+        <item name="qicrDrawerBackground">@android:color/darker_gray</item>
     </style>
 
     <style name="AppTheme.Dark" parent="@style/Theme.AppCompat">
@@ -25,9 +26,13 @@
       -->
         <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
         <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix</item>
+        <item name="qicrDrawerBackground">#ff222222</item>
     </style>
 
     <style name="TabPageIndicatorTextFix" parent="@style/Widget.TabPageIndicator">
+        <!--
+         can't use textColorPrimary on gb, it goes black for selected
+         -->
         <item name="android:textColor">@android:color/white</item>
     </style>
     <style name="TabPageIndicatorTextFix.Light">

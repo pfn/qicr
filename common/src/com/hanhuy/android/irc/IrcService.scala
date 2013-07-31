@@ -108,8 +108,8 @@ class IrcService extends Service with EventBus.RefOwner {
   lazy val settings = new Settings(this)
   ServiceBus += {
     case BusEvent.PreferenceChanged(_, k) =>
-      if (k == getString(R.string.pref_irc_debug)) {
-        val debug = settings.getBoolean(R.string.pref_irc_debug)
+      if (k == Settings.IRC_DEBUG) {
+        val debug = settings.get(Settings.IRC_DEBUG)
         if (debug)
           IrcDebug.setLogStream(PrintStream)
         IrcDebug.setEnabled(debug)
@@ -156,9 +156,7 @@ class IrcService extends Service with EventBus.RefOwner {
     if (!running) {
       _servers.foreach { s =>
         if (s.autoconnect) connect(s)
-          s.messages.maximumSize = settings.getString(
-            R.string.pref_message_lines,
-            MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString).toInt
+          s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
       }
     }
   }
@@ -225,8 +223,7 @@ class IrcService extends Service with EventBus.RefOwner {
       async {
         try {
           val m = message getOrElse {
-            settings.getString(R.string.pref_quit_message,
-              R.string.pref_quit_message_default)
+            settings.get(Settings.QUIT_MESSAGE)
           }
           c.disconnect(m)
         } catch {
@@ -267,7 +264,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onCreate() {
     super.onCreate()
-    val ircdebug = settings.getBoolean(R.string.pref_irc_debug)
+    val ircdebug = settings.get(Settings.IRC_DEBUG)
     if (ircdebug)
       IrcDebug.setLogStream(PrintStream)
     IrcDebug.setEnabled(ircdebug)

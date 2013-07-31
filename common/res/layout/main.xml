@@ -68,11 +68,12 @@
             android:clickable="true"
             android:layout_height="match_parent"
             android:layout_width="@dimen/drawer_width"
-            android:background="@android:color/darker_gray"
-            android:padding="@dimen/standard_padding"
+            android:background="?attr/qicrDrawerBackground"
             android:layout_gravity="left">
         <ListView
+                android:padding="@dimen/standard_padding"
                 android:id="@+id/channel_list"
+                android:cacheColorHint="?attr/qicrDrawerBackground"
                 android:choiceMode="singleChoice"
                 android:fastScrollEnabled="true"
                 android:layout_width="match_parent"
@@ -84,12 +85,13 @@
             android:clickable="true"
             android:layout_height="match_parent"
             android:layout_width="@dimen/drawer_width"
-            android:background="@android:color/darker_gray"
-            android:padding="@dimen/standard_padding"
+            android:background="?attr/qicrDrawerBackground"
             android:layout_gravity="right">
         <ListView
+                android:padding="@dimen/standard_padding"
                 android:id="@+id/nick_list"
                 android:choiceMode="singleChoice"
+                android:cacheColorHint="?attr/qicrDrawerBackground"
                 android:fastScrollEnabled="true"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>

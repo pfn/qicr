@@ -65,7 +65,7 @@ class InputProcessor(activity: MainActivity) {
       val line = input.getText()
       handleLine(line)
       clear(input)
-      !activity.settings.getBoolean(R.string.pref_hide_keyboard)
+      !activity.settings.get(Settings.HIDE_KEYBOARD)
     } else
       false
   }

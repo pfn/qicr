@@ -4,7 +4,7 @@
     android:layout_weight="1"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:textAppearance="?android:attr/textAppearanceMedium"
+    android:textAppearance="?android:attr/textAppearanceSmall"
     android:gravity="center_vertical"
     android:paddingLeft="6dip"
     android:minWidth="270dp"

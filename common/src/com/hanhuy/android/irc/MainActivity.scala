@@ -65,27 +65,23 @@ with EventBus.RefOwner {
   lazy val settings = {
     val s = new Settings(this)
     UiBus += { case BusEvent.PreferenceChanged(_, key) =>
-      List(R.string.pref_show_nick_complete,
-        R.string.pref_show_speech_rec,
-        R.string.pref_selector_mode) foreach { r =>
-        if (getString(r) == key) {
-          val R_string_pref_show_nick_complete = R.string.pref_show_nick_complete
-          val R_string_pref_show_speech_rec = R.string.pref_show_speech_rec
-          val R_string_pref_selector_mode = R.string.pref_selector_mode
+      List(Settings.SHOW_NICK_COMPLETE,
+        Settings.SHOW_SPEECH_REC,
+        Settings.SELECTOR_MODE) foreach { r =>
+        if (r == key) {
           r match {
-          case R_string_pref_show_nick_complete =>
-            showNickComplete = s.getBoolean(r, honeycombAndNewer)
-          case R_string_pref_show_speech_rec =>
-            showSpeechRec = s.getBoolean(r, true)
-          case R_string_pref_selector_mode =>
+          case Settings.SHOW_NICK_COMPLETE =>
+            showNickComplete = s.get(Settings.SHOW_NICK_COMPLETE)
+          case Settings.SHOW_SPEECH_REC =>
+            showSpeechRec = s.get(Settings.SHOW_SPEECH_REC)
+          case Settings.SELECTOR_MODE =>
             toggleSelectorMode = true // flag recreate onResume
           }
         }
       }
     }
-    showNickComplete = s.getBoolean(
-      R.string.pref_show_nick_complete, honeycombAndNewer)
-    showSpeechRec = s.getBoolean(R.string.pref_show_speech_rec, true)
+    showNickComplete = s.get(Settings.SHOW_NICK_COMPLETE)
+    showSpeechRec = s.get(Settings.SHOW_SPEECH_REC)
     s
   }
   private var toggleSelectorMode = false;
@@ -151,7 +147,7 @@ with EventBus.RefOwner {
   }
 
   override def onCreate(bundle: Bundle) {
-    val mode = settings.getBoolean(R.string.pref_daynight_mode)
+    val mode = settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle);
@@ -173,11 +169,11 @@ with EventBus.RefOwner {
     channels.setAdapter(adapter.DropDownAdapter)
 
     HoneycombSupport.init(this)
-    if (settings.getBoolean(R.string.pref_selector_mode))
+    if (settings.get(Settings.SELECTOR_MODE))
       HoneycombSupport.setupSpinnerNavigation(adapter)
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
-      if (settings.getBoolean(R.string.pref_rotate_lock))
+      if (settings.get(Settings.ROTATE_LOCK))
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
   }
 
@@ -195,12 +191,8 @@ with EventBus.RefOwner {
       return
     }
 
-    val eol = settings.getString(
-      R.string.pref_speech_rec_eol,
-      R.string.pref_speech_rec_eol_default)
-    val clearLine = settings.getString(
-      R.string.pref_speech_rec_clearline,
-      R.string.pref_speech_rec_clearline_default)
+    val eol = settings.get(Settings.SPEECH_REC_EOL)
+    val clearLine = settings.get(Settings.SPEECH_REC_CLEAR_LINE)
 
     results find { r => r == eol || r == clearLine } match {
     case Some(c) =>
@@ -216,11 +208,11 @@ with EventBus.RefOwner {
       builder.setItems(results.toArray(
         new Array[CharSequence](results.size)),
         (d: DialogInterface, which: Int) => {
-          input.getText().append(results(which) + " ")
+          input.getText.append(results(which) + " ")
 
           val rec = results(which).toLowerCase
           if (rec.endsWith(" " + eol) || rec == eol) {
-            val t = input.getText()
+            val t = input.getText
             val line = t.substring(0, t.length() - eol.length() - 1)
             proc.handleLine(line)
             InputProcessor.clear(input)
@@ -374,7 +366,7 @@ with EventBus.RefOwner {
           input.getText.insert(cursor, nick)
         }
         nicks.setOnItemClickListener {
-          (av: AdapterView[_], v: View, pos: Int, id: Long) =>
+          (pos: Int) =>
             HoneycombSupport.startNickActionMode(
               nicks.getAdapter.getItem(pos).toString) { item: MenuItem =>
               val R_id_nick_insert = R.id.nick_insert
@@ -417,7 +409,7 @@ with EventBus.RefOwner {
     val inflater = new MenuInflater(this)
     inflater.inflate(R.menu.main_menu, menu)
     val item = menu.findItem(R.id.toggle_rotate_lock)
-    val locked = settings.getBoolean(R.string.pref_rotate_lock)
+    val locked = settings.get(Settings.ROTATE_LOCK)
     item.setChecked(locked)
     true
   }
@@ -440,8 +432,8 @@ with EventBus.RefOwner {
       true
     }
     case R_id_toggle_theme => {
-      val mode = settings.getBoolean(R.string.pref_daynight_mode)
-      settings.set(R.string.pref_daynight_mode, !mode)
+      val mode = settings.get(Settings.DAYNIGHT_MODE)
+      settings.set(Settings.DAYNIGHT_MODE, !mode)
       _recreate()
       true
     }
@@ -449,7 +441,7 @@ with EventBus.RefOwner {
       import android.content.pm.ActivityInfo._
       val locked = !item.isChecked()
       item.setChecked(locked)
-      settings.set(R.string.pref_rotate_lock, locked)
+      settings.set(Settings.ROTATE_LOCK, locked)
       setRequestedOrientation(
         if (locked) SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
       true
@@ -469,7 +461,7 @@ with EventBus.RefOwner {
   }
 
   def exit(message: Option[String] = None) {
-    val prompt = settings.getBoolean(R.string.pref_quit_prompt, true)
+    val prompt = settings.get(Settings.QUIT_PROMPT)
     if (service.connected && prompt) {
       var builder = new AlertDialog.Builder(this)
       builder.setTitle(R.string.quit_confirm_title)

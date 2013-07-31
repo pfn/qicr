@@ -7,7 +7,6 @@ import com.hanhuy.android.irc.R
 import com.hanhuy.android.irc.AndroidConversions._
 
 import android.view.LayoutInflater
-import android.content.Context
 import android.widget.BaseAdapter
 import android.widget.TextView
 import android.view.{View, ViewGroup}
@@ -15,6 +14,7 @@ import android.view.{View, ViewGroup}
 import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
+import com.hanhuy.android.irc.model.BusEvent.NickListChanged
 
 // must reference activity for resources
 class NickListAdapter(activity: MainActivity, channel: Channel)
@@ -30,7 +30,7 @@ extends BaseAdapter with EventBus.RefOwner {
         if (c == null) return
         // oy, this is super-slow when called a bunch of times rapidly
         // try to prevent CME by copying
-        nicks = List(c.getUsers().toSeq: _*).map { u =>
+        nicks = List(c.getUsers.toSeq: _*).map { u =>
             (if (u.hasOperator) "@" else if (u.hasVoice) "+" else "") +
                     u.getNick
         }.toList.filter {
@@ -49,7 +49,7 @@ extends BaseAdapter with EventBus.RefOwner {
     }
     override def getItemId(pos: Int) : Long = pos
     override def getItem(pos: Int) : String = nicks(pos)
-    override def getCount() : Int = if (nicks != null) nicks.size else 0
+    override def getCount : Int = if (nicks != null) nicks.size else 0
     override def getView(pos: Int, convertView: View, container: ViewGroup) :
             View = createViewFromResource(pos, convertView, container)
 
@@ -64,4 +64,8 @@ extends BaseAdapter with EventBus.RefOwner {
         view.setText(getItem(pos))
         view
     }
+
+  UiBus += {
+    case NickListChanged(ch) => if (ch == channel) notifyDataSetChanged()
+  }
 }

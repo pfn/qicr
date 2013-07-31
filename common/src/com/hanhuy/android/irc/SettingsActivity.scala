@@ -1,14 +1,48 @@
 package com.hanhuy.android.irc
 
-import com.hanhuy.android.irc.model.BusEvent
+import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.preference.PreferenceActivity
 import android.preference.PreferenceFragment
+import scala.collection.mutable
+
+object Setting {
+  private val settings = mutable.HashMap[String,Setting[_]]()
+  def unapply(key: String): Option[Setting[_]] = settings get key
+  def apply[A](key: String, default: A) = new Setting(key, default, None)
+  def apply[A](key: String, res: Int) = new Setting(key,
+    null.asInstanceOf[A], Some(res))
+}
+class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
+  Setting.settings += ((key, this))
+}
+
+object Settings {
+  val HIDE_KEYBOARD = Setting[Boolean]("ui_hide_kbd_after_send", false)
+  val IRC_DEBUG = Setting[Boolean]("irc_debug_log", false)
+  val SELECTOR_MODE = Setting[Boolean]("ui_selector_mode", false)
+  val QUIT_MESSAGE = Setting[String]("irc_quit_message",
+    R.string.pref_quit_message_default)
+  val SPEECH_REC_EOL = Setting[String]("speech_cmd_eol",
+    R.string.pref_speech_rec_eol_default)
+  val SPEECH_REC_CLEAR_LINE = Setting[String]("speech_cmd_clear_line",
+    R.string.pref_speech_rec_clearline_default)
+  val ROTATE_LOCK = Setting[Boolean]("ui_rotate_lock", false)
+  val QUIT_PROMPT = Setting[Boolean]("ui_quit_prompt", true)
+  val SHOW_TIMESTAMP = Setting[Boolean]("ui_show_timestamp", false)
+  val CLOSE_TAB_PROMPT = Setting[Boolean]("ui_close_tab_prompt", true)
+  val MESSAGE_LINES = Setting[String]("ui_message_lines",
+    MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString)
+  val SHOW_JOIN_PART_QUIT = Setting[Boolean]("irc_show_join_part_quit", false)
+  val SHOW_SPEECH_REC = Setting[Boolean]("ui_show_speech_rec", true)
+  val SHOW_NICK_COMPLETE = Setting[Boolean]("ui_show_nick_complete",
+    AndroidConversions.honeycombAndNewer)
+  val DAYNIGHT_MODE = Setting[Boolean]("ui_daynight_mode", false)
+}
 
 class Settings(val context: Context)
 extends SharedPreferences.OnSharedPreferenceChangeListener {
@@ -16,34 +50,47 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
     p.registerOnSharedPreferenceChangeListener(this)
 
     override def onSharedPreferenceChanged(p: SharedPreferences, key: String) {
-        val e = BusEvent.PreferenceChanged(this, key)
+        val Setting(s) = key
+        val e = BusEvent.PreferenceChanged(this, s)
         UiBus.send(e) // already on main thread
         ServiceBus.send(e)
     }
 
-    def getBoolean(key: Int, default: Boolean = false): Boolean =
-            p.getBoolean(context.getString(key), default)
-    def getFloat(key: Int, default: Float = 0f): Float =
-            p.getFloat(context.getString(key), default)
-    def getInt(key: Int, default: Int = 0): Int =
-            p.getInt(context.getString(key), default)
-    def getLong(key: Int, default: Long = 0l): Long =
-            p.getLong(context.getString(key), default)
-    def getString(key: Int, default: String = ""): String =
-            p.getString(context.getString(key), default)
-    def getString(key: Int, default: Int): String =
-            p.getString(context.getString(key), context.getString(default))
-
-    def set(key: Int, value: Boolean) =
-            p.edit().putBoolean(context.getString(key), value).commit()
+  def get[A](setting: Setting[A])(implicit m: ClassManifest[A]): A = {
+    val result = if (classOf[String] == m.erasure) {
+      val default: String = setting.defaultRes map {
+        context.getString
+      } getOrElse setting.default.asInstanceOf[String]
+      p.getString(setting.key, default)
+    } else if (classOf[Boolean] == m.erasure) {
+      p.getBoolean(setting.key, setting.default.asInstanceOf[Boolean])
+    } else if (classOf[Float] == m.erasure) {
+      p.getFloat(setting.key, setting.default.asInstanceOf[Float])
+    } else if (classOf[Long] == m.erasure) {
+      p.getLong(setting.key, setting.default.asInstanceOf[Long])
+    } else if (classOf[Int] == m.erasure) {
+      p.getInt(setting.key, setting.default.asInstanceOf[Int])
+    } else {
+      throw new IllegalArgumentException("Unknown type: " + m.erasure)
+    }
+    result.asInstanceOf[A]
+  }
+  def set[A](setting: Setting[A], value: A)(implicit m: ClassManifest[A]) {
+    val editor = p.edit()
+    if (classOf[Boolean] == m.erasure) {
+      editor.putBoolean(setting.key, value.asInstanceOf[Boolean])
+    } else {
+      throw new IllegalArgumentException("Unknown type: " + m.erasure)
+    }
+    editor.commit()
+  }
 }
-
 
 // android3.0+
 class SettingsFragmentActivity extends Activity {
     override def onCreate(bundle: Bundle) {
         super.onCreate(bundle)
-        val tx = getFragmentManager().beginTransaction()
+        val tx = getFragmentManager.beginTransaction()
         tx.add(android.R.id.content, new SettingsFragment, "settings fragment")
         tx.commit()
     }
