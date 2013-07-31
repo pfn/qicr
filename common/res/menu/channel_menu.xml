@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:qicr="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/channel_names"
         android:icon="@drawable/ic_menu_friendslist"
         android:title="@string/channel_names"
-        android:showAsAction="ifRoom|withText"
+        qicr:showAsAction="ifRoom|withText"
         android:menuCategory="container"
         android:orderInCategory="1"
         android:visible="@bool/is_phone"/>
