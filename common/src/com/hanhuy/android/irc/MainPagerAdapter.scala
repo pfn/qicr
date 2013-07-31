@@ -172,7 +172,7 @@ with EventBus.RefOwner {
     if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
       title = "<font color=#ff0000>*" + title + "</font>"
     else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0)
-      title = "<font color=#009999>+" + title +"</font>"
+      title = "<font color=#007f7f>+" + title +"</font>"
 
     if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
       title = "(" + title + ")"
