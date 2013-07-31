@@ -19,7 +19,6 @@ import android.view.LayoutInflater;
 import android.widget.HorizontalScrollView
 import android.widget.TextView
 import android.widget.BaseAdapter
-import android.widget.TabHost
 import android.widget.EditText
 
 import android.support.v4.view.{ViewPager, PagerAdapter}
@@ -56,24 +55,24 @@ object MainPagerAdapter {
 }
 class MainPagerAdapter(activity: MainActivity)
 extends FragmentPagerAdapter(activity.getSupportFragmentManager)
-with TabHost.OnTabChangeListener with ViewPager.OnPageChangeListener
+with ViewPager.OnPageChangeListener
 with EventBus.RefOwner {
   val channels = new ArrayBuffer[ChannelLike]
   val servers  = new ArrayBuffer[Server]
   val tabs = new ArrayBuffer[TabInfo]()
   lazy val channelcomp = new ChannelLikeComparator
   lazy val servercomp  = new ServerComparator
+  lazy val tabindicators = activity.findView(TR.tabs)
 
   def channelBase = servers.size + 1
   def currentTab = tabs(page)
 
-  tabhost.setOnTabChangedListener(this)
-  pager.setOnPageChangeListener(this)
+  //pager.setOnPageChangeListener(this)
   pager.setAdapter(this)
+  tabindicators.setViewPager(pager)
+  tabindicators.setOnPageChangeListener(this)
   lazy val manager = activity.getSupportFragmentManager
-  lazy val tabhost = activity.tabhost
   lazy val pager = activity.pager
-  lazy val hsv = activity.findView(TR.tab_scroller)
   lazy val nm = activity.systemService[NotificationManager]
 
   var page = 0
@@ -157,16 +156,16 @@ with EventBus.RefOwner {
     if (c.newMentions)
       activity.newmessages.setVisibility(View.VISIBLE)
 
-      if (c.newMessages)
-        t.flags |= TabInfo.FLAG_NEW_MESSAGES
-      if (c.newMentions)
-        t.flags |= TabInfo.FLAG_NEW_MENTIONS
-      refreshTabTitle(idx + channelBase)
+    if (c.newMessages)
+      t.flags |= TabInfo.FLAG_NEW_MESSAGES
+    if (c.newMentions)
+      t.flags |= TabInfo.FLAG_NEW_MENTIONS
+    refreshTabTitle(idx + channelBase)
   }
 
   def refreshTabTitle(pos: Int) {
-    setTabTitle(makeTabTitle(pos), pos)
-    DropDownAdapter.notifyDataSetChanged
+    tabindicators.notifyDataSetChanged()
+    DropDownAdapter.notifyDataSetChanged()
   }
 
   def makeTabTitle(pos: Int) = {
@@ -185,7 +184,6 @@ with EventBus.RefOwner {
 
   def actionBarNavigationListener(pos: Int, id: Long) = {
     pager.setCurrentItem(pos)
-    tabhost.setCurrentTab(pos)
     pageChanged(pos)
     true
   }
@@ -193,13 +191,6 @@ with EventBus.RefOwner {
   // PagerAdapter
   override def getCount() = tabs.length
   override def getItem(pos: Int): Fragment = tabs(pos).fragment
-
-  // OnTabChangeListener
-  override def onTabChanged(tabId: String) {
-    val idx = tabhost.getCurrentTab()
-    pager.setCurrentItem(idx)
-    pageChanged(idx)
-  }
 
   def pageChanged(pos: Int) {
     page = pos
@@ -244,50 +235,21 @@ with EventBus.RefOwner {
   def goToNewMessages() {
     val pos = channels.indexWhere(_.newMentions)
     if (pos != -1)
-      tabhost.setCurrentTab(pos + channelBase)
+      pager.setCurrentItem(pos + channelBase)
   }
 
   // OnPageChangeListener
   override def onPageScrolled(pos: Int, posOff: Float, posOffPix: Int) = ()
   override def onPageSelected(pos: Int) {
-    tabhost.setCurrentTab(pos)
-    showTabIndicator(pos)
     pageChanged(pos)
-  }
-
-  def showTabIndicator(pos: Int) {
-    val v = tabhost.getTabWidget().getChildTabViewAt(pos)
-    val offset = v.getLeft() - hsv.getWidth() / 2 + v.getWidth() / 2
-    hsv.smoothScrollTo(if (offset < 0) 0 else offset, 0)
   }
 
   override def onPageScrollStateChanged(state: Int) = ()
 
   private var tabnum = 0
-  private def addTab(title: String) {
-    var spec : TabHost#TabSpec = null
-
-    if (!honeycombAndNewer) {
-      val inflater = activity.systemService[LayoutInflater]
-      val ind = inflater.inflate(R.layout.tab_indicator,
-        tabhost.getTabWidget(), false)
-      ind.findView(TR.title).setText(title)
-
-      spec = tabhost.newTabSpec("tabspec" + tabnum).setIndicator(ind)
-    } else
-      spec = tabhost.newTabSpec("tabspec" + tabnum).setIndicator(title)
-
-    tabnum += 1
-    spec.setContent(new DummyTabFactory(tabhost.getContext()))
-    tabhost.addTab(spec)
-
-    if (!honeycombAndNewer)
-      tabhost.getTabWidget().setStripEnabled(true)
-  }
 
   def createTab(title: String, fragment: Fragment) {
     tabs += new TabInfo(title, fragment)
-    addTab(title)
     notifyDataSetChanged()
   }
 
@@ -298,20 +260,10 @@ with EventBus.RefOwner {
     case _: ServerMessagesFragment => 1
     }
     tabs.insert(pos + base, info)
-    addTab(title)
     if (tabs.size > 1) {
-      val tw = tabhost.getTabWidget()
-      (0 until tw.getTabCount) foreach { refreshTabTitle(_) }
       notifyDataSetChanged()
     }
     info
-  }
-
-  private def setTabTitle(title: CharSequence, pos: Int) {
-    val tw = tabhost.getTabWidget()
-    val v = tw.getChildTabViewAt(pos)
-    val titleId = if (honeycombAndNewer) android.R.id.title else R.id.title
-    v.findView[TextView](titleId).setText(title)
   }
 
   private def addChannel(c: ChannelLike) {
@@ -344,7 +296,7 @@ with EventBus.RefOwner {
       val frag = if (f != null) f else new ServerMessagesFragment(s)
       val info = insertTab(s.name, frag, idx - 1)
       refreshTabTitle(idx)
-      tabhost.setCurrentTab(idx)
+      pager.setCurrentItem(idx)
       info.server = Some(s)
     } else {
       tabs(idx).flags &= ~TabInfo.FLAG_DISCONNECTED
@@ -359,19 +311,16 @@ with EventBus.RefOwner {
         new IllegalArgumentException)
       return
     }
-    tabhost.setCurrentTab(0)
-    tabhost.clearAllTabs()
+    pager.setCurrentItem(0)
     val i = pos - 1
     if (i < servers.size)
       servers.remove(i)
     else
       channels.remove(i - servers.size)
     tabs.remove(pos)
-    (0 until tabs.length) foreach { i => addTab(tabs(i).title) }
     val idx = Math.max(0, i)
-    tabhost.setCurrentTab(idx)
+    pager.setCurrentItem(idx)
     notifyDataSetChanged()
-    UiBus.post { showTabIndicator(idx) }
   }
 
   override def getItemPosition(item: Object): Int = {
@@ -455,14 +404,11 @@ with EventBus.RefOwner {
       view
     }
   }
-}
 
-// TODO get rid of this when getting rid of TabHost
-class DummyTabFactory(c : Context) extends TabHost.TabContentFactory {
-  override def createTabContent(tag : String) : View = {
-    val v = new View(c)
-    v.setMinimumWidth(0)
-    v.setMinimumHeight(0)
-    v
+  override def getPageTitle(position: Int) = makeTabTitle(position)
+
+  override def notifyDataSetChanged() {
+    tabindicators.notifyDataSetChanged()
+    super.notifyDataSetChanged()
   }
 }

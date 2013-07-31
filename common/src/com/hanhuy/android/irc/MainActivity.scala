@@ -18,7 +18,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.widget.LinearLayout
-import android.widget.TabHost
 import android.widget.TextView
 import android.widget.EditText
 import android.widget.Toast
@@ -106,13 +105,6 @@ with EventBus.RefOwner {
   private var showNickComplete = false
   private var showSpeechRec = false
 
-  // stuck with tabhost because pulling out tabwidget is a massive pita
-  // consider viewpagerindicator in the future?
-  lazy val tabhost = {
-    val t = findView[TabHost](android.R.id.tabhost)
-    t.setup()
-    t
-  }
   lazy val servers = { // because of retain instance
     val f = getSupportFragmentManager().findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
@@ -263,7 +255,7 @@ with EventBus.RefOwner {
         i.removeExtra(IrcService.EXTRA_SUBJECT)
         if (subject != null) {
           if (subject == "")
-            tabhost.setCurrentTab(0)
+            pager.setCurrentItem(0)
           else {
             val parts = subject.split(IrcService.EXTRA_SPLITTER)
             if (parts.length == 2)
@@ -305,7 +297,7 @@ with EventBus.RefOwner {
     servers.onIrcServiceConnected(service)
     if (page != -1) {
       UiBus.post {
-        tabhost.setCurrentTab(page)
+        pager.setCurrentItem(page)
         page = -1
       }
     }

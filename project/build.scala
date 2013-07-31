@@ -36,6 +36,7 @@ object QicrBuild extends Build {
     resolvers += Resolver.mavenLocal,
     // mvn install sirc locally to use the below dep
     libraryDependencies ++= Seq(
+      "com.viewpagerindicator" % "library" % "2.4.1" % "provided",
       "com.android.support" % "support-v4" % "18.0.0",
       "com.android.support" % "appcompat-v7" % "18.0.0")
   ) ++ android.Plugin.androidBuild: _*) dependsOn(sirc)

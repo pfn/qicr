@@ -92,14 +92,14 @@ class InputProcessor(activity: MainActivity) {
         case KeyEvent.KEYCODE_TAB => {
           if (ctrlOn && shiftOn) { // move backward in tabs
             val count = activity.adapter.getCount()
-            val current = activity.tabhost.getCurrentTab()
+            val current = activity.pager.getCurrentItem()
             val next = if (current - 1 < 0) count - 1 else current - 1
-            activity.tabhost.setCurrentTab(next)
+            activity.pager.setCurrentItem(next)
           } else if (ctrlOn) { // move forward in tabs
             val count = activity.adapter.getCount()
-            val current = activity.tabhost.getCurrentTab()
+            val current = activity.pager.getCurrentItem()
             val next = if (current + 1 >= count) 0 else current + 1
-            activity.tabhost.setCurrentTab(next)
+            activity.pager.setCurrentItem(next)
           } else { // tab completion
           }
           return true
@@ -127,7 +127,7 @@ class InputProcessor(activity: MainActivity) {
         case _ => ()
       }
       if (altOn && pageTarget != -1) {
-        activity.tabhost.setCurrentTab(pageTarget)
+        activity.pager.setCurrentItem(pageTarget)
         return true
       }
     }

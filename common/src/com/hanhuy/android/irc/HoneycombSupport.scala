@@ -62,7 +62,7 @@ object HoneycombSupport {
 
   def setupSpinnerNavigation(a: MainPagerAdapter) {
     val bar = activity.getSupportActionBar
-    a.hsv.setVisibility(View.GONE)
+    a.tabindicators.setVisibility(View.GONE)
     bar.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST)
     bar.setDisplayOptions(0, ActionBar.DISPLAY_SHOW_TITLE)
     bar.setListNavigationCallbacks(

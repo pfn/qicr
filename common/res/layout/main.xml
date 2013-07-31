@@ -1,87 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.hanhuy.android.irc.NoKeyEventTabHost
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@android:id/tabhost"
-    android:layout_weight="1"
+    android:id="@+id/top_container"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <LinearLayout
-        android:id="@+id/top_container"
-        android:orientation="vertical"
+
+    <com.viewpagerindicator.TabPageIndicator
+        android:id="@+id/tabs"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-        <HorizontalScrollView
-            android:id="@+id/tab_scroller"
-            android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+    <android.support.v4.view.ViewPager
+        android:id="@+id/pager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+        <!--
+        android:singleLine="true"
+        -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <ImageButton
+            android:id="@+id/btn_new_messages"
+            android:visibility="gone"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:src="@drawable/ic_btn_search_go"
             android:layout_height="wrap_content"
-            android:fillViewport="true"
-            android:scrollbars="none">
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_height="wrap_content"
-                android:layout_width="match_parent">
-                <TabWidget
-                    android:id="@android:id/tabs"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-                <!-- don't let a single tab eat up all space -->
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"/>
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <FrameLayout
-            android:id="@android:id/tabcontent"
+            android:layout_width="wrap_content"/>
+        <ImageButton
+            android:id="@+id/btn_nick_complete"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:src="@drawable/ic_btn_search"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"/>
+        <EditText
+            android:id="@+id/input"
+            android:autoText="true"
+            android:inputType="text|textAutoCorrect"
+            android:hint="@string/input_placeholder"
+            android:imeOptions="actionSend|flagNoFullscreen"
+            android:layout_weight="1"
             android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="0"/>
-
-        <android.support.v4.view.ViewPager
-            android:id="@+id/pager"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"/>
-
-            <!--
-            android:singleLine="true"
-            -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <ImageButton
-                android:id="@+id/btn_new_messages"
-                android:visibility="gone"
-                android:focusable="false"
-                android:focusableInTouchMode="false"
-                android:src="@drawable/ic_btn_search_go"
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content"/>
-            <ImageButton
-                android:id="@+id/btn_nick_complete"
-                android:focusable="false"
-                android:focusableInTouchMode="false"
-                android:src="@drawable/ic_btn_search"
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content"/>
-            <EditText
-                android:id="@+id/input"
-                android:autoText="true"
-                android:inputType="text|textAutoCorrect"
-                android:hint="@string/input_placeholder"
-                android:imeOptions="actionSend|flagNoFullscreen"
-                android:layout_weight="1"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"/>
-            <ImageButton
-                android:id="@+id/btn_speech_rec"
-                android:focusable="false"
-                android:focusableInTouchMode="false"
-                android:src="@android:drawable/ic_btn_speak_now"
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content"/>
-        </LinearLayout>
+            android:layout_height="wrap_content"/>
+        <ImageButton
+            android:id="@+id/btn_speech_rec"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:src="@android:drawable/ic_btn_speak_now"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"/>
     </LinearLayout>
-</com.hanhuy.android.irc.NoKeyEventTabHost>
+</LinearLayout>
