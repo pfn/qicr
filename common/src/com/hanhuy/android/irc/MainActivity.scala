@@ -6,39 +6,26 @@ import android.content.Context
 import android.content.Intent
 import android.content.ComponentName
 import android.content.ServiceConnection
-import android.content.res.Configuration
 import android.os.{Bundle, Build, IBinder, Parcelable}
 import android.content.DialogInterface
 import android.speech.RecognizerIntent
-import android.util.AttributeSet
 import android.util.Log
 import android.view.View
-import android.view.Display
-import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.{Menu, MenuItem, MenuInflater}
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.EditText
-import android.widget.Toast
+import android.widget.{AdapterView, Toast}
 
-import android.support.v4.app.FragmentActivity
 import android.support.v4.app.FragmentManager
-import android.support.v4.app.FragmentPagerAdapter
-import android.support.v4.view.{ViewPager, MenuItemCompat}
 
 import scala.collection.JavaConversions._
 
-import com.hanhuy.android.irc.model.Server
-import com.hanhuy.android.irc.model.ChannelLike
-import com.hanhuy.android.irc.model.Channel
-import com.hanhuy.android.irc.model.Query
-import com.hanhuy.android.irc.model.BusEvent
+import com.hanhuy.android.irc.model._
 
 import MainActivity._
 
 import AndroidConversions._
 import android.support.v7.app.ActionBarActivity
+import android.support.v4.widget.DrawerLayout
+import scala.Some
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -109,6 +96,9 @@ with EventBus.RefOwner {
     val f = getSupportFragmentManager().findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
   }
+  lazy val drawer = findView(TR.drawer_layout)
+  lazy val drawerLeft = findView(TR.drawer_left)
+  lazy val drawerRight = findView(TR.drawer_right)
   lazy val pager = findView(TR.pager)
   lazy val adapter = new MainPagerAdapter(this)
 
@@ -171,6 +161,16 @@ with EventBus.RefOwner {
       page = bundle.getInt("page")
 
     adapter.createTab(getString(R.string.tab_servers), servers)
+
+    drawer.setScrimColor(0x11000000)
+    drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
+    drawer.setDrawerListener(new DrawerLayout.SimpleDrawerListener {
+      override def onDrawerClosed(drawerView: View) {
+        HoneycombSupport.stopActionMode()
+      }
+    })
+    val channels = drawerLeft.findView(TR.channel_list)
+    channels.setAdapter(adapter.DropDownAdapter)
 
     HoneycombSupport.init(this)
     if (settings.getBoolean(R.string.pref_selector_mode))
@@ -351,22 +351,62 @@ with EventBus.RefOwner {
 
     f match {
       case _: QueryFragment => {
+        drawer.setDrawerLockMode(
+          DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         nickcomplete.setVisibility(View.GONE)
         speechrec.setVisibility(
           if (showSpeechRec) View.VISIBLE else View.GONE)
       }
-      case _: ChannelFragment => {
+      case c: ChannelFragment => {
+
+        drawer.setDrawerLockMode(
+          DrawerLayout.LOCK_MODE_UNLOCKED, drawerRight)
+        val nicks = drawerRight.findView(TR.nick_list)
+        nicks.setAdapter(new NickListAdapter(this, c.channel))
+        def insertNick(pos: Int) {
+          var nick = nicks.getAdapter().getItem(pos).asInstanceOf[String]
+          val c = nick.charAt(0)
+          if (c == '@' || c == '+')
+            nick = nick.substring(1)
+          val cursor = input.getSelectionStart
+          // TODO make ", " a preference
+          nick += (if (cursor == 0) ", " else " ")
+          input.getText.insert(cursor, nick)
+        }
+        nicks.setOnItemClickListener {
+          (av: AdapterView[_], v: View, pos: Int, id: Long) =>
+            HoneycombSupport.startNickActionMode(
+              nicks.getAdapter.getItem(pos).toString) { item: MenuItem =>
+              val R_id_nick_insert = R.id.nick_insert
+              val R_id_nick_start_chat = R.id.nick_start_chat
+              item.getItemId match {
+                case R_id_nick_insert => insertNick(pos)
+                case R_id_nick_start_chat =>
+                  Toast.makeText(this,
+                    "Not implemented yet, use /msg",
+                    Toast.LENGTH_SHORT).show()
+              }
+
+              ()
+            }
+            ()
+        }
+
         nickcomplete.setVisibility(
           if (showNickComplete) View.VISIBLE else View.GONE)
         speechrec.setVisibility(
           if (showSpeechRec) View.VISIBLE else View.GONE)
       }
       case _: ServerMessagesFragment => {
+        drawer.setDrawerLockMode(
+          DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         input.setVisibility(View.VISIBLE)
         nickcomplete.setVisibility(View.GONE)
         speechrec.setVisibility(View.GONE)
       }
       case _ => {
+        drawer.setDrawerLockMode(
+          DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         nickcomplete.setVisibility(View.GONE)
         speechrec.setVisibility(View.GONE)
       }

@@ -240,76 +240,6 @@ extends ListFragment with EventBus.RefOwner {
   }
 }
 
-// TODO try embedding as a fragment directly into channelfragment (on phone)
-class NickListFragment extends DialogFragment
-with AdapterView.OnItemClickListener {
-  // sucky hack because of using the view directly
-  // when used directly, external caller will need to set activity
-  private var _activity: MainActivity = _
-  def activity = if (_activity != null) _activity else getActivity()
-  def activity_=(a: MainActivity) = _activity = a
-
-  var listview: ListView = _
-  var showAsDialog = true // default unless we're on large+
-  var adapter: Option[NickListAdapter] = None // Some if on large+
-
-  override def onCreateView(inflater: LayoutInflater,
-      container: ViewGroup, bundle: Bundle) : View = {
-    listview = inflater.inflate(R.layout.fragment_nicklist,
-      container, false).asInstanceOf[ListView]
-    if (showAsDialog && adapter.isEmpty)
-      UiBus.post { dismiss() }
-    if (showAsDialog)
-      registerForContextMenu(listview)
-    listview.setOnItemClickListener(this)
-    adapter.foreach(listview.setAdapter(_))
-    listview
-  }
-
-  var contextPos: Int = _
-  override def onContextItemSelected(item: MenuItem): Boolean = {
-    val R_id_nick_insert = R.id.nick_insert
-    val R_id_nick_start_chat = R.id.nick_start_chat
-    item.getItemId match {
-    case R_id_nick_insert => insertNick()
-    case R_id_nick_start_chat =>
-      Toast.makeText(activity,
-      "Not implemented yet, use /msg",
-      Toast.LENGTH_SHORT).show()
-    }
-    true
-  }
-
-  override def onCreateContextMenu(menu: ContextMenu,
-      v: View, info: ContextMenu.ContextMenuInfo) {
-    val i = info.asInstanceOf[AdapterView.AdapterContextMenuInfo]
-    contextPos = i.position
-    val inflater = activity.getMenuInflater()
-    inflater.inflate(R.menu.nicklist_menu, menu)
-  }
-
-  def insertNick() {
-    var nick = listview.getAdapter().getItem(contextPos).asInstanceOf[String]
-    val c = nick.charAt(0)
-    if (c == '@' || c == '+')
-      nick = nick.substring(1)
-    val cursor = activity.input.getSelectionStart
-    // TODO make ", " a preference
-    nick += (if (cursor == 0) ", " else " ")
-    activity.input.getText.insert(cursor, nick)
-  }
-
-  def onItemClick(parent: AdapterView[_], view: View, pos: Int, id: Long) {
-    contextPos = pos
-    if (!showAsDialog) {
-      HoneycombSupport.startActionMode(this)
-    } else {
-      insertNick()
-      if (showAsDialog) dismiss()
-    }
-  }
-}
-
 class ChannelFragment(a: MessageAdapter, var channel: Channel)
 extends MessagesFragment(a) with EventBus.RefOwner {
   var tag = getFragmentTag(channel)
@@ -354,30 +284,6 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     val v = inflater.inflate(R.layout.fragment_channel, container, false)
     val activity = getActivity()
     // show via dialogfragment if < size_large
-    if (activity.isLargeScreen) {
-      def addNickList() {
-        if (!channel.isInstanceOf[Channel]) return
-        val f = new NickListFragment
-        f.showAsDialog = false
-        f.activity = activity
-        val view = f.onCreateView(inflater, null, null)
-        val list = view.asInstanceOf[ListView]
-        nicklist = Some(list)
-        setNickListAdapter(list)
-        // doesn't appear if added via onCreateView
-        v.findView(TR.nicklist_container).addView(list)
-        // TODO this puts them one atop the other, even when horizontal?
-        //v.asInstanceOf[ViewGroup].addView(view)
-      }
-      if (channelReady && getActivity.service != null)
-        addNickList()
-      else {
-        UiBus += { case BusEvent.ServiceConnected(_) =>
-          addNickList()
-          EventBus.Remove
-        }
-      }
-    }
     v
   }
 
@@ -413,20 +319,6 @@ extends MessagesFragment(a) with EventBus.RefOwner {
       } else {
         removeChannel()
       }
-      return true
-    } else if (R.id.channel_names == item.getItemId()) {
-      val activity = getActivity()
-      val adapter = new NickListAdapter(activity, channel)
-      val tx = activity.getSupportFragmentManager().beginTransaction()
-
-      val f = new NickListFragment
-      val m = activity.settings.getBoolean(R.string.pref_daynight_mode)
-      f.setStyle(DialogFragment.STYLE_NO_TITLE, 0)
-      //if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
-      // should be set in onCreateDialog
-      //f.getDialog().setTitle("Names")
-      f.adapter = Some(adapter)
-      f.show(tx, "nick list")
       return true
     }
     false
