@@ -22,9 +22,14 @@ class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
 }
 
 object Settings {
+  val NAVIGATION_MODE_TABS = "Tabs"
+  val NAVIGATION_MODE_DROPDOWN = "Drop Down"
+  val NAVIGATION_MODE_DRAWER = "Drawer"
+
   val HIDE_KEYBOARD = Setting[Boolean]("ui_hide_kbd_after_send", false)
   val IRC_DEBUG = Setting[Boolean]("irc_debug_log", false)
-  val SELECTOR_MODE = Setting[Boolean]("ui_selector_mode", false)
+  val NAVIGATION_MODE = Setting[String]("ui_selector_mode2",
+    NAVIGATION_MODE_TABS)
   val QUIT_MESSAGE = Setting[String]("irc_quit_message",
     R.string.pref_quit_message_default)
   val SPEECH_REC_EOL = Setting[String]("speech_cmd_eol",

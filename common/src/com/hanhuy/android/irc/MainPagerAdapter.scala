@@ -213,7 +213,9 @@ with EventBus.RefOwner {
     HoneycombSupport.setSelectedNavigationItem(pos)
     HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
       t.server map { s =>
-        " - %s: %s" format(s.name, Server.intervalString(s.currentLag))
+        val chan = if (activity.settings.get(Settings.NAVIGATION_MODE) ==
+          Settings.NAVIGATION_MODE_DRAWER) " " + t.title else ""
+        " - %s%s: %s" format(s.name, chan, Server.intervalString(s.currentLag))
       } getOrElse null)
 
     refreshTabTitle(pos)

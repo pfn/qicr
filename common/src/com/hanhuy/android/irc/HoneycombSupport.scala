@@ -12,7 +12,7 @@ import android.view.{Menu, MenuItem, MenuInflater}
 import android.view.View
 
 import AndroidConversions._
-import android.support.v4.view.{MenuItemCompat, MenuCompat}
+import android.support.v4.view.MenuItemCompat
 
 object HoneycombSupport {
   val TAG = "HoneycombSupport"
@@ -68,6 +68,10 @@ object HoneycombSupport {
     bar.setListNavigationCallbacks(
       a.DropDownAdapter, a.actionBarNavigationListener _)
   }
+
+  def isSpinnerNavigation =
+    activity.getSupportActionBar.getNavigationMode ==
+      ActionBar.NAVIGATION_MODE_LIST
 
   def setSelectedNavigationItem(pos: Int) {
     if (activity == null) return

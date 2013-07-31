@@ -25,13 +25,13 @@
             android:summary="@string/pref_show_timestamp_summary"
             android:defaultValue="false"
         />
-        <CheckBoxPreference
-            android:key="ui_selector_mode"
-            android:title="@string/pref_selector_mode_title"
-            android:summaryOn="@string/pref_selector_mode_summary_on"
-            android:summaryOff="@string/pref_selector_mode_summary_off"
-            android:defaultValue="@bool/is_phone"
-        />
+        <ListPreference
+                android:key="ui_selector_mode2"
+                android:entries="@array/selector_options"
+                android:entryValues="@array/selector_option_values"
+                android:defaultValue="Tabs"
+                android:title="@string/pref_selector_mode_title"
+                />
         <CheckBoxPreference
             android:key="ui_hide_kbd_after_send"
             android:title="@string/pref_hide_keyboard_title"
@@ -64,7 +64,7 @@
             android:singleLine="true"
         />
         <EditTextPreference
-            android:dependency="ui_show_speech-rec"
+            android:dependency="ui_show_speech_rec"
             android:key="speech_cmd_clear_line"
             android:title="@string/pref_speech_rec_clearline_title"
             android:summary="@string/pref_speech_rec_clearline_summary"

@@ -67,15 +67,16 @@ with EventBus.RefOwner {
     UiBus += { case BusEvent.PreferenceChanged(_, key) =>
       List(Settings.SHOW_NICK_COMPLETE,
         Settings.SHOW_SPEECH_REC,
-        Settings.SELECTOR_MODE) foreach { r =>
+        Settings.NAVIGATION_MODE) foreach { r =>
         if (r == key) {
           r match {
           case Settings.SHOW_NICK_COMPLETE =>
             showNickComplete = s.get(Settings.SHOW_NICK_COMPLETE)
           case Settings.SHOW_SPEECH_REC =>
             showSpeechRec = s.get(Settings.SHOW_SPEECH_REC)
-          case Settings.SELECTOR_MODE =>
-            toggleSelectorMode = true // flag recreate onResume
+          case Settings.NAVIGATION_MODE =>
+             // flag recreate onResume
+            toggleSelectorMode = true
           }
         }
       }
@@ -84,7 +85,7 @@ with EventBus.RefOwner {
     showSpeechRec = s.get(Settings.SHOW_SPEECH_REC)
     s
   }
-  private var toggleSelectorMode = false;
+  private var toggleSelectorMode = false
   private var showNickComplete = false
   private var showSpeechRec = false
 
@@ -92,6 +93,7 @@ with EventBus.RefOwner {
     val f = getSupportFragmentManager().findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
   }
+  lazy val tabs = findView(TR.tabs)
   lazy val drawer = findView(TR.drawer_layout)
   lazy val drawerLeft = findView(TR.drawer_left)
   lazy val drawerRight = findView(TR.drawer_right)
@@ -166,11 +168,27 @@ with EventBus.RefOwner {
       }
     })
     val channels = drawerLeft.findView(TR.channel_list)
+    channels.setOnItemClickListener { (pos: Int) =>
+      pager.setCurrentItem(pos)
+      drawer.closeDrawer(drawerLeft)
+    }
     channels.setAdapter(adapter.DropDownAdapter)
 
     HoneycombSupport.init(this)
-    if (settings.get(Settings.SELECTOR_MODE))
-      HoneycombSupport.setupSpinnerNavigation(adapter)
+    settings.get(Settings.NAVIGATION_MODE) match {
+      case Settings.NAVIGATION_MODE_DROPDOWN =>
+        HoneycombSupport.setupSpinnerNavigation(adapter)
+        drawer.setDrawerLockMode(
+          DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerLeft)
+      case Settings.NAVIGATION_MODE_TABS =>
+        drawer.setDrawerLockMode(
+          DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerLeft)
+      case Settings.NAVIGATION_MODE_DRAWER =>
+        drawer.setDrawerLockMode(
+          DrawerLayout.LOCK_MODE_UNLOCKED, drawerLeft)
+        tabs.setVisibility(View.GONE)
+    }
+
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
       if (settings.get(Settings.ROTATE_LOCK))
@@ -232,8 +250,26 @@ with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
-    if (toggleSelectorMode)
-      UiBus.post { HoneycombSupport.recreate() }
+    if (toggleSelectorMode) {
+      val newnav = settings.get(Settings.NAVIGATION_MODE)
+      val isDropNav = HoneycombSupport.isSpinnerNavigation
+      if ((isDropNav && newnav != Settings.NAVIGATION_MODE_DROPDOWN) ||
+          (!isDropNav && newnav == Settings.NAVIGATION_MODE_DROPDOWN)) {
+        UiBus.post { HoneycombSupport.recreate() }
+      } else {
+        newnav match {
+          case Settings.NAVIGATION_MODE_TABS =>
+            tabs.setVisibility(View.VISIBLE)
+            drawer.setDrawerLockMode(
+              DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerLeft)
+          case Settings.NAVIGATION_MODE_DRAWER =>
+            tabs.setVisibility(View.GONE)
+            drawer.setDrawerLockMode(
+              DrawerLayout.LOCK_MODE_UNLOCKED, drawerLeft)
+        }
+      }
+    }
+
 
     if (service != null)
       service.showing = true
