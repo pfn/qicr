@@ -97,6 +97,7 @@ with EventBus.RefOwner {
   lazy val drawer = findView(TR.drawer_layout)
   lazy val drawerLeft = findView(TR.drawer_left)
   lazy val drawerRight = findView(TR.drawer_right)
+  lazy val channels = drawerLeft.findView(TR.channel_list)
   lazy val pager = findView(TR.pager)
   lazy val adapter = new MainPagerAdapter(this)
 
@@ -167,7 +168,6 @@ with EventBus.RefOwner {
         HoneycombSupport.stopActionMode()
       }
     })
-    val channels = drawerLeft.findView(TR.channel_list)
     channels.setOnItemClickListener { (pos: Int) =>
       pager.setCurrentItem(pos)
       drawer.closeDrawer(drawerLeft)
@@ -276,7 +276,7 @@ with EventBus.RefOwner {
 
     def refreshTabs(s: IrcService = null) {
       adapter.refreshTabs(if (s != null) s else service)
-      val i = getIntent()
+      val i = getIntent
       if (i != null && i.hasExtra(IrcService.EXTRA_SUBJECT)) {
         val subject = i.getStringExtra(IrcService.EXTRA_SUBJECT)
         // why'd I do removeExtra?
@@ -392,7 +392,7 @@ with EventBus.RefOwner {
         val nicks = drawerRight.findView(TR.nick_list)
         nicks.setAdapter(new NickListAdapter(this, c.channel))
         def insertNick(pos: Int) {
-          var nick = nicks.getAdapter().getItem(pos).asInstanceOf[String]
+          var nick = nicks.getAdapter.getItem(pos).asInstanceOf[String]
           val c = nick.charAt(0)
           if (c == '@' || c == '+')
             nick = nick.substring(1)
@@ -439,6 +439,7 @@ with EventBus.RefOwner {
         speechrec.setVisibility(View.GONE)
       }
     }
+    channels.setItemChecked(idx, true)
   }
 
   override def onCreateOptionsMenu(menu: Menu): Boolean = {
