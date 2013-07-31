@@ -16,6 +16,7 @@ import scala.collection.JavaConversions._
 import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.irc.model.BusEvent.NickListChanged
 
+// TODO memoize this to improve performance
 // must reference activity for resources
 class NickListAdapter(activity: MainActivity, channel: Channel)
 extends BaseAdapter with EventBus.RefOwner {
@@ -41,7 +42,7 @@ extends BaseAdapter with EventBus.RefOwner {
             case (x, '@') if x != '@'             => false
             case ('+', y) if y != '@' && y != '+' => true
             case (x, '+') if x != '@' && x != '+' => false
-            case (_,_) => a.toLowerCase.compareTo(b.toLowerCase) < 0
+            case (_,_) => a.compareToIgnoreCase(b) < 0
             }
         }
 
