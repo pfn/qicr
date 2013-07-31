@@ -14,7 +14,8 @@ object QicrBuild extends Build {
   lazy val sirc = RootProject(uri("https://github.com/sorcix/sIRC.git#7fa7cc7"))
 
   override def settings = super.settings ++
-    (exportJars in (sirc,Compile) := true)
+    Seq(exportJars in (sirc,Compile) := true) ++
+      inScope(Global in sirc) (org.sbtidea.SbtIdeaPlugin.settings)
 
   lazy val lite = Project(id = "lite", base = file("lite")) settings(
       android.Plugin.androidBuild(common) ++ Seq(
@@ -33,6 +34,7 @@ object QicrBuild extends Build {
     resolvers += Resolver.mavenLocal,
     // mvn install sirc locally to use the below dep
     libraryDependencies ++= Seq(
-      "com.android.support" % "support-v4" % "18.0.0")
+      "com.android.support" % "support-v4" % "18.0.0",
+      "com.android.support" % "appcompat-v7" % "18.0.0")
   ) ++ android.Plugin.androidBuild: _*) dependsOn(sirc)
 }
