@@ -6,13 +6,13 @@ import scala.ref.WeakReference
 
 import android.os.StrictMode
 
-import android.app.ActionBar
-import android.view.ActionMode
+import android.support.v7.app.ActionBar
+import android.support.v7.view.ActionMode
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.view.View
-import android.util.Log
 
 import AndroidConversions._
+import android.support.v4.view.{MenuItemCompat, MenuCompat}
 
 object HoneycombSupport {
   val TAG = "HoneycombSupport"
@@ -30,7 +30,7 @@ object HoneycombSupport {
 
   def invalidateActionBar() {
     if (activity != null)
-      activity.invalidateOptionsMenu()
+      activity.supportInvalidateOptionsMenu()
   }
 
   def stopActionMode() {
@@ -39,21 +39,29 @@ object HoneycombSupport {
     _actionmode = null
   }
 
-  def recreate() = activity.recreate()
+  def recreate() {
+
+    if (honeycombAndNewer) {
+      activity.recreate()
+    } else {
+      activity.service.queueCreateActivity(activity.adapter.page)
+      activity.finish()
+    }
+  }
 
   def startActionMode(server: Server) {
     _server = new WeakReference(server)
     if (activity == null) return
     _actionmode = new WeakReference(
-      activity.startActionMode(ServerActionModeSetup))
+      activity.startSupportActionMode(ServerActionModeSetup))
   }
 
   def setSubtitle(s: String) = if (activity != null) {
-    activity.getActionBar.setSubtitle(s)
+    activity.getSupportActionBar.setSubtitle(s)
   }
 
   def setupSpinnerNavigation(a: MainPagerAdapter) {
-    val bar = activity.getActionBar
+    val bar = activity.getSupportActionBar
     a.hsv.setVisibility(View.GONE)
     bar.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST)
     bar.setDisplayOptions(0, ActionBar.DISPLAY_SHOW_TITLE)
@@ -63,9 +71,9 @@ object HoneycombSupport {
 
   def setSelectedNavigationItem(pos: Int) {
     if (activity == null) return
-    val bar = activity.getActionBar
+    val bar = activity.getSupportActionBar
     if (bar.getNavigationItemCount > pos)
-      activity.getActionBar.setSelectedNavigationItem(pos)
+      activity.getSupportActionBar.setSelectedNavigationItem(pos)
   }
 
   object ServerActionModeSetup extends ActionMode.Callback {
@@ -79,10 +87,10 @@ object HoneycombSupport {
       inflater.inflate(R.menu.server_menu, menu)
       List(R.id.server_connect,
         R.id.server_disconnect,
-        R.id.server_options).foreach(
-          menu.findItem(_).setShowAsAction(
-            MenuItem.SHOW_AS_ACTION_IF_ROOM |
-            MenuItem.SHOW_AS_ACTION_WITH_TEXT))
+        R.id.server_options).foreach(i =>
+          MenuItemCompat.setShowAsAction(menu.findItem(i),
+            MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+        )
       true
     }
 
@@ -106,7 +114,7 @@ object HoneycombSupport {
   def startActionMode(f: NickListFragment) {
     NickListActionModeSetup.fragment = new WeakReference(f)
     _actionmode = new WeakReference(
-      activity.startActionMode(NickListActionModeSetup))
+      activity.startSupportActionMode(NickListActionModeSetup))
   }
 
   object NickListActionModeSetup extends ActionMode.Callback {
@@ -121,10 +129,10 @@ object HoneycombSupport {
       val inflater = new MenuInflater(activity)
       inflater.inflate(R.menu.nicklist_menu, menu)
       List(R.id.nick_insert,
-        R.id.nick_start_chat).foreach(
-          menu.findItem(_).setShowAsAction(
-            MenuItem.SHOW_AS_ACTION_IF_ROOM |
-            MenuItem.SHOW_AS_ACTION_WITH_TEXT))
+        R.id.nick_start_chat).foreach(i =>
+          MenuItemCompat.setShowAsAction(menu.findItem(i),
+            MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+        )
       true
     }
 

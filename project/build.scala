@@ -4,11 +4,13 @@ import sbt.Keys._
 import android.Keys._
 
 object QicrBuild extends Build {
-  lazy val root = Project(id = "qicr", base = file(".")) settings(
-    organization         := "com.hanhuy.android",
-    packageT in Compile <<= packageT in Android in lite,
-    packageRelease      <<= packageRelease in Android in lite,
-    packageDebug        <<= packageDebug in Android in lite
+  lazy val root = Project(id = "qicr", base = file(".")) settings(Seq(
+      organization         := "com.hanhuy.android",
+      packageT in Compile <<= packageT in Android in lite,
+      packageRelease      <<= packageRelease in Android in lite,
+      packageDebug        <<= packageDebug in Android in lite,
+      run                 <<= run in Android in lite
+    ) ++ android.Plugin.androidCommands: _*
   ) aggregate(lite, common, sirc)
 
   lazy val sirc = RootProject(uri("https://github.com/sorcix/sIRC.git#7fa7cc7"))

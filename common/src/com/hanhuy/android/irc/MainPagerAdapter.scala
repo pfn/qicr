@@ -222,13 +222,11 @@ with EventBus.RefOwner {
     activity.newmessages.setVisibility(
       if (channels.find(_.newMentions).isEmpty) View.GONE else View.VISIBLE)
 
-    if (honeycombAndNewer) {
-      HoneycombSupport.setSelectedNavigationItem(pos)
-      HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
-        t.server map { s =>
-          " - %s: %s" format(s.name, Server.intervalString(s.currentLag))
-        } getOrElse null)
-    }
+    HoneycombSupport.setSelectedNavigationItem(pos)
+    HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
+      t.server map { s =>
+        " - %s: %s" format(s.name, Server.intervalString(s.currentLag))
+      } getOrElse null)
 
     refreshTabTitle(pos)
   }
@@ -387,10 +385,10 @@ with EventBus.RefOwner {
     val f = getItem(pos)
     val name = makeFragmentTag(f)
     tabs(pos).tag = Some(name)
-    if (f.isDetached())
+    if (f.isDetached)
       mCurTransaction.attach(f)
-    else if (!f.isAdded())
-      mCurTransaction.add(container.getId(), f, name)
+    else if (!f.isAdded)
+      mCurTransaction.add(container.getId, f, name)
     // because the ordering of instantiateItem vs. insertTab can't be
     // guaranteed, always make the menu invisible (true?)
     //if (f != mCurrentPrimaryItem)
@@ -409,24 +407,29 @@ with EventBus.RefOwner {
   object DropDownAdapter extends BaseAdapter {
     lazy val inflater = activity.systemService[LayoutInflater]
     override def getItem(pos: Int) = tabs(pos)
-    override def getCount() = tabs.length
+    override def getCount = tabs.length
     override def getItemId(pos: Int) = tabs(pos).fragment.getId
+
+    override def getItemViewType(pos: Int): Int = {
+      val tab = tabs(pos)
+      if  (tab.channel.isDefined || tab.server.isDefined) 0 else 1
+    }
+
+    override def getViewTypeCount: Int = 2
+
     override def getView(pos: Int, convert: View, container: ViewGroup) = {
-      val id = if (convert != null) convert.getId else -1
       val tab = tabs(pos)
 
-      val channelOrServer = !tab.channel.isEmpty || !tab.server.isEmpty
-      // ugh, ugly!
-      val R_id_two_line_item = R.id.two_line_item
-
-      val view = id match {
-      case R_id_two_line_item if channelOrServer => convert
-      case -1 | _ if channelOrServer => inflater.inflate(
-        R.layout.simple_dropdown_item_2line, container, false)
-      case R_id_two_line_item | -1 => inflater.inflate(
-        R.layout.simple_dropdown_item_1line, container, false)
-      case _ => convert
-      }
+      val t = getItemViewType(pos)
+      val view = if (convert == null ||
+        t != convert.getTag(R.id.dropdown_view_type)) {
+        val layout = getItemViewType(pos) match {
+          case 0 => R.layout.simple_dropdown_item_2line
+          case 1 => R.layout.simple_dropdown_item_1line
+        }
+        inflater.inflate(layout, container, false)
+      } else convert
+      view.setTag(R.id.dropdown_view_type, t)
 
       view.findView[TextView](android.R.id.text1).setText(makeTabTitle(pos))
 

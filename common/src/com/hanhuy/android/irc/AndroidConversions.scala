@@ -2,7 +2,7 @@ package com.hanhuy.android.irc
 
 import android.app.Activity
 
-import android.app.ActionBar
+import android.support.v7.app.ActionBar
 import android.content.Intent
 import android.content.Context
 import android.content.BroadcastReceiver

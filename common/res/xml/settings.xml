@@ -30,7 +30,6 @@
             android:title="@string/pref_selector_mode_title"
             android:summaryOn="@string/pref_selector_mode_summary_on"
             android:summaryOff="@string/pref_selector_mode_summary_off"
-            android:enabled="@bool/is_v11plus"
             android:defaultValue="@bool/is_phone"
         />
         <CheckBoxPreference

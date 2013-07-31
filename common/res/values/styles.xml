@@ -13,11 +13,11 @@
         <item name="android:textColor">@color/tab_indicator_text</item>
     </style>
 
-    <style name="AppTheme.Light" parent="@android:style/Theme.Light.NoTitleBar">
+    <style name="AppTheme.Light" parent="@style/Theme.AppCompat.Light">
       <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
     </style>
 
-    <style name="AppTheme.Dark" parent="@android:style/Theme.NoTitleBar">
+    <style name="AppTheme.Dark" parent="@style/Theme.AppCompat">
       <!-- seems to break autoLink text...
       <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
       -->

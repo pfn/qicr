@@ -8,12 +8,9 @@
     <style name="ActionBar.Dark" parent="@style/ActionBar">
     </style>
 
-    <style name="AppTheme.Light" parent="@android:style/Theme.Holo.Light">
+    <style name="AppTheme.Light" parent="@style/Theme.AppCompat.Light">
         <item name="android:actionBarStyle">@style/ActionBar.Light</item>
         <item name="android:textColor">?android:attr/textColorPrimary</item>
-    </style>
-
-    <style name="AppTheme.Dark" parent="@android:style/Theme.Holo">
     </style>
 
     <color name="actionbar_background_light">#fccc</color>

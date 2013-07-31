@@ -39,6 +39,7 @@ import com.hanhuy.android.irc.model.BusEvent
 import MainActivity._
 
 import AndroidConversions._
+import android.support.v7.app.ActionBarActivity
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -71,7 +72,7 @@ object MainActivity {
     })
   }
 }
-class MainActivity extends FragmentActivity with ServiceConnection
+class MainActivity extends ActionBarActivity with ServiceConnection
 with EventBus.RefOwner {
   val _richactivity: RichActivity = this; import _richactivity._
 
@@ -179,11 +180,9 @@ with EventBus.RefOwner {
 
     adapter.createTab(getString(R.string.tab_servers), servers)
 
-    if (honeycombAndNewer) {
-      HoneycombSupport.init(this)
-      if (settings.getBoolean(R.string.pref_selector_mode))
-        HoneycombSupport.setupSpinnerNavigation(adapter)
-    }
+    HoneycombSupport.init(this)
+    if (settings.getBoolean(R.string.pref_selector_mode))
+      HoneycombSupport.setupSpinnerNavigation(adapter)
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
       if (settings.getBoolean(R.string.pref_rotate_lock))
@@ -249,7 +248,7 @@ with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
-    if (honeycombAndNewer && toggleSelectorMode)
+    if (toggleSelectorMode)
       UiBus.post { HoneycombSupport.recreate() }
 
     if (service != null)
@@ -294,8 +293,7 @@ with EventBus.RefOwner {
 
   override def onStart() {
     super.onStart()
-    if (honeycombAndNewer)
-      HoneycombSupport.init(this)
+    HoneycombSupport.init(this)
     bindService(new Intent(this, classOf[IrcService]), this,
       Context.BIND_AUTO_CREATE)
   }
@@ -318,8 +316,7 @@ with EventBus.RefOwner {
 
   override def onStop() {
     super.onStop()
-    if (honeycombAndNewer)
-      HoneycombSupport.close()
+    HoneycombSupport.close()
     if (service != null) {
       service.showing = false
       service.unbind()
@@ -345,10 +342,8 @@ with EventBus.RefOwner {
     }
     f.setMenuVisibility(true)
 
-    if (honeycombAndNewer) {
-      HoneycombSupport.stopActionMode()
-      UiBus.post { HoneycombSupport.invalidateActionBar() }
-    }
+    HoneycombSupport.stopActionMode()
+    UiBus.post { HoneycombSupport.invalidateActionBar() }
 
     f match {
       // post to thread to make sure it shows up when done paging
@@ -391,10 +386,6 @@ with EventBus.RefOwner {
     inflater.inflate(R.menu.main_menu, menu)
     val item = menu.findItem(R.id.toggle_rotate_lock)
     val locked = settings.getBoolean(R.string.pref_rotate_lock)
-    if (!honeycombAndNewer) {
-      item.setTitle(if (locked) R.string.toggle_rotate_unlock
-        else R.string.toggle_rotate_lock)
-    }
     item.setChecked(locked)
     true
   }
@@ -436,12 +427,7 @@ with EventBus.RefOwner {
   }
 
   private def _recreate() { // _recreate for name clash
-    if (honeycombAndNewer)
-      HoneycombSupport.recreate()
-    else {
-      service.queueCreateActivity(adapter.page)
-      finish()
-    }
+    HoneycombSupport.recreate()
   }
 
   override def onSaveInstanceState(state: Bundle) {

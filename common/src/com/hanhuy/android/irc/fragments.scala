@@ -259,7 +259,7 @@ with AdapterView.OnItemClickListener {
       container, false).asInstanceOf[ListView]
     if (showAsDialog && adapter.isEmpty)
       UiBus.post { dismiss() }
-    if (showAsDialog || !honeycombAndNewer)
+    if (showAsDialog)
       registerForContextMenu(listview)
     listview.setOnItemClickListener(this)
     adapter.foreach(listview.setAdapter(_))
@@ -301,7 +301,7 @@ with AdapterView.OnItemClickListener {
 
   def onItemClick(parent: AdapterView[_], view: View, pos: Int, id: Long) {
     contextPos = pos
-    if (honeycombAndNewer && !showAsDialog) {
+    if (!showAsDialog) {
       HoneycombSupport.startActionMode(this)
     } else {
       insertNick()
@@ -535,7 +535,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
       true
     } else {
       val r = getActivity.servers.onServerMenuItemClicked(item, Option(server))
-      if (r && honeycombAndNewer) HoneycombSupport.invalidateActionBar()
+      if (r) HoneycombSupport.invalidateActionBar()
       r
     }
   }
@@ -573,8 +573,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
-    if (honeycombAndNewer)
-      HoneycombSupport.menuItemListener = onServerMenuItemClicked
+    HoneycombSupport.menuItemListener = onServerMenuItemClicked
   }
 
   override def onCreateView(inflater: LayoutInflater,
@@ -582,8 +581,6 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     val v = inflater.inflate(R.layout.fragment_servers, container, false)
     val b = v.findView(TR.add_server)
     b.setOnClickListener { () => getActivity.servers.addServerSetupFragment() }
-    if (!honeycombAndNewer)
-      registerForContextMenu(v.findView[ListView](android.R.id.list))
     v
   }
 
@@ -594,10 +591,8 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     manager.popBackStack(SERVER_SETUP_STACK,
       FragmentManager.POP_BACK_STACK_INCLUSIVE)
     val server = adapter.getItem(pos)
-    if (honeycombAndNewer) {
-      HoneycombSupport.invalidateActionBar()
-      HoneycombSupport.startActionMode(server)
-    }
+    HoneycombSupport.invalidateActionBar()
+    HoneycombSupport.startActionMode(server)
 
     if (server.state == Server.State.CONNECTED) {
       activity.input.setVisibility(View.VISIBLE)
@@ -697,8 +692,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     }
 
     fragment.server = server
-    if (honeycombAndNewer)
-      UiBus.post { HoneycombSupport.invalidateActionBar() }
+    UiBus.post { HoneycombSupport.invalidateActionBar() }
   }
 
   def changeListener(server: Server) {
@@ -781,28 +775,6 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
         true
       }
       case _ => false
-    }
-  }
-
-  override def onCreateContextMenu(menu: ContextMenu, v: View,
-      info: ContextMenu.ContextMenuInfo) {
-    if (!honeycombAndNewer) { // newer uses actionmode
-      getActivity.getMenuInflater.inflate(R.menu.server_menu, menu)
-      val i = info.asInstanceOf[AdapterView.AdapterContextMenuInfo]
-      _server = if (i.position == -1)
-        None
-      else
-        Some(adapter.getItem(i.position))
-
-      val connected = _server map { _.state match {
-        case Server.State.INITIAL      => false
-        case Server.State.DISCONNECTED => false
-        case _                         => true
-      }} getOrElse { false }
-
-      menu.findItem(R.id.server_connect).setVisible(
-        !connected && !_server.isEmpty)
-      menu.findItem(R.id.server_disconnect).setVisible(connected)
     }
   }
 
