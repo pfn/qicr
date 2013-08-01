@@ -269,15 +269,9 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     }
   }
 
-  private def setNickListAdapter(list: ListView) =
-    list.setAdapter(new NickListAdapter(getActivity, channel))
-
   override def onCreateView(inflater: LayoutInflater,
       container: ViewGroup, bundle: Bundle) : View = {
-    val v = inflater.inflate(R.layout.fragment_channel, container, false)
-    val activity = getActivity()
-    // show via dialogfragment if < size_large
-    v
+    inflater.inflate(R.layout.fragment_channel, container, false)
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =

@@ -20,6 +20,9 @@ import android.widget.CheckBox
 import android.content.DialogInterface
 import android.app.NotificationManager
 import android.view.LayoutInflater
+import android.text.{SpannableString, SpannableStringBuilder, Spanned}
+import android.text.style.{StyleSpan, ForegroundColorSpan, CharacterStyle}
+import android.graphics.Typeface
 
 object AndroidConversions {
   val icsAndNewer =
@@ -127,6 +130,7 @@ object AndroidConversions {
   implicit def toRichContext(c: Context) = new RichContext(c)
   implicit def toRichActivity(a: Activity) = new RichActivity(a)
   implicit def toRichHandler(h: Handler) = new RichHandler(h)
+  implicit def toSpannedGenerator(s: String) = SpannedGenerator(s)
 
   lazy val _threadpool = {
     if (honeycombAndNewer) AsyncTask.THREAD_POOL_EXECUTOR
@@ -186,4 +190,46 @@ with TypedViewHolder {
 class RichHandler(handler: Handler) {
   def delayed(delay: Long)(f: => Unit) = handler.postDelayed(
     AndroidConversions.byNameToRunnable(f), delay)
+}
+
+object SpannedGenerator {
+  private def span(style: Object, text: CharSequence) = {
+    val s = new SpannableString(text)
+    s.setSpan(style, 0, text.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+    s
+  }
+  def textColor(color: Int, text: CharSequence) = {
+    span(new ForegroundColorSpan(color) , text)
+  }
+
+  def bold(text: CharSequence) = {
+    span(new StyleSpan(Typeface.BOLD) , text)
+  }
+}
+
+case class SpannedGenerator(fmt: String) {
+  def formatSpans(items: CharSequence*): Spanned = {
+    val builder = new SpannableStringBuilder()
+    val idx = fmt indexOf "%"
+
+    formatNext(builder, fmt, 0, idx, items:_*)
+
+    builder
+  }
+
+  private def formatNext(s: SpannableStringBuilder, fmt: String,
+                 cur: Int, next: Int, items: CharSequence*) {
+    if (next == -1) {
+      s.append(fmt.substring(cur, fmt.length))
+    } else {
+      s.append(fmt.substring(cur, next))
+      val space = fmt.indexWhere({ !_.isDigit }, next + 1)
+      val number = fmt.substring(next + 1,
+        if (space < 0) fmt.length else space).toInt
+      s.append(items(number - 1))
+      if (space > 0)
+        formatNext(s, fmt, space, fmt indexOf ("%", space), items:_*)
+    }
+  }
+
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="drawer_width">144dp</dimen>
+    <dimen name="drawer_width">192dp</dimen>
     <item name="standard_margin" type="dimen">4dp</item>
     <item name="standard_padding" type="dimen">12dp</item>
 </resources>

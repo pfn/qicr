@@ -12,7 +12,6 @@ import com.hanhuy.android.irc.model.BusEvent
 
 import android.app.NotificationManager
 import android.util.Log
-import android.text.Html
 import android.view.{View, ViewGroup}
 import android.view.LayoutInflater
 import android.widget.TextView
@@ -167,16 +166,17 @@ with EventBus.RefOwner {
 
   def makeTabTitle(pos: Int) = {
     val t = tabs(pos)
-    var title = t.title
+    var title: CharSequence = t.title
 
     if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
-      title = "<font color=#ff0000>*" + title + "</font>"
+      title = SpannedGenerator.textColor(0xffff0000, title)
     else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0)
-      title = "<font color=#007f7f>+" + title +"</font>"
+      title = SpannedGenerator.textColor(0xff007f7f, title)
 
     if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
-      title = "(" + title + ")"
-    Html.fromHtml(title)
+      title = "(%1)" formatSpans title
+
+    title
   }
 
   def actionBarNavigationListener(pos: Int, id: Long) = {

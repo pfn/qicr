@@ -23,7 +23,6 @@ object EventBus {
   private val TAG = "EventBus"
 }
 abstract class EventBus(ui: Boolean = false) {
-  import EventBus.TAG
   import ref.WeakReference
 
   private val queue = new ArrayBuffer[WeakReference[EventBus.Handler]]

@@ -1,15 +1,9 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.IrcListeners
-import com.hanhuy.android.irc.MainActivity
-import com.hanhuy.android.irc.Settings
-import com.hanhuy.android.irc.EventBus
-import com.hanhuy.android.irc.UiBus
+import com.hanhuy.android.irc._
 import com.hanhuy.android.irc.AndroidConversions._
 
 import MessageLike._
-
-import com.hanhuy.android.irc.R
 
 import scala.collection.mutable.Queue
 import scala.ref.WeakReference
@@ -17,7 +11,6 @@ import scala.ref.WeakReference
 import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.content.Context
-import android.text.Html
 import android.widget.BaseAdapter
 import android.widget.TextView
 import android.view.{View, ViewGroup}
@@ -25,6 +18,23 @@ import android.view.{View, ViewGroup}
 import java.text.SimpleDateFormat
 
 import MessageAdapter._
+import com.hanhuy.android.irc.model.MessageLike.CommandError
+import com.hanhuy.android.irc.model.MessageLike.Kick
+import com.hanhuy.android.irc.model.MessageLike.Privmsg
+import com.hanhuy.android.irc.model.MessageLike.ServerInfo
+import com.hanhuy.android.irc.model.MessageLike.Join
+import com.hanhuy.android.irc.model.MessageLike.Motd
+import com.hanhuy.android.irc.model.MessageLike.Part
+import com.hanhuy.android.irc.model.MessageLike.Quit
+import scala.Some
+import com.hanhuy.android.irc.model.MessageLike.Topic
+import com.hanhuy.android.irc.model.MessageLike.Notice
+import com.hanhuy.android.irc.model.MessageLike.CtcpAction
+import com.hanhuy.android.irc.model.MessageLike.SslInfo
+import com.hanhuy.android.irc.model.MessageLike.CtcpReply
+import com.hanhuy.android.irc.model.MessageLike.CtcpRequest
+import com.hanhuy.android.irc.model.MessageLike.SslError
+import com.hanhuy.android.irc.model.MessageLike.NickChange
 
 trait MessageAppender {
   def add(m: MessageLike): Unit
@@ -99,9 +109,15 @@ object MessageAdapter {
   }
 
   private def formatText(c: Context, msg: MessageLike, res: Int,
-      args: String*) =
-    (if (showTimestamp) sdf.format(msg.ts) else "") + getString(c, res, args:_*)
+      args: CharSequence*) = {
+    val text =  if (res == -1) args(0)
+      else getString(c, res) formatSpans (args:_*)
+    if (showTimestamp) {
+      "%1%2" formatSpans(sdf.format(msg.ts), text)
+    } else text
+  }
 
+  private def getString(c: Context, res: Int) = c.getString(res)
   private def getString(c: Context, res: Int, args: String*) = {
     res match {
     case -1 => args(0)
@@ -110,33 +126,28 @@ object MessageAdapter {
   }
 
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
-      _msg: String)(implicit channel: ChannelLike) = {
+      msg: String)(implicit channel: ChannelLike) = {
     val server = channel.server
-    // escape HTML
-    val msg = _msg.replace("&", "&amp;")
-      .replace("<", "&lt;")
-      .replace(">", "&gt;")
 
     if (channel.isInstanceOf[Query]) {
       if (server.currentNick.toLowerCase() == src.toLowerCase())
-        Html.fromHtml(formatText(c, m, res,
-          "<font color=#00ffff>" + src + "</font>", msg))
+        formatText(c, m, res, SpannedGenerator.textColor(0xff00ffff, src), msg)
       else
-        Html.fromHtml(formatText(c, m, res,
-          "<font color=#ff0000>" + src + "</font>", msg))
+        formatText(c, m, res, SpannedGenerator.textColor(0xffff0000, src), msg)
     } else if (server.currentNick.toLowerCase() == src.toLowerCase()) {
-      Html.fromHtml(formatText(c, m, res, "<b>" + src + "</b>", msg))
+      formatText(c, m, res, SpannedGenerator.bold(src), msg)
     } else if (IrcListeners.matchesNick(server, msg) &&
         server.currentNick.toLowerCase() != src.toLowerCase()) {
-      Html.fromHtml(formatText(c, m, res,
-        "<font color=#00ff00>" + src + "</font>", msg))
+      formatText(c, m, res, SpannedGenerator.textColor(0xff00ff00, src), msg)
     } else
-      Html.fromHtml(formatText(c, m, res, src, msg))
+      formatText(c, m, res, src, msg)
   }
 }
 
 class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   implicit var channel: ChannelLike = _
+
+  var filterCache = Option.empty[collection.mutable.MutableList[MessageLike]]
 
   var showJoinPartQuit = false
   val messages = new Queue[MessageLike]
@@ -206,13 +217,18 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   def filteredMessages = {
     if (showJoinPartQuit)
       messages
-    else
-      messages.filter {
-        case Join(_,_)   => false
-        case Part(_,_,_) => false
-        case Quit(_,_,_) => false
-        case _           => true
+    else {
+      filterCache getOrElse {
+        val filtered = messages.filter {
+          case Join(_,_)   => false
+          case Part(_,_,_) => false
+          case Quit(_,_,_) => false
+          case _           => true
+        }
+        filterCache = Some(filtered)
+        filtered
       }
+    }
   }
 
   override def getItemId(pos: Int) : Long = pos
@@ -233,6 +249,11 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
 
     view.setText(formatText(getItem(pos)))
     view
+  }
+
+  override def notifyDataSetChanged() {
+    filterCache = None
+    super.notifyDataSetChanged()
   }
 
   private def formatText(msg: MessageLike) =

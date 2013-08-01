@@ -26,6 +26,7 @@ import AndroidConversions._
 import android.support.v7.app.ActionBarActivity
 import android.support.v4.widget.DrawerLayout
 import scala.Some
+import android.database.DataSetObserver
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -389,8 +390,13 @@ with EventBus.RefOwner {
 
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_UNLOCKED, drawerRight)
+
         val nicks = drawerRight.findView(TR.nick_list)
-        nicks.setAdapter(new NickListAdapter(this, c.channel))
+        Option(nicks.getAdapter) foreach {
+          _.unregisterDataSetObserver(observer) }
+        nicks.setAdapter(NickListAdapter(this, c.channel))
+        findView(TR.user_count).setText("Users: " + nicks.getAdapter.getCount)
+        nicks.getAdapter.registerDataSetObserver(observer)
         def insertNick(pos: Int) {
           var nick = nicks.getAdapter.getItem(pos).asInstanceOf[String]
           val c = nick.charAt(0)
@@ -512,6 +518,12 @@ with EventBus.RefOwner {
     } else {
       service.quit(message,
         if (service.connected) Some(finish _) else { finish; None })
+    }
+  }
+  val observer = new DataSetObserver {
+    override def onChanged() {
+      val nicks = drawerRight.findView(TR.nick_list)
+      findView(TR.user_count).setText("Users: " + nicks.getAdapter.getCount)
     }
   }
 }

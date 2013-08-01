@@ -75,9 +75,10 @@
     <string name="usage_ctcp">
         Usage /ctcp &lt;nick/channel&gt; &lt;command&gt; [args]</string>
 
-    <string name="message_template">&amp;lt;%1$s&amp;gt; %2$s</string>
-    <string name="notice_template">-%1$s- %2$s</string>
-    <string name="action_template"> * %1$s %2$s</string>
+    <string name="message_template" formatted="false">
+        &lt;%1&gt; %2</string>
+    <string name="notice_template" formatted="false">-%1- %2</string>
+    <string name="action_template" formatted="false"> * %1 %2</string>
     <string name="ctcp_response_template_3">
         CTCP %1$s reply from %2$s: %3$s</string>
     <string name="ctcp_response_template_2">CTCP %1$s reply from %2$s</string>
@@ -92,17 +93,21 @@
         [ctcp(%1$s)] %2$s %3$s</string>
 
     <!-- TODO colorize? -->
-    <string name="nick_change_template">-!- %1$s is now known as %2$s</string>
-    <string name="join_template">-!- %1$s [%2$s] has joined</string>
-    <string name="quit_template">-!- %1$s [%2$s] has quit [%3$s]</string>
-    <string name="part_template">-!- %1$s [%2$s] has left [%3$s]</string>
-    <string name="kick_template">
-        -!- %1$s was kicked by %2$s [%3$s]</string>
+    <string name="nick_change_template" formatted="false">
+        -!- %1 is now known as %2</string>
+    <string name="join_template" formatted="false">
+        -!- %1 [%2] has joined</string>
+    <string name="quit_template" formatted="false">
+        -!- %1 [%2] has quit [%3]</string>
+    <string name="part_template" formatted="false">
+        -!- %1 [%2] has left [%3]</string>
+    <string name="kick_template" formatted="false">
+        -!- %1 was kicked by %2 [%3]</string>
 
-    <string name="topic_template_1">
-        *** Topic for %1$s: %2$s</string>
-    <string name="topic_template_2">
-        *** %1$s changed the topic of %2$s to: %3$s</string>
+    <string name="topic_template_1" formatted="false">
+        *** Topic for %1: %2</string>
+    <string name="topic_template_2" formatted="false">
+        *** %1 changed the topic of %2 to: %3</string>
 
     <string name="error_no_channel">
         You are not on a channel or query, try /help</string>

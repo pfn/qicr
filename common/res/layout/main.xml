@@ -87,6 +87,11 @@
             android:layout_width="@dimen/drawer_width"
             android:background="?attr/qicrDrawerBackground"
             android:layout_gravity="right">
+        <TextView
+                android:id="@+id/user_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/standard_margin"/>
         <ListView
                 android:padding="@dimen/standard_padding"
                 android:id="@+id/nick_list"

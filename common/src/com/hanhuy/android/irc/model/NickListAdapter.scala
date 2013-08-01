@@ -15,8 +15,25 @@ import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.irc.model.BusEvent.NickListChanged
+import scala.collection.mutable
+import scala.collection
 
-// TODO memoize this to improve performance
+object NickListAdapter {
+  val adapters = new collection.mutable.WeakHashMap[
+    MainActivity,mutable.HashMap[Channel,NickListAdapter]]()
+  def apply(activity: MainActivity, channel: Channel) = {
+    val m = adapters.get(activity) getOrElse {
+      adapters += ((activity, new collection.mutable.HashMap()))
+      adapters(activity)
+    }
+
+    m.get(channel) getOrElse {
+      m += ((channel,new NickListAdapter(activity, channel)))
+      m(channel)
+    }
+  }
+}
+
 // must reference activity for resources
 class NickListAdapter(activity: MainActivity, channel: Channel)
 extends BaseAdapter with EventBus.RefOwner {
