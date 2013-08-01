@@ -195,16 +195,15 @@ class RichHandler(handler: Handler) {
 object SpannedGenerator {
   private def span(style: Object, text: CharSequence) = {
     val s = new SpannableString(text)
-    s.setSpan(style, 0, text.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+    s.setSpan(style, 0, text.length, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
     s
   }
-  def textColor(color: Int, text: CharSequence) = {
+  def textColor(color: Int, text: CharSequence) =
     span(new ForegroundColorSpan(color) , text)
-  }
 
-  def bold(text: CharSequence) = {
-    span(new StyleSpan(Typeface.BOLD) , text)
-  }
+  def bold(text: CharSequence) = span(new StyleSpan(Typeface.BOLD) , text)
+
+  def italics(text: CharSequence) = span(new StyleSpan(Typeface.ITALIC), text)
 }
 
 case class SpannedGenerator(fmt: String) {
@@ -212,13 +211,13 @@ case class SpannedGenerator(fmt: String) {
     val builder = new SpannableStringBuilder()
     val idx = fmt indexOf "%"
 
-    formatNext(builder, fmt, 0, idx, items:_*)
+    formatNext(builder, fmt, 0, idx, items)
 
     builder
   }
 
   private def formatNext(s: SpannableStringBuilder, fmt: String,
-                 cur: Int, next: Int, items: CharSequence*) {
+                 cur: Int, next: Int, items: Seq[CharSequence]) {
     if (next == -1) {
       s.append(fmt.substring(cur, fmt.length))
     } else {
@@ -228,7 +227,7 @@ case class SpannedGenerator(fmt: String) {
         if (space < 0) fmt.length else space).toInt
       s.append(items(number - 1))
       if (space > 0)
-        formatNext(s, fmt, space, fmt indexOf ("%", space), items:_*)
+        formatNext(s, fmt, space, fmt indexOf ("%", space), items)
     }
   }
 

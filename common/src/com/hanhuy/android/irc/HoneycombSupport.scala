@@ -136,11 +136,13 @@ object HoneycombSupport {
       val inflater = new MenuInflater(activity)
       inflater.inflate(R.menu.nicklist_menu, menu)
       mode.setTitle(nick)
+      /*
       List(R.id.nick_insert,
         R.id.nick_start_chat).foreach(i =>
           MenuItemCompat.setShowAsAction(menu.findItem(i),
             MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         )
+        */
       true
     }
 

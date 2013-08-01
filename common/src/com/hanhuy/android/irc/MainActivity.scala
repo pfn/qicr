@@ -1,12 +1,11 @@
 package com.hanhuy.android.irc
 
-import android.app.Activity
-import android.app.AlertDialog
+import android.app.{NotificationManager, Activity, AlertDialog}
 import android.content.Context
 import android.content.Intent
 import android.content.ComponentName
 import android.content.ServiceConnection
-import android.os.{Bundle, Build, IBinder, Parcelable}
+import android.os.{Bundle, IBinder}
 import android.content.DialogInterface
 import android.speech.RecognizerIntent
 import android.util.Log
@@ -91,7 +90,7 @@ with EventBus.RefOwner {
   private var showSpeechRec = false
 
   lazy val servers = { // because of retain instance
-    val f = getSupportFragmentManager().findFragmentByTag(SERVERS_FRAGMENT)
+    val f = getSupportFragmentManager.findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
   }
   lazy val tabs = findView(TR.tabs)
@@ -154,7 +153,7 @@ with EventBus.RefOwner {
     val mode = settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
-    super.onCreate(bundle);
+    super.onCreate(bundle)
     setContentView(R.layout.main)
 
     if (bundle != null)
@@ -216,13 +215,13 @@ with EventBus.RefOwner {
     results find { r => r == eol || r == clearLine } match {
     case Some(c) =>
       if (c == eol) {
-        proc.handleLine(input.getText())
+        proc.handleLine(input.getText)
         InputProcessor.clear(input)
       } else if (c == clearLine) {
         InputProcessor.clear(input)
       }
     case None =>
-      var builder = new AlertDialog.Builder(this)
+      val builder = new AlertDialog.Builder(this)
       builder.setTitle(R.string.speech_select)
       builder.setItems(results.toArray(
         new Array[CharSequence](results.size)),
@@ -251,6 +250,7 @@ with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
+    systemService[NotificationManager].cancel(IrcService.MENTION_ID)
     if (toggleSelectorMode) {
       val newnav = settings.get(Settings.NAVIGATION_MODE)
       val isDropNav = HoneycombSupport.isSpinnerNavigation
@@ -348,9 +348,9 @@ with EventBus.RefOwner {
   def pageChanged(idx: Int) {
     input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
 
-    val m = getSupportFragmentManager()
+    val m = getSupportFragmentManager
     if ((0 until m.getBackStackEntryCount) exists { i =>
-      m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK
+      m.getBackStackEntryAt(i).getName == SERVER_SETUP_STACK
     }) {
       m.popBackStack(SERVER_SETUP_STACK,
         FragmentManager.POP_BACK_STACK_INCLUSIVE)
@@ -370,7 +370,7 @@ with EventBus.RefOwner {
       // post to thread to make sure it shows up when done paging
       case m: MessagesFragment => UiBus.post {
         try {
-          m.getListView.setSelection(m.getListAdapter.getCount() - 1)
+          m.getListView.setSelection(m.getListAdapter.getCount - 1)
         } catch {
           case e: Exception => Log.w(TAG, "Failed to set list position", e)
         }
@@ -395,7 +395,9 @@ with EventBus.RefOwner {
         Option(nicks.getAdapter) foreach {
           _.unregisterDataSetObserver(observer) }
         nicks.setAdapter(NickListAdapter(this, c.channel))
-        findView(TR.user_count).setText("Users: " + nicks.getAdapter.getCount)
+        findView(TR.user_count).setText(
+          getString(R.string.users_count,
+            nicks.getAdapter.getCount: java.lang.Integer))
         nicks.getAdapter.registerDataSetObserver(observer)
         def insertNick(pos: Int) {
           var nick = nicks.getAdapter.getItem(pos).asInstanceOf[String]
@@ -416,9 +418,11 @@ with EventBus.RefOwner {
               item.getItemId match {
                 case R_id_nick_insert => insertNick(pos)
                 case R_id_nick_start_chat =>
-                  Toast.makeText(this,
-                    "Not implemented yet, use /msg",
-                    Toast.LENGTH_SHORT).show()
+                  var nick = nicks.getAdapter.getItem(pos).asInstanceOf[String]
+                  val ch = nick.charAt(0)
+                  if (ch == '@' || ch == '+')
+                    nick = nick.substring(1)
+                  service.startQuery(c.channel.server, nick)
               }
 
               ()
@@ -462,7 +466,7 @@ with EventBus.RefOwner {
     val R_id_settings = R.id.settings
     val R_id_toggle_theme = R.id.toggle_theme
     val R_id_toggle_rotate_lock = R.id.toggle_rotate_lock
-    item.getItemId() match {
+    item.getItemId match {
     case R_id_exit => {
             exit()
             true
@@ -482,7 +486,7 @@ with EventBus.RefOwner {
     }
     case R_id_toggle_rotate_lock => {
       import android.content.pm.ActivityInfo._
-      val locked = !item.isChecked()
+      val locked = !item.isChecked
       item.setChecked(locked)
       settings.set(Settings.ROTATE_LOCK, locked)
       setRequestedOrientation(
@@ -506,7 +510,7 @@ with EventBus.RefOwner {
   def exit(message: Option[String] = None) {
     val prompt = settings.get(Settings.QUIT_PROMPT)
     if (service.connected && prompt) {
-      var builder = new AlertDialog.Builder(this)
+      val builder = new AlertDialog.Builder(this)
       builder.setTitle(R.string.quit_confirm_title)
       builder.setMessage(getString(R.string.quit_confirm))
       builder.setPositiveButton(R.string.yes,
@@ -517,13 +521,15 @@ with EventBus.RefOwner {
       builder.create().show()
     } else {
       service.quit(message,
-        if (service.connected) Some(finish _) else { finish; None })
+        if (service.connected) Some(finish _) else { finish(); None })
     }
   }
   val observer = new DataSetObserver {
     override def onChanged() {
       val nicks = drawerRight.findView(TR.nick_list)
-      findView(TR.user_count).setText("Users: " + nicks.getAdapter.getCount)
+      findView(TR.user_count).setText(
+        getString(R.string.users_count,
+          nicks.getAdapter.getCount: java.lang.Integer))
     }
   }
 }

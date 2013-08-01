@@ -41,6 +41,7 @@
     <string name="yes">Yes</string>
     <string name="no">No</string>
 
+    <string name="users_count">Users: %d</string>
     <string name="nick_insert">Insert name</string>
     <string name="nick_start_chat">Start chat</string>
     <string name="speech_unsupported">
@@ -75,6 +76,8 @@
     <string name="usage_ctcp">
         Usage /ctcp &lt;nick/channel&gt; &lt;command&gt; [args]</string>
 
+    <string name="query_template" formatted="false">
+       *** Starting chat with %1</string>
     <string name="message_template" formatted="false">
         &lt;%1&gt; %2</string>
     <string name="notice_template" formatted="false">-%1- %2</string>

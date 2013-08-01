@@ -3,6 +3,7 @@ package com.hanhuy.android.irc.model
 import com.hanhuy.android.irc._
 import com.hanhuy.android.irc.AndroidConversions._
 
+import SpannedGenerator._
 import MessageLike._
 
 import scala.collection.mutable.Queue
@@ -26,7 +27,6 @@ import com.hanhuy.android.irc.model.MessageLike.Join
 import com.hanhuy.android.irc.model.MessageLike.Motd
 import com.hanhuy.android.irc.model.MessageLike.Part
 import com.hanhuy.android.irc.model.MessageLike.Quit
-import scala.Some
 import com.hanhuy.android.irc.model.MessageLike.Topic
 import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
@@ -41,6 +41,10 @@ trait MessageAppender {
 }
 
 object MessageAdapter {
+  val NICK_COLORS = Array(
+    0xff33b5e5, 0xffaa66cc, 0xff99cc00, 0xffffbb33, 0xffff4444,
+    0xff0099cc, 0xff9933cc, 0xff669900, 0xffff8800, 0xffcc0000)
+
   val TAG = "MessageAdapter"
   val DEFAULT_MAXIMUM_SIZE = 256
   private var showTimestamp = false
@@ -50,6 +54,7 @@ object MessageAdapter {
       (implicit channel: ChannelLike = null): CharSequence = {
     val ch = Option(channel)
     msg match {
+      case Query() => formatText(c, msg, R.string.query_template, ch.get.name)
       case Privmsg(s, m, o, v) => gets(c, R.string.message_template, msg,
         {if (o) "@" else if (v) "+" else ""} + s, m)
       case Notice(s, m) => gets(c, R.string.notice_template, msg, s, m)
@@ -129,18 +134,19 @@ object MessageAdapter {
       msg: String)(implicit channel: ChannelLike) = {
     val server = channel.server
 
+    val nickColor = NICK_COLORS(math.abs(src.hashCode) % 10)
     if (channel.isInstanceOf[Query]) {
-      if (server.currentNick.toLowerCase() == src.toLowerCase())
-        formatText(c, m, res, SpannedGenerator.textColor(0xff00ffff, src), msg)
+      if (server.currentNick equalsIgnoreCase src)
+        formatText(c, m, res, textColor(0xff00ffff, src), msg)
       else
-        formatText(c, m, res, SpannedGenerator.textColor(0xffff0000, src), msg)
-    } else if (server.currentNick.toLowerCase() == src.toLowerCase()) {
-      formatText(c, m, res, SpannedGenerator.bold(src), msg)
+        formatText(c, m, res, textColor(0xffff0000, src), msg)
+    } else if (server.currentNick equalsIgnoreCase src) {
+      formatText(c, m, res, bold(src), msg)
     } else if (IrcListeners.matchesNick(server, msg) &&
-        server.currentNick.toLowerCase() != src.toLowerCase()) {
-      formatText(c, m, res, SpannedGenerator.textColor(0xff00ff00, src), msg)
+        !server.currentNick.equalsIgnoreCase(src)) {
+      formatText(c, m, res, bold(italics(textColor(nickColor, src))), msg)
     } else
-      formatText(c, m, res, src, msg)
+      formatText(c, m, res, textColor(nickColor, src), msg)
   }
 }
 
@@ -150,7 +156,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   var filterCache = Option.empty[collection.mutable.MutableList[MessageLike]]
 
   var showJoinPartQuit = false
-  val messages = new Queue[MessageLike]
+  val messages = new collection.mutable.Queue[MessageLike]
   var _maximumSize = DEFAULT_MAXIMUM_SIZE
   def maximumSize = _maximumSize
   def maximumSize_=(s: Int) = {
@@ -159,7 +165,6 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   }
     // only register once to prevent memory leak
   UiBus += { case BusEvent.PreferenceChanged(s, k) =>
-      val c = s.context
       if (k == Settings.MESSAGE_LINES) {
         val max = s.get(Settings.MESSAGE_LINES).toInt
         maximumSize = max
@@ -195,7 +200,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   def activity = _activity.get getOrElse { throw new IllegalStateException }
   // would be nice to move this into the companion
   lazy val font =
-    Typeface.createFromAsset(activity.getAssets(), "DejaVuSansMono.ttf")
+    Typeface.createFromAsset(activity.getAssets, "DejaVuSansMono.ttf")
 
   def clear() {
     messages.clear()
@@ -233,7 +238,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
 
   override def getItemId(pos: Int) : Long = pos
   override def getItem(pos: Int) : MessageLike = filteredMessages(pos)
-  override def getCount() : Int = filteredMessages.size
+  override def getCount : Int = filteredMessages.size
 
   override def getView(pos: Int, convertView: View, container: ViewGroup) =
     createViewFromResource(pos, convertView, container)

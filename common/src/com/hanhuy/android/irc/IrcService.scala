@@ -12,13 +12,12 @@ import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.Notice
 
-import scala.collection.mutable.{HashMap, HashSet}
+import scala.collection.mutable.HashMap
 import scala.ref.WeakReference
 
 import android.app.Service
 import android.app.NotificationManager
 import android.content.Intent
-import android.content.Context
 import android.os.{Binder, IBinder}
 import android.os.AsyncTask
 import android.os.{Handler, HandlerThread}
@@ -297,6 +296,16 @@ class IrcService extends Service with EventBus.RefOwner {
     config.addServer(server)
     _servers += server
     UiBus.send(BusEvent.ServerAdded(server))
+  }
+
+  def startQuery(server: Server, nick: String) {
+    val query = queries.get((server, nick.toLowerCase)) getOrElse {
+      val q = new Query(server, nick)
+      q add MessageLike.Query()
+      queries += (((server, nick.toLowerCase),q))
+      q
+    }
+    UiBus.send(BusEvent.StartQuery(query))
   }
 
   def addQuery(c: IrcConnection, _nick: String, msg: String,

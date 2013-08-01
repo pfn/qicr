@@ -87,6 +87,7 @@ with EventBus.RefOwner {
   case BusEvent.ChannelMessage(c, m)  => refreshTabTitle(c)
   case BusEvent.ChannelAdded(c)       => addChannel(c)
   case BusEvent.PrivateMessage(q, m)  => addChannel(q)
+  case BusEvent.StartQuery(q)         => pager.setCurrentItem(addChannel(q))
   }
 
   def refreshTabs(service: IrcService) {
@@ -263,7 +264,7 @@ with EventBus.RefOwner {
     info
   }
 
-  private def addChannel(c: ChannelLike) {
+  private def addChannel(c: ChannelLike) = {
     var idx = Collections.binarySearch(channels, c, channelcomp)
     if (idx < 0) {
       idx = idx * -1
@@ -281,6 +282,7 @@ with EventBus.RefOwner {
       tabs(idx + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
       refreshTabTitle(idx + channelBase)
     }
+    idx
   }
 
   def addServer(s: Server) {

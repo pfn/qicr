@@ -5,7 +5,6 @@ import android.Keys._
 
 object QicrBuild extends Build {
   lazy val root = Project(id = "qicr", base = file(".")) settings(Seq(
-      organization         := "com.hanhuy.android",
       packageT in Compile <<= packageT in Android in lite,
       packageRelease      <<= packageRelease in Android in lite,
       packageDebug        <<= packageDebug in Android in lite,
@@ -21,7 +20,6 @@ object QicrBuild extends Build {
 
   lazy val lite = Project(id = "lite", base = file("lite")) settings(
       android.Plugin.androidBuild(common) ++ Seq(
-        organization                := "com.hanhuy.android",
         proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize",
           "-dontwarn android.support.**"),
         proguardScala in Android := true
@@ -29,12 +27,8 @@ object QicrBuild extends Build {
 
   lazy val common = Project(id = "common", base = file("common")) settings(Seq(
     scalacOptions in Compile += "-deprecation",
-    organization             := "com.hanhuy.android",
     javacOptions in Compile  += "-deprecation",
-    // can get rid of mavenLocal after sirc is in central
-    // https://github.com/sorcix/sIRC/issues/4
-    resolvers += Resolver.mavenLocal,
-    // mvn install sirc locally to use the below dep
+
     libraryDependencies ++= Seq(
       "com.viewpagerindicator" % "library" % "2.4.1" % "provided",
       "com.android.support" % "support-v4" % "18.0.0",

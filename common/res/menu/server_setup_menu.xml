@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:qicr="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/cancel_server"
         android:icon="@android:drawable/ic_menu_delete"
+        qicr:showAsAction="ifRoom|withText"
         android:menuCategory="container"
         android:orderInCategory="2"
         android:title="@string/cancel_server"/>
     <item android:id="@+id/save_server"
         android:icon="@android:drawable/ic_menu_save"
+        qicr:showAsAction="ifRoom|withText"
         android:menuCategory="container"
         android:orderInCategory="1"
         android:title="@string/save_server"/>

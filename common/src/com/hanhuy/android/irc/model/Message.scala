@@ -12,6 +12,7 @@ object MessageLike {
         def sender: String
         def message: String
     }
+    case class Query() extends MessageLike
     case class Kick(op: String, nick: String, msg: String) extends MessageLike
     case class Join(nick: String, uhost: String) extends MessageLike
     case class Part(nick: String, uhost: String, msg: String)
@@ -73,5 +74,6 @@ object BusEvent {
     case class NickChanged(channel: Channel, oldnick: String, newnick: String)
     extends BusEvent
     case class ChannelAdded(channel: Channel) extends BusEvent
+    case class StartQuery(query: Query) extends BusEvent
     case class PrivateMessage(query: Query, msg: MessageLike) extends BusEvent
 }

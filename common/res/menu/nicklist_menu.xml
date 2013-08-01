@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:qicr="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/nick_start_chat"
+          qicr:showAsAction="ifRoom|withText"
+          android:icon="@drawable/ic_menu_start_conversation"
+          android:title="@string/nick_start_chat"/>
     <item android:id="@+id/nick_insert"
         android:icon="@drawable/ic_menu_paste"
+        qicr:showAsAction="ifRoom|withText"
         android:title="@string/nick_insert"/>
-    <!-- temporarily disabled until implemented -->
-    <item android:id="@+id/nick_start_chat"
-        android:icon="@drawable/ic_menu_start_conversation"
-        android:visible="false"
-        android:title="@string/nick_start_chat"/>
 </menu>
