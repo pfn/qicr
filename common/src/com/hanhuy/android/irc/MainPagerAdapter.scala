@@ -318,8 +318,8 @@ with EventBus.RefOwner {
       channels.remove(i - servers.size)
     tabs.remove(pos)
     val idx = Math.max(0, i)
-    pager.setCurrentItem(idx)
     notifyDataSetChanged()
+    pager.setCurrentItem(idx)
   }
 
   override def getItemPosition(item: Object): Int = {

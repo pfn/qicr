@@ -3,6 +3,7 @@
       package="com.hanhuy.android.irc"
       android:versionCode="1"
       android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="15"/>
     <application android:label="qicr irc library"
         android:icon="@drawable/ic_appicon">
       <!-- Nothing can be declared in a library's manifest -->

@@ -137,14 +137,14 @@ object MessageAdapter {
     val nickColor = NICK_COLORS(math.abs(src.hashCode) % 10)
     if (channel.isInstanceOf[Query]) {
       if (server.currentNick equalsIgnoreCase src)
-        formatText(c, m, res, textColor(0xff00ffff, src), msg)
+        formatText(c, m, res, textColor(0xff009999, src), msg)
       else
-        formatText(c, m, res, textColor(0xffff0000, src), msg)
+        formatText(c, m, res, textColor(0xffcc0000, src), msg)
     } else if (server.currentNick equalsIgnoreCase src) {
       formatText(c, m, res, bold(src), msg)
     } else if (IrcListeners.matchesNick(server, msg) &&
         !server.currentNick.equalsIgnoreCase(src)) {
-      formatText(c, m, res, bold(italics(textColor(nickColor, src))), msg)
+      formatText(c, m, res, bold(italics(textColor(nickColor, src))), bold(msg))
     } else
       formatText(c, m, res, textColor(nickColor, src), msg)
   }

@@ -140,7 +140,7 @@ with EventBus.RefOwner {
     i.addTextChangedListener(proc.TextListener)
     i
   }
-  var page = -1 // used for restoring tab selection on recreate
+  private var page = -1 // used for restoring tab selection on recreate
 
   var _service: IrcService = _
   def service = _service
@@ -250,7 +250,10 @@ with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
-    systemService[NotificationManager].cancel(IrcService.MENTION_ID)
+    val nm = systemService[NotificationManager]
+    nm.cancel(IrcService.MENTION_ID)
+    nm.cancel(IrcService.DISCON_ID)
+    nm.cancel(IrcService.PRIVMSG_ID)
     if (toggleSelectorMode) {
       val newnav = settings.get(Settings.NAVIGATION_MODE)
       val isDropNav = HoneycombSupport.isSpinnerNavigation
@@ -280,15 +283,17 @@ with EventBus.RefOwner {
       val i = getIntent
       if (i != null && i.hasExtra(IrcService.EXTRA_SUBJECT)) {
         val subject = i.getStringExtra(IrcService.EXTRA_SUBJECT)
-        // why'd I do removeExtra?
+        // removeExtra so subsequent onResume doesn't select this tab
         i.removeExtra(IrcService.EXTRA_SUBJECT)
         if (subject != null) {
           if (subject == "")
             pager.setCurrentItem(0)
           else {
             val parts = subject.split(IrcService.EXTRA_SPLITTER)
-            if (parts.length == 2)
+            if (parts.length == 2) {
               adapter.selectTab(parts(1), parts(0))
+              page = -1
+            }
           }
         }
       } else if (i != null && i.hasExtra(IrcService.EXTRA_PAGE)) {

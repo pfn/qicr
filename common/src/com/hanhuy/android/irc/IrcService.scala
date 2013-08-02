@@ -12,7 +12,6 @@ import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.Notice
 
-import scala.collection.mutable.HashMap
 import scala.ref.WeakReference
 
 import android.app.Service
@@ -32,7 +31,6 @@ import com.sorcix.sirc.IrcServer
 import com.sorcix.sirc.IrcConnection
 import com.sorcix.sirc.NickNameException
 import com.sorcix.sirc.{Channel => SircChannel}
-import com.sorcix.sirc.{User => SircUser}
 
 import AndroidConversions._
 import IrcService._
@@ -76,18 +74,9 @@ class IrcService extends Service with EventBus.RefOwner {
     // but speech rec -> home will not trigger this?
     if (!s) {
       if (_running) {
-        val pending = PendingIntent.getActivity(this, 0,
-          new Intent(this, classOf[MainActivity]),
-          PendingIntent.FLAG_UPDATE_CURRENT)
-        val notif = new NotificationCompat.Builder(this)
-          .setSmallIcon(R.drawable.ic_notify_mono)
-          .setWhen(System.currentTimeMillis())
-          .setContentIntent(pending)
-          .setContentText(getString(R.string.notif_running))
-          .setContentTitle(getString(R.string.notif_title))
-          .build
-
-        startForeground(RUNNING_ID, notif)
+        startForeground(RUNNING_ID, runningNotification(
+          getString(R.string.notif_connected_servers,
+            connections.size: java.lang.Integer)))
       } else {
         stopForeground(true)
       }
@@ -98,7 +87,7 @@ class IrcService extends Service with EventBus.RefOwner {
   }
   lazy val handlerThread = {
     val t = new HandlerThread("IrcServiceHandler")
-    t.start();
+    t.start()
     t
   }
   lazy val handler = new Handler(handlerThread.getLooper)
@@ -115,18 +104,18 @@ class IrcService extends Service with EventBus.RefOwner {
       }
   }
 
-  val connections   = new HashMap[Server,IrcConnection]
-  val _connections  = new HashMap[IrcConnection,Server]
+  val connections   = new collection.mutable.HashMap[Server,IrcConnection]
+  val _connections  = new collection.mutable.HashMap[IrcConnection,Server]
 
-  val channels      = new HashMap[ChannelLike,SircChannel]
-  val _channels     = new HashMap[SircChannel,ChannelLike]
-  val queries       = new HashMap[(Server,String),Query]
+  val channels      = new collection.mutable.HashMap[ChannelLike,SircChannel]
+  val _channels     = new collection.mutable.HashMap[SircChannel,ChannelLike]
+  val queries       = new collection.mutable.HashMap[(Server,String),Query]
 
   // TODO find a way to automatically(?) purge the adapters
   // worst-case: leak memory on the int, but not the adapter
-  val messages = new HashMap[Int,MessageAdapter]
-  val chans    = new HashMap[Int,ChannelLike]
-  val servs    = new HashMap[Int,Server]
+  val messages = new collection.mutable.HashMap[Int,MessageAdapter]
+  val chans    = new collection.mutable.HashMap[Int,ChannelLike]
+  val servs    = new collection.mutable.HashMap[Int,Server]
 
   def newMessagesId(): Int = {
     messagesId += 1
@@ -148,6 +137,12 @@ class IrcService extends Service with EventBus.RefOwner {
     Log.i(TAG, "Registering connection: " + server + " => " + connection)
     connections  += ((server, connection))
     _connections += ((connection, server))
+
+    if (activity.isEmpty) {
+      systemService[NotificationManager].notify(RUNNING_ID, runningNotification(
+        getString(R.string.notif_connected_servers,
+          connections.size: java.lang.Integer)))
+    }
   }
 
   def bind(main: MainActivity) {
@@ -271,7 +266,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
     startId = id
-    return Service.START_STICKY
+    Service.START_STICKY
   }
 
   def connect(server: Server) {
@@ -313,9 +308,9 @@ class IrcService extends Service with EventBus.RefOwner {
       notice: Boolean = false) {
     val server = _connections.get(c) getOrElse { return }
 
-    val query = queries.get((server, _nick.toLowerCase())) getOrElse {
+    val query = queries.get((server, _nick.toLowerCase)) getOrElse {
       val q = new Query(server, _nick)
-      queries += (((server, _nick.toLowerCase()),q))
+      queries += (((server, _nick.toLowerCase),q))
       q
     }
     channels += ((query,null))
@@ -331,13 +326,13 @@ class IrcService extends Service with EventBus.RefOwner {
       query.add(m)
       if (activity.isEmpty)
         showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
-          m.toString(), server.name + EXTRA_SPLITTER + query.name)
+          m.toString, server.name + EXTRA_SPLITTER + query.name)
     }
   }
 
   def addChannel(c: IrcConnection, ch: SircChannel) {
     val server = _connections(c)
-    var channel: ChannelLike = new Channel(server, ch.getName())
+    var channel: ChannelLike = new Channel(server, ch.getName)
     channels.keys.find(_ == channel) foreach { _c =>
       channel    = _c
       val _ch    = channels(channel)
@@ -374,13 +369,38 @@ class IrcService extends Service with EventBus.RefOwner {
   // currently unused
   def uncaughtExceptionHandler(t: Thread, e: Throwable) {
     Log.e(TAG, "Uncaught exception in thread: " + t, e)
-    Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show()
-    if (!t.getName().startsWith("sIRC-")) throw e
+    Toast.makeText(this, e.getMessage, Toast.LENGTH_LONG).show()
+    if (!t.getName.startsWith("sIRC-")) throw e
   }
 
+  def runningNotification(text: CharSequence) = {
+
+    val pending = PendingIntent.getActivity(this, RUNNING_ID,
+      new Intent(this, classOf[MainActivity]),
+      PendingIntent.FLAG_UPDATE_CURRENT)
+
+    new NotificationCompat.Builder(this)
+      .setSmallIcon(R.drawable.ic_notify_mono)
+      .setWhen(System.currentTimeMillis())
+      .setContentIntent(pending)
+      .setContentText(text)
+      .setContentTitle(getString(R.string.notif_title))
+      .build
+  }
   // TODO decouple
   def serverDisconnected(server: Server) {
-    UiBus.run { disconnect(server, disconnected = true) }
+    UiBus.run {
+      val nm = systemService[NotificationManager]
+      disconnect(server, disconnected = true)
+      if (connections.isEmpty) {
+        nm.notify(RUNNING_ID, runningNotification(
+          getString(R.string.server_disconnected)))
+      } else {
+        nm.notify(RUNNING_ID, runningNotification(
+          getString(R.string.notif_connected_servers,
+            connections.size: java.lang.Integer)))
+      }
+    }
     if (activity.isEmpty)
       showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
         getString(R.string.notif_server_disconnected, server.name), "")
@@ -390,7 +410,7 @@ class IrcService extends Service with EventBus.RefOwner {
   def addChannelMention(c: ChannelLike, m: MessageLike) {
     if (activity.isEmpty)
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
-        getString(R.string.notif_mention_template, c.name, m.toString()),
+        getString(R.string.notif_mention_template, c.name, m.toString),
         c.server.name + EXTRA_SPLITTER + c.name)
   }
 
@@ -399,7 +419,7 @@ class IrcService extends Service with EventBus.RefOwner {
     val intent = new Intent(this, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     intent.putExtra(EXTRA_SUBJECT, extra)
-    val pending = PendingIntent.getActivity(this, 0, intent,
+    val pending = PendingIntent.getActivity(this, id, intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
     val notif = new NotificationCompat.Builder(this)
       .setSmallIcon(icon)
@@ -472,7 +492,7 @@ extends AsyncTask[Object, Object, Server.State] {
         state = Server.State.DISCONNECTED
         service.removeConnection(server)
         Log.e(TAG, "Unable to connect", e)
-        publishProgress(e.getMessage())
+        publishProgress(e.getMessage)
         try {
           connection.disconnect()
         } catch {
@@ -499,7 +519,7 @@ extends AsyncTask[Object, Object, Server.State] {
   protected override def onProgressUpdate(progress: Object*) {
     if (progress.length > 0)
       server.add(ServerInfo(
-        if (progress(0) == null) "" else progress(0).toString()))
+        if (progress(0) == null) "" else progress(0).toString))
   }
 }
 
