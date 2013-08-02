@@ -27,44 +27,43 @@ import com.sorcix.sirc._
 import scala.util.control.Exception._
 import AndroidConversions._
 import IrcListeners._
+import scala.annotation.tailrec
 
 object IrcListeners {
   val TAG = "IrcListeners"
-  // TODO FIXME only looks for the first instance in a string
-  // won't match if the first match is bogus but there's a real
-  // match later on in the string.  e.g. with a nick of "foo"
-  // and a message of "foobar sucks bad, foo" -- the line will not report
-  // a match
-  def matchesNickIndex(server: Server, m: Option[String]): Int = {
-    m map { msg =>
-      val m = msg.toLowerCase
-      val nick = server.currentNick.toLowerCase
-
-      val idx = m.indexOf(nick)
-      val nlen = nick.length()
-      val mlen = m.length()
-      var matches = false
-      if (idx != -1) {
-        matches = true
-        if (idx > 0) { // matches intra-line
-          matches = !Character.isJavaIdentifierPart(msg.charAt(idx-1))
-          if (idx + nlen < mlen) { // if not at end of line
-            matches = matches && !Character.isJavaIdentifierPart(
-              msg.charAt(idx+nlen))
-          }
-        } else {
-          if (nlen < mlen) // matches at start of line
-            matches = !Character.isJavaIdentifierPart(msg.charAt(nlen))
-          }
-        }
-
-        idx
-      } getOrElse -1
+  @tailrec
+  private def matchesNickIndex(nick: String, m: String, cur: Int): Int = {
+    val mlen = m.length
+    val nlen = nick.length
+    val idx = m.indexOf(nick, cur)
+    if (idx < 0) idx else {
+      if (idx > 0) { // not at start of line
+        val before = !Character.isJavaIdentifierPart(m.charAt(idx - 1))
+        if (idx + nlen < mlen) {
+          if (before && !Character.isJavaIdentifierPart(m.charAt(idx + nlen)))
+            idx
+          else
+            matchesNickIndex(nick, m, idx + nlen)
+        } else if (before) idx else -1
+      } else {
+        // beginning of line
+        if (nlen < mlen) {
+          if (!Character.isJavaIdentifierPart(m.charAt(nlen)))
+            idx
+          else
+            matchesNickIndex(nick, m, nlen)
+        } else idx
+      }
+    }
   }
 
   // sometimes a null is passed in...
-  def matchesNick(server: Server, msg: String) =
-    matchesNickIndex(server, Option(msg)) != -1
+  def matchesNick(server: Server, msg: String) = {
+    if (msg != null)
+      matchesNickIndex(server.currentNick.toLowerCase, msg.toLowerCase, 0) != -1
+    else
+      false
+  }
 
   class EnhancedUser(u: User) {
     def address = u.getUserName + "@" + u.getHostName

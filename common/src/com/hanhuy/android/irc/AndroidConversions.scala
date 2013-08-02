@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.text.{SpannableString, SpannableStringBuilder, Spanned}
 import android.text.style.{StyleSpan, ForegroundColorSpan, CharacterStyle}
 import android.graphics.Typeface
+import scala.annotation.tailrec
 
 object AndroidConversions {
   val icsAndNewer =
@@ -216,6 +217,7 @@ case class SpannedGenerator(fmt: String) {
     builder
   }
 
+  @tailrec
   private def formatNext(s: SpannableStringBuilder, fmt: String,
                  cur: Int, next: Int, items: Seq[CharSequence]) {
     if (next == -1) {
