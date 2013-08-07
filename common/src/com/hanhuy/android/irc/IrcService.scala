@@ -138,7 +138,7 @@ class IrcService extends Service with EventBus.RefOwner {
     connections  += ((server, connection))
     _connections += ((connection, server))
 
-    if (activity.isEmpty) {
+    if (activity.isEmpty && _running) {
       systemService[NotificationManager].notify(RUNNING_ID, runningNotification(
         getString(R.string.notif_connected_servers,
           connections.size: java.lang.Integer)))
