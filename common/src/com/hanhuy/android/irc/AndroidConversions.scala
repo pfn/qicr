@@ -225,7 +225,7 @@ case class SpannedGenerator(fmt: String) {
       val space = fmt.indexWhere({ !_.isDigit }, next + 1)
       val number = fmt.substring(next + 1,
         if (space < 0) fmt.length else space).toInt
-      s.append(items(number - 1))
+      s.append(Option(items(number - 1)) getOrElse "")
       if (space > 0)
         formatNext(s, fmt, space, fmt indexOf ("%", space), items)
     }
