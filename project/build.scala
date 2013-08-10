@@ -20,8 +20,7 @@ object QicrBuild extends Build {
 
   lazy val lite = Project(id = "lite", base = file("lite")) settings(
       android.Plugin.androidBuild(common) ++ Seq(
-        proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize",
-          "-dontwarn android.support.**"),
+        //proguardOptions in Android ++= Seq("-dontoptimize"),
         proguardScala in Android := true
       ): _*) dependsOn(common)
 
