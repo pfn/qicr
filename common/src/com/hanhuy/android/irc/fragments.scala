@@ -177,7 +177,7 @@ extends ListFragment with EventBus.RefOwner {
     if (getActivity != null) _adapter.activity = getActivity
 
     setListAdapter(_adapter)
-    service.messages += ((id, _adapter))
+    service.add(id, _adapter)
     try {
       getListView().setSelection(
         if (adapter.getCount() > 0) _adapter.getCount()-1 else 0)
@@ -199,7 +199,7 @@ extends ListFragment with EventBus.RefOwner {
     if (adapter != null) { // this works by way of the network being slow
       val service = activity.service // assuming service is ready?
       adapter.activity = getActivity
-      service.messages += ((id, adapter))
+      service.add(id, adapter)
       setListAdapter(adapter)
     }
     if (activity.service == null)
@@ -264,7 +264,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     }
     // this apparently works by virtue of the network being slow?
     if (id != -1 && channelReady && a != null) {
-      activity.service.chans += ((id, channel))
+      activity.service.add(id, channel)
       a.channel = channel
     }
   }
@@ -287,9 +287,8 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         if (channel != null && channel.state == Channel.State.JOINED) {
           activity.service.channels.get(channel) foreach { _.part() }
         }
-        activity.service.messages -= id
-        activity.service.chans    -= id
-        activity.service.channels -= channel
+        activity.service.remove(id)
+        activity.service.remove(channel)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (channel != null && channel.state == Channel.State.JOINED && prompt) {
@@ -321,7 +320,7 @@ extends MessagesFragment(a) {
     setHasOptionsMenu(true)
     if (id != -1 && query != null) {
       val activity = getActivity()
-      activity.service.chans += ((id, query))
+      activity.service.add(id, query)
       a.channel = query
     }
   }
@@ -336,15 +335,10 @@ extends MessagesFragment(a) {
       def removeQuery() {
         activity.service.chans.get(id) foreach { q =>
           val query = q.asInstanceOf[Query]
-          activity.service.queries  -=
-            ((query.server, query.name.toLowerCase()))
-
-          activity.service.channels -= query
+          activity.service.remove(query)
         }
 
-        activity.service.messages -= id
-        activity.service.chans    -= id
-
+        activity.service.remove(id)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (prompt) {
@@ -373,7 +367,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
 
     val activity = getActivity
     if (id != -1 && server != null)
-      activity.service.servs += ((id, server))
+      activity.service.add(id, server)
 
     if (server == null) {
       def setServer(s: IrcService) {
@@ -406,8 +400,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
     if (R.id.server_close == item.getItemId()) {
       val service = getActivity.service
-      service.servs    -= id
-      service.messages -= id
+      service.remove(id)
       getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
       true
     } else {

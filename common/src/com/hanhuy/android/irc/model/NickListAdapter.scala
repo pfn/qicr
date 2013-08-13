@@ -3,7 +3,8 @@ package com.hanhuy.android.irc.model
 import com.hanhuy.android.irc.EventBus
 import com.hanhuy.android.irc.UiBus
 import com.hanhuy.android.irc.MainActivity
-import com.hanhuy.android.irc.R
+import com.hanhuy.android.irc.TR
+import com.hanhuy.android.irc.TypedResource._
 import com.hanhuy.android.irc.AndroidConversions._
 
 import android.view.LayoutInflater
@@ -19,16 +20,17 @@ import scala.collection
 
 object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[
-    MainActivity,collection.mutable.HashMap[Channel,NickListAdapter]]()
+    MainActivity,Map[Channel,NickListAdapter]]()
   def apply(activity: MainActivity, channel: Channel) = {
     val m = adapters.get(activity) getOrElse {
-      adapters += ((activity, new collection.mutable.HashMap()))
+      adapters += ((activity, Map.empty))
       adapters(activity)
     }
 
     m.get(channel) getOrElse {
-      m += ((channel,new NickListAdapter(activity, channel)))
-      m(channel)
+      adapters += ((activity,
+        m + ((channel, new NickListAdapter(activity, channel)))))
+      adapters(activity)(channel)
     }
   }
 }
@@ -72,10 +74,8 @@ extends BaseAdapter with EventBus.RefOwner {
 
     private def createViewFromResource(
             pos: Int, convertView: View, container: ViewGroup): View = {
-        var view: TextView = convertView.asInstanceOf[TextView]
-        if (view == null) {
-            view = inflater.inflate(R.layout.nicklist_item,
-                    container, false).asInstanceOf[TextView]
+        val view = Option(convertView.asInstanceOf[TextView]) getOrElse {
+            inflater.inflate(TR.layout.nicklist_item, container, false)
         }
 
         view.setText(getItem(pos))

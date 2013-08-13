@@ -70,11 +70,13 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
   override def onCreate(db: SQLiteDatabase) = db.execSQL(TABLE_SERVERS_DDL)
   override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) = ()
 
-  def servers = {
+  private var _servers = listServers
+  def servers = _servers
+  private def listServers = {
     try {
       val db = getReadableDatabase
-      val list = new collection.mutable.ArrayBuffer[Server]
       val c = db.query(TABLE_SERVERS, null, null, null, null, null, null)
+
       val col_id          = c.getColumnIndexOrThrow(BaseColumns._ID)
       val col_name        = c.getColumnIndexOrThrow(FIELD_NAME)
       val col_autoconnect = c.getColumnIndexOrThrow(FIELD_AUTOCONNECT)
@@ -89,7 +91,8 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
       val col_autorun     = c.getColumnIndexOrThrow(FIELD_AUTORUN)
       val col_autojoin    = c.getColumnIndexOrThrow(FIELD_AUTOJOIN)
 
-      while (c.moveToNext()) {
+      val list = Stream.continually(c.moveToNext()).takeWhile (_==true).map {
+        _ =>
         val s = new Server
         s.id          = c.getLong(col_id)
         s.name        = c.getString(col_name)
@@ -104,8 +107,9 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
         s.realname    = c.getString(col_realname)
         s.autorun     = c.getString(col_autorun)
         s.autojoin    = c.getString(col_autojoin)
-        list += s
-      }
+        s
+      }.force
+
       c.close()
       db.close()
       list
@@ -114,7 +118,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
         Toast.makeText(context,
           "Failed to open database", Toast.LENGTH_LONG).show()
         Log.e(TAG, "Unable to open database", e)
-        collection.mutable.ArrayBuffer.empty[Server]
+        Seq.empty[Server]
     }
   }
 
@@ -125,6 +129,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     db.close()
     if (id == -1)
       throw new IllegalStateException("Unable to create server")
+    _servers = server +: _servers
   }
 
   def updateServer(server: Server) {
@@ -134,6 +139,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     db.close()
     if (rows != 1)
       Log.e(TAG, "Wrong rows updated: " + rows, new StackTrace)
+    _servers = server +: (_servers filterNot (_ == server))
   }
 
   def deleteServer(server: Server) {
@@ -143,5 +149,6 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     db.close()
     if (rows != 1)
       Log.e(TAG, "Wrong rows deleted: " + rows, new StackTrace)
+    _servers = _servers filterNot (_ == server)
   }
 }

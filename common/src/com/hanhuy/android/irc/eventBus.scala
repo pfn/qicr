@@ -7,7 +7,7 @@ import android.os.{Handler, Looper}
 
 object EventBus {
   class Owner {
-    val handlers = new collection.mutable.ArrayBuffer[EventBus.Handler]
+    var handlers = Seq.empty[EventBus.Handler]
   }
 
   trait RefOwner {
@@ -38,7 +38,7 @@ abstract class EventBus {
   def +=(handler: EventBus.Handler)(implicit owner: EventBus.Owner) {
     // long-lived objects that use EventBus must purge their owner list
     // keep the handler only for as long as the weak reference is valid
-    owner.handlers += handler
+    owner.handlers = handler +: owner.handlers
     queue = new WeakReference(handler) +: queue
   }
 

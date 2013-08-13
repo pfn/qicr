@@ -5,6 +5,7 @@ import com.hanhuy.android.irc.AndroidConversions._
 
 import SpannedGenerator._
 import MessageLike._
+import TypedResource._
 
 import scala.ref.WeakReference
 
@@ -56,7 +57,7 @@ object MessageAdapter {
       case Query() => formatText(c, msg, R.string.query_template,
         textColor(nickColor(ch.get.name), ch.get.name))
       case Privmsg(s, m, o, v) => gets(c, R.string.message_template, msg,
-        {if (o) "@" else if (v) "+" else ""} + s, m)
+         s, m, (o,v))
       case Notice(s, m) => gets(c, R.string.notice_template, msg, s, m)
       case CtcpAction(s, m) => gets(c, R.string.action_template, msg, s, m)
       case CtcpRequest(server, t, cmd, args) =>
@@ -137,8 +138,12 @@ object MessageAdapter {
 
   private def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % 10)
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
-      msg: String)(implicit channel: ChannelLike) = {
+      msg: String, modes: (Boolean,Boolean) = (false, false))(
+      implicit channel: ChannelLike) = {
     val server = channel.server
+    val (op, voice) = modes
+
+    val prefix = {if (op) "@" else if (voice) "+" else ""}
 
     if (channel.isInstanceOf[Query]) {
       if (server.currentNick equalsIgnoreCase src)
@@ -146,13 +151,14 @@ object MessageAdapter {
       else
         formatText(c, m, res, textColor(0xffcc0000, src), msg)
     } else if (server.currentNick equalsIgnoreCase src) {
-      formatText(c, m, res, bold(src), msg)
+      formatText(c, m, res, "%1%2" formatSpans (prefix, bold(src)), msg)
     } else if (IrcListeners.matchesNick(server, msg) &&
         !server.currentNick.equalsIgnoreCase(src)) {
-      formatText(c, m, res,
-        bold(italics(textColor(nickColor(src), src))), bold(msg))
+      formatText(c, m, res, "%1%2" formatSpans(prefix,
+        bold(italics(textColor(nickColor(src), src)))), bold(msg))
     } else
-      formatText(c, m, res, textColor(nickColor(src), src), msg)
+      formatText(c, m, res,
+        "%1%2" formatSpans(prefix, textColor(nickColor(src), src)), msg)
   }
 }
 
@@ -250,12 +256,11 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     createViewFromResource(pos, convertView, container)
   private def createViewFromResource(
       pos: Int, convertView: View, container: ViewGroup): View = {
-    var view: TextView = convertView.asInstanceOf[TextView]
-    if (view == null) {
-      view = inflater.inflate(R.layout.message_item, container, false)
-        .asInstanceOf[TextView]
+    val view = Option(convertView.asInstanceOf[TextView]) getOrElse {
+      val v = inflater.inflate(TR.layout.message_item, container, false)
       if (!icsAndNewer)
-        view.setTypeface(font)
+        v.setTypeface(font)
+      v
     }
 
     view.setText(formatText(getItem(pos)))

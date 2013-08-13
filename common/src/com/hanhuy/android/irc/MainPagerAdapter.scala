@@ -20,7 +20,6 @@ import android.widget.BaseAdapter
 import android.support.v4.view.{ViewPager, PagerAdapter}
 import android.support.v4.app.Fragment
 
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math.Numeric.{IntIsIntegral => Math}
 
@@ -53,9 +52,9 @@ class MainPagerAdapter(activity: MainActivity)
 extends FragmentPagerAdapter(activity.getSupportFragmentManager)
 with ViewPager.OnPageChangeListener
 with EventBus.RefOwner {
-  val channels = new ArrayBuffer[ChannelLike]
-  val servers  = new ArrayBuffer[Server]
-  val tabs = new ArrayBuffer[TabInfo]()
+  private var channels = List.empty[ChannelLike]
+  private var servers  = List.empty[Server]
+  private var tabs = List.empty[TabInfo]
   lazy val channelcomp = new ChannelLikeComparator
   lazy val servercomp  = new ServerComparator
   lazy val tabindicators = activity.findView(TR.tabs)
@@ -223,7 +222,7 @@ with EventBus.RefOwner {
   }
 
   def selectTab(cname: String, sname: String) {
-    val tab = tabs.indexWhere {
+    val tab = tabs indexWhere {
       _.channel map {
         c => cname == c.name && sname == c.server.name
       } getOrElse { false }
@@ -247,7 +246,7 @@ with EventBus.RefOwner {
   override def onPageScrollStateChanged(state: Int) = ()
 
   def createTab(title: String, fragment: Fragment) {
-    tabs += new TabInfo(title, fragment)
+    tabs = tabs :+ new TabInfo(title, fragment)
     notifyDataSetChanged()
   }
 
@@ -257,18 +256,22 @@ with EventBus.RefOwner {
     case _: QueryFragment | _: ChannelFragment => channelBase
     case _: ServerMessagesFragment => 1
     }
-    tabs.insert(pos + base, info)
+    tabs = insert(tabs, pos + base, info)
     if (tabs.size > 1) {
       notifyDataSetChanged()
     }
     info
   }
 
+  private def insert[A](list: List[A], idx: Int, item: A): List[A] = {
+    val (prefix,suffix) = list.splitAt(idx)
+    prefix ++ List(item) ++ suffix
+  }
   private def addChannel(c: ChannelLike) = {
     var idx = Collections.binarySearch(channels, c, channelcomp)
     if (idx < 0) {
       idx = idx * -1
-      channels.insert(idx - 1, c)
+      channels = insert(channels, idx - 1, c)
       val tag = MainActivity.getFragmentTag(c)
       val f = manager.findFragmentByTag(tag)
       val frag = if (f != null) f else c match {
@@ -289,7 +292,7 @@ with EventBus.RefOwner {
     var idx = Collections.binarySearch(servers, s, servercomp)
     if (idx < 0) {
       idx = idx * -1
-      servers.insert(idx - 1, s)
+      servers = insert(servers, idx - 1, s)
       val tag = MainActivity.getFragmentTag(s)
       val f = manager.findFragmentByTag(tag)
       val frag = if (f != null) f else new ServerMessagesFragment(s)
@@ -313,10 +316,10 @@ with EventBus.RefOwner {
     pager.setCurrentItem(0)
     val i = pos - 1
     if (i < servers.size)
-      servers.remove(i)
+      servers = servers filterNot (_ == servers(i))
     else
-      channels.remove(i - servers.size)
-    tabs.remove(pos)
+      channels = channels filterNot (_ == channels(i-servers.size))
+    tabs = tabs filterNot (_== tabs(pos))
     val idx = Math.max(0, i)
     notifyDataSetChanged()
     pager.setCurrentItem(idx)

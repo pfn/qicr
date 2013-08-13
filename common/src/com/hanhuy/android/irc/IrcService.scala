@@ -104,18 +104,52 @@ class IrcService extends Service with EventBus.RefOwner {
       }
   }
 
-  val connections   = new collection.mutable.HashMap[Server,IrcConnection]
-  val _connections  = new collection.mutable.HashMap[IrcConnection,Server]
+  def connections  = mconnections
+  def _connections = m_connections
+  private var mconnections   = Map.empty[Server,IrcConnection]
+  private var m_connections  = Map.empty[IrcConnection,Server]
 
-  val channels      = new collection.mutable.HashMap[ChannelLike,SircChannel]
-  val _channels     = new collection.mutable.HashMap[SircChannel,ChannelLike]
-  val queries       = new collection.mutable.HashMap[(Server,String),Query]
+  def channels = mchannels
+  def _channels = m_channels
+  private var mchannels  = Map.empty[ChannelLike,SircChannel]
+  private var m_channels = Map.empty[SircChannel,ChannelLike]
+  private var queries    = Map.empty[(Server,String),Query]
+
+  def remove(id: Int) {
+    _messages -= id
+    _chans -= id
+    _servs -= id
+  }
+
+  def remove(c: ChannelLike) {
+    c match {
+      case ch: Channel =>
+        mchannels -= ch
+      case qu: Query =>
+        mchannels -= qu
+        queries -= ((qu.server, qu.name.toLowerCase))
+    }
+  }
 
   // TODO find a way to automatically(?) purge the adapters
   // worst-case: leak memory on the int, but not the adapter
-  val messages = new collection.mutable.HashMap[Int,MessageAdapter]
-  val chans    = new collection.mutable.HashMap[Int,ChannelLike]
-  val servs    = new collection.mutable.HashMap[Int,Server]
+  def messages = _messages
+  def chans    = _chans
+  def servs    = _servs
+  private var _messages = Map.empty[Int,MessageAdapter]
+  private var _chans    = Map.empty[Int,ChannelLike]
+  private var _servs    = Map.empty[Int,Server]
+
+  def add(id: Int, s: Server) {
+    _servs += ((id, s))
+  }
+  def add(id: Int, ch: ChannelLike) {
+    _chans += ((id, ch))
+  }
+
+  def add(idx: Int, adapter: MessageAdapter) {
+    _messages += ((idx, adapter))
+  }
 
   def newMessagesId(): Int = {
     messagesId += 1
@@ -128,15 +162,15 @@ class IrcService extends Service with EventBus.RefOwner {
   def removeConnection(server: Server) {
     //Log.d(TAG, "Unregistering connection: " + server, new StackTrace)
     connections.get(server).foreach(c => {
-      connections -= server
-      _connections -= c
+      mconnections -= server
+      m_connections -= c
     })
   }
 
   def addConnection(server: Server, connection: IrcConnection) {
     Log.i(TAG, "Registering connection: " + server + " => " + connection)
-    connections  += ((server, connection))
-    _connections += ((connection, server))
+    mconnections += ((server, connection))
+    m_connections += ((connection, server))
 
     if (activity.isEmpty && _running) {
       systemService[NotificationManager].notify(RUNNING_ID, runningNotification(
@@ -148,7 +182,7 @@ class IrcService extends Service with EventBus.RefOwner {
   def bind(main: MainActivity) {
     _activity = new WeakReference(main)
     if (!running) {
-      _servers.foreach { s =>
+      config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
           s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
       }
@@ -283,13 +317,10 @@ class IrcService extends Service with EventBus.RefOwner {
     }
   }
 
-  lazy val _servers = config.servers
-
-  def getServers = _servers
+  def getServers = config.servers
 
   def addServer(server: Server) {
     config.addServer(server)
-    _servers += server
     UiBus.send(BusEvent.ServerAdded(server))
   }
 
@@ -313,7 +344,7 @@ class IrcService extends Service with EventBus.RefOwner {
       queries += (((server, _nick.toLowerCase),q))
       q
     }
-    channels += ((query,null))
+    mchannels += ((query,null))
 
     val nick = if (sending) server.currentNick else _nick
 
@@ -336,11 +367,11 @@ class IrcService extends Service with EventBus.RefOwner {
     channels.keys.find(_ == channel) foreach { _c =>
       channel    = _c
       val _ch    = channels(channel)
-      channels  -= channel
-      _channels -= _ch
+      mchannels  -= channel
+      m_channels -= _ch
     }
-    channels  += ((channel,ch))
-    _channels += ((ch,channel))
+    mchannels  += ((channel,ch))
+    m_channels += ((ch,channel))
 
     UiBus.run {
       val chan = channel.asInstanceOf[Channel]
@@ -351,8 +382,8 @@ class IrcService extends Service with EventBus.RefOwner {
 
   def removeChannel(ch: Channel) {
     val sircchannel = channels(ch)
-    channels  -= ch
-    _channels -= sircchannel
+    mchannels  -= ch
+    m_channels -= sircchannel
   }
 
   def updateServer(server: Server) = {
@@ -362,7 +393,6 @@ class IrcService extends Service with EventBus.RefOwner {
 
   def deleteServer(server: Server) {
     config.deleteServer(server)
-    _servers -= server
     UiBus.send(BusEvent.ServerRemoved(server))
   }
 

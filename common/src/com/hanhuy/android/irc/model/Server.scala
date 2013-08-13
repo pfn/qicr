@@ -30,6 +30,7 @@ object Server {
     fmt format lag
   }
 }
+// TODO FIXME add equals
 class Server extends MessageAppender {
 
   import Server._
@@ -123,15 +124,17 @@ class Server extends MessageAppender {
     values.put(Config.FIELD_USESOCKS,    socks)
     values
   }
+
+  override def equals(o: Any): Boolean = o match {
+    case s: Server => id == s.id
+    case _ => false
+  }
 }
 
 class ServerComparator extends java.util.Comparator[Server] {
   override def compare(s1: Server, s2: Server): Int = {
-    var s1name = s1.name
-    var s2name = s2.name
-    var r = s1name.compareTo(s2name)
-    if (r == 0)
-      r = s1.username.compareTo(s2.username)
-    r
+    val r = s1.name.compareTo(s2.name)
+    if (r == 0) s1.username.compareTo(s2.username)
+    else r
   }
 }

@@ -10,14 +10,14 @@ import android.preference.PreferenceManager
 import android.preference.PreferenceFragment
 
 object Setting {
-  private val settings = collection.mutable.HashMap[String,Setting[_]]()
+  private var settings = Map.empty[String,Setting[_]]
   def unapply(key: String): Option[Setting[_]] = settings get key
   def apply[A](key: String, default: A) = new Setting(key, default, None)
   def apply[A](key: String, res: Int) = new Setting(key,
     null.asInstanceOf[A], Some(res))
 }
 class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
-  Setting.settings += ((key, this))
+  Setting.settings = Setting.settings + ((key, this))
 }
 
 object Settings {
