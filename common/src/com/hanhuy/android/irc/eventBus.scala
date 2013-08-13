@@ -17,7 +17,6 @@ object EventBus {
   // this is terribad -- only EventBus.Remove has any meaning
   type Handler = PartialFunction[BusEvent,Any]
   object Remove // result object for Handler, if present, remove after exec
-  private val TAG = "EventBus"
 }
 abstract class EventBus {
   import ref.WeakReference

@@ -21,7 +21,6 @@ import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.MessageAdapter
-import com.hanhuy.android.irc.model.NickListAdapter
 import com.hanhuy.android.irc.model.BusEvent
 
 import AndroidConversions._
@@ -72,7 +71,7 @@ class ServerSetupFragment extends DialogFragment {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
-    setRetainInstance(true)
+    //setRetainInstance(true)
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
@@ -83,8 +82,8 @@ class ServerSetupFragment extends DialogFragment {
     val R_id_save_server = R.id.save_server
     item.getItemId match {
       case R_id_save_server => {
-        val activity = getActivity()
-        val manager = activity.getSupportFragmentManager()
+        val activity = getActivity
+        val manager = activity.getSupportFragmentManager
         val s = server
         if (s.valid) {
           if (s.id == -1)
@@ -93,13 +92,13 @@ class ServerSetupFragment extends DialogFragment {
             activity.service.updateServer(s)
           manager.popBackStack()
         } else {
-          Toast.makeText(getActivity(), R.string.server_incomplete,
+          Toast.makeText(getActivity, R.string.server_incomplete,
             Toast.LENGTH_SHORT).show()
         }
         true
       }
       case R_id_cancel_server => {
-        val manager = getActivity().getSupportFragmentManager()
+        val manager = getActivity.getSupportFragmentManager
         manager.popBackStack()
         true
       }
@@ -124,8 +123,8 @@ class ServerSetupFragment extends DialogFragment {
   var dialogShown = false
   override def onCreateDialog(bundle: Bundle): Dialog = {
     dialogShown = true
-    val activity = getActivity()
-    val m = activity.settings.get(Settings.DAYNIGHT_MODE)
+    val activity = getActivity
+    //val m = activity.settings.get(Settings.DAYNIGHT_MODE)
     //import android.view.ContextThemeWrapper
     //val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
     //    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark))
@@ -133,13 +132,12 @@ class ServerSetupFragment extends DialogFragment {
       .setTitle(R.string.server_details)
       .setPositiveButton(R.string.save_server, null)
       .setNegativeButton(R.string.cancel_server, null)
-      .setView(createView(getActivity().getLayoutInflater(), null))
+      .setView(createView(getActivity.getLayoutInflater, null))
       .create()
     // block dismiss on positive button click
     d.setOnShowListener { () =>
       val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
       b.setOnClickListener { () =>
-        val manager = activity.getSupportFragmentManager()
         val s = server
         if (s != null && s.valid) {
           if (s.id == -1)
@@ -148,7 +146,7 @@ class ServerSetupFragment extends DialogFragment {
             activity.service.updateServer(s)
           d.dismiss()
         } else {
-          Toast.makeText(getActivity(),
+          Toast.makeText(getActivity,
             R.string.server_incomplete,
             Toast.LENGTH_SHORT).show()
         }
@@ -166,7 +164,7 @@ extends ListFragment with EventBus.RefOwner {
   var tag: String
 
   // eh?
-  lazy val _service = getActivity().service
+  lazy val _service = getActivity.service
   var __service: IrcService = _
   def service = if (__service != null) __service else _service
 
@@ -179,16 +177,16 @@ extends ListFragment with EventBus.RefOwner {
     setListAdapter(_adapter)
     service.add(id, _adapter)
     try {
-      getListView().setSelection(
+      getListView.setSelection(
         if (adapter.getCount() > 0) _adapter.getCount()-1 else 0)
     } catch {
-      case _ => Log.d(TAG, "Content view not ready")
+      case e: IllegalStateException => Log.d(TAG, "Content view not ready", e)
     }
   }
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
-    val activity = getActivity()
+    val activity = getActivity
 
     id = if (id == -1 && bundle != null) bundle.getInt("id")
       else service.newMessagesId()
@@ -218,7 +216,7 @@ extends ListFragment with EventBus.RefOwner {
   override def onResume() {
     super.onResume()
     if (adapter != null) // scroll to bottom on resume
-      getListView().setSelection(adapter.getCount()-1)
+      getListView.setSelection(adapter.getCount()-1)
   }
   override def onSaveInstanceState(bundle: Bundle) {
     super.onSaveInstanceState(bundle)
@@ -247,7 +245,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
 
-    val activity = getActivity()
+    val activity = getActivity
     if (channel == null) {
       def setChannel(s: IrcService) {
         val c = s.chans.get(bundle.getInt("id"))
@@ -278,8 +276,8 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     inflater.inflate(R.menu.channel_menu, menu)
 
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
-    if (R.id.channel_close == item.getItemId()) {
-      val activity = getActivity()
+    if (R.id.channel_close == item.getItemId) {
+      val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
 
       Log.d(TAG, "Requesting tab close for: " + channel + " <= " + id)
@@ -292,7 +290,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (channel != null && channel.state == Channel.State.JOINED && prompt) {
-        var builder = new AlertDialog.Builder(activity)
+        val builder = new AlertDialog.Builder(activity)
         builder.setTitle(R.string.channel_close_confirm_title)
         builder.setMessage(getString(R.string.channel_close_confirm))
         builder.setPositiveButton(R.string.yes, () => {
@@ -319,7 +317,7 @@ extends MessagesFragment(a) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
     if (id != -1 && query != null) {
-      val activity = getActivity()
+      val activity = getActivity
       activity.service.add(id, query)
       a.channel = query
     }
@@ -329,8 +327,8 @@ extends MessagesFragment(a) {
     inflater.inflate(R.menu.query_menu, menu)
 
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
-    if (R.id.query_close == item.getItemId()) {
-      val activity = getActivity()
+    if (R.id.query_close == item.getItemId) {
+      val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
       def removeQuery() {
         activity.service.chans.get(id) foreach { q =>
@@ -342,7 +340,7 @@ extends MessagesFragment(a) {
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (prompt) {
-        var builder = new AlertDialog.Builder(activity)
+        val builder = new AlertDialog.Builder(activity)
         builder.setTitle(R.string.query_close_confirm_title)
         builder.setMessage(getString(R.string.query_close_confirm))
         builder.setPositiveButton(R.string.yes, removeQuery _)
@@ -398,7 +396,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
   }
 
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
-    if (R.id.server_close == item.getItemId()) {
+    if (R.id.server_close == item.getItemId) {
       val service = getActivity.service
       service.remove(id)
       getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
@@ -433,10 +431,10 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     super.onActivityCreated(bundle)
     // retain instance results in the list items having the wrong theme?
     // so recreate the adapter here
-    adapter = new ServerArrayAdapter(getActivity())
+    adapter = new ServerArrayAdapter(getActivity)
     setListAdapter(adapter)
     if (service != null) {
-      service.getServers.foreach(adapter.add(_))
+      service.getServers.foreach(adapter.add)
       adapter.notifyDataSetChanged()
     }
   }
@@ -456,8 +454,8 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
 
   override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
     v.findView(TR.server_checked_text).setChecked(true)
-    val activity = getActivity()
-    val manager = activity.getSupportFragmentManager()
+    val activity = getActivity
+    val manager = activity.getSupportFragmentManager
     manager.popBackStack(SERVER_SETUP_STACK,
       FragmentManager.POP_BACK_STACK_INCLUSIVE)
     val server = adapter.getItem(pos)
@@ -478,7 +476,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     service = _service
     if (adapter != null) {
       adapter.clear()
-      service.getServers.foreach(adapter.add(_))
+      service.getServers.foreach(adapter.add)
       adapter.notifyDataSetChanged()
     }
   }
@@ -504,7 +502,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
   }
 
   def addServerMessagesFragment(server: Server) {
-    val mgr = getActivity.getSupportFragmentManager()
+    val mgr = getActivity.getSupportFragmentManager
     val name = SERVER_MESSAGES_FRAGMENT_PREFIX + server.name
     var fragment = mgr.findFragmentByTag(name).asInstanceOf[MessagesFragment]
 
@@ -519,7 +517,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
       tx.add(R.id.servers_container, fragment, name)
     } else {
       fragment.adapter = server.messages
-      if (fragment.isDetached())
+      if (fragment.isDetached)
         tx.attach(fragment)
       // fragment is sometimes visible without being shown?
       // showing again shouldn't hurt?
@@ -531,18 +529,18 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
   }
 
   def addServerSetupFragment(_s: Option[Server] = None) {
-    val activity = getActivity()
-    val mgr = activity.getSupportFragmentManager()
+    val activity = getActivity
+    val mgr = activity.getSupportFragmentManager
     var fragment: ServerSetupFragment = null
     fragment = mgr.findFragmentByTag(SERVER_SETUP_FRAGMENT)
       .asInstanceOf[ServerSetupFragment]
     if (fragment == null)
       fragment = new ServerSetupFragment
-    if (fragment.isVisible()) return
+    if (fragment.isVisible) return
 
     val server = _s getOrElse {
-      val listview = getListView()
-      val checked = listview.getCheckedItemPosition()
+      val listview = getListView
+      val checked = listview.getCheckedItemPosition
       if (AdapterView.INVALID_POSITION != checked)
         listview.setItemChecked(checked, false)
       new Server
@@ -595,15 +593,15 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     val R_id_server_options = R.id.server_options
     val R_id_server_connect = R.id.server_connect
     val R_id_server_disconnect = R.id.server_disconnect
-    item.getItemId() match {
+    item.getItemId match {
       case R_id_server_delete => {
         server match {
         case Some(s) => {
-          var builder = new AlertDialog.Builder(getActivity())
-          val mgr = getActivity().getSupportFragmentManager()
+          val builder = new AlertDialog.Builder(getActivity)
+          val mgr = getActivity.getSupportFragmentManager
           clearServerMessagesFragment(mgr)
           builder.setTitle(R.string.server_confirm_delete)
-          builder.setMessage(getActivity().getString(
+          builder.setMessage(getActivity.getString(
             R.string.server_confirm_delete_message,
             s.name))
           builder.setPositiveButton(R.string.yes,
@@ -614,21 +612,21 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
           builder.create().show()
         }
         case None =>
-          Toast.makeText(getActivity(),
+          Toast.makeText(getActivity,
             R.string.server_not_selected, Toast.LENGTH_SHORT).show()
         }
         true
       }
       case R_id_server_connect => {
-        server map { service.connect(_) } getOrElse {
-          Toast.makeText(getActivity(), R.string.server_not_selected,
+        server map service.connect getOrElse {
+          Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
       }
       case R_id_server_disconnect => {
         server map { service.disconnect(_) } getOrElse {
-          Toast.makeText(getActivity(), R.string.server_not_selected,
+          Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
@@ -638,8 +636,8 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
         true
       }
       case R_id_server_messages => {
-        server map { getActivity.adapter.addServer(_) } getOrElse {
-          Toast.makeText(getActivity(), R.string.server_not_selected,
+        server map getActivity.adapter.addServer getOrElse {
+          Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
@@ -655,7 +653,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     inflater.inflate(R.menu.servers_menu, menu)
 
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
-    if (R.id.add_server == item.getItemId()) {
+    if (R.id.add_server == item.getItemId) {
       getActivity.servers.addServerSetupFragment()
       return true
     }
@@ -663,15 +661,15 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
   }
 
   override def onPrepareOptionsMenu(menu: Menu) {
-    val activity = getActivity()
-    val m = activity.getSupportFragmentManager()
+    val activity = getActivity
+    val m = activity.getSupportFragmentManager
 
     var page = 0
     if (activity.adapter != null)
       page = activity.adapter.page
 
     val found = page == 0 && ((0 until m.getBackStackEntryCount) exists {
-      i => m.getBackStackEntryAt(i).getName() == SERVER_SETUP_STACK
+      i => m.getBackStackEntryAt(i).getName == SERVER_SETUP_STACK
     })
 
     menu.findItem(R.id.add_server).setVisible(!found)
@@ -687,7 +685,7 @@ extends ArrayAdapter[Server](
     val server = getItem(pos)
     val list = parent.asInstanceOf[ListView]
     val v = super.getView(pos, reuseView, parent)
-    val checked = list.getCheckedItemPosition()
+    val checked = list.getCheckedItemPosition
     val img = v.findView(TR.server_item_status)
 
     v.findView(TR.server_item_progress).setVisibility(

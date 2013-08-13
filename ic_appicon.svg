@@ -7,10 +7,34 @@
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    xmlns:svg="http://www.w3.org/2000/svg"
    xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    version="1.1"
-   width="72"
-   height="72"
-   id="svg3787">
+   width="144"
+   height="144"
+   id="svg3787"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="ic_appicon.svg">
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="940"
+     inkscape:window-height="680"
+     id="namedview12"
+     showgrid="false"
+     inkscape:zoom="3.2777778"
+     inkscape:cx="36"
+     inkscape:cy="72.756151"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg3787" />
   <defs
      id="defs3789" />
   <metadata
@@ -21,12 +45,12 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(0,-980.36218)"
+     transform="matrix(1.9982672,0,0,1.9982672,0.48202497,-1951.7668)"
      id="layer1">
     <g
        transform="matrix(0.13921744,0,0,0.13921744,11.093393,864.04519)"
@@ -34,22 +58,26 @@
       <path
          d="m 268.34008,1113.2424 1.70017,139.2881 65.89393,-118.4286 z"
          id="path2989"
-         style="fill:#ff0000;fill-opacity:1;stroke:#000000;stroke-width:23;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+         style="fill:#ff0000;fill-opacity:1;stroke:#000000;stroke-width:23;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+         inkscape:connector-curvature="0" />
       <path
          d="m 497.14287,274.85715 a 234.28572,148.57143 0 1 1 -468.571444,0 234.28572,148.57143 0 1 1 468.571444,0 z"
          transform="translate(-84.857147,751.90815)"
          id="path2985"
-         style="fill:#a4c639;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:23;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+         style="fill:#a4c639;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:23;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+         inkscape:connector-curvature="0" />
       <path
          d="m 278.92211,1071.6903 1.70016,139.2882 65.89393,-118.4286 z"
          id="path2989-1"
-         style="fill:#a4c639;fill-opacity:1;stroke:none" />
+         style="fill:#a4c639;fill-opacity:1;stroke:none"
+         inkscape:connector-curvature="0" />
       <text
          x="-30.57143"
          y="1066.7653"
          id="text3783"
          xml:space="preserve"
-         style="font-size:144px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Segoe Print;-inkscape-font-specification:Segoe Print Bold"><tspan
+         style="font-size:144px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Segoe Print;-inkscape-font-specification:Segoe Print Bold"
+         sodipodi:linespacing="125%"><tspan
            x="-30.57143"
            y="1066.7653"
            id="tspan3785">#qicr</tspan></text>

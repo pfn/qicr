@@ -187,4 +187,5 @@
       /wi /whois\n
       /whowas\n
     </string>
+    <string name="app_name">qicr</string>
 </resources>

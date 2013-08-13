@@ -7,31 +7,11 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-feature android:name="android.hardware.touchscreen"
                   android:required="false"/>
-    <application android:label="@string/app_name"
-            android:icon="@drawable/ic_appicon"
-            android:logo="@drawable/ic_appicon"
-            android:debuggable="true"
-            android:installLocation="auto">
-        <activity
-                android:name="com.hanhuy.android.irc.SettingsActivity"
-                android:label="qicr"/>
-        <activity
-                android:name="com.hanhuy.android.irc.SettingsFragmentActivity"
-                android:label="qicr"/>
-        <activity
-                android:name="com.hanhuy.android.irc.MainActivity"
-                android:theme="@style/AppTheme.Dark"
-                android:launchMode="singleTask"
-                android:label="qicr"
-                android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <service android:name="com.hanhuy.android.irc.IrcService"/>
-    </application>
 
+    <application android:label="@string/app_name"
+                 android:icon="@drawable/ic_appicon"
+                 android:logo="@drawable/ic_appicon"
+                 android:installLocation="auto"/>
     <!--
     <meta-data android:name="com.google.android.backup.api_key"
         android:value="AEdPqrEAAAAIKU_SLiEP2MRhsncxderquUs47kYTlDzgSHpggQ" />

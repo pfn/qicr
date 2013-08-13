@@ -19,22 +19,6 @@ import android.view.{View, ViewGroup}
 import java.text.SimpleDateFormat
 
 import MessageAdapter._
-import com.hanhuy.android.irc.model.MessageLike.CommandError
-import com.hanhuy.android.irc.model.MessageLike.Kick
-import com.hanhuy.android.irc.model.MessageLike.Privmsg
-import com.hanhuy.android.irc.model.MessageLike.ServerInfo
-import com.hanhuy.android.irc.model.MessageLike.Join
-import com.hanhuy.android.irc.model.MessageLike.Motd
-import com.hanhuy.android.irc.model.MessageLike.Part
-import com.hanhuy.android.irc.model.MessageLike.Quit
-import com.hanhuy.android.irc.model.MessageLike.Topic
-import com.hanhuy.android.irc.model.MessageLike.Notice
-import com.hanhuy.android.irc.model.MessageLike.CtcpAction
-import com.hanhuy.android.irc.model.MessageLike.SslInfo
-import com.hanhuy.android.irc.model.MessageLike.CtcpReply
-import com.hanhuy.android.irc.model.MessageLike.CtcpRequest
-import com.hanhuy.android.irc.model.MessageLike.SslError
-import com.hanhuy.android.irc.model.MessageLike.NickChange
 
 trait MessageAppender {
   def add(m: MessageLike): Unit

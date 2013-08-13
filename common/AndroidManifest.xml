@@ -4,8 +4,24 @@
       android:versionCode="1"
       android:versionName="1.0">
     <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="15"/>
-    <application android:label="qicr irc library"
-        android:icon="@drawable/ic_appicon">
-      <!-- Nothing can be declared in a library's manifest -->
+    <application>
+        <activity
+                android:name="com.hanhuy.android.irc.SettingsActivity"
+                android:label="@string/app_name"/>
+        <activity
+                android:name="com.hanhuy.android.irc.SettingsFragmentActivity"
+                android:label="@string/app_name"/>
+        <activity
+                android:name="com.hanhuy.android.irc.MainActivity"
+                android:theme="@style/AppTheme.Dark"
+                android:launchMode="singleTask"
+                android:label="@string/app_name"
+                android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service android:name="com.hanhuy.android.irc.IrcService"/>
     </application>
 </manifest>
