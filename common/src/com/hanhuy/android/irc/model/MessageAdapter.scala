@@ -256,7 +256,8 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     createViewFromResource(pos, convertView, container)
   private def createViewFromResource(
       pos: Int, convertView: View, container: ViewGroup): View = {
-    val view = Option(convertView.asInstanceOf[TextView]) getOrElse {
+    val c = convertView.asInstanceOf[TextView]
+    val view = if (c != null) c else {
       val v = inflater.inflate(TR.layout.message_item, container, false)
       if (!icsAndNewer)
         v.setTypeface(font)

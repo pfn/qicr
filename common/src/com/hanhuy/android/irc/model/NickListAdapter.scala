@@ -17,6 +17,7 @@ import scala.collection.JavaConversions._
 import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.irc.model.BusEvent.NickListChanged
 import scala.collection
+import scala.ref.WeakReference
 
 object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[
@@ -29,20 +30,21 @@ object NickListAdapter {
 
     m.get(channel) getOrElse {
       adapters += ((activity,
-        m + ((channel, new NickListAdapter(activity, channel)))))
+        m + ((channel, new NickListAdapter(
+          new WeakReference(activity), channel)))))
       adapters(activity)(channel)
     }
   }
 }
 
 // must reference activity for resources
-class NickListAdapter(activity: MainActivity, channel: Channel)
+class NickListAdapter(activity: WeakReference[MainActivity], channel: Channel)
 extends BaseAdapter with EventBus.RefOwner {
     var c: SircChannel = _
-    activity.service.channels.get(channel).foreach(c = _)
+    activity.get map { _.service.channels.get(channel).foreach(c = _) }
     notifyDataSetChanged()
 
-    val inflater = activity.systemService[LayoutInflater]
+    def inflater = activity().systemService[LayoutInflater]
 
     var nicks: List[String] = _
     override def notifyDataSetChanged() {
@@ -74,12 +76,12 @@ extends BaseAdapter with EventBus.RefOwner {
 
     private def createViewFromResource(
             pos: Int, convertView: View, container: ViewGroup): View = {
-        val view = Option(convertView.asInstanceOf[TextView]) getOrElse {
-            inflater.inflate(TR.layout.nicklist_item, container, false)
-        }
+      val c = convertView.asInstanceOf[TextView]
+      val view = if (c != null) c else
+        inflater.inflate(TR.layout.nicklist_item, container, false)
 
-        view.setText(getItem(pos))
-        view
+      view.setText(getItem(pos))
+      view
     }
 
   UiBus += {

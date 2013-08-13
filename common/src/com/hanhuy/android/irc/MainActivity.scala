@@ -63,7 +63,7 @@ with EventBus.RefOwner {
   val _richactivity: RichActivity = this; import _richactivity._
 
   lazy val settings = {
-    val s = new Settings(this)
+    val s = Settings(this)
     UiBus += { case BusEvent.PreferenceChanged(_, key) =>
       List(Settings.SHOW_NICK_COMPLETE,
         Settings.SHOW_SPEECH_REC,
@@ -343,6 +343,11 @@ with EventBus.RefOwner {
   override def onStop() {
     super.onStop()
     HoneycombSupport.close()
+
+    // unregister, or else we have a memory leak on observer -> this
+    Option(drawerRight.findView(TR.nick_list).getAdapter) foreach {
+      _.unregisterDataSetObserver(observer)
+    }
     if (service != null) {
       service.showing = false
       service.unbind()
@@ -529,6 +534,7 @@ with EventBus.RefOwner {
         if (service.connected) Some(finish _) else { finish(); None })
     }
   }
+  // interesting, this causes a memory leak--fix by unregistering onStop
   val observer = new DataSetObserver {
     override def onChanged() {
       val nicks = drawerRight.findView(TR.nick_list)

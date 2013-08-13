@@ -93,7 +93,7 @@ class IrcService extends Service with EventBus.RefOwner {
   lazy val handler = new Handler(handlerThread.getLooper)
 
   lazy val config   = new Config(this)
-  lazy val settings = new Settings(this)
+  lazy val settings = Settings(this)
   ServiceBus += {
     case BusEvent.PreferenceChanged(_, k) =>
       if (k == Settings.IRC_DEBUG) {

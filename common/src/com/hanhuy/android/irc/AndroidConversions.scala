@@ -205,6 +205,8 @@ object SpannedGenerator {
   def bold(text: CharSequence) = span(new StyleSpan(Typeface.BOLD) , text)
 
   def italics(text: CharSequence) = span(new StyleSpan(Typeface.ITALIC), text)
+
+  val DIGITS = Set('0','1','2','3','4','5','6','7','8','9')
 }
 
 case class SpannedGenerator(fmt: String) {
@@ -224,7 +226,7 @@ case class SpannedGenerator(fmt: String) {
       s.append(fmt.substring(cur, fmt.length))
     } else {
       s.append(fmt.substring(cur, next))
-      val space = fmt.indexWhere({ !_.isDigit }, next + 1)
+      val space = fmt.indexWhere((!SpannedGenerator.DIGITS(_)), next + 1)
       val number = fmt.substring(next + 1,
         if (space < 0) fmt.length else space).toInt
       s.append(Option(items(number - 1)) getOrElse "")

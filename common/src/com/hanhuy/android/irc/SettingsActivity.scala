@@ -46,6 +46,10 @@ object Settings {
   val SHOW_NICK_COMPLETE = Setting[Boolean]("ui_show_nick_complete",
     AndroidConversions.honeycombAndNewer)
   val DAYNIGHT_MODE = Setting[Boolean]("ui_daynight_mode", false)
+
+  def apply(c: Context) = {
+    new Settings(c.getApplicationContext)
+  }
 }
 
 class Settings(val context: Context)
