@@ -3,14 +3,11 @@ package com.hanhuy.android.irc
 import com.hanhuy.android.irc.model.Server
 
 import android.content.Context
-import android.content.ContentValues
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
 import android.util.Log
 import android.widget.Toast
-
-import scala.collection.mutable.ArrayBuffer
 
 import Config._
 
@@ -75,8 +72,8 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
   def servers = {
     try {
-      val db = getReadableDatabase()
-      val list = new ArrayBuffer[Server]
+      val db = getReadableDatabase
+      val list = new collection.mutable.ArrayBuffer[Server]
       val c = db.query(TABLE_SERVERS, null, null, null, null, null, null)
       val col_id          = c.getColumnIndexOrThrow(BaseColumns._ID)
       val col_name        = c.getColumnIndexOrThrow(FIELD_NAME)
@@ -117,12 +114,12 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
         Toast.makeText(context,
           "Failed to open database", Toast.LENGTH_LONG).show()
         Log.e(TAG, "Unable to open database", e)
-        ArrayBuffer.empty[Server]
+        collection.mutable.ArrayBuffer.empty[Server]
     }
   }
 
   def addServer(server: Server) {
-    val db = getWritableDatabase()
+    val db = getWritableDatabase
     val id = db.insertOrThrow(TABLE_SERVERS, null, server.values)
     server.id = id
     db.close()
@@ -131,7 +128,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
   }
 
   def updateServer(server: Server) {
-    val db = getWritableDatabase()
+    val db = getWritableDatabase
     val rows = db.update(TABLE_SERVERS, server.values,
       BaseColumns._ID + " = ?", Array[String]("" + server.id))
     db.close()
@@ -140,7 +137,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
   }
 
   def deleteServer(server: Server) {
-    val db = getWritableDatabase()
+    val db = getWritableDatabase
     val rows = db.delete(TABLE_SERVERS,
       BaseColumns._ID + " = ?", Array[String]("" + server.id))
     db.close()

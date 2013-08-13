@@ -6,7 +6,6 @@ import com.hanhuy.android.irc.AndroidConversions._
 import SpannedGenerator._
 import MessageLike._
 
-import scala.collection.mutable.Queue
 import scala.ref.WeakReference
 
 import android.graphics.Typeface
@@ -54,7 +53,8 @@ object MessageAdapter {
       (implicit channel: ChannelLike = null): CharSequence = {
     val ch = Option(channel)
     msg match {
-      case Query() => formatText(c, msg, R.string.query_template, ch.get.name)
+      case Query() => formatText(c, msg, R.string.query_template,
+        textColor(nickColor(ch.get.name), ch.get.name))
       case Privmsg(s, m, o, v) => gets(c, R.string.message_template, msg,
         {if (o) "@" else if (v) "+" else ""} + s, m)
       case Notice(s, m) => gets(c, R.string.notice_template, msg, s, m)
@@ -91,20 +91,25 @@ object MessageAdapter {
           getString(c, R.string.ctcp_response_template_2, cmd, s)
         }
       }
-      case Topic(src, t) => src map {
-        formatText(c, msg, R.string.topic_template_2, _, channel.name, t)
+      case Topic(src, t) => src map { s =>
+        formatText(c, msg, R.string.topic_template_2,
+          textColor(nickColor(s), s), bold(italics(channel.name)), t)
       } getOrElse {
-        formatText(c, msg, R.string.topic_template_1, channel.name, t)
+        formatText(c, msg, R.string.topic_template_1,
+          bold(italics(channel.name)), t)
       }
       case NickChange(o, n) =>
-        formatText(c, msg, R.string.nick_change_template, o, n)
-      case Join(n, u)    => formatText(c, msg, R.string.join_template, n, u)
-      case Part(n, u, m) => formatText(c, msg, R.string.part_template, n, u,
+        formatText(c, msg, R.string.nick_change_template,
+          textColor(nickColor(o), o), textColor(nickColor(n), n))
+      case Join(n, u)    => formatText(c, msg, R.string.join_template,
+        textColor(nickColor(n), n), u)
+      case Part(n, u, m) => formatText(c, msg, R.string.part_template,
+        textColor(nickColor(n), n), u, if (m == null) "" else m)
+      case Quit(n, u, m) => formatText(c, msg, R.string.quit_template,
+        textColor(nickColor(n), n), u, m)
+      case Kick(o, n, m) => formatText(c, msg, R.string.kick_template,
+        textColor(nickColor(o), o), textColor(nickColor(n), n),
         if (m == null) "" else m)
-      case Quit(n, u, m) => formatText(c, msg, R.string.quit_template, n, u, m)
-      case Kick(o, n, m) => formatText(c, msg, R.string.kick_template, o, n,
-        if (m == null) "" else m)
-
       case CommandError(m)  => formatText(c, msg, -1, m)
       case ServerInfo(m)    => formatText(c, msg, -1, m)
       case Motd(m)          => formatText(c, msg, -1, m)
@@ -130,11 +135,11 @@ object MessageAdapter {
     }
   }
 
+  private def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % 10)
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
       msg: String)(implicit channel: ChannelLike) = {
     val server = channel.server
 
-    val nickColor = NICK_COLORS(math.abs(src.hashCode) % 10)
     if (channel.isInstanceOf[Query]) {
       if (server.currentNick equalsIgnoreCase src)
         formatText(c, m, res, textColor(0xff009999, src), msg)
@@ -144,16 +149,17 @@ object MessageAdapter {
       formatText(c, m, res, bold(src), msg)
     } else if (IrcListeners.matchesNick(server, msg) &&
         !server.currentNick.equalsIgnoreCase(src)) {
-      formatText(c, m, res, bold(italics(textColor(nickColor, src))), bold(msg))
+      formatText(c, m, res,
+        bold(italics(textColor(nickColor(src), src))), bold(msg))
     } else
-      formatText(c, m, res, textColor(nickColor, src), msg)
+      formatText(c, m, res, textColor(nickColor(src), src), msg)
   }
 }
 
 class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   implicit var channel: ChannelLike = _
 
-  var filterCache = Option.empty[collection.mutable.MutableList[MessageLike]]
+  var filterCache = Option.empty[Seq[MessageLike]]
 
   var showJoinPartQuit = false
   val messages = new collection.mutable.Queue[MessageLike]

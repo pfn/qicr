@@ -8,10 +8,9 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.preference.PreferenceFragment
-import scala.collection.mutable
 
 object Setting {
-  private val settings = mutable.HashMap[String,Setting[_]]()
+  private val settings = collection.mutable.HashMap[String,Setting[_]]()
   def unapply(key: String): Option[Setting[_]] = settings get key
   def apply[A](key: String, default: A) = new Setting(key, default, None)
   def apply[A](key: String, res: Int) = new Setting(key,

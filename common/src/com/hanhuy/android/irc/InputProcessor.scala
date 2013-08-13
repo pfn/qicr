@@ -18,12 +18,8 @@ import android.text.method.TextKeyListener
 import android.util.Log
 
 import com.sorcix.sirc.IrcConnection
-import com.sorcix.sirc.{User => SircUser}
 
-import scala.collection.mutable.HashSet
-import scala.collection.mutable.HashMap
 import scala.collection.JavaConversions._
-import scala.ref.WeakReference
 
 import AndroidConversions._
 
@@ -62,7 +58,7 @@ class InputProcessor(activity: MainActivity) {
     if (action == EditorInfo.IME_ACTION_SEND)
       false // ignored for now
     else if (action == EditorInfo.IME_NULL) {
-      val line = input.getText()
+      val line = input.getText
       handleLine(line)
       clear(input)
       !activity.settings.get(Settings.HIDE_KEYBOARD)
@@ -78,11 +74,10 @@ class InputProcessor(activity: MainActivity) {
   }
 
   def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
-    val input = v.asInstanceOf[EditText]
     Log.i(TAG, "key: " + k + " e: " + e)
     // keyboard shortcuts / honeycomb and above only
-    if (KeyEvent.ACTION_UP == e.getAction()) {
-      val meta = e.getMetaState()
+    if (KeyEvent.ACTION_UP == e.getAction) {
+      val meta = e.getMetaState
       val altOn   = (meta & KeyEvent.META_ALT_ON)   > 0
       val ctrlOn  = (meta & KeyEvent.META_CTRL_ON)  > 0
       val shiftOn = (meta & KeyEvent.META_SHIFT_ON) > 0
@@ -92,12 +87,12 @@ class InputProcessor(activity: MainActivity) {
         case KeyEvent.KEYCODE_TAB => {
           if (ctrlOn && shiftOn) { // move backward in tabs
             val count = activity.adapter.getCount()
-            val current = activity.pager.getCurrentItem()
+            val current = activity.pager.getCurrentItem
             val next = if (current - 1 < 0) count - 1 else current - 1
             activity.pager.setCurrentItem(next)
           } else if (ctrlOn) { // move forward in tabs
             val count = activity.adapter.getCount()
-            val current = activity.pager.getCurrentItem()
+            val current = activity.pager.getCurrentItem
             val next = if (current + 1 >= count) 0 else current + 1
             activity.pager.setCurrentItem(next)
           } else { // tab completion
@@ -161,8 +156,8 @@ class InputProcessor(activity: MainActivity) {
       case _ => return
     }
 
-    val caret = input.getSelectionStart()
-    val in = input.getText()
+    val caret = input.getSelectionStart
+    val in = input.getText
     // completion logic:  starts off with recents first, then alphabet
     // match a prefix, lowercased
     //   (store the prefix and start index if not set)
@@ -180,7 +175,7 @@ class InputProcessor(activity: MainActivity) {
     // do nothing if no match
     //   fell off the end? revert to prefix/start over
     val prefix = completionPrefix getOrElse {
-      val start = input.getSelectionStart()
+      val start = input.getSelectionStart
       val beginning = in.lastIndexOf(" ", start - 1)
       val p = in.substring(if (beginning == -1) 0 else (beginning + 1), start)
       completionPrefix = Some(p)
@@ -190,10 +185,10 @@ class InputProcessor(activity: MainActivity) {
     // TODO make ", " a preference
     val suffix = ", "
     val offset = completionOffset.get
-    val lowerp  = prefix.toLowerCase()
+    val lowerp  = prefix.toLowerCase
 
     if (in.length() < offset || !in.substring(
-        offset).toLowerCase().startsWith(lowerp)) {
+        offset).toLowerCase.startsWith(lowerp)) {
       completionPrefix = None
       completionOffset = None
       return nickComplete(Some(input))
@@ -201,23 +196,18 @@ class InputProcessor(activity: MainActivity) {
     var current = in.substring(offset, caret)
     if (current.endsWith(suffix))
       current = current.substring(0, current.length() - suffix.length())
-    current = current.toLowerCase()
+    current = current.toLowerCase
 
     val ch = activity.service.channels(c)
-    val users = ch.getUsers() map {
-      u => ( u.getNick().toLowerCase(), u.getNick() )
-    } toMap
-    val seenSet = new HashSet[String]
+    val users = ch.getUsers.map {
+      u => ( u.getNick.toLowerCase, u.getNick )
+    }.toMap
+
     val recent = c.messages.messages.reverse.collect {
-      // side-effect cannot occur on the case side
-      case ChatMessage(s, m) if !seenSet.contains(s.toLowerCase()) =>
-        seenSet.add(s.toLowerCase())
-        s.toLowerCase()
-    }.filter { n =>
-      // znc playback user and current nick
-      n != "***" && n != c.server.currentNick
-    } toList
-    val names = recent ++ users.keys.toList.sorted.filterNot(seenSet)
+      case ChatMessage(s, m) => s.toLowerCase
+    }.distinct.toList
+    val names = (recent ++ users.keys.toList.sorted.filterNot(
+      recent.toSet)) filterNot { n => n == "***" || n == c.server.currentNick }
 
     def goodCandidate(x: String) = x.startsWith(lowerp) && users.contains(x)
     val candidate: Option[String] = if (current == lowerp) {
@@ -248,7 +238,6 @@ object CommandProcessor {
 // set ctx, server and channel prior to invoking executeLine
 sealed class CommandProcessor(ctx: Context) {
   val TAG = "CommandProcessor"
-  val commands = new HashMap[String,Command]
 
   def getString(res: Int, args: String*) = ctx.getString(res, args: _*)
   var channel: Option[ChannelLike] = None
@@ -281,7 +270,7 @@ sealed class CommandProcessor(ctx: Context) {
         val a = line.substring(idx + 1)
         if (a.trim().length() == 0) args = None else args = Some(a)
       }
-      cmd = cmd.toLowerCase()
+      cmd = cmd.toLowerCase
       if (cmd.length() == 0 || cmd.charAt(0) == ' ') {
         cmd = getString(R.string.command_quote)
         val a = if (line.length() > 2) line.substring(2) else ""
@@ -317,10 +306,10 @@ sealed class CommandProcessor(ctx: Context) {
             ch.add(CtcpAction(ch.server.currentNick, l))
             chan.sendAction(l)
           } else {
-            val u = chan.getUs()
+            val u = chan.getUs
             if (u != null) // I doubt this will ever be null
               ch.add(Privmsg(ch.server.currentNick, l,
-                u.hasOperator(), u.hasVoice()))
+                u.hasOperator, u.hasVoice))
             else
               ch.add(Privmsg(ch.server.currentNick, l))
                 chan.sendMessage(l)
@@ -352,7 +341,7 @@ sealed class CommandProcessor(ctx: Context) {
     }
   }
 
-  def currentServer = channel map { _.server } orElse (server)
+  def currentServer = channel map { _.server } orElse server
 
   object JoinCommand extends Command {
     override def execute(args: Option[String]) {
@@ -520,7 +509,7 @@ sealed class CommandProcessor(ctx: Context) {
       addCommandError(R.string.help_text)
   }
 
-  commands += ((getString(R.string.command_ignore),   IgnoreCommand)
+  val commands = Map((getString(R.string.command_ignore),   IgnoreCommand)
               ,(getString(R.string.command_whowas),   WhowasCommand)
               ,(getString(R.string.command_whois_1),  WhoisCommand)
               ,(getString(R.string.command_whois_2),  WhoisCommand)

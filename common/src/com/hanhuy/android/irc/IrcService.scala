@@ -441,6 +441,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
 // TODO when cancelled, disconnect if still in process
 // TODO implement connection timeouts
+// TODO nuke the stupid AsyncTask
 // use Object due to java<->scala varargs interop bug
 // https://issues.scala-lang.org/browse/SI-1459
 class ConnectTask(server: Server, service: IrcService)

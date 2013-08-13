@@ -15,12 +15,11 @@ import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.irc.model.BusEvent.NickListChanged
-import scala.collection.mutable
 import scala.collection
 
 object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[
-    MainActivity,mutable.HashMap[Channel,NickListAdapter]]()
+    MainActivity,collection.mutable.HashMap[Channel,NickListAdapter]]()
   def apply(activity: MainActivity, channel: Channel) = {
     val m = adapters.get(activity) getOrElse {
       adapters += ((activity, new collection.mutable.HashMap()))
