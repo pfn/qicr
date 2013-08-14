@@ -120,7 +120,7 @@ object MessageAdapter {
     }
   }
 
-  private def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % 10)
+  def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % 10)
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
       msg: String, modes: (Boolean,Boolean) = (false, false))(
       implicit channel: ChannelLike) = {

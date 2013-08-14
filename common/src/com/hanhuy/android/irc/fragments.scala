@@ -180,7 +180,7 @@ extends ListFragment with EventBus.RefOwner {
       getListView.setSelection(
         if (adapter.getCount() > 0) _adapter.getCount()-1 else 0)
     } catch {
-      case e: IllegalStateException => Log.d(TAG, "Content view not ready", e)
+      case e: IllegalStateException => Log.d(TAG, "Content view not ready")
     }
   }
 

@@ -6,6 +6,7 @@ import com.hanhuy.android.irc.MainActivity
 import com.hanhuy.android.irc.TR
 import com.hanhuy.android.irc.TypedResource._
 import com.hanhuy.android.irc.AndroidConversions._
+import com.hanhuy.android.irc.SpannedGenerator.textColor
 
 import android.view.LayoutInflater
 import android.widget.BaseAdapter
@@ -37,6 +38,8 @@ object NickListAdapter {
   }
 }
 
+case class NickAndMode(mode: Char, nick: String)
+
 // must reference activity for resources
 class NickListAdapter(activity: WeakReference[MainActivity], channel: Channel)
 extends BaseAdapter with EventBus.RefOwner {
@@ -46,30 +49,31 @@ extends BaseAdapter with EventBus.RefOwner {
 
     def inflater = activity().systemService[LayoutInflater]
 
-    var nicks: List[String] = _
+    var nicks: List[android.text.Spanned] = _
     override def notifyDataSetChanged() {
-        if (c == null) return
-        // oy, this is super-slow when called a bunch of times rapidly
-        // try to prevent CME by copying
-        nicks = List(c.getUsers.toSeq: _*).map { u =>
-            (if (u.hasOperator) "@" else if (u.hasVoice) "+" else "") +
-                    u.getNick
-        }.toList.filter {
-            _ != "***" // znc playback user
-        } sortWith { (a, b) =>
-            (a.charAt(0), b.charAt(0)) match {
-            case ('@', y) if y != '@'             => true
-            case (x, '@') if x != '@'             => false
-            case ('+', y) if y != '@' && y != '+' => true
-            case (x, '+') if x != '@' && x != '+' => false
-            case (_,_) => a.compareToIgnoreCase(b) < 0
-            }
+      if (c == null) return
+      nicks = c.getUsers.toList.map { u =>
+        val prefix = if (u.hasOperator) '@' else if (u.hasVoice) '+' else ' '
+        NickAndMode(prefix, u.getNick)
+      }.filterNot {
+        _.nick == "***" // znc playback user
+      }.sortWith { (a, b) =>
+        (a.mode, b.mode) match {
+          case ('@', y) if y != '@'             => true
+          case (x, '@') if x != '@'             => false
+          case ('+', y) if y != '@' && y != '+' => true
+          case (x, '+') if x != '@' && x != '+' => false
+          case (_,_) => a.nick.compareToIgnoreCase(b.nick) < 0
         }
-
-        super.notifyDataSetChanged()
+      }.map { n =>
+        "%1%2" formatSpans (String.valueOf(n.mode),
+          textColor(MessageAdapter.nickColor(n.nick), n.nick))
+      }
+      super.notifyDataSetChanged()
     }
+
     override def getItemId(pos: Int) : Long = pos
-    override def getItem(pos: Int) : String = nicks(pos)
+    override def getItem(pos: Int) = nicks(pos)
     override def getCount : Int = if (nicks != null) nicks.size else 0
     override def getView(pos: Int, convertView: View, container: ViewGroup) :
             View = createViewFromResource(pos, convertView, container)
