@@ -62,7 +62,6 @@ with EventBus.RefOwner {
   def channelBase = servers.size + 1
   def currentTab = tabs(page)
 
-  //pager.setOnPageChangeListener(this)
   pager.setAdapter(this)
   tabindicators.setViewPager(pager)
   tabindicators.setOnPageChangeListener(this)

@@ -137,7 +137,7 @@ class ServerSetupFragment extends DialogFragment {
     // block dismiss on positive button click
     d.setOnShowListener { () =>
       val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
-      b.setOnClickListener { () =>
+      b.onClick {
         val s = server
         if (s != null && s.valid) {
           if (s.id == -1)
@@ -176,7 +176,7 @@ extends ListFragment with EventBus.RefOwner {
 
     setListAdapter(_adapter)
     service.add(id, _adapter)
-    try {
+    try { // TODO FIXME figure out how to do this better
       getListView.setSelection(
         if (adapter.getCount() > 0) _adapter.getCount()-1 else 0)
     } catch {
@@ -448,7 +448,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
       container: ViewGroup, bundle: Bundle) = {
     val v = inflater.inflate(R.layout.fragment_servers, container, false)
     val b = v.findView(TR.add_server)
-    b.setOnClickListener { () => getActivity.servers.addServerSetupFragment() }
+    b.onClick { getActivity.servers.addServerSetupFragment() }
     v
   }
 

@@ -127,10 +127,10 @@ object AndroidConversions {
 
   implicit def toBoolean(c: CheckBox) = c.isChecked()
 
-  implicit def toRichView(v: View) = new RichView(v)
-  implicit def toRichContext(c: Context) = new RichContext(c)
+  implicit def toRichView(v: View) = RichView(v)
+  implicit def toRichContext(c: Context) = RichContext(c)
   implicit def toRichActivity(a: Activity) = new RichActivity(a)
-  implicit def toRichHandler(h: Handler) = new RichHandler(h)
+  implicit def toRichHandler(h: Handler) = RichHandler(h)
   implicit def toSpannedGenerator(s: String) = SpannedGenerator(s)
 
   lazy val _threadpool = {
@@ -158,11 +158,11 @@ object SystemService {
   implicit val ls = SystemService[LayoutInflater](LAYOUT_INFLATER_SERVICE)
   implicit val ns = SystemService[NotificationManager](NOTIFICATION_SERVICE)
 }
-class RichContext(context: Context) {
+case class RichContext(context: Context) {
   def systemService[T](implicit s: SystemService[T]): T =
     context.getSystemService(s.name).asInstanceOf[T]
 }
-class RichView(view: View) extends TypedViewHolder {
+case class RichView(view: View) extends TypedViewHolder {
   import AndroidConversions._
 
   def findViewById(id: Int): View = view.findViewById(id)
@@ -170,8 +170,9 @@ class RichView(view: View) extends TypedViewHolder {
   def findView[A <: View](id: Int): A =
     view.findViewById(id).asInstanceOf[A]
 
-  def onClick_= (f: => Unit) = view.setOnClickListener { () => f }
+  def onClick(f: => Unit) = view.setOnClickListener { () => f }
 }
+// can't be case class because of inheritance :-/
 class RichActivity(activity: Activity) extends RichContext(activity)
 with TypedViewHolder {
   import Configuration._
@@ -188,7 +189,7 @@ with TypedViewHolder {
   lazy val isXLargeScreen = atLeast(SCREENLAYOUT_SIZE_XLARGE)
 }
 
-class RichHandler(handler: Handler) {
+case class RichHandler(handler: Handler) {
   def delayed(delay: Long)(f: => Unit) = handler.postDelayed(
     AndroidConversions.byNameToRunnable(f), delay)
 }

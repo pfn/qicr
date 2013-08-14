@@ -103,18 +103,18 @@ with EventBus.RefOwner {
 
   lazy val newmessages = {
     val v = findView(TR.btn_new_messages)
-    v.setOnClickListener(adapter.goToNewMessages _)
+    v.onClick (adapter.goToNewMessages)
     v
   }
 
   lazy val nickcomplete = {
     val complete = findView(TR.btn_nick_complete)
-    complete.setOnClickListener { () => proc.nickComplete(Some(input)) }
+    complete.onClick { proc.nickComplete(Some(input)) }
     complete
   }
   lazy val speechrec = {
     val speech = findView(TR.btn_speech_rec)
-    speech.setOnClickListener { () =>
+    speech.onClick {
       val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
       intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
         RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -402,8 +402,11 @@ with EventBus.RefOwner {
           DrawerLayout.LOCK_MODE_UNLOCKED, drawerRight)
 
         val nicks = drawerRight.findView(TR.nick_list)
-        Option(nicks.getAdapter) foreach {
-          _.unregisterDataSetObserver(observer) }
+        Option(nicks.getAdapter) foreach { a =>
+          try { // throws because of the unregister in onStop  :-(
+            a.unregisterDataSetObserver(observer)
+          } catch { case _: Exception => }
+        }
         nicks.setAdapter(NickListAdapter(this, c.channel))
         findView(TR.user_count).setText(
           getString(R.string.users_count,
