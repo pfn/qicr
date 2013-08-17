@@ -5,22 +5,29 @@ import com.hanhuy.android.irc.ServiceBus
 import com.hanhuy.android.irc.UiBus
 
 import MessageLike._
+import scala.annotation.tailrec
 
 object Channel {
-    trait State
-    object State {
-        case object NEW extends State
-        case object JOINED extends State
-        case object KICKED extends State
-        case object PARTED extends State
-    }
+  trait State
+  object State {
+    case object NEW extends State
+    case object JOINED extends State
+    case object KICKED extends State
+    case object PARTED extends State
+  }
 }
 
-abstract class ChannelLike(_server: Server, _name: String)
-extends MessageAppender {
+object ChannelLike {
+  private var created = Set.empty[(Server,String)]
+}
+
+abstract class ChannelLike(val server: Server, val name: String)
+extends MessageAppender with Ordered[ChannelLike] {
     val messages = new MessageAdapter
-    def name = _name
-    def server = _server
+
+  if (ChannelLike.created(server -> name))
+    throw new IllegalStateException("Already created: " + this)
+  ChannelLike.created += server -> name
 
     var newMessages = false
     var newMentions = false
@@ -35,9 +42,9 @@ extends MessageAppender {
     def add(m: MessageLike) {
         messages.add(m)
         val msg = m match {
-        case Privmsg(src, msg, o, v) => {newMessages = true; msg}
-        case CtcpAction(src, msg)    => {newMessages = true; msg}
-        case Notice(src, msg)        => {newMessages = true; msg}
+        case Privmsg(src, m2, o, v) => {newMessages = true; m2}
+        case CtcpAction(src, m2)    => {newMessages = true; m2}
+        case Notice(src, m2)        => {newMessages = true; m2}
         case _ => ""
         }
 
@@ -47,8 +54,12 @@ extends MessageAppender {
         UiBus.send(BusEvent.ChannelMessage(this, m))
     }
 
-    override def toString() = name
+    override def toString = name
+
+  def compare(that: ChannelLike): Int =
+    ChannelLikeComparator.compare(this, that)
 }
+
 class Channel(s: Server, n: String) extends ChannelLike(s, n) {
     import Channel._
     private var _state: State = State.NEW
@@ -65,23 +76,24 @@ class Query(s: Server, n: String) extends ChannelLike(s, n) {
     }
 }
 
-class ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
-    private def stripInitial(_name: String): String = {
-        var name = _name
-        name = if (name.length == 0) "" else (name.charAt(0) match {
-            case '#' => name.substring(1)
-            case '&' => name.substring(1)
-            case _   => name
-        })
-        if (name == _name) name else stripInitial(name)
-    }
+object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
+  @tailrec
+  private def stripInitial(_name: String): String = {
+      var name = _name
+      name = if (name.length == 0) "" else (name.charAt(0) match {
+          case '#' => name.substring(1)
+          case '&' => name.substring(1)
+          case _   => name
+      })
+      if (name == _name) name else stripInitial(name)
+  }
     override def compare(c1: ChannelLike, c2: ChannelLike): Int = {
         if (c1.isInstanceOf[Channel] && c2.isInstanceOf[Query])
             return 1
         if (c1.isInstanceOf[Query] && c2.isInstanceOf[Channel])
             return -1
-        var c1name = c1.name
-        var c2name = c2.name
+        val c1name = c1.name
+        val c2name = c2.name
         val ch1 = if (c1name.length > 0) c1name.charAt(0)
         val ch2 = if (c2name.length > 0) c2name.charAt(0)
         (ch1, ch2) match {

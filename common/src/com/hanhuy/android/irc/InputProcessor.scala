@@ -288,7 +288,7 @@ sealed class CommandProcessor(ctx: Context) {
     channel map { _.add _ } orElse (server map { _.add _}) map {
       _(CommandError(error))
     } getOrElse {
-      Log.w(TAG, "Unable to addCommandError, no server or channel")
+      Log.w(TAG, "Unable to addCommandError, no server or channel: " + error)
     }
   }
 
@@ -431,7 +431,7 @@ sealed class CommandProcessor(ctx: Context) {
           val now = System.currentTimeMillis
           // irssi seems to use microseconds for the second part, emulate
           CtcpCommand.execute(
-            Some("PING %s %d %d000" format(target, now / 1000, now & 999)))
+            Some("%s PING %d %d000" format(target, now / 1000, now & 999)))
       } getOrElse addCommandError(R.string.usage_ping)
     }
   }
@@ -448,7 +448,7 @@ sealed class CommandProcessor(ctx: Context) {
     val CommandPattern = """(\S+)\s+(\S+)\s*(.*?)\s*""".r
     override def execute(args: Option[String]) {
       args collect {
-        case CommandPattern(command, target, arg) => withConnection { c =>
+        case CommandPattern(target, command, arg) => withConnection { c =>
           val trimmedArg = arg.trim
           val line = command.toUpperCase + (
             if (trimmedArg.length == 0) "" else " " + trimmedArg)
@@ -482,11 +482,19 @@ sealed class CommandProcessor(ctx: Context) {
   }
 
   object WhowasCommand extends Command {
-    override def execute(args: Option[String]) = TODO
+    override def execute(args: Option[String]) {
+      args foreach { line =>
+        RawCommand.execute(Some("WHOWAS " + line))
+      }
+    }
   }
 
   object WhoisCommand extends Command {
-    override def execute(args: Option[String]) = TODO
+    override def execute(args: Option[String]) {
+      args foreach { line =>
+        RawCommand.execute(Some("WHOIS " + line))
+      }
+    }
   }
 
   object IgnoreCommand extends Command {

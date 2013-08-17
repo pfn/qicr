@@ -237,10 +237,6 @@ extends MessagesFragment(a) with EventBus.RefOwner {
   def this() = this(null, null)
   def channelReady = channel != null
 
-
-  // TODO get rid of this reference through use of UiBus
-  var nicklist: Option[ListView] = None // Some when large+
-  //Log.d(TAG, "Creating ChannelFragment: " + this, new StackTrace)
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)

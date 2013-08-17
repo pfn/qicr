@@ -1,22 +1,12 @@
 package com.hanhuy.android.irc
 
-import com.hanhuy.android.irc.model.Query
-import com.hanhuy.android.irc.model.Channel
-import com.hanhuy.android.irc.model.ChannelLike
-import com.hanhuy.android.irc.model.Server
-import com.hanhuy.android.irc.model.MessageAdapter
-import com.hanhuy.android.irc.model.BusEvent
-import com.hanhuy.android.irc.model.MessageLike
-import com.hanhuy.android.irc.model.MessageLike.ServerInfo
-import com.hanhuy.android.irc.model.MessageLike.Privmsg
-import com.hanhuy.android.irc.model.MessageLike.CtcpAction
-import com.hanhuy.android.irc.model.MessageLike.Notice
+import com.hanhuy.android.irc.model._
 
 import scala.ref.WeakReference
 
 import android.app.Service
 import android.app.NotificationManager
-import android.content.Intent
+import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
 import android.os.{Binder, IBinder}
 import android.os.AsyncTask
 import android.os.{Handler, HandlerThread}
@@ -34,6 +24,12 @@ import com.sorcix.sirc.{Channel => SircChannel}
 
 import AndroidConversions._
 import IrcService._
+import android.text.TextUtils
+import com.hanhuy.android.irc.model.MessageLike.Privmsg
+import scala.Some
+import com.hanhuy.android.irc.model.MessageLike.CtcpAction
+import com.hanhuy.android.irc.model.MessageLike.ServerInfo
+import com.hanhuy.android.irc.model.MessageLike.Notice
 
 // practice doing this so as to prevent leaking the service instance
 //     irrelevant in this app
@@ -52,6 +48,9 @@ object IrcService {
   val EXTRA_PAGE    = "com.hanhuy.android.irc.extra.page"
   val EXTRA_SUBJECT = "com.hanhuy.android.irc.extra.subject"
   val EXTRA_SPLITTER = "::qicr-splitter-boundary::"
+
+  val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
+  val ACTION_PREV_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_PREV"
 
   // notification IDs
   val RUNNING_ID = 1
@@ -74,9 +73,7 @@ class IrcService extends Service with EventBus.RefOwner {
     // but speech rec -> home will not trigger this?
     if (!s) {
       if (_running) {
-        startForeground(RUNNING_ID, runningNotification(
-          getString(R.string.notif_connected_servers,
-            connections.size: java.lang.Integer)))
+        startForeground(RUNNING_ID, runningNotification(runningString))
       } else {
         stopForeground(true)
       }
@@ -102,12 +99,23 @@ class IrcService extends Service with EventBus.RefOwner {
           IrcDebug.setLogStream(PrintStream)
         IrcDebug.setEnabled(debug)
       }
+    case BusEvent.ChannelMessage(ch, msg) => lastChannel foreach { c =>
+      if (!showing && c == ch) {
+        val text = getString(R.string.notif_connected_servers,
+          connections.size: java.lang.Integer)
+
+        val n = runningNotification(text)
+        systemService[NotificationManager].notify(RUNNING_ID, n)
+      }
+    }
   }
 
   def connections  = mconnections
   def _connections = m_connections
   private var mconnections   = Map.empty[Server,IrcConnection]
   private var m_connections  = Map.empty[IrcConnection,Server]
+
+  var lastChannel: Option[ChannelLike] = None
 
   def channels = mchannels
   def _channels = m_channels
@@ -174,8 +182,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
     if (activity.isEmpty && _running) {
       systemService[NotificationManager].notify(RUNNING_ID, runningNotification(
-        getString(R.string.notif_connected_servers,
-          connections.size: java.lang.Integer)))
+        runningString))
     }
   }
 
@@ -239,6 +246,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onDestroy() {
     super.onDestroy()
+    unregisterReceiver(receiver)
     val nm = systemService[NotificationManager]
     nm.cancel(DISCON_ID)
     nm.cancel(MENTION_ID)
@@ -296,6 +304,11 @@ class IrcService extends Service with EventBus.RefOwner {
     if (ircdebug)
       IrcDebug.setLogStream(PrintStream)
     IrcDebug.setEnabled(ircdebug)
+    val filter = new IntentFilter
+
+    filter.addAction(ACTION_NEXT_CHANNEL)
+    filter.addAction(ACTION_PREV_CHANNEL)
+    registerReceiver(receiver, filter)
   }
 
   override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
@@ -403,32 +416,64 @@ class IrcService extends Service with EventBus.RefOwner {
     if (!t.getName.startsWith("sIRC-")) throw e
   }
 
+  def runningString = getString(R.string.notif_connected_servers,
+    connections.size: java.lang.Integer)
   def runningNotification(text: CharSequence) = {
-
+    val intent = new Intent(this, classOf[MainActivity])
+    lastChannel foreach { c =>
+      intent.putExtra(EXTRA_SUBJECT, c.server.name + EXTRA_SPLITTER + c.name)
+    }
     val pending = PendingIntent.getActivity(this, RUNNING_ID,
-      new Intent(this, classOf[MainActivity]),
-      PendingIntent.FLAG_UPDATE_CURRENT)
+      intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
-    new NotificationCompat.Builder(this)
+    val builder = new NotificationCompat.Builder(this)
       .setSmallIcon(R.drawable.ic_notify_mono)
       .setWhen(System.currentTimeMillis())
       .setContentIntent(pending)
       .setContentText(text)
       .setContentTitle(getString(R.string.notif_title))
+
+
+    lastChannel map { c =>
+      val title = c.name
+      val msgs = if (c.messages.filteredMessages.size > 0) {
+        TextUtils.concat(
+          c.messages.filteredMessages.takeRight(5).map { m =>
+            MessageAdapter.formatText(this, m)(c)
+        }.flatMap (m => Seq(m, "\n")).init:_*)
+      } else {
+        getString(R.string.no_messages)
+      }
+
+      val n = builder
+      .setStyle(new NotificationCompat.BigTextStyle()
+      .setBigContentTitle(title)
+      .setSummaryText(text)
+      .bigText(msgs))
+      .addAction(android.R.drawable.ic_media_previous, "Prev",
+        PendingIntent.getBroadcast(this, ACTION_PREV_CHANNEL.hashCode,
+        new Intent(ACTION_PREV_CHANNEL),
+        PendingIntent.FLAG_UPDATE_CURRENT))
+      .addAction(android.R.drawable.ic_media_next, "Next",
+        PendingIntent.getBroadcast(this, ACTION_NEXT_CHANNEL.hashCode,
+          new Intent(ACTION_NEXT_CHANNEL),
+          PendingIntent.FLAG_UPDATE_CURRENT))
       .build
+      n
+    } getOrElse builder.build
   }
+
   // TODO decouple
   def serverDisconnected(server: Server) {
     UiBus.run {
       val nm = systemService[NotificationManager]
       disconnect(server, disconnected = true)
       if (connections.isEmpty) {
+        lastChannel = None
         nm.notify(RUNNING_ID, runningNotification(
           getString(R.string.server_disconnected)))
       } else {
-        nm.notify(RUNNING_ID, runningNotification(
-          getString(R.string.notif_connected_servers,
-            connections.size: java.lang.Integer)))
+        nm.notify(RUNNING_ID, runningNotification(runningString))
       }
     }
     if (activity.isEmpty)
@@ -456,6 +501,8 @@ class IrcService extends Service with EventBus.RefOwner {
       .setWhen(System.currentTimeMillis())
       .setContentIntent(pending)
       .setContentText(text)
+      .setStyle(new NotificationCompat.BigTextStyle()
+        .bigText(text).setBigContentTitle(getString(R.string.notif_title)))
       .setContentTitle(getString(R.string.notif_title))
       .build
     notif.flags |= Notification.FLAG_AUTO_CANCEL
@@ -466,6 +513,24 @@ class IrcService extends Service with EventBus.RefOwner {
     val now = System.currentTimeMillis
     server.currentPing = Some(now)
     c.sendRaw("PING %d" format now)
+  }
+
+  val receiver = new BroadcastReceiver {
+    def onReceive(c: Context, intent: Intent) {
+      val chans = channels.keys.toList.sortWith(_ < _)
+      val idx = chans.size + lastChannel.map { c =>
+        chans.indexOf(c)
+      }.get
+      val tgt = intent.getAction match {
+        case ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
+        case ACTION_PREV_CHANNEL => (idx - 1) % chans.size
+        case _ => idx
+      }
+      lastChannel = Option(chans(tgt))
+      systemService[NotificationManager].notify(RUNNING_ID, runningNotification(
+        runningString
+      ))
+    }
   }
 }
 

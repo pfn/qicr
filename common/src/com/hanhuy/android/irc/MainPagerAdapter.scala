@@ -55,7 +55,7 @@ with EventBus.RefOwner {
   private var channels = List.empty[ChannelLike]
   private var servers  = List.empty[Server]
   private var tabs = List.empty[TabInfo]
-  lazy val channelcomp = new ChannelLikeComparator
+  lazy val channelcomp = ChannelLikeComparator
   lazy val servercomp  = new ServerComparator
   lazy val tabindicators = activity.findView(TR.tabs)
 
@@ -80,7 +80,6 @@ with EventBus.RefOwner {
     }
 
   UiBus += {
-  case BusEvent.NickListChanged(c)    => updateNickList(c)
   case BusEvent.ServerChanged(server) => serverStateChanged(server)
   case BusEvent.ChannelMessage(c, m)  => refreshTabTitle(c)
   case BusEvent.ChannelAdded(c)       => addChannel(c)
@@ -120,15 +119,6 @@ with EventBus.RefOwner {
     }
     case _ => ()
     }
-  }
-
-  def updateNickList(c: Channel) {
-    val idx = Collections.binarySearch(channels, c, channelcomp)
-    if (idx < 0) return
-
-    val f = tabs(idx + channelBase).fragment.asInstanceOf[ChannelFragment]
-    f.nicklist.foreach(_.getAdapter
-      .asInstanceOf[NickListAdapter].notifyDataSetChanged())
   }
 
   def refreshTabTitle(c: ChannelLike) {
@@ -188,7 +178,7 @@ with EventBus.RefOwner {
   override def getCount = tabs.length
   override def getItem(pos: Int): Fragment = tabs(pos).fragment
 
-  def pageChanged(pos: Int) {
+  private def pageChanged(pos: Int) {
     page = pos
 
     activity.pageChanged(pos)
@@ -205,6 +195,7 @@ with EventBus.RefOwner {
       c.newMessages = false
       c.newMentions = false
     })
+    activity.service.lastChannel = t.channel
 
     activity.newmessages.setVisibility(
       if (channels.find(_.newMentions).isEmpty) View.GONE else View.VISIBLE)

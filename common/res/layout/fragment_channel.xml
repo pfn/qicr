@@ -3,12 +3,9 @@
     android:id="@android:id/list"
     android:listSelector="@drawable/message_selector"
     android:drawSelectorOnTop="true"
-    android:focusable="false"
-    android:focusableInTouchMode="false"
     android:divider="#0000"
     android:dividerHeight="0px"
-    android:layout_weight="1"
-    android:layout_width="0dp"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:choiceMode="none"
     android:transcriptMode="normal"/>

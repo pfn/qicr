@@ -32,6 +32,7 @@ object MessageLike {
     case class SslError(message: String) extends MessageLike
     case class Motd(message: String) extends MessageLike
     case class Topic(sender: Option[String], topic: String) extends MessageLike
+    case class Whois(whois: CharSequence) extends MessageLike
 
     // too hard to reference R.string, hardcode <> -- and *
     case class Privmsg(sender: String, message: String,

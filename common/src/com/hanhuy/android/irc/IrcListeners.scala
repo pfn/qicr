@@ -5,18 +5,7 @@ import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.{Channel => QicrChannel}
 import com.hanhuy.android.irc.model.MessageAdapter
-import com.hanhuy.android.irc.model.MessageLike.ServerInfo
-import com.hanhuy.android.irc.model.MessageLike.Privmsg
-import com.hanhuy.android.irc.model.MessageLike.CtcpAction
-import com.hanhuy.android.irc.model.MessageLike.CtcpReply
-import com.hanhuy.android.irc.model.MessageLike.Motd
-import com.hanhuy.android.irc.model.MessageLike.Notice
-import com.hanhuy.android.irc.model.MessageLike.Topic
-import com.hanhuy.android.irc.model.MessageLike.Kick
-import com.hanhuy.android.irc.model.MessageLike.Join
-import com.hanhuy.android.irc.model.MessageLike.Part
-import com.hanhuy.android.irc.model.MessageLike.NickChange
-import com.hanhuy.android.irc.model.MessageLike.Quit
+import com.hanhuy.android.irc.model.MessageLike._
 
 import android.widget.Toast
 
@@ -26,8 +15,23 @@ import com.sorcix.sirc._
 
 import scala.util.control.Exception._
 import AndroidConversions._
+import SpannedGenerator._
 import IrcListeners._
 import scala.annotation.tailrec
+import android.text.SpannableStringBuilder
+import com.hanhuy.android.irc.model.MessageLike.Kick
+import com.hanhuy.android.irc.model.MessageLike.Privmsg
+import com.hanhuy.android.irc.model.MessageLike.Join
+import com.hanhuy.android.irc.model.MessageLike.Motd
+import com.hanhuy.android.irc.model.MessageLike.Part
+import com.hanhuy.android.irc.model.MessageLike.Quit
+import scala.Some
+import com.hanhuy.android.irc.model.MessageLike.CtcpAction
+import com.hanhuy.android.irc.model.MessageLike.CtcpReply
+import com.hanhuy.android.irc.model.MessageLike.NickChange
+import com.hanhuy.android.irc.model.MessageLike.ServerInfo
+import com.hanhuy.android.irc.model.MessageLike.Topic
+import com.hanhuy.android.irc.model.MessageLike.Notice
 
 object IrcListeners {
   val TAG = "IrcListeners"
@@ -58,7 +62,7 @@ object IrcListeners {
   }
 
   // sometimes a null is passed in...
-  def matchesNick(server: Server, msg: String) = {
+  def matchesNick(server: Server, msg: CharSequence) = {
     if (msg != null)
       matchesNickIndex(server.currentNick.toLowerCase, msg.toLowerCase, 0) != -1
     else
@@ -163,9 +167,10 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onTopic(c: IrcConnection, channel: Channel,
       src: User, topic: String) {
-    val c = service._channels(channel)
-    UiBus.run {
-      c.add(Topic(if (src != null) Some(src.getNick) else None, topic))
+    service._channels.get(channel) foreach { c =>
+      UiBus.run {
+        c.add(Topic(if (src != null) Some(src.getNick) else None, topic))
+      }
     }
   }
 
@@ -319,6 +324,71 @@ with ServerListener with MessageListener with ModeListener {
   override def onPrivateMessage(c: IrcConnection, src: User, msg: String) =
     UiBus.run { service.addQuery(c, src.getNick, msg) }
 
+  def handleWhois(line: IrcPacket, start: Boolean = false) {
+    val nick = line.getArgumentsArray()(1)
+    if (start)
+      whoisBuffer += (nick -> List(line))
+    else
+      whoisBuffer += (nick -> (whoisBuffer(nick) ++ List(line)))
+
+    line.getNumericCommand match {
+      case 318 =>
+        UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
+      case 369 =>
+        UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
+      case _ =>
+    }
+  }
+
+  def whoisPrefix = "%1%2%3" formatSpans( textColor(0xff777777, "-"),
+    textColor(0xff00ff00, "!"), textColor(0xff777777, "-"))
+  def accumulateWhois(nick: String) = {
+    val b = (new SpannableStringBuilder /: whoisBuffer(nick)) { (buf,line) =>
+      val args = line.getArgumentsArray
+      val m = line.getMessage
+      line.getNumericCommand match {
+        case 318 => // end of whois
+        case 369 => // end of whowas
+        case 311 =>
+          val (user, host, name) = (args(2), args(3), m)
+          val t = "%1 %2 [%3@%4]\n%6   name: %5" formatSpans(
+            whoisPrefix, MessageAdapter.colorNick(nick), user, host,
+            bold(name), whoisPrefix)
+          buf.append(t)
+        case 314 =>
+          val (user, host, name) = (args(2), args(3), m)
+          val t = "%1 %2 was [%3@%4]\n%1   name: %5" formatSpans(
+            whoisPrefix, MessageAdapter.colorNick(nick), user, host, bold(name))
+          buf.append(t)
+        case 312 =>
+          val (server,tag) = (args(2), m)
+          val t = "\n%1   server: %2 [%3]" formatSpans(whoisPrefix, server, tag)
+          buf.append(t)
+        case 330 =>
+          val (login,tag) = (args(2), m)
+          val t = "\n%1   %3: %2" formatSpans(whoisPrefix, login,tag)
+          buf.append(t)
+        case 319 =>
+          buf.append("\n%1   channels: %2" formatSpans(whoisPrefix, m))
+        case 338 =>
+          buf.append("\n%1   %2: %3" formatSpans(whoisPrefix, m, args(2)))
+        case 317 =>
+          val (idle, time) = (args(2).toInt, args(3).toLong * 1000)
+          buf.append("\n%1   %2: %3, %4" formatSpans(whoisPrefix, m,
+            args(2), new java.util.Date(time).toString))
+        case 401 =>
+          buf.append("\n%1 %2: %3" formatSpans(whoisPrefix,
+            MessageAdapter.colorNick(nick), m))
+        case 406 =>
+          buf.append("\n%1 %2: %3" formatSpans(whoisPrefix,
+            MessageAdapter.colorNick(nick), m))
+        case _ =>
+      }
+      buf
+    }
+    whoisBuffer -= nick
+    Whois(b)
+  }
   // AdvancedListener
   override def onUnknown(c: IrcConnection, line: IrcPacket) {
     service._connections.get(c) foreach { server =>
@@ -338,21 +408,23 @@ with ServerListener with MessageListener with ModeListener {
           case 301 => () // args[1], target nick, away msg (reply)
           case 305 => () // unaway (user)
           case 306 => () // nowaway (user)
+          case 333 => return // topic change timestamp
           // whois response line1
           // 1: nick, 2: username, 3: host, 4: ?; msg = realname
-          case 311 => ()
-          case 312 => () // 1: server, 2: server comment (whois l2)
+          case 311 => handleWhois(line, true)
+          case 314 => handleWhois(line, true) // like 311, whowas
+          case 312 => handleWhois(line) // 1: server, 2: server comment (whois l2)
           case 313 => () // 1: nick, whois operator
-          case 314 => () // like 311, whowas
-          case 318 => () // args[1], nick, end of whois
-          case 319 => () // args[1], nick, msg channels, whois
-          case 333 => return // topic change timestamp
-          case 338 => () // args[1], host/ip, whois l3
-          case 317 => () // args[1], idle, args[2], signon whois l4
+          case 318 => handleWhois(line) // args[1], nick, end of whois
+          case 330 => handleWhois(line) // args[1] nick, args[2] login, msg/2
+          case 319 => handleWhois(line) // args[1], nick, msg channels, whois
+          case 338 => handleWhois(line) // args[2] host/ip, whois l3
+          case 317 => handleWhois(line) // args[1], idle, args[2], signon whois l4
+          case 369 => handleWhois(line) // args[1], nick, end of whowas
+          case 401 => handleWhois(line, true) // args[1], nick, whois not there
+          case 406 => handleWhois(line, true) // args[1], nick, whowas not there
           case 366 => return // end of names list
-          case 369 => () // args[1], nick, end of whowas
           case 375 => return // motd start
-          case 401 => () // args[1], nick, whois not there
           case _ => ()
         }
       } else {
@@ -393,4 +465,6 @@ with ServerListener with MessageListener with ModeListener {
 
   // Never happens
   override def onUnknownReply(c: IrcConnection, line: IrcPacket) = ()
+
+  private var whoisBuffer: Map[String,List[IrcPacket]] = Map.empty
 }

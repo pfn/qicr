@@ -344,15 +344,19 @@ with EventBus.RefOwner {
     super.onStop()
     HoneycombSupport.close()
 
-    // unregister, or else we have a memory leak on observer -> this
-    Option(drawerRight.findView(TR.nick_list).getAdapter) foreach {
-      _.unregisterDataSetObserver(observer)
-    }
     if (service != null) {
       service.showing = false
       service.unbind()
     }
     unbindService(this)
+  }
+
+  override def onDestroy() {
+    super.onDestroy()
+    // unregister, or else we have a memory leak on observer -> this
+    Option(drawerRight.findView(TR.nick_list).getAdapter) foreach {
+      _.unregisterDataSetObserver(observer)
+    }
   }
 
   def pageChanged(idx: Int) {
@@ -426,15 +430,20 @@ with EventBus.RefOwner {
           (pos: Int) =>
             HoneycombSupport.startNickActionMode(
               nicks.getAdapter.getItem(pos).toString) { item: MenuItem =>
+              // TODO refactor this callback (see messageadapter)
               val R_id_nick_insert = R.id.nick_insert
               val R_id_nick_start_chat = R.id.nick_start_chat
+              val R_id_nick_whois = R.id.nick_whois
+              var nick = nicks.getAdapter.getItem(pos).toString
+              val ch = nick.charAt(0)
+              if (ch == '@' || ch == '+')
+                nick = nick.substring(1)
               item.getItemId match {
+                case R_id_nick_whois =>
+                  proc.processor.channel = service.lastChannel
+                  proc.processor.WhoisCommand.execute(Some(nick))
                 case R_id_nick_insert => insertNick(pos)
                 case R_id_nick_start_chat =>
-                  var nick = nicks.getAdapter.getItem(pos).asInstanceOf[String]
-                  val ch = nick.charAt(0)
-                  if (ch == '@' || ch == '+')
-                    nick = nick.substring(1)
                   service.startQuery(c.channel.server, nick)
               }
 

@@ -32,6 +32,8 @@ object AndroidConversions {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB
   val gingerbreadAndNewer =
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD
+  val jellybeanAndNewer =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN
 
   implicit def toBroadcastReceiver(f: (Context, Intent) => Unit) =
     new BroadcastReceiver() {
@@ -195,13 +197,13 @@ case class RichHandler(handler: Handler) {
 }
 
 object SpannedGenerator {
-  private def span(style: Object, text: CharSequence) = {
+  def span(style: Object, text: CharSequence) = {
     val s = new SpannableString(text)
     s.setSpan(style, 0, text.length, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
     s
   }
   def textColor(color: Int, text: CharSequence) =
-    span(new ForegroundColorSpan(color) , text)
+    span(new ForegroundColorSpan(color), text)
 
   def bold(text: CharSequence) = span(new StyleSpan(Typeface.BOLD) , text)
 

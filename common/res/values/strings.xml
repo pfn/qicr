@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="no_messages">No messages...</string>
     <string name="exit">Quit</string>
     <string name="server_details">Server Details</string>
     <string name="add_server">Add Server</string>

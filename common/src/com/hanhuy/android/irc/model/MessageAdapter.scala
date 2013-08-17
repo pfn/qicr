@@ -19,6 +19,9 @@ import android.view.{View, ViewGroup}
 import java.text.SimpleDateFormat
 
 import MessageAdapter._
+import android.text.style.ClickableSpan
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
 
 trait MessageAppender {
   def add(m: MessageLike): Unit
@@ -38,8 +41,9 @@ object MessageAdapter {
       (implicit channel: ChannelLike = null): CharSequence = {
     val ch = Option(channel)
     msg match {
+      case Whois(text) => text
       case Query() => formatText(c, msg, R.string.query_template,
-        textColor(nickColor(ch.get.name), ch.get.name))
+        colorNick(ch.get.name))
       case Privmsg(s, m, o, v) => gets(c, R.string.message_template, msg,
          s, m, (o,v))
       case Notice(s, m) => gets(c, R.string.notice_template, msg, s, m)
@@ -78,22 +82,22 @@ object MessageAdapter {
       }
       case Topic(src, t) => src map { s =>
         formatText(c, msg, R.string.topic_template_2,
-          textColor(nickColor(s), s), bold(italics(channel.name)), t)
+          colorNick(s), bold(italics(channel.name)), t)
       } getOrElse {
         formatText(c, msg, R.string.topic_template_1,
           bold(italics(channel.name)), t)
       }
       case NickChange(o, n) =>
         formatText(c, msg, R.string.nick_change_template,
-          textColor(nickColor(o), o), textColor(nickColor(n), n))
+          colorNick(o), colorNick(n))
       case Join(n, u)    => formatText(c, msg, R.string.join_template,
-        textColor(nickColor(n), n), u)
+        colorNick(n), u)
       case Part(n, u, m) => formatText(c, msg, R.string.part_template,
-        textColor(nickColor(n), n), u, if (m == null) "" else m)
+        colorNick(n), u, if (m == null) "" else m)
       case Quit(n, u, m) => formatText(c, msg, R.string.quit_template,
-        textColor(nickColor(n), n), u, m)
+        colorNick(n), u, m)
       case Kick(o, n, m) => formatText(c, msg, R.string.kick_template,
-        textColor(nickColor(o), o), textColor(nickColor(n), n),
+        colorNick(o), colorNick(n),
         if (m == null) "" else m)
       case CommandError(m)  => formatText(c, msg, -1, m)
       case ServerInfo(m)    => formatText(c, msg, -1, m)
@@ -139,17 +143,55 @@ object MessageAdapter {
     } else if (IrcListeners.matchesNick(server, msg) &&
         !server.currentNick.equalsIgnoreCase(src)) {
       formatText(c, m, res, "%1%2" formatSpans(prefix,
-        bold(italics(textColor(nickColor(src), src)))), bold(msg))
+        bold(italics(colorNick(src)))), bold(msg))
     } else
       formatText(c, m, res,
-        "%1%2" formatSpans(prefix, textColor(nickColor(src), src)), msg)
+        "%1%2" formatSpans(prefix, colorNick(src)), msg)
+  }
+  private case class NickClick(nick: String) extends ClickableSpan {
+    override def updateDrawState(ds: TextPaint) = ()
+
+    def onClick(v: View) {
+      v.getContext match {
+        case a: MainActivity =>
+          def insertNick() {
+            val cursor = a.input.getSelectionStart
+            // TODO make ", " a preference
+            a.input.getText.insert(cursor,
+              nick + (if (cursor == 0) ", " else " "))
+          }
+          // TODO refactor this callback
+          HoneycombSupport.startNickActionMode(nick) { item =>
+            val R_id_nick_insert = R.id.nick_insert
+            val R_id_nick_start_chat = R.id.nick_start_chat
+            val R_id_nick_whois = R.id.nick_whois
+            item.getItemId match {
+              case R_id_nick_whois =>
+                val proc = CommandProcessor(a)
+                proc.channel = a.service.lastChannel
+                proc.WhoisCommand.execute(Some(nick))
+              case R_id_nick_insert => insertNick()
+              case R_id_nick_start_chat =>
+                a.service.startQuery(a.service.lastChannel.get.server, nick)
+            }
+            ()
+          }
+        case _ => // ignore
+      }
+    }
+  }
+
+  def colorNick(nick: String): CharSequence = {
+    val text = textColor(nickColor(nick), nick)
+    if (nick == "***") text else
+      SpannedGenerator.span(NickClick(text), text)
   }
 }
 
 class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   implicit var channel: ChannelLike = _
 
-  var filterCache = Option.empty[Seq[MessageLike]]
+  private var filterCache = Option.empty[Seq[MessageLike]]
 
   var showJoinPartQuit = false
   val messages = new collection.mutable.Queue[MessageLike]
@@ -161,36 +203,36 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   }
     // only register once to prevent memory leak
   UiBus += { case BusEvent.PreferenceChanged(s, k) =>
-      if (k == Settings.MESSAGE_LINES) {
-        val max = s.get(Settings.MESSAGE_LINES).toInt
-        maximumSize = max
-      } else if (k == Settings.SHOW_JOIN_PART_QUIT) {
+    if (k == Settings.MESSAGE_LINES) {
+      val max = s.get(Settings.MESSAGE_LINES).toInt
+      maximumSize = max
+    } else if (k == Settings.SHOW_JOIN_PART_QUIT) {
+      showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
+      notifyDataSetChanged()
+    } else if (k == Settings.SHOW_TIMESTAMP) {
+      MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
+      notifyDataSetChanged()
+    }
+  }
+
+  var _inflater: WeakReference[LayoutInflater] = _
+  def inflater = _inflater.get getOrElse { throw new IllegalStateException }
+  var _activity: WeakReference[MainActivity] = _
+  // can't make this IrcService due to resource changes on recreation
+  def activity_= (c: MainActivity) = {
+    if (c != null) {
+      _activity = new WeakReference(c)
+      _inflater = new WeakReference(c.systemService[LayoutInflater])
+      if (c.service != null) {
+        val s = c.service.settings
+        // It'd be nice to register a ServiceBus listener, but no way
+        // to clean up when this adapter goes away?
+        // add it to UiBus here maybe?
+        maximumSize = s.get(Settings.MESSAGE_LINES).toInt
         showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
-        notifyDataSetChanged()
-      } else if (k == Settings.SHOW_TIMESTAMP) {
         MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
-        notifyDataSetChanged()
       }
     }
-
-    var _inflater: WeakReference[LayoutInflater] = _
-    def inflater = _inflater.get getOrElse { throw new IllegalStateException }
-    var _activity: WeakReference[MainActivity] = _
-    // can't make this IrcService due to resource changes on recreation
-    def activity_= (c: MainActivity) = {
-      if (c != null) {
-        _activity = new WeakReference(c)
-        _inflater = new WeakReference(c.systemService[LayoutInflater])
-        if (c.service != null) {
-          val s = c.service.settings
-          // It'd be nice to register a ServiceBus listener, but no way
-          // to clean up when this adapter goes away?
-          // add it to UiBus here maybe?
-          maximumSize = s.get(Settings.MESSAGE_LINES).toInt
-          showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
-          MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
-        }
-      }
   }
 
   def activity = _activity.get getOrElse { throw new IllegalStateException }
@@ -245,6 +287,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
       val v = inflater.inflate(TR.layout.message_item, container, false)
       if (!icsAndNewer)
         v.setTypeface(font)
+      v.setMovementMethod(LinkMovementMethod.getInstance)
       v
     }
 
@@ -259,4 +302,5 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
 
   private def formatText(msg: MessageLike) =
     MessageAdapter.formatText(activity, msg)
+
 }
