@@ -6,6 +6,7 @@ import com.hanhuy.android.irc.UiBus
 
 import MessageLike._
 import scala.annotation.tailrec
+import android.util.Log
 
 object Channel {
   trait State
@@ -26,7 +27,7 @@ extends MessageAppender with Ordered[ChannelLike] {
     val messages = new MessageAdapter
 
   if (ChannelLike.created(server -> name))
-    throw new IllegalStateException("Already created: " + this)
+    Log.e("ChannelLike", "Already created: " + this, new IllegalStateException)
   ChannelLike.created += server -> name
 
     var newMessages = false

@@ -252,6 +252,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
 
   protected[model] def add(item: MessageLike) {
     messages += item
+    filterCache = None
     ensureSize()
     if (_activity != null && isMainThread)
       _activity.get.foreach { _ => notifyDataSetChanged() }
