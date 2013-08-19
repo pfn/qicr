@@ -44,6 +44,7 @@ object MainPagerAdapter {
     var channel: Option[ChannelLike] = None
     var server: Option[Server] = None
     var flags = TabInfo.FLAG_NONE
+    var lastModified = 0l
     override def toString =
       title + " fragment=" + fragment + " channel=" + channel
   }
@@ -56,7 +57,7 @@ with EventBus.RefOwner {
   private var servers  = List.empty[Server]
   private var tabs = List.empty[TabInfo]
   lazy val channelcomp = ChannelLikeComparator
-  lazy val servercomp  = new ServerComparator
+  lazy val servercomp  = ServerComparator
   lazy val tabindicators = activity.findView(TR.tabs)
 
   def channelBase = servers.size + 1
@@ -149,8 +150,12 @@ with EventBus.RefOwner {
   }
 
   def refreshTabTitle(pos: Int) {
-    tabindicators.notifyDataSetChanged()
-    DropDownAdapter.notifyDataSetChanged()
+    if (System.currentTimeMillis - tabs(pos).lastModified > 100) {
+      tabindicators.notifyDataSetChanged()
+      DropDownAdapter.notifyDataSetChanged()
+
+      tabs(pos).lastModified = System.currentTimeMillis
+    }
   }
 
   def makeTabTitle(pos: Int) = {

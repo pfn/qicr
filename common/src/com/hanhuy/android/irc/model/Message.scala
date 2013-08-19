@@ -58,23 +58,24 @@ trait MessageLike {
 
 trait BusEvent
 object BusEvent {
-    case class ServerChanged(server: Server) extends BusEvent
-    case class ServerAdded(server: Server) extends BusEvent
-    case class ServerRemoved(server: Server) extends BusEvent
-    case class ServerStateChanged(
-        server: Server, oldstate: Server.State) extends BusEvent
-    case class PreferenceChanged(settings: Settings, pref: Setting[_])
+  case class ServerChanged(server: Server) extends BusEvent
+  case class ServerAdded(server: Server) extends BusEvent
+  case class ServerRemoved(server: Server) extends BusEvent
+  case class ServerStateChanged(
+      server: Server, oldstate: Server.State) extends BusEvent
+  case class PreferenceChanged(settings: Settings, pref: Setting[_])
+  extends BusEvent
+  case class ServiceRunning(running: Boolean) extends BusEvent
+  case class ServiceConnected(service: IrcService) extends BusEvent
+  case object ServiceDisconnected extends BusEvent
+  case class ChannelMessage(channel: ChannelLike, msg: MessageLike)
     extends BusEvent
-    case class ServiceConnected(service: IrcService) extends BusEvent
-    case object ServiceDisconnected extends BusEvent
-    case class ChannelMessage(
-        channel: ChannelLike, msg: MessageLike) extends BusEvent
-    case class ChannelStateChanged(
-        channel: Channel, oldstate: Channel.State) extends BusEvent
-    case class NickListChanged(channel: Channel) extends BusEvent
-    case class NickChanged(channel: Channel, oldnick: String, newnick: String)
+  case class ChannelStateChanged(channel: Channel, oldstate: Channel.State)
     extends BusEvent
-    case class ChannelAdded(channel: Channel) extends BusEvent
-    case class StartQuery(query: Query) extends BusEvent
-    case class PrivateMessage(query: Query, msg: MessageLike) extends BusEvent
+  case class NickListChanged(channel: Channel) extends BusEvent
+  case class NickChanged(channel: Channel, oldnick: String, newnick: String)
+  extends BusEvent
+  case class ChannelAdded(channel: Channel) extends BusEvent
+  case class StartQuery(query: Query) extends BusEvent
+  case class PrivateMessage(query: Query, msg: MessageLike) extends BusEvent
 }

@@ -31,7 +31,7 @@ object Server {
   }
 }
 // TODO FIXME add equals
-class Server extends MessageAppender {
+class Server extends MessageAppender with Ordered[Server]{
 
   import Server._
   val messages = new MessageAdapter
@@ -129,9 +129,11 @@ class Server extends MessageAppender {
     case s: Server => id == s.id
     case _ => false
   }
+
+  def compare(that: Server) = ServerComparator.compare(this, that)
 }
 
-class ServerComparator extends java.util.Comparator[Server] {
+object ServerComparator extends java.util.Comparator[Server] {
   override def compare(s1: Server, s2: Server): Int = {
     val r = s1.name.compareTo(s2.name)
     if (r == 0) s1.username.compareTo(s2.username)

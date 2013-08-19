@@ -178,9 +178,10 @@ with ServerListener with MessageListener with ModeListener {
       src: User, mode: String) = () // TODO
 
   override def onMotd(c: IrcConnection, motd: String) {
-    val server = service._connections(c)
-    // sIRC sends motd as one big blob of lines, split before adding
-    UiBus.run { motd.split("\r?\n") foreach { m => server.add(Motd(m)) } }
+    service._connections.get(c) foreach { server =>
+      // sIRC sends motd as one big blob of lines, split before adding
+      UiBus.run { motd.split("\r?\n") foreach { m => server.add(Motd(m)) } }
+    }
   }
 
   override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
@@ -212,19 +213,20 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onQuit(c: IrcConnection, user: User, msg: String) {
     if (user.isUs) return
-    val server = service._connections(c)
-    UiBus.run {
-      try { // guard can change values if slow...
-        service.channels.values collect {
-          case c: Channel if c.hasUser(user) => service._channels(c)
-        } foreach { c =>
-          if (c.server == server) {
-            UiBus.send(BusEvent.NickListChanged(c))
-            c.add(Quit(user.getNick, user.address, msg))
+    service._connections.get(c) foreach { server =>
+      UiBus.run {
+        try { // guard can change values if slow...
+          service.channels.values collect {
+            case c: Channel if c.hasUser(user) => service._channels(c)
+          } foreach { c =>
+            if (c.server == server) {
+              UiBus.send(BusEvent.NickListChanged(c))
+              c.add(Quit(user.getNick, user.address, msg))
+            }
           }
+        } catch {
+          case _: MatchError => ()
         }
-      } catch {
-        case _: MatchError => ()
       }
     }
   }
@@ -264,13 +266,17 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onMessage(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
-    val c = service._channels(channel)
+    service._channels.get(channel) foreach {
+      c =>
 
-    val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice)
-    if (matchesNick(c.server, msg))
-      service.addChannelMention(c, pm)
+        val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice)
+        if (matchesNick(c.server, msg))
+          service.addChannelMention(c, pm)
 
-    UiBus.run { c.add(pm) }
+        UiBus.run {
+          c.add(pm)
+        }
+    }
   }
 
   override def onNotice(c: IrcConnection, src: User, channel: Channel,
@@ -328,15 +334,18 @@ with ServerListener with MessageListener with ModeListener {
     val nick = line.getArgumentsArray()(1)
     if (start)
       whoisBuffer += (nick -> List(line))
-    else
-      whoisBuffer += (nick -> (whoisBuffer(nick) ++ List(line)))
+    else {
+      if (whoisBuffer.contains(nick)) {
+        whoisBuffer += (nick -> (whoisBuffer(nick) ++ List(line)))
 
-    line.getNumericCommand match {
-      case 318 =>
-        UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
-      case 369 =>
-        UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
-      case _ =>
+        line.getNumericCommand match {
+          case 318 =>
+            UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
+          case 369 =>
+            UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
+          case _ =>
+        }
+      }
     }
   }
 

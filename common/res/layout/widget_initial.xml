@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="match_parent"
+             android:background="@drawable/widget_background"
+             android:layout_height="match_parent">
+
+    <ImageView
+        android:src="@drawable/ic_appicon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|left"
+        android:layout_margin="12dp"
+        android:contentDescription="application icon"/>
+
+    <ProgressBar
+        style="@android:style/Widget.ProgressBar.Small"
+        android:indeterminate="true"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="12dp"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="qicr widget loading..."/>
+</FrameLayout>

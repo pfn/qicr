@@ -31,7 +31,7 @@ import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Notice
 
-// practice doing this so as to prevent leaking the service instance
+// practice doing this so as to prevent leaking the context instance
 //     irrelevant in this app
 class LocalIrcBinder extends Binder {
   var ref: WeakReference[IrcService] = _
@@ -45,8 +45,9 @@ class LocalIrcBinder extends Binder {
 object IrcService {
   val TAG = "IrcService"
 
-  val EXTRA_PAGE    = "com.hanhuy.android.irc.extra.page"
-  val EXTRA_SUBJECT = "com.hanhuy.android.irc.extra.subject"
+  val EXTRA_HEADLESS = "com.hanhuy.android.irc.extra.headless"
+  val EXTRA_PAGE     = "com.hanhuy.android.irc.extra.page"
+  val EXTRA_SUBJECT  = "com.hanhuy.android.irc.extra.subject"
   val EXTRA_SPLITTER = "::qicr-splitter-boundary::"
 
   val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
@@ -57,6 +58,17 @@ object IrcService {
   val DISCON_ID  = 2
   val PRIVMSG_ID = 3
   val MENTION_ID = 4
+
+  // TODO refactor to make this private
+  private var __running = false
+  def _running = __running
+  def _running_= (r: Boolean) = {
+    if (__running != r)
+      ServiceBus.send(BusEvent.ServiceRunning(r))
+    __running = r
+  }
+
+  var instance: Option[IrcService] = None
 }
 class IrcService extends Service with EventBus.RefOwner {
   val _richcontext: RichContext = this; import _richcontext._
@@ -64,7 +76,6 @@ class IrcService extends Service with EventBus.RefOwner {
   var startId: Int = -1
   var messagesId = 0
   def connected = connections.size > 0
-  var _running = false
 
   var _showing = false
   def showing = _showing
@@ -186,14 +197,19 @@ class IrcService extends Service with EventBus.RefOwner {
     }
   }
 
-  def bind(main: MainActivity) {
-    _activity = new WeakReference(main)
+  def start() {
     if (!running) {
       config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
-          s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
+        s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
       }
+      if (activity.isEmpty)
+        startForeground(RUNNING_ID, runningNotification(runningString))
     }
+  }
+  def bind(main: MainActivity) {
+    _activity = new WeakReference(main)
+    start()
   }
 
   def unbind() {
@@ -246,6 +262,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onDestroy() {
     super.onDestroy()
+    instance = None
     unregisterReceiver(receiver)
     val nm = systemService[NotificationManager]
     nm.cancel(DISCON_ID)
@@ -284,10 +301,10 @@ class IrcService extends Service with EventBus.RefOwner {
     //    connect(server)
 
     if (connections.size == 0) {
-      // do not stop service if onDisconnect unless showing
-      // do not stop service if quitting, quit() will do it
+      // do not stop context if onDisconnect unless showing
+      // do not stop context if quitting, quit() will do it
       if ((!disconnected || showing) && !quitting) {
-        Log.i(TAG, "Stopping service because all connections closed")
+        Log.i(TAG, "Stopping context because all connections closed")
         stopForeground(true)
         _running = false
         if (startId != -1) {
@@ -300,6 +317,8 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onCreate() {
     super.onCreate()
+    Widgets(this) // load widgets listeners
+    instance = Some(this)
     val ircdebug = settings.get(Settings.IRC_DEBUG)
     if (ircdebug)
       IrcDebug.setLogStream(PrintStream)
@@ -313,6 +332,10 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
     startId = id
+
+    if (i.hasExtra(EXTRA_HEADLESS) && i.getBooleanExtra(EXTRA_HEADLESS, false))
+      start()
+
     Service.START_STICKY
   }
 
@@ -389,6 +412,7 @@ class IrcService extends Service with EventBus.RefOwner {
     UiBus.run {
       val chan = channel.asInstanceOf[Channel]
       UiBus.send(BusEvent.ChannelAdded(chan))
+      ServiceBus.send(BusEvent.ChannelAdded(chan))
       chan.state = Channel.State.JOINED
     }
   }
@@ -600,7 +624,7 @@ extends AsyncTask[Object, Object, Server.State] {
           }
         }
         publishProgress(service.getString(R.string.server_disconnected))
-        if (service.connections.size == 0) service._running = false
+        if (service.connections.size == 0) IrcService._running = false
     }
 
     if (state == Server.State.CONNECTED)

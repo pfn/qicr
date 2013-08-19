@@ -195,7 +195,7 @@ extends ListFragment with EventBus.RefOwner {
       tag = bundle.getString("tag")
 
     if (adapter != null) { // this works by way of the network being slow
-      val service = activity.service // assuming service is ready?
+      val service = activity.service // assuming context is ready?
       adapter.activity = getActivity
       service.add(id, adapter)
       setListAdapter(adapter)

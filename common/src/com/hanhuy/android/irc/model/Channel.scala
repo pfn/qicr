@@ -102,9 +102,9 @@ object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
         case ('#', '&') => return 1
         case          _ => ()
         }
-        var r = stripInitial(c1.name).compareTo(stripInitial(c2.name))
+        var r = stripInitial(c1.name).compareToIgnoreCase(stripInitial(c2.name))
         if (r == 0)
-            r = c1.server.name.compareTo(c2.server.name)
+            r = c1.server.name.compareToIgnoreCase(c2.server.name)
         r
     }
 }

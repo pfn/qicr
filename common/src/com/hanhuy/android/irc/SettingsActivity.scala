@@ -25,6 +25,7 @@ object Settings {
   val NAVIGATION_MODE_DROPDOWN = "Drop Down"
   val NAVIGATION_MODE_DRAWER = "Drawer"
 
+  val WIDGET_IDS = Setting[String]("internal_widget_ids", "")
   val HIDE_KEYBOARD = Setting[Boolean]("ui_hide_kbd_after_send", false)
   val IRC_DEBUG = Setting[Boolean]("irc_debug_log", false)
   val NAVIGATION_MODE = Setting[String]("ui_selector_mode2",
@@ -87,6 +88,8 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
     val editor = p.edit()
     if (classOf[Boolean] == m.erasure) {
       editor.putBoolean(setting.key, value.asInstanceOf[Boolean])
+    } else if (classOf[String] == m.erasure) {
+        editor.putString(setting.key, value.asInstanceOf[String])
     } else {
       throw new IllegalArgumentException("Unknown type: " + m.erasure)
     }
