@@ -1,11 +1,7 @@
 package com.hanhuy.android.irc
 
-import com.hanhuy.android.irc.model.MessageAdapter
+import com.hanhuy.android.irc.model._
 import com.hanhuy.android.irc.model.MessageLike._
-import com.hanhuy.android.irc.model.ChannelLike
-import com.hanhuy.android.irc.model.Server
-import com.hanhuy.android.irc.model.Channel
-import com.hanhuy.android.irc.model.Query
 
 import android.content.Context
 import android.text.TextWatcher
@@ -22,6 +18,13 @@ import com.sorcix.sirc.IrcConnection
 import scala.collection.JavaConversions._
 
 import AndroidConversions._
+import android.app.Activity
+import com.hanhuy.android.irc.model.MessageLike.CommandError
+import com.hanhuy.android.irc.model.MessageLike.Privmsg
+import scala.Some
+import com.hanhuy.android.irc.model.MessageLike.CtcpAction
+import com.hanhuy.android.irc.model.MessageLike.CtcpRequest
+import com.hanhuy.android.irc.model.Query
 
 trait Command {
   def execute(args: Option[String])
@@ -29,28 +32,14 @@ trait Command {
 object InputProcessor {
   def clear(input: EditText) = TextKeyListener.clear(input.getText)
 }
-class InputProcessor(activity: MainActivity) {
+abstract class InputProcessor(activity: Activity) {
+  val service = IrcService.instance.get
   import InputProcessor._
   val TAG = "InputProcessor"
 
   val processor = CommandProcessor(activity)
 
-  def currentState = {
-    activity.adapter.getItem(activity.adapter.page) match {
-    case s: ServersFragment => (s._server, None)
-    case c: ChannelFragment => {
-      activity.service.chans.get(c.id) map { ch =>
-        (Some(ch.server), Some(ch))
-      } getOrElse (None, None)
-    }
-    case q: QueryFragment => {
-      activity.service.chans.get(q.id) map { qu =>
-        (Some(qu.server), Some(qu))
-      } getOrElse (None, None)
-    }
-    case _ => (None, None)
-    }
-  }
+  def currentState: (Option[Server],Option[ChannelLike])
 
   def onEditorActionListener(v: View, action: Int, e: KeyEvent): Boolean = {
     Log.i(TAG, "editoraction: " + action + " e: " + e)
@@ -61,7 +50,7 @@ class InputProcessor(activity: MainActivity) {
       val line = input.getText
       handleLine(line)
       clear(input)
-      !activity.settings.get(Settings.HIDE_KEYBOARD)
+      !service.settings.get(Settings.HIDE_KEYBOARD)
     } else
       false
   }
@@ -71,66 +60,6 @@ class InputProcessor(activity: MainActivity) {
       case (s, c) => processor.server = s; processor.channel = c
     }
     processor.executeLine(line)
-  }
-
-  def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
-    Log.i(TAG, "key: " + k + " e: " + e)
-    // keyboard shortcuts / honeycomb and above only
-    if (KeyEvent.ACTION_UP == e.getAction) {
-      val meta = e.getMetaState
-      val altOn   = (meta & KeyEvent.META_ALT_ON)   > 0
-      val ctrlOn  = (meta & KeyEvent.META_CTRL_ON)  > 0
-      val shiftOn = (meta & KeyEvent.META_SHIFT_ON) > 0
-      var pageTarget = -1
-
-      k match {
-        case KeyEvent.KEYCODE_TAB => {
-          if (ctrlOn && shiftOn) { // move backward in tabs
-            val count = activity.adapter.getCount()
-            val current = activity.pager.getCurrentItem
-            val next = if (current - 1 < 0) count - 1 else current - 1
-            activity.pager.setCurrentItem(next)
-          } else if (ctrlOn) { // move forward in tabs
-            val count = activity.adapter.getCount()
-            val current = activity.pager.getCurrentItem
-            val next = if (current + 1 >= count) 0 else current + 1
-            activity.pager.setCurrentItem(next)
-          } else { // tab completion
-          }
-          return true
-        }
-        case KeyEvent.KEYCODE_1 => pageTarget =  1
-        case KeyEvent.KEYCODE_2 => pageTarget =  2
-        case KeyEvent.KEYCODE_3 => pageTarget =  3
-        case KeyEvent.KEYCODE_4 => pageTarget =  4
-        case KeyEvent.KEYCODE_5 => pageTarget =  5
-        case KeyEvent.KEYCODE_6 => pageTarget =  6
-        case KeyEvent.KEYCODE_7 => pageTarget =  7
-        case KeyEvent.KEYCODE_8 => pageTarget =  8
-        case KeyEvent.KEYCODE_9 => pageTarget =  9
-        case KeyEvent.KEYCODE_0 => pageTarget = 10
-        case KeyEvent.KEYCODE_Q => pageTarget = 11
-        case KeyEvent.KEYCODE_W => pageTarget = 12
-        case KeyEvent.KEYCODE_E => pageTarget = 13
-        case KeyEvent.KEYCODE_R => pageTarget = 14
-        case KeyEvent.KEYCODE_T => pageTarget = 15
-        case KeyEvent.KEYCODE_Y => pageTarget = 16
-        case KeyEvent.KEYCODE_U => pageTarget = 17
-        case KeyEvent.KEYCODE_I => pageTarget = 18
-        case KeyEvent.KEYCODE_O => pageTarget = 19
-        case KeyEvent.KEYCODE_P => pageTarget = 20
-        case _ => ()
-      }
-      if (altOn && pageTarget != -1) {
-        activity.pager.setCurrentItem(pageTarget)
-        return true
-      }
-    }
-    if (KeyEvent.KEYCODE_SEARCH != k) {
-      completionPrefix = None
-      completionOffset = None
-    }
-    false
   }
 
   object TextListener extends TextWatcher {
@@ -148,8 +77,7 @@ class InputProcessor(activity: MainActivity) {
 
   var completionPrefix: Option[String] = None
   var completionOffset: Option[Int]    = None
-  def nickComplete(_input: Option[EditText] = None) {
-    val input = _input getOrElse activity.input
+  def nickComplete(input: EditText) {
     val (server, channel) = currentState
     val c = channel match {
       case Some(c: Channel) => c
@@ -191,14 +119,14 @@ class InputProcessor(activity: MainActivity) {
         offset).toLowerCase.startsWith(lowerp)) {
       completionPrefix = None
       completionOffset = None
-      return nickComplete(Some(input))
+      return nickComplete(input)
     }
     var current = in.substring(offset, caret)
     if (current.endsWith(suffix))
       current = current.substring(0, current.length() - suffix.length())
     current = current.toLowerCase
 
-    val ch = activity.service.channels(c)
+    val ch = service.channels(c)
     val users = ch.getUsers.map {
       u => ( u.getNick.toLowerCase, u.getNick )
     }.toMap
@@ -229,6 +157,99 @@ class InputProcessor(activity: MainActivity) {
     val out = in.substring(0, offset) + replacement + in.substring(caret)
     input.setText(out)
     input.setSelection(offset + replacement.length())
+  }
+}
+
+case class SimpleInputProcessor(activity: Activity, appender: MessageAppender)
+  extends InputProcessor(activity) {
+  def currentState = appender match {
+    case s: Server => (Some(s), None)
+    case c: ChannelLike => (Some(c.server), Some(c))
+  }
+  def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
+    if (KeyEvent.KEYCODE_SEARCH != k) {
+      completionPrefix = None
+      completionOffset = None
+    }
+    false
+  }
+}
+
+case class MainInputProcessor(activity: MainActivity)
+extends InputProcessor(activity) {
+
+  def currentState = activity.adapter.getItem(activity.adapter.page) match {
+    case s: ServersFragment => (s._server, None)
+    case c: ChannelFragment => {
+      service.chans.get(c.id) map { ch =>
+        (Some(ch.server), Some(ch))
+      } getOrElse (None, None)
+    }
+    case q: QueryFragment => {
+      service.chans.get(q.id) map { qu =>
+        (Some(qu.server), Some(qu))
+      } getOrElse (None, None)
+    }
+    case _ => (None, None)
+  }
+  def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
+    Log.i(TAG, "key: " + k + " e: " + e)
+    // keyboard shortcuts / honeycomb and above only
+    if (KeyEvent.ACTION_UP == e.getAction) {
+      val meta = e.getMetaState
+      val altOn   = (meta & KeyEvent.META_ALT_ON)   > 0
+      val ctrlOn  = (meta & KeyEvent.META_CTRL_ON)  > 0
+      val shiftOn = (meta & KeyEvent.META_SHIFT_ON) > 0
+      var pageTarget = -1
+
+      k match {
+        case KeyEvent.KEYCODE_TAB => {
+          if (ctrlOn && shiftOn) { // move backward in tabs
+          val count = activity.adapter.getCount()
+            val current = activity.pager.getCurrentItem
+            val next = if (current - 1 < 0) count - 1 else current - 1
+            activity.pager.setCurrentItem(next)
+          } else if (ctrlOn) { // move forward in tabs
+          val count = activity.adapter.getCount()
+            val current = activity.pager.getCurrentItem
+            val next = if (current + 1 >= count) 0 else current + 1
+            activity.pager.setCurrentItem(next)
+          } else { // tab completion
+          }
+          return true
+        }
+        case KeyEvent.KEYCODE_1 => pageTarget =  1
+        case KeyEvent.KEYCODE_2 => pageTarget =  2
+        case KeyEvent.KEYCODE_3 => pageTarget =  3
+        case KeyEvent.KEYCODE_4 => pageTarget =  4
+        case KeyEvent.KEYCODE_5 => pageTarget =  5
+        case KeyEvent.KEYCODE_6 => pageTarget =  6
+        case KeyEvent.KEYCODE_7 => pageTarget =  7
+        case KeyEvent.KEYCODE_8 => pageTarget =  8
+        case KeyEvent.KEYCODE_9 => pageTarget =  9
+        case KeyEvent.KEYCODE_0 => pageTarget = 10
+        case KeyEvent.KEYCODE_Q => pageTarget = 11
+        case KeyEvent.KEYCODE_W => pageTarget = 12
+        case KeyEvent.KEYCODE_E => pageTarget = 13
+        case KeyEvent.KEYCODE_R => pageTarget = 14
+        case KeyEvent.KEYCODE_T => pageTarget = 15
+        case KeyEvent.KEYCODE_Y => pageTarget = 16
+        case KeyEvent.KEYCODE_U => pageTarget = 17
+        case KeyEvent.KEYCODE_I => pageTarget = 18
+        case KeyEvent.KEYCODE_O => pageTarget = 19
+        case KeyEvent.KEYCODE_P => pageTarget = 20
+        case _ => ()
+      }
+      if (altOn && pageTarget != -1) {
+        activity.pager.setCurrentItem(pageTarget)
+        return true
+      }
+    }
+    if (KeyEvent.KEYCODE_SEARCH != k) {
+      completionPrefix = None
+      completionOffset = None
+    }
+    false
   }
 }
 

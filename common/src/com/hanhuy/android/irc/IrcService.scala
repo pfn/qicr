@@ -30,6 +30,7 @@ import scala.Some
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Notice
+import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 
 // practice doing this so as to prevent leaking the context instance
 //     irrelevant in this app
@@ -52,6 +53,7 @@ object IrcService {
 
   val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
   val ACTION_PREV_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_PREV"
+  val ACTION_CANCEL_MENTION = "com.hanhuy.android.irc.action.CANCEL_MENTION"
 
   // notification IDs
   val RUNNING_ID = 1
@@ -71,6 +73,7 @@ object IrcService {
   var instance: Option[IrcService] = None
 }
 class IrcService extends Service with EventBus.RefOwner {
+  instance = Some(this)
   val _richcontext: RichContext = this; import _richcontext._
   var recreateActivity: Option[Int] = None // int = page to flip to
   var startId: Int = -1
@@ -318,7 +321,6 @@ class IrcService extends Service with EventBus.RefOwner {
   override def onCreate() {
     super.onCreate()
     Widgets(this) // load widgets listeners
-    instance = Some(this)
     val ircdebug = settings.get(Settings.IRC_DEBUG)
     if (ircdebug)
       IrcDebug.setLogStream(PrintStream)
@@ -327,13 +329,14 @@ class IrcService extends Service with EventBus.RefOwner {
 
     filter.addAction(ACTION_NEXT_CHANNEL)
     filter.addAction(ACTION_PREV_CHANNEL)
+    filter.addAction(ACTION_CANCEL_MENTION)
     registerReceiver(receiver, filter)
   }
 
   override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
     startId = id
 
-    if (i.hasExtra(EXTRA_HEADLESS) && i.getBooleanExtra(EXTRA_HEADLESS, false))
+    if (i != null && i.getBooleanExtra(EXTRA_HEADLESS, false))
       start()
 
     Service.START_STICKY
@@ -389,6 +392,7 @@ class IrcService extends Service with EventBus.RefOwner {
       else if (action) CtcpAction(nick, msg)
       else Privmsg(nick, msg)
       UiBus.send(BusEvent.PrivateMessage(query, m))
+      ServiceBus.send(BusEvent.PrivateMessage(query, m))
 
       query.add(m)
       if (activity.isEmpty)
@@ -510,10 +514,11 @@ class IrcService extends Service with EventBus.RefOwner {
     if (activity.isEmpty)
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
         getString(R.string.notif_mention_template, c.name, m.toString),
-        c.server.name + EXTRA_SPLITTER + c.name)
+        c.server.name + EXTRA_SPLITTER + c.name, Some(c))
   }
 
-  def showNotification(id: Int, icon: Int, text: String, extra: String) {
+  def showNotification(id: Int, icon: Int, text: String, extra: String,
+                       channel: Option[ChannelLike] = None) {
     val nm = systemService[NotificationManager]
     val intent = new Intent(this, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -530,6 +535,13 @@ class IrcService extends Service with EventBus.RefOwner {
       .setContentTitle(getString(R.string.notif_title))
       .build
     notif.flags |= Notification.FLAG_AUTO_CANCEL
+    channel foreach { c =>
+      val cancel = new Intent(ACTION_CANCEL_MENTION)
+      cancel.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
+      notif.deleteIntent = PendingIntent.getBroadcast(this,
+        ACTION_CANCEL_MENTION.hashCode,
+        new Intent(ACTION_CANCEL_MENTION), PendingIntent.FLAG_UPDATE_CURRENT)
+    }
     nm.notify(id, notif)
   }
 
@@ -548,6 +560,12 @@ class IrcService extends Service with EventBus.RefOwner {
       val tgt = intent.getAction match {
         case ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
         case ACTION_PREV_CHANNEL => (idx - 1) % chans.size
+        case ACTION_CANCEL_MENTION =>
+          val subject = intent.getStringExtra(EXTRA_SUBJECT)
+          val c = Widgets.appenderForSubject(subject).get.asInstanceOf[ChannelLike]
+          c.newMentions = false
+          ServiceBus.send(ChannelStatusChanged(c))
+          idx % chans.size // FIXME refactor the above
         case _ => idx
       }
       lastChannel = Option(chans(tgt))

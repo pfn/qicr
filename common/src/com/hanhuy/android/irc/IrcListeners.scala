@@ -257,11 +257,12 @@ with ServerListener with MessageListener with ModeListener {
   // MessageListener
   override def onAction(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
-    val c = service._channels(channel)
-    val action = CtcpAction(src.getNick, msg)
-    UiBus.run { c.add(action) }
-    if (matchesNick(c.server, msg))
-      service.addChannelMention(c, action)
+    service._channels.get(channel) foreach { c =>
+      val action = CtcpAction(src.getNick, msg)
+      UiBus.run { c.add(action) }
+      if (matchesNick(c.server, msg))
+        service.addChannelMention(c, action)
+    }
   }
 
   override def onMessage(c: IrcConnection, src: User, channel: Channel,

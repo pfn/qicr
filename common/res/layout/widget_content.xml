@@ -55,6 +55,8 @@
             android:id="@+id/message_list"
             android:visibility="gone"
             android:layout_width="match_parent"
+            android:listSelector="@drawable/message_selector"
+            android:choiceMode="none"
             android:divider="@null"
             android:dividerHeight="0dp"
             android:paddingLeft="8dp"
@@ -90,6 +92,7 @@
                 android:layout_margin="4dp"
                 android:contentDescription="application icon"/>
         <TextView
+                android:id="@+id/widget_input"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp"
                 android:background="@android:drawable/editbox_background"

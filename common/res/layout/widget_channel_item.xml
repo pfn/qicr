@@ -4,6 +4,8 @@
           android:id="@android:id/text1"
           android:textAppearance="?android:attr/textAppearanceMedium"
           android:textColor="@android:color/secondary_text_dark"
+          android:shadowColor="#ffffffff"
+          android:shadowRadius="1.2"
           android:paddingLeft="24dp"
           android:minHeight="24dp"
           android:layout_width="match_parent"

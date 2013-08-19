@@ -58,6 +58,7 @@ trait MessageLike {
 
 trait BusEvent
 object BusEvent {
+  case class ChannelStatusChanged(channel: ChannelLike) extends BusEvent
   case class ServerChanged(server: Server) extends BusEvent
   case class ServerAdded(server: Server) extends BusEvent
   case class ServerRemoved(server: Server) extends BusEvent
@@ -68,6 +69,7 @@ object BusEvent {
   case class ServiceRunning(running: Boolean) extends BusEvent
   case class ServiceConnected(service: IrcService) extends BusEvent
   case object ServiceDisconnected extends BusEvent
+  case class ServerMessage(server: Server, msg: MessageLike) extends BusEvent
   case class ChannelMessage(channel: ChannelLike, msg: MessageLike)
     extends BusEvent
   case class ChannelStateChanged(channel: Channel, oldstate: Channel.State)

@@ -109,7 +109,7 @@ with EventBus.RefOwner {
 
   lazy val nickcomplete = {
     val complete = findView(TR.btn_nick_complete)
-    complete.onClick { proc.nickComplete(Some(input)) }
+    complete.onClick { proc.nickComplete(input) }
     complete
   }
   lazy val speechrec = {
@@ -132,7 +132,7 @@ with EventBus.RefOwner {
     speech
   }
 
-  lazy val proc = new InputProcessor(this)
+  lazy val proc = new MainInputProcessor(this)
   lazy val input = {
     val i = findView(TR.input)
     i.setOnEditorActionListener(proc.onEditorActionListener _)
@@ -244,7 +244,7 @@ with EventBus.RefOwner {
   }
 
   override def onSearchRequested() = {
-    proc.nickComplete(Some(input))
+    proc.nickComplete(input)
     true // prevent KEYCODE_SEARCH being sent to onKey
   }
 

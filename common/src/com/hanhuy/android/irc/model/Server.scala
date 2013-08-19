@@ -6,6 +6,7 @@ import com.hanhuy.android.irc.ServiceBus
 
 import android.content.ContentValues
 import android.provider.BaseColumns
+import com.hanhuy.android.irc.model.BusEvent.ServerMessage
 
 object Server {
   trait State
@@ -36,7 +37,10 @@ class Server extends MessageAppender with Ordered[Server]{
   import Server._
   val messages = new MessageAdapter
 
-  def add(m: MessageLike) = messages.add(m)
+  def add(m: MessageLike) = {
+    ServiceBus.send(ServerMessage(this, m))
+    messages.add(m)
+  }
   private var _state: State = State.INITIAL
   def state = _state
   def state_=(state: State) = {

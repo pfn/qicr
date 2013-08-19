@@ -50,5 +50,9 @@
                 android:name=".WidgetMessageService"
                 android:enabled="@bool/is_v11plus"
                 android:permission="android.permission.BIND_REMOTEVIEWS"/>
+        <activity
+                android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar"
+                android:name=".WidgetChatActivity"
+                android:enabled="@bool/is_v11plus"/>
     </application>
 </manifest>

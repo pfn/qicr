@@ -22,6 +22,7 @@ import MessageAdapter._
 import android.text.style.ClickableSpan
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
+import android.app.Activity
 
 trait MessageAppender {
   def add(m: MessageLike): Unit
@@ -190,17 +191,19 @@ object MessageAdapter {
 
 class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   implicit var channel: ChannelLike = _
-
-  private var filterCache = Option.empty[Seq[MessageLike]]
-
   var showJoinPartQuit = false
-  val messages = new collection.mutable.Queue[MessageLike]
   var _maximumSize = DEFAULT_MAXIMUM_SIZE
   def maximumSize = _maximumSize
   def maximumSize_=(s: Int) = {
-      _maximumSize = s
-      ensureSize()
+    if (_maximumSize != s)
+      _messages = messages.copy(s)
+    _maximumSize = s
   }
+
+  private var filterCache = Option.empty[Seq[MessageLike]]
+  def messages = _messages
+  private var _messages = RingBuffer[MessageLike](maximumSize)
+
     // only register once to prevent memory leak
   UiBus += { case BusEvent.PreferenceChanged(s, k) =>
     if (k == Settings.MESSAGE_LINES) {
@@ -217,14 +220,14 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
 
   var _inflater: WeakReference[LayoutInflater] = _
   def inflater = _inflater.get getOrElse { throw new IllegalStateException }
-  var _activity: WeakReference[MainActivity] = _
+  var _activity: WeakReference[Activity] = _
   // can't make this IrcService due to resource changes on recreation
-  def activity_= (c: MainActivity) = {
+  def activity_= (c: Activity) = {
     if (c != null) {
       _activity = new WeakReference(c)
       _inflater = new WeakReference(c.systemService[LayoutInflater])
-      if (c.service != null) {
-        val s = c.service.settings
+      IrcService.instance foreach { service =>
+        val s = service.settings
         // It'd be nice to register a ServiceBus listener, but no way
         // to clean up when this adapter goes away?
         // add it to UiBus here maybe?
@@ -245,15 +248,9 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     notifyDataSetChanged()
   }
 
-  private def ensureSize() {
-    while (messages.size > _maximumSize && !messages.isEmpty)
-      messages.dequeue()
-  }
-
   protected[model] def add(item: MessageLike) {
     messages += item
     filterCache = None
-    ensureSize()
     if (_activity != null && isMainThread)
       _activity.get.foreach { _ => notifyDataSetChanged() }
   }
@@ -304,4 +301,30 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   private def formatText(msg: MessageLike) =
     MessageAdapter.formatText(activity, msg)
 
+}
+
+case class RingBuffer[A: ClassManifest](capacity: Int) extends IndexedSeq[A] {
+  private val buffer = Array.fill[A](capacity)(null.asInstanceOf[A])
+  private var _length = 0
+  private var pos = 0
+  def length = _length
+
+  private def zero = (capacity + (pos - _length)) % capacity
+
+  def clear() {
+    _length = 0
+    pos = 0
+  }
+  def +=(a: A) {
+    buffer(pos % capacity) = a
+    _length = math.min(_length + 1, capacity)
+    pos += 1
+  }
+
+  def apply(i: Int) = buffer((zero + i) % capacity)
+  def copy(capacity: Int = capacity) = {
+    val b = RingBuffer[A](capacity)
+    foreach { item => b += item }
+    b
+  }
 }

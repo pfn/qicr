@@ -27,6 +27,7 @@ import java.util.Collections
 
 import MainPagerAdapter._
 import AndroidConversions._
+import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 
 object MainPagerAdapter {
   val TAG = "MainPagerAdapter"
@@ -199,6 +200,7 @@ with EventBus.RefOwner {
       }
       c.newMessages = false
       c.newMentions = false
+      ServiceBus.send(ChannelStatusChanged(c))
     })
     activity.service.lastChannel = t.channel
 
