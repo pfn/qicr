@@ -3,4 +3,5 @@
     <dimen name="drawer_width">192dp</dimen>
     <item name="standard_margin" type="dimen">4dp</item>
     <item name="standard_padding" type="dimen">12dp</item>
+    <dimen name="widget_chat_width">320dp</dimen>
 </resources>

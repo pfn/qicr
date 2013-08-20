@@ -2,7 +2,7 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
-              android:layout_width="480dp"
+              android:layout_width="@dimen/widget_chat_width"
               android:layout_height="320dp">
 
     <FrameLayout

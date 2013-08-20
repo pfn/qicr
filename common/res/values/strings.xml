@@ -3,6 +3,7 @@
     <string name="launching">Launching...</string>
     <string name="status">Status</string>
     <string name="no_messages">No messages...</string>
+    <string name="not_connected">Not connected...</string>
     <string name="exit">Quit</string>
     <string name="server_details">Server Details</string>
     <string name="add_server">Add Server</string>

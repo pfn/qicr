@@ -45,7 +45,6 @@ object MainPagerAdapter {
     var channel: Option[ChannelLike] = None
     var server: Option[Server] = None
     var flags = TabInfo.FLAG_NONE
-    var lastModified = 0l
     override def toString =
       title + " fragment=" + fragment + " channel=" + channel
   }
@@ -151,13 +150,13 @@ with EventBus.RefOwner {
     refreshTabTitle(idx + channelBase)
   }
 
+  val refreshTabRunnable: Runnable = () => {
+    tabindicators.notifyDataSetChanged()
+    DropDownAdapter.notifyDataSetChanged()
+  }
   def refreshTabTitle(pos: Int) {
-    if (System.currentTimeMillis - tabs(pos).lastModified > 100) {
-      tabindicators.notifyDataSetChanged()
-      DropDownAdapter.notifyDataSetChanged()
-
-      tabs(pos).lastModified = System.currentTimeMillis
-    }
+    UiBus.handler.removeCallbacks(refreshTabRunnable)
+    UiBus.handler.postDelayed(refreshTabRunnable, 100)
   }
 
   def makeTabTitle(pos: Int) = {

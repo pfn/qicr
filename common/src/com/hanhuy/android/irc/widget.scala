@@ -7,11 +7,18 @@ import android.widget.{Toast, RemoteViews, RemoteViewsService}
 import android.content.{DialogInterface, Context, BroadcastReceiver, Intent}
 import android.app.{AlertDialog, Activity, PendingIntent}
 import android.view.View
-import com.hanhuy.android.irc.model.BusEvent._
-import com.hanhuy.android.irc.model.{MessageAppender, MessageAdapter, ChannelLike, Server}
+import com.hanhuy.android.irc.model._
 import android.widget.RemoteViewsService.RemoteViewsFactory
 import android.os.{Handler, Bundle}
 import android.speech.RecognizerIntent
+import com.hanhuy.android.irc.model.BusEvent.ChannelAdded
+import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
+import com.hanhuy.android.irc.model.BusEvent.PrivateMessage
+import scala.Some
+import com.hanhuy.android.irc.model.BusEvent.ChannelMessage
+import com.hanhuy.android.irc.model.BusEvent.ServerStateChanged
+import com.hanhuy.android.irc.model.BusEvent.ServiceRunning
+import com.hanhuy.android.irc.model.BusEvent.ServerMessage
 
 object Widgets extends EventBus.RefOwner {
   val ACTION_LAUNCH = "com.hanhuy.android.irc.action.LAUNCH"
@@ -67,18 +74,10 @@ object Widgets extends EventBus.RefOwner {
   def ids_= (ids: Array[Int]) = settings.set(
     Settings.WIDGET_IDS, ids mkString ",")
 
-  def setMessageView(c: Context, id: Int, m: MessageAppender) {
-    setMessageView(c, id, toString(m))
-  }
-  def setMessageView(c: Context, id: Int, subject: String) {
+  def setMessageView(c: Context, id: Int, subject: String,
+                     partial: Boolean = false) {
+    assignMessageView(id, subject)
     val views = new RemoteViews(c.getPackageName, R.layout.widget_content)
-    views.setViewVisibility(R.id.back_button, View.VISIBLE)
-    views.setViewVisibility(R.id.widget_control, View.VISIBLE)
-    views.setViewVisibility(R.id.status_list, View.GONE)
-    views.setViewVisibility(R.id.message_list, View.VISIBLE)
-    views.setEmptyView(R.id.message_list, R.id.empty_list)
-    views.setTextViewText(R.id.empty_list,
-      c.getString(R.string.no_messages))
 
     val info = subject.split(IrcService.EXTRA_SPLITTER)
     val title = info match {
@@ -86,50 +85,67 @@ object Widgets extends EventBus.RefOwner {
       case Array(serverName,channelName) => serverName + "/" + channelName
     }
 
-    val goBackIntent = new Intent(ACTION_BACK)
-    goBackIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-    views.setOnClickPendingIntent(R.id.back_button, PendingIntent.getBroadcast(
-      c, pid(id, PID_GO_BACK), goBackIntent, PendingIntent.FLAG_UPDATE_CURRENT))
     val launchIntent = new Intent(c, classOf[MainActivity])
     launchIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     views.setOnClickPendingIntent(R.id.widget_app_icon,
       PendingIntent.getActivity(c, pid(id, PID_OPEN_CHANNEL),
         launchIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+
     val nextIntent = new Intent(ACTION_NEXT)
     nextIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
     nextIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+
     val prevIntent = new Intent(ACTION_PREV)
     prevIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
     prevIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+
+    views.setTextViewText(R.id.title, title)
+
     views.setOnClickPendingIntent(R.id.go_next, PendingIntent.getBroadcast(
       c, pid(id, PID_GO_NEXT), nextIntent, PendingIntent.FLAG_UPDATE_CURRENT))
     views.setOnClickPendingIntent(R.id.go_prev, PendingIntent.getBroadcast(
       c, pid(id, PID_GO_PREV), prevIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+
     val chatIntent = new Intent(c, classOf[WidgetChatActivity])
     chatIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
     chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
       Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
       Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
     views.setOnClickPendingIntent(R.id.widget_input, PendingIntent.getActivity(
-      c, pid(id, PID_CHAT+10), chatIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+      c, pid(id, PID_CHAT), chatIntent, PendingIntent.FLAG_UPDATE_CURRENT))
 
     val service = new Intent(c, classOf[WidgetMessageService])
     service.setAction(Widgets.ACTION_SUBJECT_PREFIX + subject.hashCode)
     service.putExtra(IrcService.EXTRA_SUBJECT, subject)
     service.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-
     views.setRemoteAdapter(R.id.message_list, service)
-    views.setTextViewText(R.id.title, title)
 
     val awm = AppWidgetManager.getInstance(c)
-    views.setScrollPosition(R.id.message_list, 1000)
-    awm.updateAppWidget(id, views)
-    assignMessageView(id, subject)
-    awm.notifyAppWidgetViewDataChanged(id, R.id.message_list)
+    if (partial) {
+      views.setScrollPosition(R.id.message_list, 1000)
+      awm.partiallyUpdateAppWidget(id, views)
+      awm.notifyAppWidgetViewDataChanged(id, R.id.message_list)
+    } else {
+      val goBackIntent = new Intent(ACTION_BACK)
+      goBackIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+      views.setOnClickPendingIntent(R.id.back_button, PendingIntent.getBroadcast(
+        c, pid(id, PID_GO_BACK), goBackIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+
+      views.setViewVisibility(R.id.back_button, View.VISIBLE)
+      views.setViewVisibility(R.id.widget_control, View.VISIBLE)
+      views.setViewVisibility(R.id.status_list, View.GONE)
+      views.setViewVisibility(R.id.message_list, View.VISIBLE)
+      views.setEmptyView(R.id.message_list, R.id.empty_list)
+
+      views.setTextViewText(R.id.empty_list,
+        c.getString(R.string.no_messages))
+      awm.updateAppWidget(id, views)
+    }
   }
 
   def setStatusView(context: Context, id: Int) {
+    unassignMessageView(id)
     val views = new RemoteViews(context.getPackageName, R.layout.widget_content)
     views.setViewVisibility(R.id.back_button, View.GONE)
     views.setViewVisibility(R.id.widget_control, View.GONE)
@@ -137,7 +153,7 @@ object Widgets extends EventBus.RefOwner {
     views.setViewVisibility(R.id.message_list, View.GONE)
     views.setEmptyView(R.id.status_list, R.id.empty_list)
     views.setTextViewText(R.id.empty_list,
-      context.getString(R.string.server_disconnected))
+      context.getString(R.string.not_connected))
     val adapterIntent = new Intent(context, classOf[WidgetStatusService])
     adapterIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
     views.setRemoteAdapter(R.id.status_list, adapterIntent)
@@ -156,7 +172,6 @@ object Widgets extends EventBus.RefOwner {
     val awm = AppWidgetManager.getInstance(context)
     awm.updateAppWidget(id, views)
     awm.notifyAppWidgetViewDataChanged(id, R.id.status_list)
-    unassignMessageView(id)
   }
   def setInitialView(c: Context, awm: AppWidgetManager, ids: Array[Int]) {
     val views = new RemoteViews(c.getPackageName, R.layout.widget_not_running)
@@ -171,15 +186,19 @@ object Widgets extends EventBus.RefOwner {
 
   private var messageViews: Map[Int,String] = Map.empty
 
-  def assignMessageView(id: Int, subj: String) = messageViews += id -> subj
-  def unassignMessageView(id: Int) = messageViews -= id
+  def assignMessageView(id: Int, subj: String) = synchronized {
+    messageViews += id -> subj
+  }
+  def unassignMessageView(id: Int) = synchronized {
+    messageViews -= id
+  }
 
   def toString(m: MessageAppender) = m match {
     case c: ChannelLike => c.server.name + IrcService.EXTRA_SPLITTER + c.name
     case s: Server      => s.name + IrcService.EXTRA_SPLITTER
   }
 
-  def updateMessageWidget(m: MessageAppender) = {
+  def updateMessageWidget(m: MessageAppender) = synchronized {
     val subject = toString(m)
     messageViews.toList filter { case (id, subj) => subject == subj } map {
       case (id,_) =>
@@ -190,8 +209,7 @@ object Widgets extends EventBus.RefOwner {
     }
   }
   private val handler = new Handler
-  private var lastStatusUpdate = 0l
-  def updateStatusWidget() {
+  def updateStatusWidget() = synchronized {
     handler.removeCallbacks(updateStatusRunnable)
     handler.postDelayed(updateStatusRunnable, 250)
   }
@@ -255,7 +273,7 @@ class WidgetProvider extends AppWidgetProvider {
           views.setViewVisibility(R.id.progress, View.VISIBLE)
           views.setTextViewText(R.id.not_running,
             c.getString(R.string.launching))
-          awm.updateAppWidget(Widgets(c).ids, views)
+          awm.partiallyUpdateAppWidget(Widgets(c).ids, views)
           val intent = new Intent(c, classOf[IrcService])
           intent.putExtra(IrcService.EXTRA_HEADLESS, true)
           c.startService(intent)
@@ -284,8 +302,8 @@ class WidgetProvider extends AppWidgetProvider {
     val m = Widgets.appenderForSubject(subject).get
     val idx = all.indexOf(m)
     val tgt = (all.size + idx + direction) % all.size
-    Widgets.setMessageView(c,
-      intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0), all(tgt))
+    Widgets.setMessageView(c, intent.getIntExtra(
+      AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Widgets.toString(all(tgt)), true)
   }
 }
 
@@ -328,35 +346,28 @@ with RemoteViewsService.RemoteViewsFactory {
   def getViewTypeCount = 0
   def getViewAt(p1: Int) = null
   def getLoadingView = null
-  def getItemId(p1: Int) = 0L
+  def getItemId(pos: Int) = pos
   def getCount = 0
 }
 
 class WidgetStatusViewsFactory extends BroadcastReceiver
 with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
   val service = IrcService.instance.get
-  val serverView = new RemoteViews(
-    service.getPackageName, R.layout.widget_server_item)
-  val channelView = new RemoteViews(
-    service.getPackageName, R.layout.widget_channel_item)
-
-  ServiceBus += {
-    case PrivateMessage(chan, _)   => _all = null
-    case ChannelAdded(_)           => _all = null
-    case ServerStateChanged(_, _)  => _all = null
-    case ChannelStatusChanged(_)   => _all = null
-  }
 
   def getViewAt(pos: Int) = {
     val intent = new Intent
     all(pos) match {
       case s: Server =>
+        val serverView = new RemoteViews(
+          service.getPackageName, R.layout.widget_server_item)
         serverView.setTextViewText(android.R.id.text1, s.name)
         val intent = new Intent(Widgets.ACTION_STATUS_CLICK)
         intent.putExtra(IrcService.EXTRA_SUBJECT, Widgets.toString(s))
         serverView.setOnClickFillInIntent(android.R.id.text1, intent)
         serverView
       case c: ChannelLike =>
+        val channelView = new RemoteViews(
+          service.getPackageName, R.layout.widget_channel_item)
         channelView.setTextViewText(android.R.id.text1, c.name)
         val color = if (c.newMentions)
           0xffff0000 else if (c.newMessages) 0xff00afaf else 0xffbebebe
@@ -378,11 +389,11 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
 
   def getViewTypeCount = 2
   def getCount = all.size
+  def onDataSetChanged() { _all = null }
 
   def getLoadingView = null
-  def onDataSetChanged() {}
   def hasStableIds = false
-  def getItemId(pos: Int) = 0L
+  def getItemId(pos: Int) = pos
   def onCreate() {}
   def onDestroy() {}
   def onReceive(c: Context, intent: Intent) {}
@@ -397,22 +408,25 @@ with RemoteViewsService.RemoteViewsFactory {
   }
 
   private val MAX_LINES = 32
-  val views = new RemoteViews(c.getPackageName, R.layout.widget_message_item)
+
+  var items: Seq[MessageLike] = _
 
   def getViewAt(pos: Int) = {
+    val views = new RemoteViews(c.getPackageName, R.layout.widget_message_item)
     views.setTextViewText(android.R.id.text1,
-      MessageAdapter.formatText(c,
-        messages.filteredMessages.takeRight(MAX_LINES)(pos))(channel))
+      MessageAdapter.formatText(c, items(pos))(channel))
     views
   }
 
-  def getCount = math.min(MAX_LINES, messages.getCount)
+  def getCount = items.size
   def getViewTypeCount = 1
-  def getItemId(pos: Int) = messages.getItemId(pos)
+  def getItemId(pos: Int) = System.identityHashCode(items(pos))
+  def hasStableIds = true
+  def onDataSetChanged() {
+    items = messages.filteredMessages.takeRight(MAX_LINES)
+  }
 
   def getLoadingView = null
-  def onDataSetChanged() {}
-  def hasStableIds = false
   def onDestroy() {}
   def onCreate() {}
   def onReceive(c: Context, intent: Intent) {}

@@ -49,7 +49,7 @@ abstract class EventBus {
 }
 object UiBus extends EventBus {
 
-  private lazy val handler = new Handler(Looper.getMainLooper)
+  lazy val handler = new Handler(Looper.getMainLooper)
 
   def post(f: => Unit) = handler.post(f _)
 

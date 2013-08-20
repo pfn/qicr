@@ -22,7 +22,6 @@ import MessageAdapter._
 import android.text.style.ClickableSpan
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
-import android.app.Activity
 
 trait MessageAppender {
   def add(m: MessageLike): Unit
@@ -149,43 +148,12 @@ object MessageAdapter {
       formatText(c, m, res,
         "%1%2" formatSpans(prefix, colorNick(src)), msg)
   }
-  private case class NickClick(nick: String) extends ClickableSpan {
-    override def updateDrawState(ds: TextPaint) = ()
-
-    def onClick(v: View) {
-      v.getContext match {
-        case a: MainActivity =>
-          def insertNick() {
-            val cursor = a.input.getSelectionStart
-            // TODO make ", " a preference
-            a.input.getText.insert(cursor,
-              nick + (if (cursor == 0) ", " else " "))
-          }
-          // TODO refactor this callback
-          HoneycombSupport.startNickActionMode(nick) { item =>
-            val R_id_nick_insert = R.id.nick_insert
-            val R_id_nick_start_chat = R.id.nick_start_chat
-            val R_id_nick_whois = R.id.nick_whois
-            item.getItemId match {
-              case R_id_nick_whois =>
-                val proc = CommandProcessor(a)
-                proc.channel = a.service.lastChannel
-                proc.WhoisCommand.execute(Some(nick))
-              case R_id_nick_insert => insertNick()
-              case R_id_nick_start_chat =>
-                a.service.startQuery(a.service.lastChannel.get.server, nick)
-            }
-            ()
-          }
-        case _ => // ignore
-      }
-    }
-  }
 
   def colorNick(nick: String): CharSequence = {
     val text = textColor(nickColor(nick), nick)
-    if (nick == "***") text else
-      SpannedGenerator.span(NickClick(text), text)
+    val inMain = IrcService.instance.get.showing
+    if (nick != "***" && inMain)
+      SpannedGenerator.span(NickClick(text), text) else text
   }
 }
 
@@ -329,5 +297,38 @@ case class RingBuffer[A: ClassManifest](capacity: Int) extends IndexedSeq[A] {
     val b = RingBuffer[A](capacity)
     foreach { item => b += item }
     b
+  }
+}
+
+case class NickClick(nick: String) extends ClickableSpan {
+  override def updateDrawState(ds: TextPaint) = ()
+
+  def onClick(v: View) {
+    v.getContext match {
+      case a: MainActivity =>
+        def insertNick() {
+          val cursor = a.input.getSelectionStart
+          // TODO make ", " a preference
+          a.input.getText.insert(cursor,
+            nick + (if (cursor == 0) ", " else " "))
+        }
+        // TODO refactor this callback
+        HoneycombSupport.startNickActionMode(nick) { item =>
+          val R_id_nick_insert = R.id.nick_insert
+          val R_id_nick_start_chat = R.id.nick_start_chat
+          val R_id_nick_whois = R.id.nick_whois
+          item.getItemId match {
+            case R_id_nick_whois =>
+              val proc = CommandProcessor(a)
+              proc.channel = a.service.lastChannel
+              proc.WhoisCommand.execute(Some(nick))
+            case R_id_nick_insert => insertNick()
+            case R_id_nick_start_chat =>
+              a.service.startQuery(a.service.lastChannel.get.server, nick)
+          }
+          ()
+        }
+      case _ => // ignore
+    }
   }
 }
