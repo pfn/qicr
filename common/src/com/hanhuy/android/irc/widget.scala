@@ -442,7 +442,7 @@ class WidgetChatActivity extends Activity {
         c.messages.channel = c
         (c.messages,c.name)
     }
-    a.activity = this
+    a.context = this
     list.setAdapter(a)
     findView(TR.title).setText(title)
     UiBus.post { list.setSelection(list.getAdapter.getCount - 1) }

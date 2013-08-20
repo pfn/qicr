@@ -223,9 +223,9 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     IrcService.instance } map {
     _.systemService[LayoutInflater] } getOrElse (
     throw new IllegalStateException("no context available"))
-  var _activity: WeakReference[Activity] = _
+  var _activity: WeakReference[Context] = _
   // can't make this IrcService due to resource changes on recreation
-  def activity_= (c: Activity) = {
+  def context_= (c: Context) = {
     if (c != null) {
       _activity = new WeakReference(c)
       IrcService.instance foreach { service =>
@@ -240,10 +240,11 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     }
   }
 
-  def activity = _activity.get getOrElse { throw new IllegalStateException }
+  def context = _activity.get orElse IrcService.instance getOrElse {
+    throw new IllegalStateException }
   // would be nice to move this into the companion
   lazy val font =
-    Typeface.createFromAsset(activity.getAssets, "DejaVuSansMono.ttf")
+    Typeface.createFromAsset(context.getAssets, "DejaVuSansMono.ttf")
 
   def clear() {
     messages.clear()
@@ -301,7 +302,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   }
 
   private def formatText(msg: MessageLike) =
-    MessageAdapter.formatText(activity, msg)
+    MessageAdapter.formatText(context, msg)
 
 }
 

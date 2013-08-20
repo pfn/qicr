@@ -49,8 +49,10 @@ extends MessageAppender with Ordered[ChannelLike] {
         case _ => ""
         }
 
-        if (IrcListeners.matchesNick(server, msg))
-            newMentions = true
+        if (IrcListeners.matchesNick(server, msg)) {
+          newMentions = true
+          ServiceBus.send(BusEvent.ChannelStatusChanged(this))
+        }
         ServiceBus.send(BusEvent.ChannelMessage(this, m))
         UiBus.send(BusEvent.ChannelMessage(this, m))
     }

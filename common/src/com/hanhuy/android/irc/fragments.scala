@@ -172,7 +172,7 @@ extends ListFragment with EventBus.RefOwner {
   def adapter = _adapter
   def adapter_=(a: MessageAdapter) = {
     _adapter = a
-    if (getActivity != null) _adapter.activity = getActivity
+    if (getActivity != null) _adapter.context = getActivity
 
     setListAdapter(_adapter)
     service.add(id, _adapter)
@@ -196,7 +196,7 @@ extends ListFragment with EventBus.RefOwner {
 
     if (adapter != null) { // this works by way of the network being slow
       val service = activity.service // assuming context is ready?
-      adapter.activity = getActivity
+      adapter.context = getActivity
       service.add(id, adapter)
       setListAdapter(adapter)
     }
