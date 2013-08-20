@@ -54,6 +54,7 @@ object IrcService {
   val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
   val ACTION_PREV_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_PREV"
   val ACTION_CANCEL_MENTION = "com.hanhuy.android.irc.action.CANCEL_MENTION"
+  val ACTION_QUICK_CHAT = "com.hanhuy.android.irc.action.QUICK_CHAT"
 
   // notification IDs
   val RUNNING_ID = 1
@@ -473,6 +474,12 @@ class IrcService extends Service with EventBus.RefOwner {
         getString(R.string.no_messages)
       }
 
+      val chatIntent = new Intent(this, classOf[WidgetChatActivity])
+      chatIntent.putExtra(IrcService.EXTRA_SUBJECT, Widgets.toString(c))
+      chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+        Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
+        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+
       val n = builder
       .setStyle(new NotificationCompat.BigTextStyle()
       .setBigContentTitle(title)
@@ -482,6 +489,9 @@ class IrcService extends Service with EventBus.RefOwner {
         PendingIntent.getBroadcast(this, ACTION_PREV_CHANNEL.hashCode,
         new Intent(ACTION_PREV_CHANNEL),
         PendingIntent.FLAG_UPDATE_CURRENT))
+      .addAction(android.R.drawable.sym_action_chat, "Chat",
+        PendingIntent.getActivity(this, ACTION_QUICK_CHAT.hashCode,
+          chatIntent, PendingIntent.FLAG_UPDATE_CURRENT))
       .addAction(android.R.drawable.ic_media_next, "Next",
         PendingIntent.getBroadcast(this, ACTION_NEXT_CHANNEL.hashCode,
           new Intent(ACTION_NEXT_CHANNEL),

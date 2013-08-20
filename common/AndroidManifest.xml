@@ -53,6 +53,8 @@
         <activity
                 android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar"
                 android:name=".WidgetChatActivity"
+                android:allowTaskReparenting="true"
+                android:launchMode="standard"
                 android:enabled="@bool/is_v11plus"/>
     </application>
 </manifest>

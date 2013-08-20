@@ -108,13 +108,11 @@ object Widgets extends EventBus.RefOwner {
       c, pid(id, PID_GO_PREV), prevIntent, PendingIntent.FLAG_UPDATE_CURRENT))
     val chatIntent = new Intent(c, classOf[WidgetChatActivity])
     chatIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
-    chatIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-      Intent.FLAG_ACTIVITY_TASK_ON_HOME |
-      Intent.FLAG_ACTIVITY_CLEAR_TASK |
-      Intent.FLAG_ACTIVITY_CLEAR_TOP |
+    chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+      Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
       Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
     views.setOnClickPendingIntent(R.id.widget_input, PendingIntent.getActivity(
-      c, pid(id, PID_CHAT), chatIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+      c, pid(id, PID_CHAT+10), chatIntent, PendingIntent.FLAG_UPDATE_CURRENT))
 
     val service = new Intent(c, classOf[WidgetMessageService])
     service.setAction(Widgets.ACTION_SUBJECT_PREFIX + subject.hashCode)
@@ -427,6 +425,8 @@ class WidgetChatActivity extends Activity {
     val (a,title) = m match {
       case s: Server      => (s.messages,s.name)
       case c: ChannelLike =>
+        c.newMessages = false
+        c.newMentions = false
         c.messages.channel = c
         (c.messages,c.name)
     }
