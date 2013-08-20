@@ -10,7 +10,7 @@ import android.view.View
 import com.hanhuy.android.irc.model.BusEvent._
 import com.hanhuy.android.irc.model.{MessageAppender, MessageAdapter, ChannelLike, Server}
 import android.widget.RemoteViewsService.RemoteViewsFactory
-import android.os.Bundle
+import android.os.{Handler, Bundle}
 import android.speech.RecognizerIntent
 
 object Widgets extends EventBus.RefOwner {
@@ -126,6 +126,7 @@ object Widgets extends EventBus.RefOwner {
     views.setScrollPosition(R.id.message_list, 1000)
     awm.updateAppWidget(id, views)
     assignMessageView(id, subject)
+    awm.notifyAppWidgetViewDataChanged(id, R.id.message_list)
   }
 
   def setStatusView(context: Context, id: Int) {
@@ -154,6 +155,7 @@ object Widgets extends EventBus.RefOwner {
 
     val awm = AppWidgetManager.getInstance(context)
     awm.updateAppWidget(id, views)
+    awm.notifyAppWidgetViewDataChanged(id, R.id.status_list)
     unassignMessageView(id)
   }
   def setInitialView(c: Context, awm: AppWidgetManager, ids: Array[Int]) {
@@ -187,7 +189,14 @@ object Widgets extends EventBus.RefOwner {
       id
     }
   }
+  private val handler = new Handler
+  private var lastStatusUpdate = 0l
   def updateStatusWidget() {
+    handler.removeCallbacks(updateStatusRunnable)
+    handler.postDelayed(updateStatusRunnable, 250)
+  }
+
+  private val updateStatusRunnable: Runnable = () => {
     val awm = AppWidgetManager.getInstance(IrcService.instance.get)
     ids filterNot messageViews.keySet foreach {
       awm.notifyAppWidgetViewDataChanged(_, R.id.status_list)
@@ -196,13 +205,15 @@ object Widgets extends EventBus.RefOwner {
 
   def appenderForSubject(subject: String) = {
     val service = IrcService.instance.get
-    subject.split(IrcService.EXTRA_SPLITTER) match {
-      case Array(serverName) =>
-        service.getServers.find(_.name == serverName)
-      case Array(serverName,channelName) =>
-        service.channels.keys.find(c =>
-          c.server.name == serverName && c.name == channelName)
-    }
+    if (subject == null) None else
+      subject.split(IrcService.EXTRA_SPLITTER) match {
+        case Array(serverName) =>
+          service.getServers.find(_.name == serverName)
+        case Array(serverName,channelName) =>
+          service.channels.keys.find(c =>
+            c.server.name == serverName && c.name == channelName)
+        case null => None
+      }
   }
 }
 
@@ -333,6 +344,7 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
     case PrivateMessage(chan, _)   => _all = null
     case ChannelAdded(_)           => _all = null
     case ServerStateChanged(_, _)  => _all = null
+    case ChannelStatusChanged(_)   => _all = null
   }
 
   def getViewAt(pos: Int) = {

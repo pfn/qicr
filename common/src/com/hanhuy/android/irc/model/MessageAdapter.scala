@@ -218,14 +218,16 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     }
   }
 
-  var _inflater: WeakReference[LayoutInflater] = _
-  def inflater = _inflater.get getOrElse { throw new IllegalStateException }
+  def inflater = _activity.get orElse {
+    IrcService.instance.get.activity } orElse {
+    IrcService.instance } map {
+    _.systemService[LayoutInflater] } getOrElse (
+    throw new IllegalStateException("no context available"))
   var _activity: WeakReference[Activity] = _
   // can't make this IrcService due to resource changes on recreation
   def activity_= (c: Activity) = {
     if (c != null) {
       _activity = new WeakReference(c)
-      _inflater = new WeakReference(c.systemService[LayoutInflater])
       IrcService.instance foreach { service =>
         val s = service.settings
         // It'd be nice to register a ServiceBus listener, but no way

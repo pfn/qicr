@@ -264,17 +264,13 @@ sealed class CommandProcessor(ctx: Context) {
   var channel: Option[ChannelLike] = None
   var server: Option[Server] = None
 
-  def service: IrcService = {
-    ctx match {
-      case s: IrcService => s
-      case a: MainActivity => a.service
-    }
-  }
+  lazy val service = IrcService.instance.get
 
-  def activity: MainActivity = {
+  lazy val activity: MainActivity = {
     ctx match {
       case s: IrcService => s.activity.get
       case a: MainActivity => a
+      case _ => null
     }
   }
 

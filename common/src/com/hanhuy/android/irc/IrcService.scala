@@ -398,7 +398,7 @@ class IrcService extends Service with EventBus.RefOwner {
       query.add(m)
       if (activity.isEmpty)
         showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
-          m.toString, server.name + EXTRA_SPLITTER + query.name)
+          m.toString, Some(query))
     }
   }
 
@@ -516,23 +516,26 @@ class IrcService extends Service with EventBus.RefOwner {
     }
     if (activity.isEmpty)
       showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
-        getString(R.string.notif_server_disconnected, server.name), "")
+        getString(R.string.notif_server_disconnected, server.name))
   }
 
   // TODO decouple
   def addChannelMention(c: ChannelLike, m: MessageLike) {
     if (activity.isEmpty)
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
-        getString(R.string.notif_mention_template, c.name, m.toString),
-        c.server.name + EXTRA_SPLITTER + c.name, Some(c))
+        getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
   }
 
-  def showNotification(id: Int, icon: Int, text: String, extra: String,
+  def showNotification(id: Int, icon: Int, text: String,
                        channel: Option[ChannelLike] = None) {
     val nm = systemService[NotificationManager]
     val intent = new Intent(this, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    intent.putExtra(EXTRA_SUBJECT, extra)
+
+    channel foreach { c =>
+      intent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
+    }
+
     val pending = PendingIntent.getActivity(this, id, intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
     val notif = new NotificationCompat.Builder(this)
@@ -549,8 +552,8 @@ class IrcService extends Service with EventBus.RefOwner {
       val cancel = new Intent(ACTION_CANCEL_MENTION)
       cancel.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
       notif.deleteIntent = PendingIntent.getBroadcast(this,
-        ACTION_CANCEL_MENTION.hashCode,
-        new Intent(ACTION_CANCEL_MENTION), PendingIntent.FLAG_UPDATE_CURRENT)
+        ACTION_CANCEL_MENTION.hashCode, cancel,
+        PendingIntent.FLAG_UPDATE_CURRENT)
     }
     nm.notify(id, notif)
   }
@@ -564,17 +567,21 @@ class IrcService extends Service with EventBus.RefOwner {
   val receiver = new BroadcastReceiver {
     def onReceive(c: Context, intent: Intent) {
       val chans = channels.keys.toList.sortWith(_ < _)
-      val idx = chans.size + lastChannel.map { c =>
+      val idx = chans.size + (lastChannel.map { c =>
         chans.indexOf(c)
-      }.get
+      } getOrElse 0)
       val tgt = intent.getAction match {
         case ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
         case ACTION_PREV_CHANNEL => (idx - 1) % chans.size
         case ACTION_CANCEL_MENTION =>
           val subject = intent.getStringExtra(EXTRA_SUBJECT)
-          val c = Widgets.appenderForSubject(subject).get.asInstanceOf[ChannelLike]
-          c.newMentions = false
-          ServiceBus.send(ChannelStatusChanged(c))
+          Widgets.appenderForSubject(subject) match {
+            case Some(c: ChannelLike) =>
+              c.newMentions = false
+              c.newMessages = false
+              ServiceBus.send(ChannelStatusChanged(c))
+            case _ =>
+          }
           idx % chans.size // FIXME refactor the above
         case _ => idx
       }
