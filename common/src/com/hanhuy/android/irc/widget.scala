@@ -26,7 +26,8 @@ object Widgets extends EventBus.RefOwner {
   val ACTION_NEXT = "com.hanhuy.android.irc.action.NEXT"
   val ACTION_PREV = "com.hanhuy.android.irc.action.PREV"
   val ACTION_STATUS_CLICK = "com.hanhuy.android.irc.action.STATUS_CLICK"
-  val ACTION_SUBJECT_PREFIX = "com.hanhuy.android.irc.action.SUBJECT-"
+  val ACTION_SUBJECT_PREFIX = "com.hanhuy.android.irc.action.SUBJECT-" +
+    android.os.Process.myPid + "-"
 
   val PID_STATUS_ITEM = 1
   val PID_OPEN_CHANNEL = 2
@@ -407,7 +408,7 @@ with RemoteViewsService.RemoteViewsFactory {
     case s: Server => (null,s.messages)
   }
 
-  private val MAX_LINES = 32
+  private val MAX_LINES = 128
 
   var items: Seq[MessageLike] = _
 
@@ -446,45 +447,51 @@ class WidgetChatActivity extends Activity {
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.widget_chat)
-    val m = Widgets.appenderForSubject(
-      getIntent.getStringExtra(IrcService.EXTRA_SUBJECT)).get
-    val (a,title) = m match {
-      case s: Server      => (s.messages,s.name)
-      case c: ChannelLike =>
-        c.newMessages = false
-        c.newMentions = false
-        c.messages.channel = c
-        (c.messages,c.name)
-    }
-    a.context = this
-    list.setAdapter(a)
-    findView(TR.title).setText(title)
-    UiBus.post { list.setSelection(list.getAdapter.getCount - 1) }
-    proc = new SimpleInputProcessor(this, m)
-    input.addTextChangedListener(proc.TextListener)
-    input.setOnEditorActionListener(proc.onEditorActionListener _)
-    val complete = findView(TR.btn_nick_complete)
-    complete onClick proc.nickComplete(input)
-    val speechrec = findView(TR.btn_speech_rec)
-    speechrec onClick {
-      val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-      intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-      intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-      try {
-        startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
-      } catch {
-        case e: Exception => {
-          Toast.makeText(this, R.string.speech_unsupported,
-            Toast.LENGTH_SHORT).show()
+    val mOption = Widgets.appenderForSubject(
+      getIntent.getStringExtra(IrcService.EXTRA_SUBJECT))
+    mOption map { m =>
+      val (a,title) = m match {
+        case s: Server      => (s.messages,s.name)
+        case c: ChannelLike =>
+          IrcService.instance.get.lastChannel = Some(c)
+          c.newMessages = false
+          c.newMentions = false
+          c.messages.channel = c
+          (c.messages,c.name)
+      }
+      a.context = this
+      list.setAdapter(a)
+      findView(TR.title).setText(title)
+      UiBus.post { list.setSelection(list.getAdapter.getCount - 1) }
+      proc = new SimpleInputProcessor(this, m)
+      input.addTextChangedListener(proc.TextListener)
+      input.setOnEditorActionListener(proc.onEditorActionListener _)
+      val complete = findView(TR.btn_nick_complete)
+      complete onClick proc.nickComplete(input)
+      val speechrec = findView(TR.btn_speech_rec)
+      speechrec onClick {
+        val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+          RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+        try {
+          startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
+        } catch {
+          case e: Exception => {
+            Toast.makeText(this, R.string.speech_unsupported,
+              Toast.LENGTH_SHORT).show()
+          }
         }
       }
-    }
-    if (!settings.get(Settings.SHOW_NICK_COMPLETE))
-      complete.setVisibility(View.GONE)
+      if (!settings.get(Settings.SHOW_NICK_COMPLETE))
+        complete.setVisibility(View.GONE)
 
-    if (!settings.get(Settings.SHOW_SPEECH_REC))
-      speechrec.setVisibility(View.GONE)
+      if (!settings.get(Settings.SHOW_SPEECH_REC))
+        speechrec.setVisibility(View.GONE)
+    } getOrElse {
+      Toast.makeText(this, "Channel cannot be found", Toast.LENGTH_SHORT).show()
+      finish()
+    }
   }
 
   // TODO refactor my ass with MainActivity's

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="open">Open</string>
+    <string name="prev">Prev</string>
+    <string name="next">Next</string>
     <string name="launching">Launching...</string>
     <string name="status">Status</string>
     <string name="no_messages">No messages...</string>
@@ -87,18 +90,18 @@
         &lt;%1&gt; %2</string>
     <string name="notice_template" formatted="false">-%1- %2</string>
     <string name="action_template" formatted="false"> * %1 %2</string>
-    <string name="ctcp_response_template_3">
-        CTCP %1$s reply from %2$s: %3$s</string>
-    <string name="ctcp_response_template_2">CTCP %1$s reply from %2$s</string>
-    <string name="ctcp_response_template_s_3">
-        [%4$s] CTCP %1$s reply from %2$s: %3$s</string>
-    <string name="ctcp_response_template_s_2">
-        [%3$s] CTCP %1$s reply from %2$s</string>
+    <string name="ctcp_response_template_3" formatted="false">
+        CTCP %1 reply from %2: %3</string>
+    <string name="ctcp_response_template_2" formatted="false">CTCP %1 reply from %2</string>
+    <string name="ctcp_response_template_s_3" formatted="false">
+        [%4] CTCP %1 reply from %2: %3</string>
+    <string name="ctcp_response_template_s_2" formatted="false">
+        [%3] CTCP %1 reply from %2</string>
 
-    <string name="ctcp_request_template_s">
-        [%4$s] [ctcp(%1$s)] %2$s %3$s</string>
-    <string name="ctcp_request_template">
-        [ctcp(%1$s)] %2$s %3$s</string>
+    <string name="ctcp_request_template_s" formatted="false">
+        [%4] [ctcp(%1)] %2 %3</string>
+    <string name="ctcp_request_template" formatted="false">
+        [ctcp(%1)] %2 %3</string>
 
     <!-- TODO colorize? -->
     <string name="nick_change_template" formatted="false">

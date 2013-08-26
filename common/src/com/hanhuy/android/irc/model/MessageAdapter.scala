@@ -51,33 +51,38 @@ object MessageAdapter {
       case CtcpRequest(server, t, cmd, args) =>
         ch flatMap { chan =>
           if (chan.server != server)
-            Some(getString(c, R.string.ctcp_request_template_s,
-              t, cmd, args getOrElse "", server.name))
+            Some(formatText(c, msg, R.string.ctcp_request_template_s,
+              colorNick(t), textColor(nickColor(cmd), cmd),
+              args getOrElse "", server.name))
           else
             None
         } getOrElse {
-          getString(c, R.string.ctcp_request_template,
-            t, cmd, args getOrElse "")
+          formatText(c, msg, R.string.ctcp_request_template,
+            colorNick(t), textColor(nickColor(cmd), cmd), args getOrElse "")
         }
       case CtcpReply(server, s, cmd, a) => a map { arg =>
         ch flatMap { chan =>
           if (chan.server != server)
-            Some(getString(c, R.string.ctcp_response_template_s_3,
-              cmd, s, arg, server.name))
+            Some(formatText(c, msg, R.string.ctcp_response_template_s_3,
+              textColor(nickColor(cmd), cmd), colorNick(s), arg,
+              textColor(nickColor(server.name), server.name)))
           else
             None
         } getOrElse {
-          getString(c, R.string.ctcp_response_template_3, cmd, s, arg)
+          formatText(c, msg, R.string.ctcp_response_template_3,
+            textColor(nickColor(cmd), cmd), colorNick(s), arg)
         }
       } getOrElse {
         ch flatMap { chan =>
           if (chan.server != server)
-            Some(getString(c, R.string.ctcp_response_template_s_2,
-              cmd, s, server.name))
+            Some(formatText(c, msg, R.string.ctcp_response_template_s_2,
+              textColor(nickColor(cmd), cmd), colorNick(s),
+              textColor(nickColor(server.name), server.name)))
           else
             None
         } getOrElse {
-          getString(c, R.string.ctcp_response_template_2, cmd, s)
+          formatText(c, msg, R.string.ctcp_response_template_2,
+            textColor(nickColor(cmd), cmd), colorNick(s))
         }
       }
       case Topic(src, t) => src map { s =>
@@ -205,6 +210,8 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
         showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
         MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
       }
+      if (isMainThread)
+        notifyDataSetChanged()
     }
   }
 
@@ -223,7 +230,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     messages += item
     filterCache = None
     if (_activity != null && isMainThread)
-      _activity.get.foreach { _ => notifyDataSetChanged() }
+      _activity.get foreach { _ => notifyDataSetChanged() }
   }
 
   def filteredMessages = {
@@ -319,7 +326,7 @@ case class NickClick(nick: String) extends ClickableSpan {
           val R_id_nick_whois = R.id.nick_whois
           item.getItemId match {
             case R_id_nick_whois =>
-              val proc = CommandProcessor(a)
+              val proc = CommandProcessor(a, null)
               proc.channel = a.service.lastChannel
               proc.WhoisCommand.execute(Some(nick))
             case R_id_nick_insert => insertNick()

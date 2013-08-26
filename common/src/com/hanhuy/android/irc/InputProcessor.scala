@@ -37,7 +37,7 @@ abstract class InputProcessor(activity: Activity) {
   import InputProcessor._
   val TAG = "InputProcessor"
 
-  val processor = CommandProcessor(activity)
+  val processor = CommandProcessor(activity, this)
 
   def currentState: (Option[Server],Option[ChannelLike])
 
@@ -78,7 +78,7 @@ abstract class InputProcessor(activity: Activity) {
   var completionPrefix: Option[String] = None
   var completionOffset: Option[Int]    = None
   def nickComplete(input: EditText) {
-    val (server, channel) = currentState
+    val (_, channel) = currentState
     val c = channel match {
       case Some(c: Channel) => c
       case _ => return
@@ -254,10 +254,10 @@ extends InputProcessor(activity) {
 }
 
 object CommandProcessor {
-  def apply(c: Context) = new CommandProcessor(c)
+  def apply(c: Context, p: InputProcessor) = new CommandProcessor(c, p)
 }
 // set ctx, server and channel prior to invoking executeLine
-sealed class CommandProcessor(ctx: Context) {
+sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   val TAG = "CommandProcessor"
 
   def getString(res: Int, args: String*) = ctx.getString(res, args: _*)
@@ -473,11 +473,11 @@ sealed class CommandProcessor(ctx: Context) {
           val r = CtcpRequest(service._connections(c),
              target, command.toUpperCase,
              Option(if (trimmedArg.length == 0) null else trimmedArg))
-          val tab = activity.adapter.currentTab
 
+          val (server, channel) = proc.currentState
           // show in currently visible tab or the server's message tab
           // if not currently on a message tab
-          tab.channel orElse tab.server map { _.add(r) } getOrElse {
+          channel orElse server map { _.add(r) } getOrElse {
             currentServer map { _.add(r) }
           }
           c.createUser(target).sendCtcp(line)

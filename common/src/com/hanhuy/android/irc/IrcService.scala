@@ -485,14 +485,16 @@ class IrcService extends Service with EventBus.RefOwner {
       .setBigContentTitle(title)
       .setSummaryText(text)
       .bigText(msgs))
-      .addAction(android.R.drawable.ic_media_previous, "Prev",
+      .setContentIntent(PendingIntent.getActivity(this,
+        ACTION_QUICK_CHAT.hashCode, chatIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT))
+      .addAction(android.R.drawable.ic_media_previous, getString(R.string.prev),
         PendingIntent.getBroadcast(this, ACTION_PREV_CHANNEL.hashCode,
         new Intent(ACTION_PREV_CHANNEL),
         PendingIntent.FLAG_UPDATE_CURRENT))
-      .addAction(android.R.drawable.sym_action_chat, "Chat",
-        PendingIntent.getActivity(this, ACTION_QUICK_CHAT.hashCode,
-          chatIntent, PendingIntent.FLAG_UPDATE_CURRENT))
-      .addAction(android.R.drawable.ic_media_next, "Next",
+      .addAction(android.R.drawable.sym_action_chat,
+        getString(R.string.open), pending)
+      .addAction(android.R.drawable.ic_media_next, getString(R.string.next),
         PendingIntent.getBroadcast(this, ACTION_NEXT_CHANNEL.hashCode,
           new Intent(ACTION_NEXT_CHANNEL),
           PendingIntent.FLAG_UPDATE_CURRENT))

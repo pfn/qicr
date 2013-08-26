@@ -68,6 +68,7 @@
             android:layout_weight="1"
             android:stackFromBottom="true"
             android:cacheColorHint="#00000000"
+            android:fadeScrollbars="false"
             android:transcriptMode="normal"
             />
     <TextView

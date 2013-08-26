@@ -88,7 +88,7 @@ with ServerListener with MessageListener with ModeListener {
         server.add(ServerInfo(service.getString(R.string.server_connected)))
       }
       if (server.autorun != null || server.autojoin != null) {
-        val proc = CommandProcessor(service)
+        val proc = CommandProcessor(service, null)
         proc.server = Some(server)
         if (server.autorun != null) {
           server.autorun.split(";") foreach { cmd =>
@@ -217,11 +217,11 @@ with ServerListener with MessageListener with ModeListener {
       UiBus.run {
         try { // guard can change values if slow...
           service.channels.values collect {
-            case c: Channel if c.hasUser(user) => service._channels(c)
+            case c: Channel if c.hasUser(user) => service._channels.get(c)
           } foreach { c =>
-            if (c.server == server) {
-              UiBus.send(BusEvent.NickListChanged(c))
-              c.add(Quit(user.getNick, user.address, msg))
+            if (c.isDefined && c.get.server == server) {
+              UiBus.send(BusEvent.NickListChanged(c.get))
+              c.get.add(Quit(user.getNick, user.address, msg))
             }
           }
         } catch {
@@ -306,6 +306,7 @@ with ServerListener with MessageListener with ModeListener {
       case _ => Option(reply)
     })
 
+    // TODO show in current WidgetChatActivity
     if (service.showing) {
       UiBus.run {
         val msg = MessageAdapter.formatText(service, r)
