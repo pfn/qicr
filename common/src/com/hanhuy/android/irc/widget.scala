@@ -183,7 +183,7 @@ object Widgets extends EventBus.RefOwner {
   }
 
   /** generate a pending intent ID */
-  def pid(id: Int, id2: Int) = id * 100 + id2
+  def pid(id: Int, id2: Int) = (android.os.Process.myPid() + id) * 100 + id2
 
   private var messageViews: Map[Int,String] = Map.empty
 
@@ -444,29 +444,29 @@ class WidgetChatActivity extends Activity {
   lazy val settings = IrcService.instance.get.settings
   private var proc: InputProcessor = _
 
-  override def onResume() {
-    super.onResume()
-    val mOption = Widgets.appenderForSubject(
-      getIntent.getStringExtra(IrcService.EXTRA_SUBJECT))
-    mOption map { m =>
-      val (a,title) = m match {
-        case s: Server      => (s.messages,s.name)
-        case c: ChannelLike =>
-          IrcService.instance.get.lastChannel = Some(c)
-          c.newMessages = false
-          c.newMentions = false
-          c.messages.channel = c
-          (c.messages,c.name)
-      }
-      a.context = this
+  private def withAppender[A](f: MessageAppender => A): Option[A] = {
+    Widgets.appenderForSubject(
+      getIntent.getStringExtra(IrcService.EXTRA_SUBJECT)) map f
+  }
+
+  private def withAdapter[A](f: MessageAdapter => A): Option[A] = {
+    withAppender { a =>
+      f(a match {
+        case s: Server      => s.messages
+        case c: ChannelLike => c.messages
+      })
     }
   }
+
+  override def onResume() {
+    super.onResume()
+    withAdapter { _.context = this }
+  }
+
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.widget_chat)
-    val mOption = Widgets.appenderForSubject(
-      getIntent.getStringExtra(IrcService.EXTRA_SUBJECT))
-    mOption map { m =>
+    withAppender { m =>
       val (a,title) = m match {
         case s: Server      => (s.messages,s.name)
         case c: ChannelLike =>

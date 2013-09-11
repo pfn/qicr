@@ -99,12 +99,15 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
 
 // android3.0+
 class SettingsFragmentActivity extends Activity {
-    override def onCreate(bundle: Bundle) {
-        super.onCreate(bundle)
-        val tx = getFragmentManager.beginTransaction()
-        tx.add(android.R.id.content, new SettingsFragment, "settings fragment")
-        tx.commit()
+  override def onCreate(bundle: Bundle) {
+    super.onCreate(bundle)
+    val f = getFragmentManager.findFragmentByTag("settings fragment")
+    if (f == null) {
+      val tx = getFragmentManager.beginTransaction()
+      tx.add(android.R.id.content, new SettingsFragment, "settings fragment")
+      tx.commit()
     }
+  }
 }
 
 class SettingsFragment extends PreferenceFragment {
