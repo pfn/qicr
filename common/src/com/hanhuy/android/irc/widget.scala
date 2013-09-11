@@ -444,6 +444,23 @@ class WidgetChatActivity extends Activity {
   lazy val settings = IrcService.instance.get.settings
   private var proc: InputProcessor = _
 
+  override def onResume() {
+    super.onResume()
+    val mOption = Widgets.appenderForSubject(
+      getIntent.getStringExtra(IrcService.EXTRA_SUBJECT))
+    mOption map { m =>
+      val (a,title) = m match {
+        case s: Server      => (s.messages,s.name)
+        case c: ChannelLike =>
+          IrcService.instance.get.lastChannel = Some(c)
+          c.newMessages = false
+          c.newMentions = false
+          c.messages.channel = c
+          (c.messages,c.name)
+      }
+      a.context = this
+    }
+  }
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.widget_chat)

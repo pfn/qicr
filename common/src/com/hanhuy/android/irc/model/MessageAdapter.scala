@@ -210,8 +210,6 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
         showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
         MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
       }
-      if (isMainThread)
-        notifyDataSetChanged()
     }
   }
 
@@ -258,7 +256,8 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     createViewFromResource(pos, convertView, container)
   private def createViewFromResource(
       pos: Int, convertView: View, container: ViewGroup): View = {
-    val c = convertView.asInstanceOf[TextView]
+    val c = if (convertView == null || convertView.getContext == context)
+      convertView.asInstanceOf[TextView] else null
     val view = if (c != null) c else {
       val v = inflater.inflate(TR.layout.message_item, container, false)
       if (!icsAndNewer)

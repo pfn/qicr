@@ -96,6 +96,7 @@ with EventBus.RefOwner {
     if (service.channels.size > channels.size)
       (service.channels.keySet -- channels) foreach addChannel
     channels foreach refreshTabTitle
+    channels foreach (_.messages.context = activity)
   }
 
   def onServiceConnected(service: IrcService) = refreshTabs(service)

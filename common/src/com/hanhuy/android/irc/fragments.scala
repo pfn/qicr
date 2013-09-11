@@ -1,7 +1,6 @@
 package com.hanhuy.android.irc
 
-import android.app.AlertDialog
-import android.app.Dialog
+import android.app.{Activity, AlertDialog, Dialog}
 import android.content.Context
 import android.content.DialogInterface
 import android.os.Bundle
@@ -170,6 +169,7 @@ extends ListFragment with EventBus.RefOwner {
 
   var _adapter = _a
   def adapter = _adapter
+
   def adapter_=(a: MessageAdapter) = {
     _adapter = a
     if (getActivity != null) _adapter.context = getActivity
