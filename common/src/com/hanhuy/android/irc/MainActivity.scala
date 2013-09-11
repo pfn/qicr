@@ -361,6 +361,7 @@ with EventBus.RefOwner {
 
   def pageChanged(idx: Int) {
     input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
+    if (idx != 0) input.requestFocus()
 
     val m = getSupportFragmentManager
     if ((0 until m.getBackStackEntryCount) exists { i =>
