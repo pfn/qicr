@@ -31,6 +31,7 @@ import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
+import android.net.ConnectivityManager
 
 // practice doing this so as to prevent leaking the context instance
 //     irrelevant in this app
@@ -268,6 +269,7 @@ class IrcService extends Service with EventBus.RefOwner {
     super.onDestroy()
     instance = None
     unregisterReceiver(receiver)
+    unregisterReceiver(connReceiver)
     val nm = systemService[NotificationManager]
     nm.cancel(DISCON_ID)
     nm.cancel(MENTION_ID)
@@ -331,7 +333,12 @@ class IrcService extends Service with EventBus.RefOwner {
     filter.addAction(ACTION_NEXT_CHANNEL)
     filter.addAction(ACTION_PREV_CHANNEL)
     filter.addAction(ACTION_CANCEL_MENTION)
+
     registerReceiver(receiver, filter)
+
+    val connFilter = new IntentFilter
+    connFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+    registerReceiver(connReceiver, connFilter)
   }
 
   override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
@@ -566,6 +573,21 @@ class IrcService extends Service with EventBus.RefOwner {
     c.sendRaw("PING %d" format now)
   }
 
+  val connReceiver = new BroadcastReceiver {
+    def onReceive(c: Context, intent: Intent) {
+      intent.getAction match {
+        case ConnectivityManager.CONNECTIVITY_ACTION =>
+          getServers foreach (disconnect(_, None, true))
+          if (!intent.hasExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY) ||
+            !intent.getBooleanExtra(
+              ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
+            getServers filter { _.autoconnect } foreach connect
+            val nm = systemService[NotificationManager]
+            nm.cancel(DISCON_ID)
+          }
+      }
+    }
+  }
   val receiver = new BroadcastReceiver {
     def onReceive(c: Context, intent: Intent) {
       val chans = channels.keys.toList.sortWith(_ < _)

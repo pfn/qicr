@@ -156,7 +156,7 @@ object MessageAdapter {
 
   def colorNick(nick: String): CharSequence = {
     val text = textColor(nickColor(nick), nick)
-    val inMain = IrcService.instance.get.showing
+    val inMain = IrcService.instance map (_.showing) getOrElse false
     if (nick != "***" && inMain)
       SpannedGenerator.span(NickClick(text), text) else text
   }
