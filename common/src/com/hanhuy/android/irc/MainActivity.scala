@@ -418,7 +418,7 @@ with EventBus.RefOwner {
             nicks.getAdapter.getCount: java.lang.Integer))
         nicks.getAdapter.registerDataSetObserver(observer)
         def insertNick(pos: Int) {
-          var nick = nicks.getAdapter.getItem(pos).asInstanceOf[String]
+          var nick = nicks.getAdapter.getItem(pos).toString
           val c = nick.charAt(0)
           if (c == '@' || c == '+')
             nick = nick.substring(1)
