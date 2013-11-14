@@ -1,0 +1,4 @@
+qicr
+====
+
+qicr irc client
