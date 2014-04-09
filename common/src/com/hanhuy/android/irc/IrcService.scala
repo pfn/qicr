@@ -581,9 +581,11 @@ class IrcService extends Service with EventBus.RefOwner {
           if (!intent.hasExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY) ||
             !intent.getBooleanExtra(
               ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
-            getServers filter { _.autoconnect } foreach connect
-            val nm = systemService[NotificationManager]
-            nm.cancel(DISCON_ID)
+            if (_running) {
+              getServers filter { _.autoconnect } foreach connect
+              val nm = systemService[NotificationManager]
+              nm.cancel(DISCON_ID)
+            }
           }
       }
     }
@@ -594,7 +596,7 @@ class IrcService extends Service with EventBus.RefOwner {
       val idx = chans.size + (lastChannel.map { c =>
         chans.indexOf(c)
       } getOrElse 0)
-      val tgt = intent.getAction match {
+      val tgt = if (chans.size == 0) 0 else intent.getAction match {
         case ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
         case ACTION_PREV_CHANNEL => (idx - 1) % chans.size
         case ACTION_CANCEL_MENTION =>

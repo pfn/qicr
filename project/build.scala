@@ -10,13 +10,7 @@ object QicrBuild extends Build {
       packageDebug        <<= packageDebug in Android in lite,
       run                 <<= run in Android in lite
     ) ++ android.Plugin.androidCommands: _*
-  ) aggregate(lite, common, sirc)
-
-  lazy val sirc = RootProject(uri("https://github.com/sorcix/sIRC.git#7fa7cc7"))
-
-  override def settings = super.settings ++
-    Seq(exportJars in (sirc,Compile) := true) ++
-      inScope(Global in sirc) (org.sbtidea.SbtIdeaPlugin.settings)
+  ) aggregate(lite, common)
 
   lazy val lite = Project(id = "lite", base = file("lite")) settings(
       android.Plugin.androidBuild(common) ++ Seq(
@@ -29,8 +23,9 @@ object QicrBuild extends Build {
     javacOptions in Compile  += "-deprecation",
 
     libraryDependencies ++= Seq(
+      "com.sorcix" % "sirc" % "1.1.5",
       "com.viewpagerindicator" % "library" % "2.4.1" % "provided",
       "com.android.support" % "support-v4" % "18.0.0",
       "com.android.support" % "appcompat-v7" % "18.0.0")
-  ) ++ android.Plugin.androidBuild: _*) dependsOn(sirc)
+  ) ++ android.Plugin.androidBuild: _*)
 }
