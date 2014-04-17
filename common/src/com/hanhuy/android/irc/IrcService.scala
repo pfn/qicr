@@ -577,15 +577,15 @@ class IrcService extends Service with EventBus.RefOwner {
     def onReceive(c: Context, intent: Intent) {
       intent.getAction match {
         case ConnectivityManager.CONNECTIVITY_ACTION =>
-          getServers foreach (disconnect(_, None, true))
-          if (!intent.hasExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY) ||
-            !intent.getBooleanExtra(
-              ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
-            if (_running) {
-              getServers filter { _.autoconnect } foreach connect
-              val nm = systemService[NotificationManager]
-              nm.cancel(DISCON_ID)
-            }
+          if (_running) {
+            getServers foreach (disconnect(_, None, true))
+            if (!intent.hasExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY) ||
+              !intent.getBooleanExtra(
+                ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
+                getServers filter { _.autoconnect } foreach connect
+                val nm = systemService[NotificationManager]
+                nm.cancel(DISCON_ID)
+              }
           }
       }
     }
