@@ -56,7 +56,7 @@ trait MessageLike {
     val ts: Date = new Date()
 }
 
-trait BusEvent
+trait BusEvent extends com.hanhuy.android.common.BusEvent
 object BusEvent {
   case class ChannelStatusChanged(channel: ChannelLike) extends BusEvent
   case class ServerChanged(server: Server) extends BusEvent

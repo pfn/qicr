@@ -8,12 +8,10 @@ import android.app.Service
 import android.app.NotificationManager
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
 import android.os.{Binder, IBinder}
-import android.os.AsyncTask
 import android.os.{Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
 import android.widget.Toast
-import android.util.Log
 import android.support.v4.app.NotificationCompat
 
 import com.sorcix.sirc.IrcDebug
@@ -22,19 +20,19 @@ import com.sorcix.sirc.IrcConnection
 import com.sorcix.sirc.NickNameException
 import com.sorcix.sirc.{Channel => SircChannel}
 
+import com.hanhuy.android.common._
 import AndroidConversions._
+import RichLogger._
 import IrcService._
 import android.text.TextUtils
+import android.net.ConnectivityManager
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
-import scala.Some
+import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Notice
-import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
-import android.net.ConnectivityManager
+import com.hanhuy.android.irc.model.BusEvent
 
-// practice doing this so as to prevent leaking the context instance
-//     irrelevant in this app
 class LocalIrcBinder extends Binder {
   var ref: WeakReference[IrcService] = _
   // can't use default constructor as it will save a strong-ref
@@ -45,7 +43,7 @@ class LocalIrcBinder extends Binder {
   def service: IrcService = ref.get.get
 }
 object IrcService {
-  val TAG = "IrcService"
+  implicit val TAG = LogcatTag("IrcService")
 
   val EXTRA_HEADLESS = "com.hanhuy.android.irc.extra.headless"
   val EXTRA_PAGE     = "com.hanhuy.android.irc.extra.page"
@@ -103,6 +101,7 @@ class IrcService extends Service with EventBus.RefOwner {
     t.start()
     t
   }
+  // used to schedule an irc ping every 30 seconds
   lazy val handler = new Handler(handlerThread.getLooper)
 
   lazy val config   = new Config(this)
@@ -192,7 +191,7 @@ class IrcService extends Service with EventBus.RefOwner {
   }
 
   def addConnection(server: Server, connection: IrcConnection) {
-    Log.i(TAG, "Registering connection: " + server + " => " + connection)
+    i("Registering connection: " + server + " => " + connection)
     mconnections += ((server, connection))
     m_connections += ((connection, server))
 
@@ -204,6 +203,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
   def start() {
     if (!running) {
+      v("Launching autoconnect servers")
       config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
         s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
@@ -243,12 +243,12 @@ class IrcService extends Service with EventBus.RefOwner {
       synchronized {
         // TODO wait for quit to actually complete?
         while (disconnectCount < count) {
-          Log.d(TAG, "Waiting for disconnect: %d/%d" format (
+          d("Waiting for disconnect: %d/%d" format (
             disconnectCount, count))
           wait()
         }
       }
-      Log.d(TAG, "All disconnects completed, running callback: " + cb)
+      d("All disconnects completed, running callback: " + cb)
       cb.foreach { callback => UiBus.run { callback() } }
       stopSelf()
       if (startId != -1) {
@@ -287,13 +287,13 @@ class IrcService extends Service with EventBus.RefOwner {
           c.disconnect(m)
         } catch {
           case e: Exception =>
-            Log.e(TAG, "Disconnect failed", e)
+            RichLogger.e("Disconnect failed", e)
             c.setConnected(false)
             c.disconnect()
         }
         synchronized {
           disconnectCount += 1
-          Log.d(TAG, "disconnectCount: " + disconnectCount)
+          d("disconnectCount: " + disconnectCount)
           notify()
         }
       }
@@ -310,7 +310,7 @@ class IrcService extends Service with EventBus.RefOwner {
       // do not stop context if onDisconnect unless showing
       // do not stop context if quitting, quit() will do it
       if ((!disconnected || showing) && !quitting) {
-        Log.i(TAG, "Stopping context because all connections closed")
+        i("Stopping context because all connections closed")
         stopForeground(true)
         _running = false
         if (startId != -1) {
@@ -323,6 +323,8 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onCreate() {
     super.onCreate()
+    IrcConnection.ABOUT = getString(R.string.version, "0.1alpha")
+    v("Creating service")
     Widgets(this) // load widgets listeners
     val ircdebug = settings.get(Settings.IRC_DEBUG)
     if (ircdebug)
@@ -347,17 +349,18 @@ class IrcService extends Service with EventBus.RefOwner {
     if (i != null && i.getBooleanExtra(EXTRA_HEADLESS, false))
       start()
 
-    Service.START_STICKY
+    Service.START_NOT_STICKY
   }
 
   def connect(server: Server) {
+    v("Connecting server: %s", server)
     if (server.state == Server.State.CONNECTING ||
         server.state == Server.State.CONNECTED) {
       return
     }
 
     server.state = Server.State.CONNECTING
-    async(new ConnectTask(server, this))
+    async(connectServerTask(server))
     if (!_running) {
       _running = true
       startService(new Intent(this, classOf[IrcService]))
@@ -447,7 +450,7 @@ class IrcService extends Service with EventBus.RefOwner {
 
   // currently unused
   def uncaughtExceptionHandler(t: Thread, e: Throwable) {
-    Log.e(TAG, "Uncaught exception in thread: " + t, e)
+    RichLogger.e("Uncaught exception in thread: " + t, e)
     Toast.makeText(this, e.getMessage, Toast.LENGTH_LONG).show()
     if (!t.getName.startsWith("sIRC-")) throw e
   }
@@ -617,32 +620,28 @@ class IrcService extends Service with EventBus.RefOwner {
       ))
     }
   }
-}
 
-// TODO when cancelled, disconnect if still in process
-// TODO implement connection timeouts
-// TODO nuke the stupid AsyncTask
-// use Object due to java<->scala varargs interop bug
-// https://issues.scala-lang.org/browse/SI-1459
-class ConnectTask(server: Server, service: IrcService)
-extends AsyncTask[Object, Object, Server.State] {
-  IrcConnection.ABOUT = service.getString(R.string.version, "0.1alpha")
-  //IrcDebug.setEnabled(true)
-  protected override def doInBackground(args: Object*): Server.State = {
+  def serverMessage(message: String, server: Server) {
+    UiBus.run {
+      server.add(ServerInfo(message))
+    }
+  }
+
+  def connectServerTask(server: Server) {
     val ircserver = new IrcServer(server.hostname, server.port,
       server.password, server.ssl)
     val connection = new IrcConnection
-    Log.i(TAG, "Connecting to server: " +
+    i("Connecting to server: " +
       (server.hostname, server.port, server.ssl))
     connection.setServer(ircserver)
     connection.setUsername(server.username, server.realname)
     connection.setNick(server.nickname)
 
     var state = server.state
-    publishProgress(service.getString(R.string.server_connecting))
-    service.addConnection(server, connection)
-    val sslctx = SSLManager.configureSSL(service, server)
-    val listener = new IrcListeners(service)
+    serverMessage(getString(R.string.server_connecting), server)
+    addConnection(server, connection)
+    val sslctx = SSLManager.configureSSL(this, server)
+    val listener = new IrcListeners(this)
     connection.setAdvancedListener(listener)
     connection.addServerListener(listener)
     connection.addModeListener(listener)
@@ -656,58 +655,49 @@ extends AsyncTask[Object, Object, Server.State] {
       case e: NickNameException =>
         connection.setNick(server.altnick)
         server.currentNick = server.altnick
-        publishProgress(service.getString(R.string.server_nick_retry))
+        serverMessage(getString(R.string.server_nick_retry), server)
         try {
           connection.connect(sslctx)
           state = Server.State.CONNECTED
         } catch {
           case e: Exception =>
-            Log.w(TAG, "Failed to connect, nick exception?", e)
-            publishProgress(service.getString(R.string.server_nick_error))
+            RichLogger.w("Failed to connect, nick exception?", e)
+            serverMessage(getString(R.string.server_nick_error), server)
             state = Server.State.DISCONNECTED
             connection.disconnect()
-            publishProgress(service.getString(R.string.server_disconnected))
-            service.removeConnection(server)
+            serverMessage(getString(R.string.server_disconnected), server)
+            removeConnection(server)
         }
       case e: Exception =>
         state = Server.State.DISCONNECTED
-        service.removeConnection(server)
-        Log.e(TAG, "Unable to connect", e)
-        publishProgress(e.getMessage)
+        removeConnection(server)
+        RichLogger.e("Unable to connect", e)
+        serverMessage(e.getMessage, server)
         try {
           connection.disconnect()
         } catch {
           case ex: Exception => {
-            Log.e(TAG, "Exception cleanup failed", ex)
+            RichLogger.e("Exception cleanup failed", ex)
             connection.setConnected(false)
             connection.disconnect()
             state = Server.State.DISCONNECTED
           }
         }
-        publishProgress(service.getString(R.string.server_disconnected))
-        if (service.connections.size == 0) IrcService._running = false
+        serverMessage(getString(R.string.server_disconnected), server)
+        if (connections.size == 0) IrcService._running = false
     }
 
     if (state == Server.State.CONNECTED)
-      service.ping(connection, server)
+      ping(connection, server)
 
-    state
-  }
-
-  protected override def onPostExecute(state: Server.State) =
-    server.state = state
-
-  protected override def onProgressUpdate(progress: Object*) {
-    if (progress.length > 0)
-      server.add(ServerInfo(
-        if (progress(0) == null) "" else progress(0).toString))
+    UiBus.run { server.state = state }
   }
 }
 
 object PrintStream
 extends java.io.PrintStream(new java.io.ByteArrayOutputStream) {
-  val TAG = "sIRC"
-  override def println(line: String) = Log.d(TAG, line)
+  implicit val TAG = LogcatTag("sIRC")
+  override def println(line: String) = d(line)
   override def flush() = ()
 }
 

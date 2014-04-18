@@ -17,6 +17,7 @@ import com.sorcix.sirc.IrcConnection
 
 import scala.collection.JavaConversions._
 
+import com.hanhuy.android.common.AndroidConversions
 import AndroidConversions._
 import android.app.Activity
 import com.hanhuy.android.irc.model.MessageLike.CommandError

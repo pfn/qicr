@@ -14,6 +14,7 @@ import android.util.Log
 import com.sorcix.sirc._
 
 import scala.util.control.Exception._
+import com.hanhuy.android.common.{UiBus, SpannedGenerator, AndroidConversions}
 import AndroidConversions._
 import SpannedGenerator._
 import IrcListeners._

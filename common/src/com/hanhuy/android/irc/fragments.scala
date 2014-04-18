@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc
 
-import android.app.{Activity, AlertDialog, Dialog}
+import android.app.{AlertDialog, Dialog}
 import android.content.Context
 import android.content.DialogInterface
 import android.os.Bundle
@@ -10,7 +10,6 @@ import android.view.{Menu, MenuItem, MenuInflater}
 import android.widget.AdapterView
 import android.widget.{ListView, ArrayAdapter}
 import android.widget.Toast
-import android.util.Log
 
 import android.support.v4.app.ListFragment
 import android.support.v4.app.DialogFragment
@@ -22,9 +21,12 @@ import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.MessageAdapter
 import com.hanhuy.android.irc.model.BusEvent
 
-import AndroidConversions._
+import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common.{RichLogger, UiBus, EventBus}
 
 import MainActivity._
+import TypedResource._
+import RichLogger._
 
 // TODO remove retainInstance -- messes up with theme change
 // TODO fix dialog dismiss on-recreate
@@ -180,7 +182,7 @@ extends ListFragment with EventBus.RefOwner {
       getListView.setSelection(
         if (adapter.getCount() > 0) _adapter.getCount()-1 else 0)
     } catch {
-      case e: IllegalStateException => Log.d(TAG, "Content view not ready")
+      case e: IllegalStateException => d("Content view not ready")
     }
   }
 
@@ -276,7 +278,7 @@ extends MessagesFragment(a) with EventBus.RefOwner {
       val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
 
-      Log.d(TAG, "Requesting tab close for: " + channel + " <= " + id)
+      d("Requesting tab close for: " + channel + " <= " + id)
       def removeChannel() {
         if (channel != null && channel.state == Channel.State.JOINED) {
           activity.service.channels.get(channel) foreach { _.part() }

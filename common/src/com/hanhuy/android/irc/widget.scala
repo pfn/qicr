@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import com.hanhuy.android.common._
 import AndroidConversions._
 
 import android.appwidget.{AppWidgetManager, AppWidgetProvider}
@@ -14,7 +15,6 @@ import android.speech.RecognizerIntent
 import com.hanhuy.android.irc.model.BusEvent.ChannelAdded
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 import com.hanhuy.android.irc.model.BusEvent.PrivateMessage
-import scala.Some
 import com.hanhuy.android.irc.model.BusEvent.ChannelMessage
 import com.hanhuy.android.irc.model.BusEvent.ServerStateChanged
 import com.hanhuy.android.irc.model.BusEvent.ServiceRunning
@@ -434,7 +434,7 @@ with RemoteViewsService.RemoteViewsFactory {
 }
 
 // TODO refactor and cleanup, so ugly, copy/paste from MainActivity
-class WidgetChatActivity extends Activity {
+class WidgetChatActivity extends Activity with TypedActivity {
   import collection.JavaConversions._
   val REQUEST_SPEECH_RECOGNITION = 1
   lazy val x: RichActivity = this

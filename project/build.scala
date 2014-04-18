@@ -31,6 +31,7 @@ object QicrBuild extends Build {
       _.data.getName startsWith "android-support-v4") },
 
     libraryDependencies ++= Seq(
+      "com.hanhuy" %% "android-common" % "0.1",
       "com.sorcix" % "sirc" % "1.1.5",
       apklib("com.viewpagerindicator" % "library" % "2.4.1"),
       "com.android.support" % "support-v4" % "19.1.0",

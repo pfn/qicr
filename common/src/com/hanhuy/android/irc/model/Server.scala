@@ -1,12 +1,10 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.Config
-import com.hanhuy.android.irc.UiBus
-import com.hanhuy.android.irc.ServiceBus
 
 import android.content.ContentValues
-import android.provider.BaseColumns
 import com.hanhuy.android.irc.model.BusEvent.ServerMessage
+import com.hanhuy.android.common.{UiBus, ServiceBus}
 
 object Server {
   trait State

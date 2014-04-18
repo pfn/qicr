@@ -11,8 +11,10 @@ import android.support.v7.view.ActionMode
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.view.View
 
+import com.hanhuy.android.common.AndroidConversions
 import AndroidConversions._
 import android.support.v4.view.MenuItemCompat
+import android.support.v7.app.ActionBar.OnNavigationListener
 
 object HoneycombSupport {
   val TAG = "HoneycombSupport"
@@ -58,6 +60,11 @@ object HoneycombSupport {
 
   def setSubtitle(s: String) = if (activity != null) {
     activity.getSupportActionBar.setSubtitle(s)
+  }
+
+  implicit def toOnNavigationListener(f: (Int, Long) => Boolean):
+  ActionBar.OnNavigationListener = new OnNavigationListener {
+    override def onNavigationItemSelected(p1: Int, p2: Long) = f(p1, p2)
   }
 
   def setupSpinnerNavigation(a: MainPagerAdapter) {

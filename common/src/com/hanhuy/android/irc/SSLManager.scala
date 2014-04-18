@@ -13,7 +13,8 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
-import AndroidConversions._
+import com.hanhuy.android.common.{AndroidConversions, UiBus}
+import com.hanhuy.android.common.UiBus
 
 object SSLManager {
     def configureSSL(service: IrcService, server: Server):

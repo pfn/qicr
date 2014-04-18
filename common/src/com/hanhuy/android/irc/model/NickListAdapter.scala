@@ -1,12 +1,10 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.EventBus
-import com.hanhuy.android.irc.UiBus
-import com.hanhuy.android.irc.MainActivity
-import com.hanhuy.android.irc.TR
-import com.hanhuy.android.irc.TypedResource._
-import com.hanhuy.android.irc.AndroidConversions._
-import com.hanhuy.android.irc.SpannedGenerator.textColor
+import com.hanhuy.android.irc.{TypedResource, MainActivity, TR}
+import com.hanhuy.android.common._
+import TypedResource._
+import com.hanhuy.android.irc.model.BusEvent.NickListChanged
+import SpannedGenerator._
 
 import android.view.LayoutInflater
 import android.widget.BaseAdapter
@@ -17,8 +15,8 @@ import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.irc.model.BusEvent.NickListChanged
-import scala.collection
 import scala.ref.WeakReference
+import AndroidConversions._
 
 object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[

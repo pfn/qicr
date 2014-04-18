@@ -1,8 +1,9 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc._
-import com.hanhuy.android.irc.AndroidConversions._
 
+import com.hanhuy.android.common.{AndroidConversions, UiBus, EventBus, SpannedGenerator}
+import AndroidConversions._
 import SpannedGenerator._
 import MessageLike._
 import TypedResource._

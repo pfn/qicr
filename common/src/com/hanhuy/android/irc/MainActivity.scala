@@ -8,10 +8,9 @@ import android.content.ServiceConnection
 import android.os.{Bundle, IBinder}
 import android.content.DialogInterface
 import android.speech.RecognizerIntent
-import android.util.Log
 import android.view.View
 import android.view.{Menu, MenuItem, MenuInflater}
-import android.widget.{AdapterView, Toast}
+import android.widget.Toast
 
 import android.support.v4.app.FragmentManager
 
@@ -20,12 +19,16 @@ import scala.collection.JavaConversions._
 import com.hanhuy.android.irc.model._
 
 import MainActivity._
+import TypedResource._
+import com.hanhuy.android.common._
+import RichLogger._
 
+import com.hanhuy.android.common._
 import AndroidConversions._
 import android.support.v7.app.ActionBarActivity
 import android.support.v4.widget.DrawerLayout
-import scala.Some
 import android.database.DataSetObserver
+import com.hanhuy.android.irc.model.BusEvent
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -35,7 +38,7 @@ object MainActivity {
   val SERVER_MESSAGES_FRAGMENT_PREFIX = "servermessagesfrag"
   val SERVER_MESSAGES_STACK = "servermessages"
 
-  val TAG = "MainActivity"
+  implicit val TAG = LogcatTag("MainActivity")
 
   val REQUEST_SPEECH_RECOGNITION = 1
 
@@ -60,7 +63,9 @@ object MainActivity {
 }
 class MainActivity extends ActionBarActivity with ServiceConnection
 with EventBus.RefOwner {
-  val _richactivity: RichActivity = this; import _richactivity._
+  val _richactivity: RichActivity = this
+  import _richactivity.{findView => _, _}
+  val _typedactivity: TypedViewHolder = this; import _typedactivity._
 
   lazy val settings = {
     val s = Settings(this)
@@ -123,7 +128,7 @@ with EventBus.RefOwner {
         startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
       } catch {
         case e: Exception => {
-          Log.w(TAG, "Unable to request speech recognition", e)
+          w("Unable to request speech recognition", e)
           Toast.makeText(this, R.string.speech_unsupported,
             Toast.LENGTH_SHORT).show()
         }
@@ -387,7 +392,7 @@ with EventBus.RefOwner {
         try {
           m.getListView.setSelection(m.getListAdapter.getCount - 1)
         } catch {
-          case e: Exception => Log.w(TAG, "Failed to set list position", e)
+          case e: Exception => w("Failed to set list position", e)
         }
       }
       case _ => ()

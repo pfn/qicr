@@ -1,12 +1,11 @@
 package com.hanhuy.android.irc.model
 
 import com.hanhuy.android.irc.IrcListeners
-import com.hanhuy.android.irc.ServiceBus
-import com.hanhuy.android.irc.UiBus
 
 import MessageLike._
 import scala.annotation.tailrec
 import android.util.Log
+import com.hanhuy.android.common.{UiBus, ServiceBus}
 
 object Channel {
   trait State

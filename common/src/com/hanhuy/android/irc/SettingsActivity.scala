@@ -8,6 +8,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.preference.PreferenceFragment
+import com.hanhuy.android.common.{AndroidConversions, ServiceBus, UiBus}
 
 object Setting {
   private var settings = Map.empty[String,Setting[_]]

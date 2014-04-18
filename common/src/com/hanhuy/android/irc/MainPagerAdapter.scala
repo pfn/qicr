@@ -7,7 +7,6 @@ import com.hanhuy.android.irc.model.Query
 import com.hanhuy.android.irc.model.ChannelLike
 import com.hanhuy.android.irc.model.ChannelLikeComparator
 import com.hanhuy.android.irc.model.FragmentPagerAdapter
-import com.hanhuy.android.irc.model.NickListAdapter
 import com.hanhuy.android.irc.model.BusEvent
 
 import android.app.NotificationManager
@@ -26,8 +25,10 @@ import scala.math.Numeric.{IntIsIntegral => Math}
 import java.util.Collections
 
 import MainPagerAdapter._
+import com.hanhuy.android.common._
 import AndroidConversions._
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
+import TypedResource.activityToTyped
 
 object MainPagerAdapter {
   val TAG = "MainPagerAdapter"
