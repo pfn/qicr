@@ -323,7 +323,9 @@ class IrcService extends Service with EventBus.RefOwner {
 
   override def onCreate() {
     super.onCreate()
-    IrcConnection.ABOUT = getString(R.string.version, "0.1alpha")
+    val version =
+      getPackageManager.getPackageInfo(getPackageName, 0).versionName
+    IrcConnection.ABOUT = getString(R.string.version, version)
     v("Creating service")
     Widgets(this) // load widgets listeners
     val ircdebug = settings.get(Settings.IRC_DEBUG)
@@ -518,15 +520,17 @@ class IrcService extends Service with EventBus.RefOwner {
     UiBus.run {
       val nm = systemService[NotificationManager]
       disconnect(server, disconnected = true)
-      if (connections.isEmpty) {
-        lastChannel = None
-        nm.notify(RUNNING_ID, runningNotification(
-          getString(R.string.server_disconnected)))
-      } else {
-        nm.notify(RUNNING_ID, runningNotification(runningString))
+      if (_running) {
+        if (connections.isEmpty) {
+          lastChannel = None
+          nm.notify(RUNNING_ID, runningNotification(
+            getString(R.string.server_disconnected)))
+        } else {
+          nm.notify(RUNNING_ID, runningNotification(runningString))
+        }
       }
     }
-    if (activity.isEmpty)
+    if (activity.isEmpty && _running)
       showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
         getString(R.string.notif_server_disconnected, server.name))
   }
