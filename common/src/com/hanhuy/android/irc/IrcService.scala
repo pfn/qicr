@@ -511,6 +511,7 @@ class IrcService extends Service with EventBus.RefOwner {
           new Intent(ACTION_NEXT_CHANNEL),
           PendingIntent.FLAG_UPDATE_CURRENT))
       .build
+      n.priority = Notification.PRIORITY_HIGH
       n
     } getOrElse builder.build
   }
