@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.{TypedResource, MainActivity, TR}
+import com.hanhuy.android.irc.{IrcManager, TypedResource, MainActivity, TR}
 import com.hanhuy.android.common._
 import TypedResource._
 import com.hanhuy.android.irc.model.BusEvent.NickListChanged
@@ -22,17 +22,17 @@ object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[
     MainActivity,Map[Channel,NickListAdapter]]()
   def apply(activity: MainActivity, channel: Channel) = {
-    val m = adapters.get(activity) getOrElse {
+    val m = adapters.getOrElse(activity, {
       adapters += ((activity, Map.empty))
       adapters(activity)
-    }
+    })
 
-    m.get(channel) getOrElse {
+    m.getOrElse(channel, {
       adapters += ((activity,
         m + ((channel, new NickListAdapter(
           new WeakReference(activity), channel)))))
       adapters(activity)(channel)
-    }
+    })
   }
 }
 
@@ -41,8 +41,9 @@ case class NickAndMode(mode: Char, nick: String)
 // must reference activity for resources
 class NickListAdapter(activity: WeakReference[MainActivity], channel: Channel)
 extends BaseAdapter with EventBus.RefOwner {
+  val manager = IrcManager.start()
     var c: SircChannel = _
-    activity.get map { _.service.channels.get(channel).foreach(c = _) }
+    manager.channels.get(channel).foreach(c = _)
     notifyDataSetChanged()
 
     def inflater = activity().systemService[LayoutInflater]

@@ -22,7 +22,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name="com.hanhuy.android.irc.IrcService"/>
+        <service android:name="com.hanhuy.android.irc.LifecycleService"/>
 
         <!-- widget -->
         <receiver

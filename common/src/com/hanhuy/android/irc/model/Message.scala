@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.{Setting, IrcService, Settings}
+import com.hanhuy.android.irc.{Setting, Settings}
 
 import java.util.Date
 
@@ -58,6 +58,11 @@ trait MessageLike {
 
 trait BusEvent extends com.hanhuy.android.common.BusEvent
 object BusEvent {
+  case object ExitApplication extends BusEvent
+  case object IrcManagerStart extends BusEvent
+  case object IrcManagerStop extends BusEvent
+  case object MainActivityStart extends BusEvent
+  case object MainActivityStop extends BusEvent
   case class ChannelStatusChanged(channel: ChannelLike) extends BusEvent
   case class ServerChanged(server: Server) extends BusEvent
   case class ServerAdded(server: Server) extends BusEvent
@@ -66,9 +71,6 @@ object BusEvent {
       server: Server, oldstate: Server.State) extends BusEvent
   case class PreferenceChanged(settings: Settings, pref: Setting[_])
   extends BusEvent
-  case class ServiceRunning(running: Boolean) extends BusEvent
-  case class ServiceConnected(service: IrcService) extends BusEvent
-  case object ServiceDisconnected extends BusEvent
   case class ServerMessage(server: Server, msg: MessageLike) extends BusEvent
   case class ChannelMessage(channel: ChannelLike, msg: MessageLike)
     extends BusEvent

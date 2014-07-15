@@ -77,19 +77,19 @@ object IrcListeners {
   implicit def toEnhancedUser(u: User) = new EnhancedUser(u)
   implicit def toQicrChannel(c: ChannelLike) = c.asInstanceOf[QicrChannel]
 }
-class IrcListeners(service: IrcService) extends AdvancedListener
+class IrcListeners(manager: IrcManager) extends AdvancedListener
 with ServerListener with MessageListener with ModeListener {
   // ServerListener
   // TODO send BusEvents instead
   override def onConnect(c: IrcConnection) {
-    service._connections.get(c) map { server =>
+    manager._connections.get(c) map { server =>
       UiBus.run {
         // ugh, need to do it here so that the auto commands can run
         server.state = Server.State.CONNECTED
-        server.add(ServerInfo(service.getString(R.string.server_connected)))
+        server.add(ServerInfo(manager.getString(R.string.server_connected)))
       }
       if (server.autorun != null || server.autojoin != null) {
-        val proc = CommandProcessor(service, null)
+        val proc = CommandProcessor(Application.context, null)
         proc.server = Some(server)
         if (server.autorun != null) {
           server.autorun.split(";") foreach { cmd =>
@@ -102,7 +102,7 @@ with ServerListener with MessageListener with ModeListener {
           }
         }
         if (server.autojoin != null) {
-          val join = service.getString(R.string.command_join_1)
+          val join = manager.getString(R.string.command_join_1)
           val channels = server.autojoin.split(";")
           channels foreach { c =>
             if (c.trim().length() > 0)
@@ -118,7 +118,7 @@ with ServerListener with MessageListener with ModeListener {
   }
   override def onDisconnect(c: IrcConnection) {
     //Log.w(TAG, "Connection dropped: " + c, new StackTrace)
-    service._connections.get(c) foreach { service.serverDisconnected }
+    manager._connections.get(c) foreach { manager.serverDisconnected }
   }
   override def onInvite(c: IrcConnection, src: User, user: User,
       channel: Channel) {
@@ -127,10 +127,10 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onJoin(c: IrcConnection, channel: Channel, user: User) {
     if (user.isUs)
-      service.addChannel(c, channel)
+      manager.addChannel(c, channel)
     UiBus.run {
       // sometimes channel hasn't been set yet (on connect)
-      service._channels.get(channel) foreach { ch =>
+      manager._channels.get(channel) foreach { ch =>
         UiBus.send(BusEvent.NickListChanged(ch))
         if (!user.isUs)
           ch.add(Join(user.getNick, user.address))
@@ -141,7 +141,7 @@ with ServerListener with MessageListener with ModeListener {
   override def onKick(c: IrcConnection, channel: Channel,
       user: User, op: User, msg: String) {
     UiBus.run {
-      val ch = service._channels(channel)
+      val ch = manager._channels(channel)
       if (user.isUs) {
         // TODO update adapter's channel state
         ch.state = QicrChannel.State.KICKED
@@ -154,9 +154,9 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onPart(c: IrcConnection, channel: Channel,
       user: User, msg: String) {
-    if (!service._channels.contains(channel)) return
+    if (!manager._channels.contains(channel)) return
       UiBus.run {
-        val ch = service._channels(channel)
+        val ch = manager._channels(channel)
         if (user.isUs) {
           ch.state = QicrChannel.State.PARTED
         } else {
@@ -168,7 +168,7 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onTopic(c: IrcConnection, channel: Channel,
       src: User, topic: String) {
-    service._channels.get(channel) foreach { c =>
+    manager._channels.get(channel) foreach { c =>
       UiBus.run {
         c.add(Topic(if (src != null) Some(src.getNick) else None, topic))
       }
@@ -179,19 +179,19 @@ with ServerListener with MessageListener with ModeListener {
       src: User, mode: String) = () // TODO
 
   override def onMotd(c: IrcConnection, motd: String) {
-    service._connections.get(c) foreach { server =>
+    manager._connections.get(c) foreach { server =>
       // sIRC sends motd as one big blob of lines, split before adding
       UiBus.run { motd.split("\r?\n") foreach { m => server.add(Motd(m)) } }
     }
   }
 
   override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
-    val server = service._connections(c)
+    val server = manager._connections(c)
     if (oldnick.isUs || newnick.isUs) {
       server.currentNick = newnick.getNick
 
       UiBus.run {
-        service._channels.values foreach { c =>
+        manager._channels.values foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
             c.add(NickChange(oldnick.getNick, newnick.getNick))
@@ -200,8 +200,8 @@ with ServerListener with MessageListener with ModeListener {
       }
     } else {
       UiBus.run {
-        service.channels.values collect {
-          case c: Channel if c.hasUser(newnick) => service._channels(c)
+        manager.channels.values collect {
+          case c: Channel if c.hasUser(newnick) => manager._channels(c)
         } foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
@@ -214,11 +214,11 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onQuit(c: IrcConnection, user: User, msg: String) {
     if (user.isUs) return
-    service._connections.get(c) foreach { server =>
+    manager._connections.get(c) foreach { server =>
       UiBus.run {
         try { // guard can change values if slow...
-          service.channels.values collect {
-            case c: Channel if c.hasUser(user) => service._channels.get(c)
+          manager.channels.values collect {
+            case c: Channel if c.hasUser(user) => manager._channels.get(c)
           } foreach { c =>
             if (c.isDefined && c.get.server == server) {
               UiBus.send(BusEvent.NickListChanged(c.get))
@@ -258,22 +258,22 @@ with ServerListener with MessageListener with ModeListener {
   // MessageListener
   override def onAction(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
-    service._channels.get(channel) foreach { c =>
+    manager._channels.get(channel) foreach { c =>
       val action = CtcpAction(src.getNick, msg)
       UiBus.run { c.add(action) }
       if (matchesNick(c.server, msg))
-        service.addChannelMention(c, action)
+        manager.addChannelMention(c, action)
     }
   }
 
   override def onMessage(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
-    service._channels.get(channel) foreach {
+    manager._channels.get(channel) foreach {
       c =>
 
         val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice)
         if (matchesNick(c.server, msg))
-          service.addChannelMention(c, pm)
+          manager.addChannelMention(c, pm)
 
         UiBus.run {
           c.add(pm)
@@ -283,17 +283,17 @@ with ServerListener with MessageListener with ModeListener {
 
   override def onNotice(c: IrcConnection, src: User, channel: Channel,
       msg: String) {
-    val c = service._channels(channel)
+    val c = manager._channels(channel)
     val notice = Notice(src.getNick, msg)
     UiBus.run { c.add(notice) }
     if (matchesNick(c.server, msg))
-      service.addChannelMention(c, notice)
+      manager.addChannelMention(c, notice)
   }
 
   val CtcpPing = """(\d+)\s+(\d+)""".r
   override def onCtcpReply(c: IrcConnection, src: User,
       cmd: String, reply: String) {
-    val s = service._connections(c)
+    val s = manager._connections(c)
     val r = CtcpReply(s, src.getNick, cmd, cmd match {
       case "PING" => reply match {
         case CtcpPing(seconds, micros) =>
@@ -308,14 +308,14 @@ with ServerListener with MessageListener with ModeListener {
     })
 
     // TODO show in current WidgetChatActivity
-    if (service.showing) {
+    if (manager.showing) {
       UiBus.run {
-        val msg = MessageAdapter.formatText(service, r)
-        service.activity map { activity =>
+        val msg = MessageAdapter.formatText(Application.context, r)
+        manager.activity map { activity =>
           val tab = activity.adapter.currentTab
           tab.channel orElse tab.server map { _.add(r) } getOrElse {
             s.add(r)
-            Toast.makeText(service, msg, Toast.LENGTH_LONG).show()
+            Toast.makeText(Application.context, msg, Toast.LENGTH_LONG).show()
           }
         }
       }
@@ -325,13 +325,13 @@ with ServerListener with MessageListener with ModeListener {
   }
 
   override def onAction(c: IrcConnection, src: User, action: String) =
-    UiBus.run { service.addQuery(c, src.getNick, action, action = true) }
+    UiBus.run { manager.addQuery(c, src.getNick, action, action = true) }
 
   override def onNotice(c: IrcConnection, src: User, msg: String) =
-    UiBus.run { service.addQuery(c, src.getNick, msg, notice = true) }
+    UiBus.run { manager.addQuery(c, src.getNick, msg, notice = true) }
 
   override def onPrivateMessage(c: IrcConnection, src: User, msg: String) =
-    UiBus.run { service.addQuery(c, src.getNick, msg) }
+    UiBus.run { manager.addQuery(c, src.getNick, msg) }
 
   def handleWhois(line: IrcPacket, start: Boolean = false) {
     val nick = line.getArgumentsArray()(1)
@@ -343,9 +343,9 @@ with ServerListener with MessageListener with ModeListener {
 
         line.getNumericCommand match {
           case 318 =>
-            UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
+            UiBus.run(manager.lastChannel foreach (_.add(accumulateWhois(nick))))
           case 369 =>
-            UiBus.run(service.lastChannel foreach (_.add(accumulateWhois(nick))))
+            UiBus.run(manager.lastChannel foreach (_.add(accumulateWhois(nick))))
           case _ =>
         }
       }
@@ -403,7 +403,7 @@ with ServerListener with MessageListener with ModeListener {
   }
   // AdvancedListener
   override def onUnknown(c: IrcConnection, line: IrcPacket) {
-    service._connections.get(c) foreach { server =>
+    manager._connections.get(c) foreach { server =>
       if (line.isNumeric) {
         // 306 = away
         // 333 = topic change info
@@ -456,8 +456,8 @@ with ServerListener with MessageListener with ModeListener {
                   // only schedule the next ping if it works
                   // need another job to update if no response?
                   // TODO make interval into a pref?
-                  service.handler.delayed(30000) {
-                    service.ping(c, server)
+                  manager.handler.delayed(30000) {
+                    manager.ping(c, server)
                   }
                   UiBus.send(BusEvent.ServerChanged(server))
                   return // don't print

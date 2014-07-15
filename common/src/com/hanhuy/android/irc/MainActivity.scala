@@ -60,9 +60,11 @@ object MainActivity {
     case _ => "null"
     })
   }
+
+  var instance = Option.empty[MainActivity]
 }
-class MainActivity extends ActionBarActivity with ServiceConnection
-with EventBus.RefOwner {
+class MainActivity extends ActionBarActivity with EventBus.RefOwner {
+  private var manager: IrcManager = null
   val _richactivity: RichActivity = this
   import _richactivity.{findView => _, _}
   val _typedactivity: TypedViewHolder = this; import _typedactivity._
@@ -147,14 +149,8 @@ with EventBus.RefOwner {
   }
   private var page = -1 // used for restoring tab selection on recreate
 
-  var _service: IrcService = _
-  def service = _service
-  def service_=(s: IrcService) {
-    _service = s
-    UiBus.send(BusEvent.ServiceConnected(s))
-  }
-
   override def onCreate(bundle: Bundle) {
+    manager = IrcManager.start()
     val mode = settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
@@ -256,9 +252,9 @@ with EventBus.RefOwner {
   override def onResume() {
     super.onResume()
     val nm = systemService[NotificationManager]
-    nm.cancel(IrcService.MENTION_ID)
-    nm.cancel(IrcService.DISCON_ID)
-    nm.cancel(IrcService.PRIVMSG_ID)
+    nm.cancel(IrcManager.MENTION_ID)
+    nm.cancel(IrcManager.DISCON_ID)
+    nm.cancel(IrcManager.PRIVMSG_ID)
     if (toggleSelectorMode) {
       val newnav = settings.get(Settings.NAVIGATION_MODE)
       val isDropNav = HoneycombSupport.isSpinnerNavigation
@@ -280,29 +276,26 @@ with EventBus.RefOwner {
     }
 
 
-    if (service != null)
-      service.showing = true
-
-    def refreshTabs(s: IrcService = null) {
-      adapter.refreshTabs(if (s != null) s else service)
+    def refreshTabs() {
+      adapter.refreshTabs()
       val i = getIntent
-      if (i != null && i.hasExtra(IrcService.EXTRA_SUBJECT)) {
-        val subject = i.getStringExtra(IrcService.EXTRA_SUBJECT)
+      if (i != null && i.hasExtra(IrcManager.EXTRA_SUBJECT)) {
+        val subject = i.getStringExtra(IrcManager.EXTRA_SUBJECT)
         // removeExtra so subsequent onResume doesn't select this tab
-        i.removeExtra(IrcService.EXTRA_SUBJECT)
+        i.removeExtra(IrcManager.EXTRA_SUBJECT)
         if (subject != null) {
           if (subject == "")
             pager.setCurrentItem(0)
           else {
-            val parts = subject.split(IrcService.EXTRA_SPLITTER)
+            val parts = subject.split(IrcManager.EXTRA_SPLITTER)
             if (parts.length == 2) {
               adapter.selectTab(parts(1), parts(0))
               page = -1
             }
           }
         }
-      } else if (i != null && i.hasExtra(IrcService.EXTRA_PAGE)) {
-        val page = i.getIntExtra(IrcService.EXTRA_PAGE, 0)
+      } else if (i != null && i.hasExtra(IrcManager.EXTRA_PAGE)) {
+        val page = i.getIntExtra(IrcManager.EXTRA_PAGE, 0)
         //tabhost.setCurrentTab(page)
         pager.setCurrentItem(page)
       }
@@ -310,11 +303,7 @@ with EventBus.RefOwner {
       pageChanged(adapter.page)
     }
 
-    if (service != null) refreshTabs()
-    else UiBus += { case BusEvent.ServiceConnected(s) =>
-      refreshTabs(s)
-      EventBus.Remove
-    }
+    refreshTabs()
   }
 
   override def onNewIntent(i: Intent) {
@@ -324,36 +313,17 @@ with EventBus.RefOwner {
 
   override def onStart() {
     super.onStart()
+    instance = Some(this)
+    IrcManager.start()
+    ServiceBus.send(BusEvent.MainActivityStart)
     HoneycombSupport.init(this)
-    bindService(new Intent(this, classOf[IrcService]), this,
-      Context.BIND_AUTO_CREATE)
   }
-
-  override def onServiceConnected(name: ComponentName, binder: IBinder) {
-    service = binder.asInstanceOf[LocalIrcBinder].service
-    service.bind(this)
-    service.showing = true
-    servers.onIrcServiceConnected(service)
-    if (page != -1) {
-      UiBus.post {
-        pager.setCurrentItem(page)
-        page = -1
-      }
-    }
-  }
-
-  override def onServiceDisconnected(name : ComponentName) =
-    UiBus.send(BusEvent.ServiceDisconnected)
 
   override def onStop() {
     super.onStop()
+    instance = None
+    ServiceBus.send(BusEvent.MainActivityStop)
     HoneycombSupport.close()
-
-    if (service != null) {
-      service.showing = false
-      service.unbind()
-    }
-    unbindService(this)
   }
 
   override def onDestroy() {
@@ -398,14 +368,13 @@ with EventBus.RefOwner {
     }
 
     f match {
-      case _: QueryFragment => {
+      case _: QueryFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         nickcomplete.setVisibility(View.GONE)
         speechrec.setVisibility(
           if (showSpeechRec) View.VISIBLE else View.GONE)
-      }
-      case c: ChannelFragment => {
+      case c: ChannelFragment =>
 
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_UNLOCKED, drawerRight)
@@ -445,11 +414,11 @@ with EventBus.RefOwner {
                 nick = nick.substring(1)
               item.getItemId match {
                 case R_id_nick_whois =>
-                  proc.processor.channel = service.lastChannel
+                  proc.processor.channel = manager.lastChannel
                   proc.processor.WhoisCommand.execute(Some(nick))
                 case R_id_nick_insert => insertNick(pos)
                 case R_id_nick_start_chat =>
-                  service.startQuery(c.channel.server, nick)
+                  manager.startQuery(c.channel.server, nick)
               }
 
               ()
@@ -461,20 +430,17 @@ with EventBus.RefOwner {
           if (showNickComplete) View.VISIBLE else View.GONE)
         speechrec.setVisibility(
           if (showSpeechRec) View.VISIBLE else View.GONE)
-      }
-      case _: ServerMessagesFragment => {
+      case _: ServerMessagesFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         input.setVisibility(View.VISIBLE)
         nickcomplete.setVisibility(View.GONE)
         speechrec.setVisibility(View.GONE)
-      }
-      case _ => {
+      case _ =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         nickcomplete.setVisibility(View.GONE)
         speechrec.setVisibility(View.GONE)
-      }
     }
     channels.setItemChecked(idx, true)
   }
@@ -494,24 +460,21 @@ with EventBus.RefOwner {
     val R_id_toggle_theme = R.id.toggle_theme
     val R_id_toggle_rotate_lock = R.id.toggle_rotate_lock
     item.getItemId match {
-    case R_id_exit => {
+    case R_id_exit =>
             exit()
             true
-    }
-    case R_id_settings => {
+    case R_id_settings =>
       val clazz = if (honeycombAndNewer) classOf[SettingsFragmentActivity]
         else classOf[SettingsActivity]
       val intent = new Intent(this, clazz)
       startActivity(intent)
       true
-    }
-    case R_id_toggle_theme => {
+    case R_id_toggle_theme =>
       val mode = settings.get(Settings.DAYNIGHT_MODE)
       settings.set(Settings.DAYNIGHT_MODE, !mode)
       _recreate()
       true
-    }
-    case R_id_toggle_rotate_lock => {
+    case R_id_toggle_rotate_lock =>
       import android.content.pm.ActivityInfo._
       val locked = !item.isChecked
       item.setChecked(locked)
@@ -519,7 +482,6 @@ with EventBus.RefOwner {
       setRequestedOrientation(
         if (locked) SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
       true
-    }
     case _ => false
     }
   }
@@ -536,19 +498,19 @@ with EventBus.RefOwner {
 
   def exit(message: Option[String] = None) {
     val prompt = settings.get(Settings.QUIT_PROMPT)
-    if (service.connected && prompt) {
+    if (IrcManager.instance.get.connected && prompt) {
       val builder = new AlertDialog.Builder(this)
       builder.setTitle(R.string.quit_confirm_title)
       builder.setMessage(getString(R.string.quit_confirm))
       builder.setPositiveButton(R.string.yes,
         () => {
-          service.quit(message, Some(finish _))
+          IrcManager.stop(message, Some(finish _))
         })
       builder.setNegativeButton(R.string.no, null)
       builder.create().show()
     } else {
-      service.quit(message,
-        if (service.connected) Some(finish _) else { finish(); None })
+      IrcManager.stop(message,
+        if (manager.connected) Some(finish _) else { finish(); None })
     }
   }
   // interesting, this causes a memory leak--fix by unregistering onStop

@@ -36,7 +36,7 @@ object QicrBuild extends android.AutoBuild {
       "com.sorcix" % "sirc" % "1.1.5",
       "ch.acra" % "acra" % "4.5.0",
       apklib("com.viewpagerindicator" % "library" % "2.4.1"),
-      "com.android.support" % "support-v4" % "19.1.0",
+      "com.android.support" % "support-v4" % "20.0.0",
       "com.android.support" % "appcompat-v7" % "19.1.0")
   ): _*)
 }

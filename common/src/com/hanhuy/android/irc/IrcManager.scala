@@ -1,13 +1,12 @@
 package com.hanhuy.android.irc
 
+import android.text.TextUtils
 import com.hanhuy.android.irc.model._
 
 import scala.ref.WeakReference
 
-import android.app.Service
 import android.app.NotificationManager
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
-import android.os.{Binder, IBinder}
 import android.os.{Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
@@ -23,8 +22,7 @@ import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.common._
 import AndroidConversions._
 import RichLogger._
-import IrcService._
-import android.text.TextUtils
+import IrcManager._
 import android.net.ConnectivityManager
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
@@ -33,19 +31,15 @@ import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.BusEvent
 
-class LocalIrcBinder extends Binder {
-  var ref: WeakReference[IrcService] = _
-  // can't use default constructor as it will save a strong-ref
-  def this(s: IrcService) = {
-      this()
-      ref = new WeakReference(s)
-  }
-  def service: IrcService = ref.get.get
-}
-object IrcService {
-  implicit val TAG = LogcatTag("IrcService")
+object IrcManager {
+  implicit val TAG = LogcatTag("IrcManager")
 
-  val EXTRA_HEADLESS = "com.hanhuy.android.irc.extra.headless"
+  // notification IDs
+  val RUNNING_ID = 1
+  val DISCON_ID  = 2
+  val PRIVMSG_ID = 3
+  val MENTION_ID = 4
+
   val EXTRA_PAGE     = "com.hanhuy.android.irc.extra.page"
   val EXTRA_SUBJECT  = "com.hanhuy.android.irc.extra.subject"
   val EXTRA_SPLITTER = "::qicr-splitter-boundary::"
@@ -55,58 +49,56 @@ object IrcService {
   val ACTION_CANCEL_MENTION = "com.hanhuy.android.irc.action.CANCEL_MENTION"
   val ACTION_QUICK_CHAT = "com.hanhuy.android.irc.action.QUICK_CHAT"
 
-  // notification IDs
-  val RUNNING_ID = 1
-  val DISCON_ID  = 2
-  val PRIVMSG_ID = 3
-  val MENTION_ID = 4
+  var instance: Option[IrcManager] = None
 
-  // TODO refactor to make this private
-  private var __running = false
-  def _running = __running
-  def _running_= (r: Boolean) = {
-    if (__running != r)
-      ServiceBus.send(BusEvent.ServiceRunning(r))
-    __running = r
-  }
-
-  var instance: Option[IrcService] = None
-}
-class IrcService extends Service with EventBus.RefOwner {
-  instance = Some(this)
-  val _richcontext: RichContext = this; import _richcontext._
-  var recreateActivity: Option[Int] = None // int = page to flip to
-  var startId: Int = -1
-  var messagesId = 0
-  def connected = connections.size > 0
-
-  var _showing = false
-  def showing = _showing
-  def showing_=(s: Boolean) = {
-    // would be nicer to show notif on activity.isEmpty
-    // but speech rec -> home will not trigger this?
-    if (!s) {
-      if (_running) {
-        startForeground(RUNNING_ID, runningNotification(runningString))
-      } else {
-        stopForeground(true)
-      }
-    } else {
-      stopForeground(true)
+  def start() = {
+    instance getOrElse {
+      val m = new IrcManager()
+      m.start()
+      m
     }
-    _showing = s
   }
-  lazy val handlerThread = {
-    val t = new HandlerThread("IrcServiceHandler")
-    t.start()
-    t
-  }
-  // used to schedule an irc ping every 30 seconds
-  lazy val handler = new Handler(handlerThread.getLooper)
 
-  lazy val config   = new Config(this)
-  lazy val settings = Settings(this)
+  def stop[A](message: Option[String] = None, cb: Option[() => A] = None) {
+    instance foreach { _.quit(message, cb) }
+  }
+
+  def running = instance exists (_.running)
+}
+class IrcManager extends EventBus.RefOwner {
+  val version =
+    Application.context.getPackageManager.getPackageInfo(
+      Application.context.getPackageName, 0).versionName
+  IrcConnection.ABOUT = getString(R.string.version, version)
+  v("Creating service")
+  Widgets(Application.context) // load widgets listeners
+  val ircdebug = settings.get(Settings.IRC_DEBUG)
+  if (ircdebug)
+    IrcDebug.setLogStream(PrintStream)
+  IrcDebug.setEnabled(ircdebug)
+  val filter = new IntentFilter
+
+  filter.addAction(ACTION_NEXT_CHANNEL)
+  filter.addAction(ACTION_PREV_CHANNEL)
+  filter.addAction(ACTION_CANCEL_MENTION)
+
+  Application.context.registerReceiver(receiver, filter)
+
+  val connFilter = new IntentFilter
+  connFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+  Application.context.registerReceiver(connReceiver, connFilter)
+
+  def getString(s: Int, args: Any*) = Application.context.getString(s,
+    args map { _.asInstanceOf[Object] }: _*)
+
+  private var _running = false
+  private var _showing = false
+  def showing = _showing
+  val nm = Application.context.systemService[NotificationManager]
+
   ServiceBus += {
+    case BusEvent.MainActivityStart => _showing = true
+    case BusEvent.MainActivityStop  => _showing = false
     case BusEvent.PreferenceChanged(_, k) =>
       if (k == Settings.IRC_DEBUG) {
         val debug = settings.get(Settings.IRC_DEBUG)
@@ -116,14 +108,29 @@ class IrcService extends Service with EventBus.RefOwner {
       }
     case BusEvent.ChannelMessage(ch, msg) => lastChannel foreach { c =>
       if (!showing && c == ch) {
-        val text = getString(R.string.notif_connected_servers,
-          connections.size: java.lang.Integer)
+        val text = getString(R.string.notif_connected_servers, connections.size)
 
         val n = runningNotification(text)
-        systemService[NotificationManager].notify(RUNNING_ID, n)
+        nm.notify(RUNNING_ID, n)
       }
     }
   }
+
+  instance = Some(this)
+  var recreateActivity: Option[Int] = None // int = page to flip to
+  var messagesId = 0
+  def connected = connections.size > 0
+
+  lazy val handlerThread = {
+    val t = new HandlerThread("IrcManagerHandler")
+    t.start()
+    t
+  }
+  // used to schedule an irc ping every 30 seconds
+  lazy val handler = new Handler(handlerThread.getLooper)
+
+  lazy val config   = new Config(Application.context)
+  lazy val settings = Settings(Application.context)
 
   def connections  = mconnections
   def _connections = m_connections
@@ -196,20 +203,20 @@ class IrcService extends Service with EventBus.RefOwner {
     m_connections += ((connection, server))
 
     if (activity.isEmpty && _running) {
-      systemService[NotificationManager].notify(RUNNING_ID, runningNotification(
-        runningString))
+      nm.notify(RUNNING_ID, runningNotification(runningString))
     }
   }
 
-  def start() {
+  private def start() {
     if (!running) {
+      Application.context.startService(
+        new Intent(Application.context, classOf[LifecycleService]))
+
       v("Launching autoconnect servers")
       config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
         s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
       }
-      if (activity.isEmpty)
-        startForeground(RUNNING_ID, runningNotification(runningString))
     }
   }
   def bind(main: MainActivity) {
@@ -221,21 +228,27 @@ class IrcService extends Service with EventBus.RefOwner {
     _activity = null
     recreateActivity foreach { page =>
       recreateActivity = None
-      val intent = new Intent(this, classOf[MainActivity])
+      val intent = new Intent(Application.context, classOf[MainActivity])
       intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       intent.putExtra(EXTRA_PAGE, page)
-      startActivity(intent)
+      Application.context.startActivity(intent)
     }
   }
 
   def queueCreateActivity(page: Int) = recreateActivity = Some(page)
 
-  override def onBind(intent: Intent) : IBinder = new LocalIrcBinder(this)
-
   def running = _running
 
   var disconnectCount = 0
   def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
+    instance = None
+    Application.context.unregisterReceiver(receiver)
+    Application.context.unregisterReceiver(connReceiver)
+    nm.cancel(DISCON_ID)
+    nm.cancel(MENTION_ID)
+    nm.cancel(PRIVMSG_ID)
+    ServiceBus.send(BusEvent.ExitApplication)
+
     val count = connections.keys.size
     _running = false
     disconnectCount = 0
@@ -250,13 +263,6 @@ class IrcService extends Service with EventBus.RefOwner {
       }
       d("All disconnects completed, running callback: " + cb)
       cb.foreach { callback => UiBus.run { callback() } }
-      stopSelf()
-      if (startId != -1) {
-        stopForeground(true)
-        stopSelfResult(startId)
-        startId = -1
-      }
-      val nm = systemService[NotificationManager]
       nm.cancel(DISCON_ID)
       nm.cancel(MENTION_ID)
       nm.cancel(PRIVMSG_ID)
@@ -265,19 +271,8 @@ class IrcService extends Service with EventBus.RefOwner {
     handlerThread.quit()
   }
 
-  override def onDestroy() {
-    super.onDestroy()
-    instance = None
-    unregisterReceiver(receiver)
-    unregisterReceiver(connReceiver)
-    val nm = systemService[NotificationManager]
-    nm.cancel(DISCON_ID)
-    nm.cancel(MENTION_ID)
-    nm.cancel(PRIVMSG_ID)
-  }
-
   def disconnect(server: Server, message: Option[String] = None,
-      disconnected: Boolean = false, quitting: Boolean = false) {
+                 disconnected: Boolean = false, quitting: Boolean = false) {
     connections.get(server).foreach { c =>
       async {
         try {
@@ -311,62 +306,21 @@ class IrcService extends Service with EventBus.RefOwner {
       // do not stop context if quitting, quit() will do it
       if ((!disconnected || showing) && !quitting) {
         i("Stopping context because all connections closed")
-        stopForeground(true)
         _running = false
-        if (startId != -1) {
-          stopSelfResult(startId)
-          startId = -1
-        }
       }
     }
-  }
-
-  override def onCreate() {
-    super.onCreate()
-    val version =
-      getPackageManager.getPackageInfo(getPackageName, 0).versionName
-    IrcConnection.ABOUT = getString(R.string.version, version)
-    v("Creating service")
-    Widgets(this) // load widgets listeners
-    val ircdebug = settings.get(Settings.IRC_DEBUG)
-    if (ircdebug)
-      IrcDebug.setLogStream(PrintStream)
-    IrcDebug.setEnabled(ircdebug)
-    val filter = new IntentFilter
-
-    filter.addAction(ACTION_NEXT_CHANNEL)
-    filter.addAction(ACTION_PREV_CHANNEL)
-    filter.addAction(ACTION_CANCEL_MENTION)
-
-    registerReceiver(receiver, filter)
-
-    val connFilter = new IntentFilter
-    connFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
-    registerReceiver(connReceiver, connFilter)
-  }
-
-  override def onStartCommand(i: Intent, flags: Int, id: Int): Int = {
-    startId = id
-
-    if (i != null && i.getBooleanExtra(EXTRA_HEADLESS, false))
-      start()
-
-    Service.START_NOT_STICKY
   }
 
   def connect(server: Server) {
     v("Connecting server: %s", server)
     if (server.state == Server.State.CONNECTING ||
-        server.state == Server.State.CONNECTED) {
+      server.state == Server.State.CONNECTED) {
       return
     }
 
     server.state = Server.State.CONNECTING
     async(connectServerTask(server))
-    if (!_running) {
-      _running = true
-      startService(new Intent(this, classOf[IrcService]))
-    }
+    _running = true
   }
 
   def getServers = config.servers
@@ -377,25 +331,25 @@ class IrcService extends Service with EventBus.RefOwner {
   }
 
   def startQuery(server: Server, nick: String) {
-    val query = queries.get((server, nick.toLowerCase)) getOrElse {
+    val query = queries.getOrElse((server, nick.toLowerCase), {
       val q = new Query(server, nick)
       q add MessageLike.Query()
       queries += (((server, nick.toLowerCase),q))
       q
-    }
+    })
     UiBus.send(BusEvent.StartQuery(query))
   }
 
   def addQuery(c: IrcConnection, _nick: String, msg: String,
-      sending: Boolean = false, action: Boolean = false,
-      notice: Boolean = false) {
-    val server = _connections.get(c) getOrElse { return }
+               sending: Boolean = false, action: Boolean = false,
+               notice: Boolean = false) {
+    val server = _connections.getOrElse(c, { return })
 
-    val query = queries.get((server, _nick.toLowerCase)) getOrElse {
+    val query = queries.getOrElse((server, _nick.toLowerCase), {
       val q = new Query(server, _nick)
       queries += (((server, _nick.toLowerCase),q))
       q
-    }
+    })
     mchannels += ((query,null))
 
     val nick = if (sending) server.currentNick else _nick
@@ -453,73 +407,13 @@ class IrcService extends Service with EventBus.RefOwner {
   // currently unused
   def uncaughtExceptionHandler(t: Thread, e: Throwable) {
     RichLogger.e("Uncaught exception in thread: " + t, e)
-    Toast.makeText(this, e.getMessage, Toast.LENGTH_LONG).show()
+    Toast.makeText(Application.context, e.getMessage, Toast.LENGTH_LONG).show()
     if (!t.getName.startsWith("sIRC-")) throw e
-  }
-
-  def runningString = getString(R.string.notif_connected_servers,
-    connections.size: java.lang.Integer)
-  def runningNotification(text: CharSequence) = {
-    val intent = new Intent(this, classOf[MainActivity])
-    lastChannel foreach { c =>
-      intent.putExtra(EXTRA_SUBJECT, c.server.name + EXTRA_SPLITTER + c.name)
-    }
-    val pending = PendingIntent.getActivity(this, RUNNING_ID,
-      intent, PendingIntent.FLAG_UPDATE_CURRENT)
-
-    val builder = new NotificationCompat.Builder(this)
-      .setSmallIcon(R.drawable.ic_notify_mono)
-      .setWhen(System.currentTimeMillis())
-      .setContentIntent(pending)
-      .setContentText(text)
-      .setContentTitle(getString(R.string.notif_title))
-
-
-    lastChannel map { c =>
-      val title = c.name
-      val msgs = if (c.messages.filteredMessages.size > 0) {
-        TextUtils.concat(
-          c.messages.filteredMessages.takeRight(5).map { m =>
-            MessageAdapter.formatText(this, m)(c)
-        }.flatMap (m => Seq(m, "\n")).init:_*)
-      } else {
-        getString(R.string.no_messages)
-      }
-
-      val chatIntent = new Intent(this, classOf[WidgetChatActivity])
-      chatIntent.putExtra(IrcService.EXTRA_SUBJECT, Widgets.toString(c))
-      chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-        Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
-        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
-
-      val n = builder
-      .setStyle(new NotificationCompat.BigTextStyle()
-      .setBigContentTitle(title)
-      .setSummaryText(text)
-      .bigText(msgs))
-      .setContentIntent(PendingIntent.getActivity(this,
-        ACTION_QUICK_CHAT.hashCode, chatIntent,
-        PendingIntent.FLAG_UPDATE_CURRENT))
-      .addAction(android.R.drawable.ic_media_previous, getString(R.string.prev),
-        PendingIntent.getBroadcast(this, ACTION_PREV_CHANNEL.hashCode,
-        new Intent(ACTION_PREV_CHANNEL),
-        PendingIntent.FLAG_UPDATE_CURRENT))
-      .addAction(android.R.drawable.sym_action_chat,
-        getString(R.string.open), pending)
-      .addAction(android.R.drawable.ic_media_next, getString(R.string.next),
-        PendingIntent.getBroadcast(this, ACTION_NEXT_CHANNEL.hashCode,
-          new Intent(ACTION_NEXT_CHANNEL),
-          PendingIntent.FLAG_UPDATE_CURRENT))
-      .build
-      n.priority = Notification.PRIORITY_HIGH
-      n
-    } getOrElse builder.build
   }
 
   // TODO decouple
   def serverDisconnected(server: Server) {
     UiBus.run {
-      val nm = systemService[NotificationManager]
       disconnect(server, disconnected = true)
       if (_running) {
         if (connections.isEmpty) {
@@ -545,30 +439,29 @@ class IrcService extends Service with EventBus.RefOwner {
 
   def showNotification(id: Int, icon: Int, text: String,
                        channel: Option[ChannelLike] = None) {
-    val nm = systemService[NotificationManager]
-    val intent = new Intent(this, classOf[MainActivity])
+    val intent = new Intent(Application.context, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     channel foreach { c =>
       intent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
     }
 
-    val pending = PendingIntent.getActivity(this, id, intent,
+    val pending = PendingIntent.getActivity(Application.context, id, intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
-    val notif = new NotificationCompat.Builder(this)
+    val notif = new NotificationCompat.Builder(Application.context)
       .setSmallIcon(icon)
       .setWhen(System.currentTimeMillis())
       .setContentIntent(pending)
       .setContentText(text)
       .setStyle(new NotificationCompat.BigTextStyle()
-        .bigText(text).setBigContentTitle(getString(R.string.notif_title)))
+      .bigText(text).setBigContentTitle(getString(R.string.notif_title)))
       .setContentTitle(getString(R.string.notif_title))
       .build
     notif.flags |= Notification.FLAG_AUTO_CANCEL
     channel foreach { c =>
       val cancel = new Intent(ACTION_CANCEL_MENTION)
       cancel.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
-      notif.deleteIntent = PendingIntent.getBroadcast(this,
+      notif.deleteIntent = PendingIntent.getBroadcast(Application.context,
         ACTION_CANCEL_MENTION.hashCode, cancel,
         PendingIntent.FLAG_UPDATE_CURRENT)
     }
@@ -590,10 +483,9 @@ class IrcService extends Service with EventBus.RefOwner {
             if (!intent.hasExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY) ||
               !intent.getBooleanExtra(
                 ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
-                getServers filter { _.autoconnect } foreach connect
-                val nm = systemService[NotificationManager]
-                nm.cancel(DISCON_ID)
-              }
+              getServers filter { _.autoconnect } foreach connect
+              nm.cancel(DISCON_ID)
+            }
           }
       }
     }
@@ -620,9 +512,7 @@ class IrcService extends Service with EventBus.RefOwner {
         case _ => idx
       }
       lastChannel = Option(chans(tgt))
-      systemService[NotificationManager].notify(RUNNING_ID, runningNotification(
-        runningString
-      ))
+      nm.notify(RUNNING_ID, runningNotification(runningString))
     }
   }
 
@@ -645,7 +535,7 @@ class IrcService extends Service with EventBus.RefOwner {
     var state = server.state
     serverMessage(getString(R.string.server_connecting), server)
     addConnection(server, connection)
-    val sslctx = SSLManager.configureSSL(this, server)
+    val sslctx = SSLManager.configureSSL(server)
     val listener = new IrcListeners(this)
     connection.setAdvancedListener(listener)
     connection.addServerListener(listener)
@@ -681,15 +571,13 @@ class IrcService extends Service with EventBus.RefOwner {
         try {
           connection.disconnect()
         } catch {
-          case ex: Exception => {
+          case ex: Exception =>
             RichLogger.e("Exception cleanup failed", ex)
             connection.setConnected(false)
             connection.disconnect()
             state = Server.State.DISCONNECTED
-          }
         }
         serverMessage(getString(R.string.server_disconnected), server)
-        if (connections.size == 0) IrcService._running = false
     }
 
     if (state == Server.State.CONNECTED)
@@ -697,10 +585,71 @@ class IrcService extends Service with EventBus.RefOwner {
 
     UiBus.run { server.state = state }
   }
+  def runningString = getString(R.string.notif_connected_servers,
+    connections.size: java.lang.Integer)
+
+  def runningNotification(text: CharSequence): Notification = {
+    val intent = new Intent(Application.context, classOf[MainActivity])
+    lastChannel foreach { c =>
+      intent.putExtra(EXTRA_SUBJECT, c.server.name + EXTRA_SPLITTER + c.name)
+    }
+    val pending = PendingIntent.getActivity(Application.context, RUNNING_ID,
+      intent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+    val builder = new NotificationCompat.Builder(Application.context)
+      .setSmallIcon(R.drawable.ic_notify_mono)
+      .setWhen(System.currentTimeMillis())
+      .setContentIntent(pending)
+      .setContentText(text)
+      .setContentTitle(getString(R.string.notif_title))
+
+
+    lastChannel map { c =>
+      val title = c.name
+      val msgs = if (c.messages.filteredMessages.size > 0) {
+        TextUtils.concat(
+          c.messages.filteredMessages.takeRight(5).map { m =>
+            MessageAdapter.formatText(Application.context, m)(c)
+          }.flatMap (m => Seq(m, "\n")).init:_*)
+      } else {
+        getString(R.string.no_messages)
+      }
+
+      val chatIntent = new Intent(Application.context, classOf[WidgetChatActivity])
+      chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
+      chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+        Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
+        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+
+      val n = builder
+        .setStyle(new NotificationCompat.BigTextStyle()
+        .setBigContentTitle(title)
+        .setSummaryText(text)
+        .bigText(msgs))
+        .setContentIntent(PendingIntent.getActivity(Application.context,
+        ACTION_QUICK_CHAT.hashCode, chatIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT))
+        .addAction(android.R.drawable.ic_media_previous, getString(R.string.prev),
+          PendingIntent.getBroadcast(Application.context,
+            ACTION_PREV_CHANNEL.hashCode,
+            new Intent(ACTION_PREV_CHANNEL),
+            PendingIntent.FLAG_UPDATE_CURRENT))
+        .addAction(android.R.drawable.sym_action_chat,
+          getString(R.string.open), pending)
+        .addAction(android.R.drawable.ic_media_next, getString(R.string.next),
+          PendingIntent.getBroadcast(Application.context,
+            ACTION_NEXT_CHANNEL.hashCode,
+            new Intent(ACTION_NEXT_CHANNEL),
+            PendingIntent.FLAG_UPDATE_CURRENT))
+        .build
+      n.priority = Notification.PRIORITY_HIGH
+      n
+    } getOrElse builder.build
+  }
 }
 
 object PrintStream
-extends java.io.PrintStream(new java.io.ByteArrayOutputStream) {
+  extends java.io.PrintStream(new java.io.ByteArrayOutputStream) {
   implicit val TAG = LogcatTag("sIRC")
   override def println(line: String) = d(line)
   override def flush() = ()

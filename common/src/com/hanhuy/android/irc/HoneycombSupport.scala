@@ -46,7 +46,7 @@ object HoneycombSupport {
     if (honeycombAndNewer) {
       activity.recreate()
     } else {
-      activity.service.queueCreateActivity(activity.adapter.page)
+      IrcManager.instance foreach (_.queueCreateActivity(activity.adapter.page))
       activity.finish()
     }
   }

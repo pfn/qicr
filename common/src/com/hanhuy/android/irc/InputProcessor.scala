@@ -34,7 +34,7 @@ object InputProcessor {
   def clear(input: EditText) = TextKeyListener.clear(input.getText)
 }
 abstract class InputProcessor(activity: Activity) {
-  val service = IrcService.instance.get
+  val manager = IrcManager.start()
   import InputProcessor._
   val TAG = "InputProcessor"
 
@@ -51,7 +51,7 @@ abstract class InputProcessor(activity: Activity) {
       val line = input.getText
       handleLine(line)
       clear(input)
-      !service.settings.get(Settings.HIDE_KEYBOARD)
+      !manager.settings.get(Settings.HIDE_KEYBOARD)
     } else
       false
   }
@@ -127,7 +127,7 @@ abstract class InputProcessor(activity: Activity) {
       current = current.substring(0, current.length() - suffix.length())
     current = current.toLowerCase
 
-    val ch = service.channels(c)
+    val ch = manager.channels(c)
     val users = ch.getUsers.map {
       u => ( u.getNick.toLowerCase, u.getNick )
     }.toMap
@@ -181,16 +181,14 @@ extends InputProcessor(activity) {
 
   def currentState = activity.adapter.getItem(activity.adapter.page) match {
     case s: ServersFragment => (s._server, None)
-    case c: ChannelFragment => {
-      service.chans.get(c.id) map { ch =>
+    case c: ChannelFragment =>
+      manager.chans.get(c.id) map { ch =>
         (Some(ch.server), Some(ch))
       } getOrElse (None, None)
-    }
-    case q: QueryFragment => {
-      service.chans.get(q.id) map { qu =>
+    case q: QueryFragment =>
+      manager.chans.get(q.id) map { qu =>
         (Some(qu.server), Some(qu))
       } getOrElse (None, None)
-    }
     case _ => (None, None)
   }
   def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
@@ -265,11 +263,10 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   var channel: Option[ChannelLike] = None
   var server: Option[Server] = None
 
-  lazy val service = IrcService.instance.get
+  lazy val manager = IrcManager.start()
 
   lazy val activity: MainActivity = {
     ctx match {
-      case s: IrcService => s.activity.get
       case a: MainActivity => a
       case _ => null
     }
@@ -314,8 +311,8 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
     line foreach { l =>
 
       channel match {
-        case Some(ch: Channel) => {
-          val chan = service.channels(ch)
+        case Some(ch: Channel) =>
+          val chan = manager.channels(ch)
           if (ch.server.state != Server.State.CONNECTED)
             return addCommandError(R.string.error_server_disconnected)
           if (ch.state != Channel.State.JOINED)
@@ -332,11 +329,10 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
               ch.add(Privmsg(ch.server.currentNick, l))
                 chan.sendMessage(l)
           }
-        }
-        case Some(query: Query)=> {
+        case Some(query: Query)=>
           if (query.server.state != Server.State.CONNECTED)
             return addCommandError(R.string.error_server_disconnected)
-          val conn = service.connections(query.server)
+          val conn = manager.connections(query.server)
           val user = conn.createUser(query.name)
           if (action) {
             query.add(CtcpAction(query.server.currentNick, l))
@@ -345,7 +341,6 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
             query.add(Privmsg(query.server.currentNick, l))
             user.sendMessage(l)
           }
-        }
         case _ => addCommandError(R.string.error_no_channel)
       }
     }
@@ -410,7 +405,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
       withConnection { c =>
         target.charAt(0) match {
           case '&' | '#' => () // do nothing if it's a channel
-          case _ => service.addQuery(c, target, line, sending = true)
+          case _ => manager.addQuery(c, target, line, sending = true)
         }
         val user = c.createUser(target)
         if (notice) user.sendNotice(line) else user.sendMessage(line)
@@ -423,7 +418,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
       if (s.state != Server.State.CONNECTED)
         return addCommandError(R.string.error_server_disconnected)
 
-      service.connections.get(s) foreach f
+      manager.connections.get(s) foreach f
     } getOrElse addCommandError(R.string.error_server_disconnected)
   }
 
@@ -471,7 +466,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
           val line = command.toUpperCase + (
             if (trimmedArg.length == 0) "" else " " + trimmedArg)
 
-          val r = CtcpRequest(service._connections(c),
+          val r = CtcpRequest(manager._connections(c),
              target, command.toUpperCase,
              Option(if (trimmedArg.length == 0) null else trimmedArg))
 

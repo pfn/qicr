@@ -157,7 +157,7 @@ object MessageAdapter {
 
   def colorNick(nick: String): CharSequence = {
     val text = textColor(nickColor(nick), nick)
-    val inMain = IrcService.instance map (_.showing) getOrElse false
+    val inMain = MainActivity.instance.isDefined
     if (nick != "***" && inMain)
       SpannedGenerator.span(NickClick(text), text) else text
   }
@@ -193,8 +193,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   }
 
   def inflater = _activity.get orElse {
-    IrcService.instance.get.activity } orElse {
-    IrcService.instance } map {
+    Some(Application.context) } map {
     _.systemService[LayoutInflater] } getOrElse (
     throw new IllegalStateException("no context available"))
   var _activity: WeakReference[Context] = _
@@ -202,8 +201,8 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   def context_= (c: Context) = {
     if (c != null) {
       _activity = new WeakReference(c)
-      IrcService.instance foreach { service =>
-        val s = service.settings
+      IrcManager.instance foreach { manager =>
+        val s = manager.settings
         // It'd be nice to register a ServiceBus listener, but no way
         // to clean up when this adapter goes away?
         // add it to UiBus here maybe?
@@ -214,7 +213,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     }
   }
 
-  def context = _activity.get orElse IrcService.instance getOrElse {
+  def context = _activity.get orElse Some(Application.context) getOrElse {
     throw new IllegalStateException }
   // would be nice to move this into the companion
   lazy val font =
@@ -321,17 +320,18 @@ case class NickClick(nick: String) extends ClickableSpan {
         }
         // TODO refactor this callback
         HoneycombSupport.startNickActionMode(nick) { item =>
+          val manager = IrcManager.instance.get
           val R_id_nick_insert = R.id.nick_insert
           val R_id_nick_start_chat = R.id.nick_start_chat
           val R_id_nick_whois = R.id.nick_whois
           item.getItemId match {
             case R_id_nick_whois =>
               val proc = CommandProcessor(a, null)
-              proc.channel = a.service.lastChannel
+              proc.channel = manager.lastChannel
               proc.WhoisCommand.execute(Some(nick))
             case R_id_nick_insert => insertNick()
             case R_id_nick_start_chat =>
-              a.service.startQuery(a.service.lastChannel.get.server, nick)
+              manager.startQuery(manager.lastChannel.get.server, nick)
           }
           ()
         }

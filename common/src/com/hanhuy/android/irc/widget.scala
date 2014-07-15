@@ -12,13 +12,7 @@ import com.hanhuy.android.irc.model._
 import android.widget.RemoteViewsService.RemoteViewsFactory
 import android.os.{Handler, Bundle}
 import android.speech.RecognizerIntent
-import com.hanhuy.android.irc.model.BusEvent.ChannelAdded
-import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
-import com.hanhuy.android.irc.model.BusEvent.PrivateMessage
-import com.hanhuy.android.irc.model.BusEvent.ChannelMessage
-import com.hanhuy.android.irc.model.BusEvent.ServerStateChanged
-import com.hanhuy.android.irc.model.BusEvent.ServiceRunning
-import com.hanhuy.android.irc.model.BusEvent.ServerMessage
+import com.hanhuy.android.irc.model.BusEvent._
 
 object Widgets extends EventBus.RefOwner {
   val ACTION_LAUNCH = "com.hanhuy.android.irc.action.LAUNCH"
@@ -48,17 +42,15 @@ object Widgets extends EventBus.RefOwner {
     case ChannelAdded(_) =>
       updateStatusWidget()
     case ServerStateChanged(_, _) =>
-      if (IrcService._running) updateStatusWidget()
-    case ServiceRunning(running) =>
-      val c = IrcService.instance.get
-      val awm = AppWidgetManager.getInstance(c)
-      if (!running) {
-        setInitialView(c, awm, ids)
-      } else {
-        ids foreach { id =>
-          setStatusView(IrcService.instance.get, id)
-        }
+      if (IrcManager.running) updateStatusWidget()
+    case IrcManagerStart =>
+      val awm = AppWidgetManager.getInstance(Application.context)
+      ids foreach { id =>
+        setStatusView(Application.context, id)
       }
+    case IrcManagerStop =>
+      val awm = AppWidgetManager.getInstance(Application.context)
+      setInitialView(Application.context, awm, ids)
   }
 
   def apply(c: Context) = {
@@ -80,25 +72,25 @@ object Widgets extends EventBus.RefOwner {
     assignMessageView(id, subject)
     val views = new RemoteViews(c.getPackageName, R.layout.widget_content)
 
-    val info = subject.split(IrcService.EXTRA_SPLITTER)
+    val info = subject.split(IrcManager.EXTRA_SPLITTER)
     val title = info match {
       case Array(serverName)             => serverName
       case Array(serverName,channelName) => serverName + "/" + channelName
     }
 
     val launchIntent = new Intent(c, classOf[MainActivity])
-    launchIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
+    launchIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     views.setOnClickPendingIntent(R.id.widget_app_icon,
       PendingIntent.getActivity(c, pid(id, PID_OPEN_CHANNEL),
         launchIntent, PendingIntent.FLAG_UPDATE_CURRENT))
 
     val nextIntent = new Intent(ACTION_NEXT)
-    nextIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
+    nextIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
     nextIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
 
     val prevIntent = new Intent(ACTION_PREV)
-    prevIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
+    prevIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
     prevIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
 
     views.setTextViewText(R.id.title, title)
@@ -109,7 +101,7 @@ object Widgets extends EventBus.RefOwner {
       c, pid(id, PID_GO_PREV), prevIntent, PendingIntent.FLAG_UPDATE_CURRENT))
 
     val chatIntent = new Intent(c, classOf[WidgetChatActivity])
-    chatIntent.putExtra(IrcService.EXTRA_SUBJECT, subject)
+    chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
     chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
       Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
       Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
@@ -118,7 +110,7 @@ object Widgets extends EventBus.RefOwner {
 
     val service = new Intent(c, classOf[WidgetMessageService])
     service.setAction(Widgets.ACTION_SUBJECT_PREFIX + subject.hashCode)
-    service.putExtra(IrcService.EXTRA_SUBJECT, subject)
+    service.putExtra(IrcManager.EXTRA_SUBJECT, subject)
     service.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
     views.setRemoteAdapter(R.id.message_list, service)
 
@@ -195,16 +187,15 @@ object Widgets extends EventBus.RefOwner {
   }
 
   def toString(m: MessageAppender) = m match {
-    case c: ChannelLike => c.server.name + IrcService.EXTRA_SPLITTER + c.name
-    case s: Server      => s.name + IrcService.EXTRA_SPLITTER
+    case c: ChannelLike => c.server.name + IrcManager.EXTRA_SPLITTER + c.name
+    case s: Server      => s.name + IrcManager.EXTRA_SPLITTER
   }
 
   def updateMessageWidget(m: MessageAppender) = synchronized {
     val subject = toString(m)
     messageViews.toList filter { case (id, subj) => subject == subj } map {
       case (id,_) =>
-      val service = IrcService.instance.get
-      val awm = AppWidgetManager.getInstance(service)
+      val awm = AppWidgetManager.getInstance(Application.context)
       awm.notifyAppWidgetViewDataChanged(id, R.id.message_list)
       id
     }
@@ -216,20 +207,20 @@ object Widgets extends EventBus.RefOwner {
   }
 
   private val updateStatusRunnable: Runnable = () => {
-    val awm = AppWidgetManager.getInstance(IrcService.instance.get)
+    val awm = AppWidgetManager.getInstance(Application.context)
     ids filterNot messageViews.keySet foreach {
       awm.notifyAppWidgetViewDataChanged(_, R.id.status_list)
     }
   }
 
   def appenderForSubject(subject: String) = {
-    val service = IrcService.instance.get
+    val manager = IrcManager.instance.get
     if (subject == null) None else
-      subject.split(IrcService.EXTRA_SPLITTER) match {
+      subject.split(IrcManager.EXTRA_SPLITTER) match {
         case Array(serverName) =>
-          service.getServers.find(_.name == serverName)
+          manager.getServers.find(_.name == serverName)
         case Array(serverName,channelName) =>
-          service.channels.keys.find(c =>
+          manager.channels.keys.find(c =>
             c.server.name == serverName && c.name == channelName)
         case null => None
       }
@@ -240,11 +231,11 @@ class WidgetProvider extends AppWidgetProvider {
 
   override def onUpdate(c: Context, wm: AppWidgetManager, ids: Array[Int]) {
     Widgets(c).ids = (Widgets(c).ids.toSet ++ ids).toArray
-    if (IrcService.instance.isEmpty)
+    if (IrcManager.instance.isEmpty)
       Widgets.setInitialView(c, wm, ids)
     else
       Widgets(c).ids foreach { id =>
-        Widgets.setStatusView(IrcService.instance.get, id) }
+        Widgets.setStatusView(Application.context, id) }
   }
 
   override def onDisabled(context: Context) {
@@ -260,7 +251,7 @@ class WidgetProvider extends AppWidgetProvider {
     intent.getAction match {
       case Widgets.ACTION_LAUNCH =>
 
-        if (IrcService.instance.isDefined) {
+        if (IrcManager.instance.isDefined) {
           Widgets.ids foreach {
             Widgets.setStatusView(c, _)
           }
@@ -275,14 +266,12 @@ class WidgetProvider extends AppWidgetProvider {
           views.setTextViewText(R.id.not_running,
             c.getString(R.string.launching))
           awm.partiallyUpdateAppWidget(Widgets(c).ids, views)
-          val intent = new Intent(c, classOf[IrcService])
-          intent.putExtra(IrcService.EXTRA_HEADLESS, true)
-          c.startService(intent)
+          IrcManager.start()
         }
       case Widgets.ACTION_STATUS_CLICK =>
         Widgets.setMessageView(c, intent.getIntExtra(
           AppWidgetManager.EXTRA_APPWIDGET_ID, 0),
-          intent.getStringExtra(IrcService.EXTRA_SUBJECT))
+          intent.getStringExtra(IrcManager.EXTRA_SUBJECT))
       case Widgets.ACTION_BACK =>
         Widgets.setStatusView(c,
           intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
@@ -295,11 +284,11 @@ class WidgetProvider extends AppWidgetProvider {
   }
 
   def nextPrevMessages(c: Context, intent: Intent, direction: Int) {
-    val service = IrcService.instance.get
-    def all = service.channels.keys.toList.sortWith(_<_).groupBy(_.server)
+    val manager = IrcManager.instance.get
+    def all = manager.channels.keys.toList.sortWith(_<_).groupBy(_.server)
       .toList.sortWith(_._1<_._1) flatMap { case (k,v) => k :: v }
 
-    val subject = intent.getStringExtra(IrcService.EXTRA_SUBJECT)
+    val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
     val m = Widgets.appenderForSubject(subject).get
     val idx = all.indexOf(m)
     val tgt = (all.size + idx + direction) % all.size
@@ -311,12 +300,12 @@ class WidgetProvider extends AppWidgetProvider {
 class WidgetMessageService extends RemoteViewsService {
 
   def onGetViewFactory(intent: Intent): RemoteViewsFactory = {
-    if (IrcService.instance.isEmpty) {
+    if (IrcManager.instance.isEmpty) {
       Widgets.setInitialView(this, AppWidgetManager.getInstance(this),
         Widgets(this).ids)
       return null
     }
-    val subject = intent.getStringExtra(IrcService.EXTRA_SUBJECT)
+    val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
     Widgets.appenderForSubject(subject) map {
       new WidgetMessageViewsFactory(_)
     } getOrElse {
@@ -329,7 +318,7 @@ class WidgetMessageService extends RemoteViewsService {
 
 class WidgetStatusService extends RemoteViewsService {
   def onGetViewFactory(intent: Intent) = {
-    IrcService.instance map { _ => new WidgetStatusViewsFactory } getOrElse {
+    IrcManager.instance map { _ => new WidgetStatusViewsFactory } getOrElse {
       Widgets.setInitialView(this, AppWidgetManager.getInstance(this),
         Widgets(this).ids)
       null
@@ -353,28 +342,28 @@ with RemoteViewsService.RemoteViewsFactory {
 
 class WidgetStatusViewsFactory extends BroadcastReceiver
 with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
-  val service = IrcService.instance.get
+  val manager = IrcManager.instance.get
 
   def getViewAt(pos: Int) = {
     val intent = new Intent
     all(pos) match {
       case s: Server =>
         val serverView = new RemoteViews(
-          service.getPackageName, R.layout.widget_server_item)
+          Application.context.getPackageName, R.layout.widget_server_item)
         serverView.setTextViewText(android.R.id.text1, s.name)
         val intent = new Intent(Widgets.ACTION_STATUS_CLICK)
-        intent.putExtra(IrcService.EXTRA_SUBJECT, Widgets.toString(s))
+        intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(s))
         serverView.setOnClickFillInIntent(android.R.id.text1, intent)
         serverView
       case c: ChannelLike =>
         val channelView = new RemoteViews(
-          service.getPackageName, R.layout.widget_channel_item)
+          Application.context.getPackageName, R.layout.widget_channel_item)
         channelView.setTextViewText(android.R.id.text1, c.name)
         val color = if (c.newMentions)
           0xffff0000 else if (c.newMessages) 0xff00afaf else 0xffbebebe
         channelView.setTextColor(android.R.id.text1, color)
         channelView.setOnClickFillInIntent(android.R.id.text1, intent)
-        intent.putExtra(IrcService.EXTRA_SUBJECT, Widgets.toString(c))
+        intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
         channelView
     }
   }
@@ -382,7 +371,7 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
   private var _all: Seq[MessageAppender] = null
   def all = {
     if (_all == null) {
-      _all = service.channels.keys.toList.sortWith(_<_).groupBy(_.server)
+      _all = manager.channels.keys.toList.sortWith(_<_).groupBy(_.server)
           .toList.sortWith(_._1<_._1) flatMap { case (k,v) => k :: v }
     }
     _all
@@ -402,7 +391,6 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
 
 class WidgetMessageViewsFactory(m: MessageAppender) extends BroadcastReceiver
 with RemoteViewsService.RemoteViewsFactory {
-  val c = IrcService.instance.get
   val (channel,messages) = m match {
     case c: ChannelLike => (c,c.messages)
     case s: Server => (null,s.messages)
@@ -413,9 +401,10 @@ with RemoteViewsService.RemoteViewsFactory {
   var items: Seq[MessageLike] = _
 
   def getViewAt(pos: Int) = {
-    val views = new RemoteViews(c.getPackageName, R.layout.widget_message_item)
+    val views = new RemoteViews(Application.context.getPackageName,
+      R.layout.widget_message_item)
     views.setTextViewText(android.R.id.text1,
-      MessageAdapter.formatText(c, items(pos))(channel))
+      MessageAdapter.formatText(Application.context, items(pos))(channel))
     views
   }
 
@@ -441,12 +430,12 @@ class WidgetChatActivity extends Activity with TypedActivity {
   import x._
   lazy val input = findView(TR.input)
   lazy val list = findView(TR.message_list)
-  lazy val settings = IrcService.instance.get.settings
+  lazy val settings = IrcManager.instance.get.settings
   private var proc: InputProcessor = _
 
   private def withAppender[A](f: MessageAppender => A): Option[A] = {
     Widgets.appenderForSubject(
-      getIntent.getStringExtra(IrcService.EXTRA_SUBJECT)) map f
+      getIntent.getStringExtra(IrcManager.EXTRA_SUBJECT)) map f
   }
 
   private def withAdapter[A](f: MessageAdapter => A): Option[A] = {
@@ -470,7 +459,7 @@ class WidgetChatActivity extends Activity with TypedActivity {
       val (a,title) = m match {
         case s: Server      => (s.messages,s.name)
         case c: ChannelLike =>
-          IrcService.instance.get.lastChannel = Some(c)
+          IrcManager.instance.get.lastChannel = Some(c)
           c.newMessages = false
           c.newMentions = false
           c.messages.channel = c
@@ -494,10 +483,9 @@ class WidgetChatActivity extends Activity with TypedActivity {
         try {
           startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
         } catch {
-          case e: Exception => {
+          case e: Exception =>
             Toast.makeText(this, R.string.speech_unsupported,
               Toast.LENGTH_SHORT).show()
-          }
         }
       }
       if (!settings.get(Settings.SHOW_NICK_COMPLETE))

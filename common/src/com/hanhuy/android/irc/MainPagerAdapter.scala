@@ -54,6 +54,7 @@ class MainPagerAdapter(activity: MainActivity)
 extends FragmentPagerAdapter(activity.getSupportFragmentManager)
 with ViewPager.OnPageChangeListener
 with EventBus.RefOwner {
+  val manager = IrcManager.start()
   private var channels = List.empty[ChannelLike]
   private var servers  = List.empty[Server]
   private var tabs = List.empty[TabInfo]
@@ -67,19 +68,11 @@ with EventBus.RefOwner {
   pager.setAdapter(this)
   tabindicators.setViewPager(pager)
   tabindicators.setOnPageChangeListener(this)
-  lazy val manager = activity.getSupportFragmentManager
+  lazy val fm = activity.getSupportFragmentManager
   lazy val pager = activity.pager
   lazy val nm = activity.systemService[NotificationManager]
 
   var page = 0
-
-  if (activity.service != null)
-    onServiceConnected(activity.service)
-  else
-    UiBus += { case BusEvent.ServiceConnected(s) =>
-      onServiceConnected(s)
-      EventBus.Remove
-    }
 
   UiBus += {
   case BusEvent.ServerChanged(server)   => serverStateChanged(server)
@@ -90,17 +83,15 @@ with EventBus.RefOwner {
   case BusEvent.ChannelStatusChanged(_) => channels foreach refreshTabTitle
   }
 
-  def refreshTabs(service: IrcService) {
-    if (service.servs.size > servers.size)
-      (service.servs.values.toSet -- servers) foreach addServer
+  def refreshTabs() {
+    if (manager.servs.size > servers.size)
+      (manager.servs.values.toSet -- servers) foreach addServer
 
-    if (service.channels.size > channels.size)
-      (service.channels.keySet -- channels) foreach addChannel
+    if (manager.channels.size > channels.size)
+      (manager.channels.keySet -- channels) foreach addChannel
     channels foreach refreshTabTitle
     channels foreach (_.messages.context = activity)
   }
-
-  def onServiceConnected(service: IrcService) = refreshTabs(service)
 
   def serverStateChanged(server: Server) {
     server.state match {
@@ -196,15 +187,15 @@ with EventBus.RefOwner {
     t.channel.foreach(c => {
       if (c.newMentions) {
         nm.cancel(c match {
-        case _: Channel => IrcService.MENTION_ID
-        case _: Query   => IrcService.PRIVMSG_ID
+        case _: Channel => IrcManager.MENTION_ID
+        case _: Query   => IrcManager.PRIVMSG_ID
         })
       }
       c.newMessages = false
       c.newMentions = false
       ServiceBus.send(ChannelStatusChanged(c))
     })
-    activity.service.lastChannel = t.channel
+    manager.lastChannel = t.channel
 
     activity.newmessages.setVisibility(
       if (channels.find(_.newMentions).isEmpty) View.GONE else View.VISIBLE)
@@ -272,7 +263,7 @@ with EventBus.RefOwner {
       idx = idx * -1
       channels = insert(channels, idx - 1, c)
       val tag = MainActivity.getFragmentTag(c)
-      val f = manager.findFragmentByTag(tag)
+      val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else c match {
         case ch: Channel => new ChannelFragment(ch.messages, ch)
         case qu: Query   => new QueryFragment(qu.messages, qu)
@@ -293,7 +284,7 @@ with EventBus.RefOwner {
       idx = idx * -1
       servers = insert(servers, idx - 1, s)
       val tag = MainActivity.getFragmentTag(s)
-      val f = manager.findFragmentByTag(tag)
+      val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else new ServerMessagesFragment(s)
       val info = insertTab(s.name, frag, idx - 1)
       refreshTabTitle(idx)

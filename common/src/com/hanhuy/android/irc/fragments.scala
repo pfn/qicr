@@ -31,6 +31,7 @@ import RichLogger._
 // TODO remove retainInstance -- messes up with theme change
 // TODO fix dialog dismiss on-recreate
 class ServerSetupFragment extends DialogFragment {
+  val manager = IrcManager.start()
   var thisview: View = _
 
   var _server: Server = _
@@ -82,27 +83,25 @@ class ServerSetupFragment extends DialogFragment {
     val R_id_cancel_server = R.id.cancel_server
     val R_id_save_server = R.id.save_server
     item.getItemId match {
-      case R_id_save_server => {
+      case R_id_save_server =>
         val activity = getActivity
-        val manager = activity.getSupportFragmentManager
+        val fm = activity.getSupportFragmentManager
         val s = server
         if (s.valid) {
           if (s.id == -1)
-            activity.service.addServer(s)
+            manager.addServer(s)
           else
-            activity.service.updateServer(s)
-          manager.popBackStack()
+            manager.updateServer(s)
+          fm.popBackStack()
         } else {
           Toast.makeText(getActivity, R.string.server_incomplete,
             Toast.LENGTH_SHORT).show()
         }
         true
-      }
-      case R_id_cancel_server => {
+      case R_id_cancel_server =>
         val manager = getActivity.getSupportFragmentManager
         manager.popBackStack()
         true
-      }
       case _ => false
     }
   }
@@ -142,9 +141,9 @@ class ServerSetupFragment extends DialogFragment {
         val s = server
         if (s != null && s.valid) {
           if (s.id == -1)
-            activity.service.addServer(s)
+            manager.addServer(s)
           else
-            activity.service.updateServer(s)
+            manager.updateServer(s)
           d.dismiss()
         } else {
           Toast.makeText(getActivity,
@@ -161,13 +160,9 @@ abstract class MessagesFragment(_a: MessageAdapter = null)
 extends ListFragment with EventBus.RefOwner {
   def this() = this(null)
 
+  val manager = IrcManager.start()
   var id = -1
   var tag: String
-
-  // eh?
-  lazy val _service = getActivity.service
-  var __service: IrcService = _
-  def service = if (__service != null) __service else _service
 
   var _adapter = _a
   def adapter = _adapter
@@ -177,7 +172,7 @@ extends ListFragment with EventBus.RefOwner {
     if (getActivity != null) _adapter.context = getActivity
 
     setListAdapter(_adapter)
-    service.add(id, _adapter)
+    manager.add(id, _adapter)
     try { // TODO FIXME figure out how to do this better
       getListView.setSelection(
         if (adapter.getCount() > 0) _adapter.getCount()-1 else 0)
@@ -191,24 +186,19 @@ extends ListFragment with EventBus.RefOwner {
     val activity = getActivity
 
     id = if (id == -1 && bundle != null) bundle.getInt("id")
-      else service.newMessagesId()
+      else manager.newMessagesId()
 
     if (bundle != null)
       tag = bundle.getString("tag")
 
     if (adapter != null) { // this works by way of the network being slow
-      val service = activity.service // assuming context is ready?
       adapter.context = getActivity
-      service.add(id, adapter)
+      manager.add(id, adapter)
       setListAdapter(adapter)
     }
-    if (activity.service == null)
-      UiBus += { case BusEvent.ServiceConnected(s) =>
-        onServiceConnected(s)
-        EventBus.Remove
-      }
-    else
-      onServiceConnected(activity.service)
+    if (adapter == null && id != -1) {
+      manager.messages.get(id) foreach { adapter = _ }
+    }
   }
 
   override def onCreateView(inflater: LayoutInflater,
@@ -225,12 +215,6 @@ extends ListFragment with EventBus.RefOwner {
     bundle.putInt("id", id)
     bundle.putString("tag", tag)
   }
-  def onServiceConnected(service: IrcService) {
-    if (adapter == null && id != -1) {
-        __service = service
-      service.messages.get(id) foreach { adapter = _ }
-    }
-  }
 }
 
 class ChannelFragment(a: MessageAdapter, var channel: Channel)
@@ -245,22 +229,12 @@ extends MessagesFragment(a) with EventBus.RefOwner {
 
     val activity = getActivity
     if (channel == null) {
-      def setChannel(s: IrcService) {
-        val c = s.chans.get(bundle.getInt("id"))
+        val c = manager.chans.get(bundle.getInt("id"))
         c.foreach(ch => channel = ch.asInstanceOf[Channel])
-      }
-      if (activity.service != null)
-        setChannel(activity.service)
-      else {
-        UiBus += { case BusEvent.ServiceConnected(s) =>
-          setChannel(s)
-          EventBus.Remove
-        }
-      }
     }
     // this apparently works by virtue of the network being slow?
     if (id != -1 && channelReady && a != null) {
-      activity.service.add(id, channel)
+      manager.add(id, channel)
       a.channel = channel
     }
   }
@@ -281,10 +255,10 @@ extends MessagesFragment(a) with EventBus.RefOwner {
       d("Requesting tab close for: " + channel + " <= " + id)
       def removeChannel() {
         if (channel != null && channel.state == Channel.State.JOINED) {
-          activity.service.channels.get(channel) foreach { _.part() }
+          manager.channels.get(channel) foreach { _.part() }
         }
-        activity.service.remove(id)
-        activity.service.remove(channel)
+        manager.remove(id)
+        manager.remove(channel)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (channel != null && channel.state == Channel.State.JOINED && prompt) {
@@ -315,8 +289,7 @@ extends MessagesFragment(a) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
     if (id != -1 && query != null) {
-      val activity = getActivity
-      activity.service.add(id, query)
+      manager.add(id, query)
       a.channel = query
     }
   }
@@ -329,12 +302,12 @@ extends MessagesFragment(a) {
       val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
       def removeQuery() {
-        activity.service.chans.get(id) foreach { q =>
+        manager.chans.get(id) foreach { q =>
           val query = q.asInstanceOf[Query]
-          activity.service.remove(query)
+          manager.remove(query)
         }
 
-        activity.service.remove(id)
+        manager.remove(id)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (prompt) {
@@ -363,21 +336,12 @@ extends MessagesFragment(if (server != null) server.messages else null) {
 
     val activity = getActivity
     if (id != -1 && server != null)
-      activity.service.add(id, server)
+      manager.add(id, server)
 
     if (server == null) {
-      def setServer(s: IrcService) {
-        val _s = s.servs.get(bundle.getInt("id"))
-        _s.foreach(srv => server = srv)
-      }
-      if (activity.service != null)
-        setServer(activity.service)
-      else
-        UiBus += { case BusEvent.ServiceConnected(s) =>
-          setServer(s)
-          EventBus.Remove
-        }
-      }
+      val _s = manager.servs.get(bundle.getInt("id"))
+      _s.foreach(srv => server = srv)
+    }
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -395,8 +359,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
 
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
     if (R.id.server_close == item.getItemId) {
-      val service = getActivity.service
-      service.remove(id)
+      manager.remove(id)
       getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
       true
     } else {
@@ -408,7 +371,7 @@ extends MessagesFragment(if (server != null) server.messages else null) {
 }
 
 class ServersFragment extends ListFragment with EventBus.RefOwner {
-  var service: IrcService = _
+  val manager = IrcManager.start()
   var adapter: ServerArrayAdapter = _
   var _server: Option[Server] = None // currently selected server
   var serverMessagesFragmentShowing: Option[String] = None
@@ -431,8 +394,8 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     // so recreate the adapter here
     adapter = new ServerArrayAdapter(getActivity)
     setListAdapter(adapter)
-    if (service != null) {
-      service.getServers.foreach(adapter.add)
+    if (manager != null) {
+      manager.getServers.foreach(adapter.add)
       adapter.notifyDataSetChanged()
     }
   }
@@ -468,15 +431,6 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
       addServerMessagesFragment(server)
 
     _server = Some(server)
-  }
-
-  def onIrcServiceConnected(_service: IrcService) {
-    service = _service
-    if (adapter != null) {
-      adapter.clear()
-      service.getServers.foreach(adapter.add)
-      adapter.notifyDataSetChanged()
-    }
   }
 
   def clearServerMessagesFragment(mgr: FragmentManager,
@@ -592,9 +546,9 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
     val R_id_server_connect = R.id.server_connect
     val R_id_server_disconnect = R.id.server_disconnect
     item.getItemId match {
-      case R_id_server_delete => {
+      case R_id_server_delete =>
         server match {
-        case Some(s) => {
+        case Some(s) =>
           val builder = new AlertDialog.Builder(getActivity)
           val mgr = getActivity.getSupportFragmentManager
           clearServerMessagesFragment(mgr)
@@ -604,42 +558,37 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
             s.name))
           builder.setPositiveButton(R.string.yes,
             () => {
-              service.deleteServer(s)
+              IrcManager.instance.map { _.deleteServer(s) }
+              ()
             })
           builder.setNegativeButton(R.string.no, null)
           builder.create().show()
-        }
         case None =>
           Toast.makeText(getActivity,
             R.string.server_not_selected, Toast.LENGTH_SHORT).show()
-        }
-        true
       }
-      case R_id_server_connect => {
-        server map service.connect getOrElse {
+        true
+      case R_id_server_connect =>
+        server map manager.connect getOrElse {
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
-      }
-      case R_id_server_disconnect => {
-        server map { service.disconnect(_) } getOrElse {
+      case R_id_server_disconnect =>
+        server map { manager.disconnect(_) } getOrElse {
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
-      }
-      case R_id_server_options => {
+      case R_id_server_options =>
         addServerSetupFragment(server)
         true
-      }
-      case R_id_server_messages => {
+      case R_id_server_messages =>
         server map getActivity.adapter.addServer getOrElse {
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }
         true
-      }
       case _ => false
     }
   }
