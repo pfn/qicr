@@ -99,6 +99,13 @@ class IrcManager extends EventBus.RefOwner {
   ServiceBus += {
     case BusEvent.MainActivityStart => _showing = true
     case BusEvent.MainActivityStop  => _showing = false
+      recreateActivity foreach { page =>
+        recreateActivity = None
+        val intent = new Intent(Application.context, classOf[MainActivity])
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.putExtra(EXTRA_PAGE, page)
+        Application.context.startActivity(intent)
+      }
     case BusEvent.PreferenceChanged(_, k) =>
       if (k == Settings.IRC_DEBUG) {
         val debug = settings.get(Settings.IRC_DEBUG)
@@ -186,9 +193,6 @@ class IrcManager extends EventBus.RefOwner {
     messagesId
   }
 
-  private var _activity: WeakReference[MainActivity] = _
-  def activity = if (_activity == null) None else _activity.get
-
   def removeConnection(server: Server) {
     //Log.d(TAG, "Unregistering connection: " + server, new StackTrace)
     connections.get(server).foreach(c => {
@@ -202,7 +206,7 @@ class IrcManager extends EventBus.RefOwner {
     mconnections += ((server, connection))
     m_connections += ((connection, server))
 
-    if (activity.isEmpty && _running) {
+    if (!showing && _running) {
       nm.notify(RUNNING_ID, runningNotification(runningString))
     }
   }
@@ -219,21 +223,7 @@ class IrcManager extends EventBus.RefOwner {
       }
     }
   }
-  def bind(main: MainActivity) {
-    _activity = new WeakReference(main)
-    start()
-  }
 
-  def unbind() {
-    _activity = null
-    recreateActivity foreach { page =>
-      recreateActivity = None
-      val intent = new Intent(Application.context, classOf[MainActivity])
-      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      intent.putExtra(EXTRA_PAGE, page)
-      Application.context.startActivity(intent)
-    }
-  }
 
   def queueCreateActivity(page: Int) = recreateActivity = Some(page)
 
@@ -362,7 +352,7 @@ class IrcManager extends EventBus.RefOwner {
       ServiceBus.send(BusEvent.PrivateMessage(query, m))
 
       query.add(m)
-      if (activity.isEmpty)
+      if (!showing)
         showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
           m.toString, Some(query))
     }
@@ -425,14 +415,14 @@ class IrcManager extends EventBus.RefOwner {
         }
       }
     }
-    if (activity.isEmpty && _running)
+    if (!showing && _running)
       showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
         getString(R.string.notif_server_disconnected, server.name))
   }
 
   // TODO decouple
   def addChannelMention(c: ChannelLike, m: MessageLike) {
-    if (activity.isEmpty)
+    if (!showing)
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
         getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
   }

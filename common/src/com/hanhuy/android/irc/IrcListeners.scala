@@ -311,7 +311,7 @@ with ServerListener with MessageListener with ModeListener {
     if (manager.showing) {
       UiBus.run {
         val msg = MessageAdapter.formatText(Application.context, r)
-        manager.activity map { activity =>
+        MainActivity.instance map { activity =>
           val tab = activity.adapter.currentTab
           tab.channel orElse tab.server map { _.add(r) } getOrElse {
             s.add(r)
