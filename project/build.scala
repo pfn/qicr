@@ -14,15 +14,14 @@ object QicrBuild extends android.AutoBuild {
     ) ++ android.Plugin.androidCommands: _*
   ) aggregate(lite, common)
 
-  lazy val lite = Project(id = "lite", base = file("lite")) settings(
-      android.Plugin.androidBuild(common) ++ Seq(
+  lazy val lite = Project(id = "lite", base = file("lite")) androidBuildWith(common) settings(android.Plugin.androidBuild(common) ++ Seq(
         transitiveAndroidLibs in Android := false,
         dependencyClasspath in Compile ~= { _ filterNot (
           _.data.getName startsWith "android-support-v4") },
         scalaVersion         := "2.9.2",
         localProjects in Android := Seq(LibraryProject(common.base)),
         proguardScala in Android := true
-      ): _*) dependsOn common
+      ): _*)
 
   lazy val common = Project(id = "common", base = file("common")) settings(Seq(
     scalacOptions in Compile += "-deprecation",

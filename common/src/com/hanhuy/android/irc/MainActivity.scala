@@ -255,6 +255,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner {
     nm.cancel(IrcManager.MENTION_ID)
     nm.cancel(IrcManager.DISCON_ID)
     nm.cancel(IrcManager.PRIVMSG_ID)
+    nm.cancel(IrcManager.RUNNING_ID)
     if (toggleSelectorMode) {
       val newnav = settings.get(Settings.NAVIGATION_MODE)
       val isDropNav = HoneycombSupport.isSpinnerNavigation

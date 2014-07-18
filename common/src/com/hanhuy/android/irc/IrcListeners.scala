@@ -141,14 +141,15 @@ with ServerListener with MessageListener with ModeListener {
   override def onKick(c: IrcConnection, channel: Channel,
       user: User, op: User, msg: String) {
     UiBus.run {
-      val ch = manager._channels(channel)
-      if (user.isUs) {
-        // TODO update adapter's channel state
-        ch.state = QicrChannel.State.KICKED
-      } else {
-        UiBus.send(BusEvent.NickListChanged(ch))
+      manager._channels.get(channel) map { ch =>
+        if (user.isUs) {
+          // TODO update adapter's channel state
+          ch.state = QicrChannel.State.KICKED
+        } else {
+          UiBus.send(BusEvent.NickListChanged(ch))
+        }
+        ch.add(Kick(op.getNick, user.getNick, msg))
       }
-      ch.add(Kick(op.getNick, user.getNick, msg))
     }
   }
 

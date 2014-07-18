@@ -1,9 +1,9 @@
 package com.hanhuy.android.irc
 
+import javax.net.ssl.SSLContext
+
 import android.text.TextUtils
 import com.hanhuy.android.irc.model._
-
-import scala.ref.WeakReference
 
 import android.app.NotificationManager
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
@@ -81,12 +81,6 @@ class IrcManager extends EventBus.RefOwner {
   filter.addAction(ACTION_NEXT_CHANNEL)
   filter.addAction(ACTION_PREV_CHANNEL)
   filter.addAction(ACTION_CANCEL_MENTION)
-
-  Application.context.registerReceiver(receiver, filter)
-
-  val connFilter = new IntentFilter
-  connFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
-  Application.context.registerReceiver(connReceiver, connFilter)
 
   def getString(s: Int, args: Any*) = Application.context.getString(s,
     args map { _.asInstanceOf[Object] }: _*)
@@ -213,6 +207,12 @@ class IrcManager extends EventBus.RefOwner {
 
   private def start() {
     if (!running) {
+      Application.context.registerReceiver(receiver, filter)
+
+      val connFilter = new IntentFilter
+      connFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+      Application.context.registerReceiver(connReceiver, connFilter)
+
       Application.context.startService(
         new Intent(Application.context, classOf[LifecycleService]))
 
@@ -394,12 +394,6 @@ class IrcManager extends EventBus.RefOwner {
     UiBus.send(BusEvent.ServerRemoved(server))
   }
 
-  // currently unused
-  def uncaughtExceptionHandler(t: Thread, e: Throwable) {
-    RichLogger.e("Uncaught exception in thread: " + t, e)
-    Toast.makeText(Application.context, e.getMessage, Toast.LENGTH_LONG).show()
-    if (!t.getName.startsWith("sIRC-")) throw e
-  }
 
   // TODO decouple
   def serverDisconnected(server: Server) {
@@ -427,7 +421,7 @@ class IrcManager extends EventBus.RefOwner {
         getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
   }
 
-  def showNotification(id: Int, icon: Int, text: String,
+  private def showNotification(id: Int, icon: Int, text: String,
                        channel: Option[ChannelLike] = None) {
     val intent = new Intent(Application.context, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -515,7 +509,7 @@ class IrcManager extends EventBus.RefOwner {
   def connectServerTask(server: Server) {
     val ircserver = new IrcServer(server.hostname, server.port,
       server.password, server.ssl)
-    val connection = new IrcConnection
+    val connection = new IrcConnection2
     i("Connecting to server: " +
       (server.hostname, server.port, server.ssl))
     connection.setServer(ircserver)
@@ -635,6 +629,19 @@ class IrcManager extends EventBus.RefOwner {
       n.priority = Notification.PRIORITY_HIGH
       n
     } getOrElse builder.build
+  }
+}
+
+class IrcConnection2 extends IrcConnection {
+  override def connect(sslctx: SSLContext) = {
+    super.connect(sslctx)
+    val thread = getOutput: Thread
+    thread.setUncaughtExceptionHandler(uncaughtExceptionHandler _)
+  }
+  // currently unused
+  def uncaughtExceptionHandler(t: Thread, e: Throwable) {
+    RichLogger.e("Uncaught exception in IRC thread: " + t, e)
+    disconnect()
   }
 }
 

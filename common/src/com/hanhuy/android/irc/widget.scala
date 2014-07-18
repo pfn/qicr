@@ -303,7 +303,7 @@ class WidgetMessageService extends RemoteViewsService {
     if (IrcManager.instance.isEmpty) {
       Widgets.setInitialView(this, AppWidgetManager.getInstance(this),
         Widgets(this).ids)
-      return null
+      new WidgetEmptyViewsFactory
     }
     val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
     Widgets.appenderForSubject(subject) map {

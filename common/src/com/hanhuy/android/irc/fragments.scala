@@ -425,7 +425,6 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
 
     if (server.state == Server.State.CONNECTED) {
       activity.input.setVisibility(View.VISIBLE)
-      activity.input.setFocusable(true)
     }
     if (activity.isLargeScreen)
       addServerMessagesFragment(server)
