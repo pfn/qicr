@@ -202,7 +202,8 @@ with ServerListener with MessageListener with ModeListener {
     } else {
       UiBus.run {
         manager.channels.values collect {
-          case c: Channel if c.hasUser(newnick) => manager._channels(c)
+          case c: Channel if c.hasUser(newnick) && manager._channels.get(c).isDefined =>
+            manager._channels(c)
         } foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))

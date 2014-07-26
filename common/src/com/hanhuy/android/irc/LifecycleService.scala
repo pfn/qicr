@@ -11,6 +11,12 @@ import com.hanhuy.android.irc.model.MessageAdapter
 /**
  * @author pfnguyen
  */
+object LifecycleService {
+  def start() {
+    Application.context.startService(
+      new Intent(Application.context, classOf[LifecycleService]))
+  }
+}
 class LifecycleService extends Service with EventBus.RefOwner {
   import IrcManager._
   override def onBind(intent: Intent) = null

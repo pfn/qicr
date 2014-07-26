@@ -16,7 +16,7 @@ class Application extends android.app.Application {
     super.onCreate()
     ACRA.init(this)
 
-    startService(new Intent(this, classOf[LifecycleService]))
+    LifecycleService.start()
   }
 }
 

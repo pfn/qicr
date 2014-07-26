@@ -214,16 +214,18 @@ object Widgets extends EventBus.RefOwner {
   }
 
   def appenderForSubject(subject: String) = {
-    val manager = IrcManager.instance.get
-    if (subject == null) None else
-      subject.split(IrcManager.EXTRA_SPLITTER) match {
-        case Array(serverName) =>
-          manager.getServers.find(_.name == serverName)
-        case Array(serverName,channelName) =>
-          manager.channels.keys.find(c =>
-            c.server.name == serverName && c.name == channelName)
-        case null => None
-      }
+    IrcManager.instance flatMap { manager =>
+      if (subject == null) None
+      else
+        subject.split(IrcManager.EXTRA_SPLITTER) match {
+          case Array(serverName) =>
+            manager.getServers.find(_.name == serverName)
+          case Array(serverName, channelName) =>
+            manager.channels.keys.find(c =>
+              c.server.name == serverName && c.name == channelName)
+          case null => None
+        }
+    }
   }
 }
 
