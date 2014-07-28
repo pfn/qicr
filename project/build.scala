@@ -29,7 +29,9 @@ object QicrBuild extends android.AutoBuild {
       _.data.getName startsWith "android-support-v4") },
 
     resolvers += Resolver.sonatypeRepo("snapshots"),
+    resolvers += "bintray" at "http://jcenter.bintray.com",
     libraryDependencies ++= Seq(
+      "org.macroid" %% "macroid" % "2.0.0-M3",
       "com.hanhuy" %% "android-common" % "0.3-SNAPSHOT",
       "com.sorcix" % "sirc" % "1.1.5",
       "ch.acra" % "acra" % "4.5.0",

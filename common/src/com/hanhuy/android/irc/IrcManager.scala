@@ -25,7 +25,7 @@ import RichLogger._
 import IrcManager._
 import android.net.ConnectivityManager
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
-import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
+import com.hanhuy.android.irc.model.BusEvent.{IrcManagerStop, IrcManagerStart, ChannelStatusChanged}
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Notice
@@ -221,6 +221,7 @@ class IrcManager extends EventBus.RefOwner {
         if (s.autoconnect) connect(s)
         s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
       }
+      ServiceBus.send(IrcManagerStart)
     }
   }
 
@@ -259,6 +260,7 @@ class IrcManager extends EventBus.RefOwner {
     }
     connections.keys.foreach(disconnect(_, message, false, true))
     handlerThread.quit()
+    ServiceBus.send(IrcManagerStop)
   }
 
   def disconnect(server: Server, message: Option[String] = None,

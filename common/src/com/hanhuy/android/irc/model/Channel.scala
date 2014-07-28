@@ -25,8 +25,10 @@ abstract class ChannelLike(val server: Server, val name: String)
 extends MessageAppender with Ordered[ChannelLike] {
     val messages = new MessageAdapter
 
-  if (ChannelLike.created(server -> name))
+  if (ChannelLike.created(server -> name)) {
     Log.e("ChannelLike", "Already created: " + this, new IllegalStateException)
+    throw new IllegalStateException("already created channel %s" format name)
+  }
   ChannelLike.created += server -> name
 
     var newMessages = false
@@ -42,9 +44,9 @@ extends MessageAppender with Ordered[ChannelLike] {
     def add(m: MessageLike) {
         messages.add(m)
         val msg = m match {
-        case Privmsg(src, m2, o, v) => {newMessages = true; m2}
-        case CtcpAction(src, m2)    => {newMessages = true; m2}
-        case Notice(src, m2)        => {newMessages = true; m2}
+        case Privmsg(src, m2, o, v) => newMessages = true; m2
+        case CtcpAction(src, m2)    => newMessages = true; m2
+        case Notice(src, m2)        => newMessages = true; m2
         case _ => ""
         }
 
