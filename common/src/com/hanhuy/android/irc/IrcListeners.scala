@@ -411,7 +411,7 @@ with ServerListener with MessageListener with ModeListener {
         // 333 = topic change info
         // 366 = end of /names list
         line.getNumericCommand match {
-          case 005 => return // server capabilities list
+          case   5 => return // server capabilities list
           case 251 => () // msg, network users info
           case 252 => () // args[1] ircops online
           case 254 => () // args[1] channel count

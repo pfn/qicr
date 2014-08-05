@@ -30,6 +30,7 @@ import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.ServerInfo
 import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.BusEvent
+import org.acra.ACRA
 
 object IrcManager {
   implicit val TAG = LogcatTag("IrcManager")
@@ -324,8 +325,8 @@ class IrcManager extends EventBus.RefOwner {
 
   def startQuery(server: Server, nick: String) {
     val query = queries.getOrElse((server, nick.toLowerCase), {
-      val q = new Query(server, nick)
-      q add MessageLike.Query()
+      val q = Query(server, nick)
+      q add MessageLike.Query
       queries += (((server, nick.toLowerCase),q))
       q
     })
@@ -338,7 +339,7 @@ class IrcManager extends EventBus.RefOwner {
     val server = _connections.getOrElse(c, { return })
 
     val query = queries.getOrElse((server, _nick.toLowerCase), {
-      val q = new Query(server, _nick)
+      val q = Query(server, _nick)
       queries += (((server, _nick.toLowerCase),q))
       q
     })
@@ -362,7 +363,7 @@ class IrcManager extends EventBus.RefOwner {
 
   def addChannel(c: IrcConnection, ch: SircChannel) {
     val server = _connections(c)
-    var channel: ChannelLike = new Channel(server, ch.getName)
+    var channel: ChannelLike = Channel(server, ch.getName)
     channels.keys.find(_ == channel) foreach { _c =>
       channel    = _c
       val _ch    = channels(channel)
@@ -643,6 +644,7 @@ class IrcConnection2 extends IrcConnection {
   // currently unused
   def uncaughtExceptionHandler(t: Thread, e: Throwable) {
     RichLogger.e("Uncaught exception in IRC thread: " + t, e)
+    ACRA.getErrorReporter.handleSilentException(e)
     disconnect()
   }
 }

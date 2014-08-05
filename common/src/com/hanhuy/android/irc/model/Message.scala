@@ -12,7 +12,7 @@ object MessageLike {
         def sender: String
         def message: String
     }
-    case class Query() extends MessageLike
+    case object Query extends MessageLike
     case class Kick(op: String, nick: String, msg: String) extends MessageLike
     case class Join(nick: String, uhost: String) extends MessageLike
     case class Part(nick: String, uhost: String, msg: String)

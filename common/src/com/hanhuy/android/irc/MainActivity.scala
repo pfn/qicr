@@ -5,15 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.ComponentName
 import android.content.ServiceConnection
+import android.graphics.Color
 import android.os.{Bundle, IBinder}
 import android.content.DialogInterface
 import android.speech.RecognizerIntent
-import android.view.View
-import android.view.{Menu, MenuItem, MenuInflater}
-import android.widget.Toast
+import android.support.v4.view.ViewPager
+import android.view._
+import android.widget._
 
 import android.support.v4.app.FragmentManager
-
 import scala.collection.JavaConversions._
 
 import com.hanhuy.android.irc.model._
@@ -21,14 +21,18 @@ import com.hanhuy.android.irc.model._
 import MainActivity._
 import TypedResource._
 import com.hanhuy.android.common._
-import RichLogger._
+import RichLogger.{w => _, _}
 
 import com.hanhuy.android.common._
+import com.viewpagerindicator.TabPageIndicator
 import AndroidConversions._
 import android.support.v7.app.ActionBarActivity
 import android.support.v4.widget.DrawerLayout
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
+
+import macroid._
+import macroid.FullDsl._
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -63,7 +67,65 @@ object MainActivity {
 
   var instance = Option.empty[MainActivity]
 }
-class MainActivity extends ActionBarActivity with EventBus.RefOwner {
+class MainActivity extends ActionBarActivity with EventBus.RefOwner with Contexts[Activity] {
+  import Tweaks._
+  import ViewGroup.LayoutParams._
+  lazy val themeAttrs = getTheme.obtainStyledAttributes(R.styleable.AppTheme)
+
+  private var nickcomplete = slot[ImageButton]
+
+  lazy val mainButtonLayout = l[LinearLayout](
+    w[ImageButton] <~ id(R.id.btn_new_messages) <~
+      image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
+        adapter.goToNewMessages()
+        Ui(true)
+      } <~ wire(_newmessages),
+      w[ImageButton] <~ id(R.id.btn_nick_complete) <~
+        image(R.drawable.ic_btn_search) <~ On.click {
+        proc.nickComplete(input)
+        Ui(true)
+      } <~ hide <~ wire(nickcomplete),
+    w[EditText] <~ id(R.id.input) <~ lp[LinearLayout](0, WRAP_CONTENT, 1.0f) <~
+      hint(R.string.input_placeholder),
+    w[ImageButton] <~ id(R.id.btn_speech_rec) <~
+      image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~ On.click {
+      val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+      intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+      intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+      try {
+        startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
+      } catch {
+        case x: Exception =>
+          e("Unable to request speech recognition", x)
+          Toast.makeText(this, R.string.speech_unsupported,
+            Toast.LENGTH_SHORT).show()
+      }
+      Ui(true)
+    }
+  ) <~ horizontal <~ llMatchWidth
+
+  lazy val mainContentLayout = l[LinearLayout](
+    w[TabPageIndicator] <~ id(R.id.tabs) <~ llMatchWidth,
+    w[ViewPager] <~ id(R.id.pager) <~ lp[LinearLayout](MATCH_PARENT, 0, 1.0f),
+    mainButtonLayout <~ horizontal
+  ) <~ vertical <~ llMatchParent
+
+  lazy val mainLayout = l[DrawerLayout](
+    mainContentLayout <~ llMatchParent,
+    l[LinearLayout](
+      w[ListView] <~ id(R.id.channel_list) <~ llMatchParent
+    ) <~ id(R.id.drawer_left) <~
+      lp[DrawerLayout](192 dp, MATCH_PARENT, Gravity.LEFT) <~
+      bg(themeAttrs.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0)),
+    l[LinearLayout](
+      w[TextView] <~ id(R.id.user_count) <~ llMatchWidth,
+      w[ListView] <~ id(R.id.nick_list) <~ llMatchParent
+    ) <~ id(R.id.drawer_right) <~ vertical <~
+      lp[DrawerLayout](192 dp, MATCH_PARENT, Gravity.RIGHT) <~
+      bg(themeAttrs.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0))
+  ) <~ id(R.id.drawer_layout)
+
   private var manager: IrcManager = null
   val _richactivity: RichActivity = this
   import _richactivity.{findView => _, _}
@@ -108,36 +170,9 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner {
   lazy val pager = findView(TR.pager)
   lazy val adapter = new MainPagerAdapter(this)
 
-  lazy val newmessages = {
-    val v = findView(TR.btn_new_messages)
-    v.onClick (adapter.goToNewMessages)
-    v
-  }
-
-  lazy val nickcomplete = {
-    val complete = findView(TR.btn_nick_complete)
-    complete.onClick { proc.nickComplete(input) }
-    complete
-  }
-  lazy val speechrec = {
-    val speech = findView(TR.btn_speech_rec)
-    speech.onClick {
-      val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-      intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-      intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-      try {
-        startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
-      } catch {
-        case e: Exception => {
-          w("Unable to request speech recognition", e)
-          Toast.makeText(this, R.string.speech_unsupported,
-            Toast.LENGTH_SHORT).show()
-        }
-      }
-    }
-    speech
-  }
+  private var _newmessages = slot[ImageButton]
+  def newmessages = _newmessages.get
+  private var speechrec = slot[ImageButton]
 
   lazy val proc = new MainInputProcessor(this)
   lazy val input = {
@@ -155,7 +190,8 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner {
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
-    setContentView(R.layout.main)
+    //setContentView(R.layout.main)
+    setContentView(getUi(mainLayout))
 
     if (bundle != null)
       page = bundle.getInt("page")
@@ -362,7 +398,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner {
         try {
           m.getListView.setSelection(m.getListAdapter.getCount - 1)
         } catch {
-          case e: Exception => w("Failed to set list position", e)
+          case x: Exception => e("Failed to set list position", x)
         }
       }
       case _ => ()
@@ -372,9 +408,8 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner {
       case _: QueryFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
-        nickcomplete.setVisibility(View.GONE)
-        speechrec.setVisibility(
-          if (showSpeechRec) View.VISIBLE else View.GONE)
+        runUi(nickcomplete <~ hide,
+          speechrec <~ (if (showSpeechRec) show else hide))
       case c: ChannelFragment =>
 
         drawer.setDrawerLockMode(
@@ -427,21 +462,17 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner {
             ()
         }
 
-        nickcomplete.setVisibility(
-          if (showNickComplete) View.VISIBLE else View.GONE)
-        speechrec.setVisibility(
-          if (showSpeechRec) View.VISIBLE else View.GONE)
+        runUi(nickcomplete <~ (if (showNickComplete) show else hide),
+          speechrec <~ (if (showSpeechRec) show else hide))
       case _: ServerMessagesFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         input.setVisibility(View.VISIBLE)
-        nickcomplete.setVisibility(View.GONE)
-        speechrec.setVisibility(View.GONE)
+        runUi(nickcomplete <~ hide, speechrec <~ hide)
       case _ =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
-        nickcomplete.setVisibility(View.GONE)
-        speechrec.setVisibility(View.GONE)
+        runUi(nickcomplete <~ hide, speechrec <~ hide)
     }
     channels.setItemChecked(idx, true)
   }
@@ -499,7 +530,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner {
 
   def exit(message: Option[String] = None) {
     val prompt = settings.get(Settings.QUIT_PROMPT)
-    if (IrcManager.instance.get.connected && prompt) {
+    if (IrcManager.instance.exists (_.connected) && prompt) {
       val builder = new AlertDialog.Builder(this)
       builder.setTitle(R.string.quit_confirm_title)
       builder.setMessage(getString(R.string.quit_confirm))

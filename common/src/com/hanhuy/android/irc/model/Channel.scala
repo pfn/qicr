@@ -15,21 +15,34 @@ object Channel {
     case object KICKED extends State
     case object PARTED extends State
   }
+
+  def apply(s: Server, n: String) = ChannelLike.created.get(s, n) match {
+    case Some(c: Channel) => c
+    case _ => new Channel(s, n)
+  }
+}
+
+object Query {
+  def apply(s: Server, n: String) = ChannelLike.created.get(s, n) match {
+    case Some(c: Query) => c
+    case _ => new Query(s, n)
+  }
 }
 
 object ChannelLike {
-  private var created = Set.empty[(Server,String)]
+  private[model] var created = Map.empty[(Server,String), ChannelLike]
 }
 
 abstract class ChannelLike(val server: Server, val name: String)
 extends MessageAppender with Ordered[ChannelLike] {
     val messages = new MessageAdapter
 
-  if (ChannelLike.created(server -> name)) {
+  if (ChannelLike.created.get(server -> name).isDefined) {
     Log.e("ChannelLike", "Already created: " + this, new IllegalStateException)
     throw new IllegalStateException("already created channel %s" format name)
   }
-  ChannelLike.created += server -> name
+
+  ChannelLike.created += (server -> name) -> this
 
     var newMessages = false
     var newMentions = false
@@ -64,7 +77,7 @@ extends MessageAppender with Ordered[ChannelLike] {
     ChannelLikeComparator.compare(this, that)
 }
 
-class Channel(s: Server, n: String) extends ChannelLike(s, n) {
+class Channel private(s: Server, n: String) extends ChannelLike(s, n) {
     import Channel._
     private var _state: State = State.NEW
     def state = _state
@@ -73,7 +86,7 @@ class Channel(s: Server, n: String) extends ChannelLike(s, n) {
         _state = state
     }
 }
-class Query(s: Server, n: String) extends ChannelLike(s, n) {
+class Query private(s: Server, n: String) extends ChannelLike(s, n) {
     override def add(m: MessageLike) {
         newMentions = true // always true in a query
         super.add(m)

@@ -24,6 +24,8 @@ import android.text.style.ClickableSpan
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 
+import scala.reflect.ClassTag
+
 trait MessageAppender {
   def add(m: MessageLike): Unit
 }
@@ -43,7 +45,7 @@ object MessageAdapter {
     val ch = Option(channel)
     msg match {
       case Whois(text) => text
-      case Query() => formatText(c, msg, R.string.query_template,
+      case MessageLike.Query => formatText(c, msg, R.string.query_template,
         colorNick(ch.get.name))
       case Privmsg(s, m, o, v) => gets(c, R.string.message_template, msg,
          s, m, (o,v))
@@ -280,7 +282,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
 
 }
 
-case class RingBuffer[A: ClassManifest](capacity: Int) extends IndexedSeq[A] {
+case class RingBuffer[A: ClassTag](capacity: Int) extends IndexedSeq[A] {
   private val buffer = Array.fill[A](capacity)(null.asInstanceOf[A])
   private var _length = 0
   private var pos = 0
