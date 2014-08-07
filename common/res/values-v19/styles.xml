@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme.Light" parent="@style/Theme.AppCompat.Light">
+        <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
+        <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
+        <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix.Light</item>
+        <item name="qicrDrawerBackground">#e0dddddd</item>
+        <item name="inputBackground">@drawable/input_background_light</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+    </style>
+
+    <style name="AppTheme.Dark" parent="@style/Theme.AppCompat">
+        <!-- seems to break autoLink text...
+        <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
+        -->
+        <item name="android:actionBarStyle">@android:style/Widget.Holo.ActionBar.Solid</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
+        <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix</item>
+        <item name="qicrDrawerBackground">#cc222222</item>
+        <item name="inputBackground">@drawable/input_background_dark</item>
+    </style>
+</resources>

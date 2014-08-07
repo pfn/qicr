@@ -3,17 +3,13 @@ package com.hanhuy.android.irc
 import android.app.{AlertDialog, Dialog}
 import android.content.Context
 import android.content.DialogInterface
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.{View, ViewGroup}
-import android.view.{Menu, MenuItem, MenuInflater}
-import android.widget.AdapterView
-import android.widget.{ListView, ArrayAdapter}
-import android.widget.Toast
+import android.view._
+import android.widget._
 
-import android.support.v4.app.ListFragment
-import android.support.v4.app.DialogFragment
-import android.support.v4.app.{FragmentManager, FragmentTransaction}
+import android.support.v4.app._
 
 import com.hanhuy.android.irc.model.Channel
 import com.hanhuy.android.irc.model.Query
@@ -26,7 +22,11 @@ import com.hanhuy.android.common.{RichLogger, UiBus, EventBus}
 
 import MainActivity._
 import TypedResource._
-import RichLogger._
+import RichLogger.{w => _, _}
+
+import Tweaks._
+import macroid._
+import macroid.FullDsl._
 
 // TODO remove retainInstance -- messes up with theme change
 // TODO fix dialog dismiss on-recreate
@@ -157,8 +157,18 @@ class ServerSetupFragment extends DialogFragment {
 }
 
 abstract class MessagesFragment(_a: MessageAdapter = null)
-extends ListFragment with EventBus.RefOwner {
+extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
   def this() = this(null)
+
+  lazy val layout = w[ListView] <~ FullDsl.id(android.R.id.list) <~ llMatchParent <~
+    kitkatPadding <~ tweak { l: ListView =>
+      l.setDrawSelectorOnTop(true)
+      l.setDivider(new ColorDrawable(Color.BLACK))
+      l.setDividerHeight(0)
+      l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
+      l.setSelector(R.drawable.message_selector)
+      newerThan(19) ? l.setClipToPadding(false)
+    }
 
   val manager = IrcManager.start()
   var id = -1
@@ -202,8 +212,7 @@ extends ListFragment with EventBus.RefOwner {
   }
 
   override def onCreateView(inflater: LayoutInflater,
-      container: ViewGroup, bundle: Bundle) : View =
-    inflater.inflate(R.layout.fragment_messages, container, false)
+      container: ViewGroup, bundle: Bundle) : View = getUi(layout)
 
   override def onResume() {
     super.onResume()
@@ -218,10 +227,22 @@ extends ListFragment with EventBus.RefOwner {
 }
 
 class ChannelFragment(a: MessageAdapter, var channel: Channel)
-extends MessagesFragment(a) with EventBus.RefOwner {
+extends MessagesFragment(a) with EventBus.RefOwner with Contexts[Fragment] {
   var tag = getFragmentTag(channel)
   def this() = this(null, null)
   def channelReady = channel != null
+
+  override lazy val layout = w[ListView] <~ kitkatPadding <~
+    FullDsl.id(android.R.id.list) <~
+    tweak { l: ListView =>
+      l.setSelector(R.drawable.message_selector)
+      l.setDrawSelectorOnTop(true)
+      l.setDivider(new ColorDrawable(Color.BLACK))
+      l.setDividerHeight(0)
+      l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
+      l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
+      newerThan(19) ? l.setClipToPadding(false)
+  } <~ llMatchParent
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
@@ -239,9 +260,24 @@ extends MessagesFragment(a) with EventBus.RefOwner {
     }
   }
 
-  override def onCreateView(inflater: LayoutInflater,
-      container: ViewGroup, bundle: Bundle) : View = {
-    inflater.inflate(R.layout.fragment_channel, container, false)
+  override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) : View = {
+    val v = getUi(layout): View
+    val listener = new ViewTreeObserver.OnPreDrawListener {
+      override def onPreDraw() = {
+        val height = for {
+          a <- MainActivity.instance
+          h <- a.inputHeight
+        } yield h
+        height exists { h =>
+          v.getViewTreeObserver.removeOnPreDrawListener(this)
+          val p = v.getPaddingBottom + h
+          v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight,  p)
+          true
+        }
+      }
+    }
+    v.getViewTreeObserver.addOnPreDrawListener(listener)
+    v
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
@@ -370,11 +406,31 @@ extends MessagesFragment(if (server != null) server.messages else null) {
   }
 }
 
-class ServersFragment extends ListFragment with EventBus.RefOwner {
+class ServersFragment extends ListFragment
+with EventBus.RefOwner with Contexts[Fragment] {
   val manager = IrcManager.start()
   var adapter: ServerArrayAdapter = _
   var _server: Option[Server] = None // currently selected server
   var serverMessagesFragmentShowing: Option[String] = None
+
+  import ViewGroup.LayoutParams._
+  lazy val layout = l[LinearLayout](
+    l[LinearLayout](
+      w[TextView] <~ text(R.string.server_none) <~ llMatchWidth <~
+        margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin)),
+      w[Button] <~ id(R.id.add_server) <~ text(R.id.add_server) <~
+        On.click {
+          getActivity.servers.addServerSetupFragment()
+          Ui(true)
+        } <~ llMatchWidth <~
+        margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))
+    ) <~ id(android.R.id.empty) <~ vertical <~ llMatchParent <~ kitkatPadding,
+    w[ListView] <~ id(android.R.id.list) <~ tweak { l: ListView =>
+      l.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE)
+      l.setDrawSelectorOnTop(false)
+      newerThan(19) ? l.setClipToPadding(false)
+    } <~ llMatchParent <~ kitkatPadding
+  )
 
   UiBus += {
     case e: BusEvent.ServerAdded   => addListener(e.server)
@@ -407,9 +463,7 @@ class ServersFragment extends ListFragment with EventBus.RefOwner {
 
   override def onCreateView(inflater: LayoutInflater,
       container: ViewGroup, bundle: Bundle) = {
-    val v = inflater.inflate(R.layout.fragment_servers, container, false)
-    val b = v.findView(TR.add_server)
-    b.onClick { getActivity.servers.addServerSetupFragment() }
+    val v = getUi(layout)
     v
   }
 

@@ -12,7 +12,6 @@
                  android:icon="@drawable/ic_appicon"
                  android:logo="@drawable/ic_appicon"
                  android:name="com.hanhuy.android.irc.Application"
-                 android:debuggable="true"
                  android:installLocation="auto"/>
     <!--
     <meta-data android:name="com.google.android.backup.api_key"

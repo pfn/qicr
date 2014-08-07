@@ -1,19 +1,21 @@
 package com.hanhuy.android.irc
 
 import android.app.{NotificationManager, Activity, AlertDialog}
-import android.content.Context
-import android.content.Intent
-import android.content.ComponentName
-import android.content.ServiceConnection
-import android.graphics.Color
-import android.os.{Bundle, IBinder}
-import android.content.DialogInterface
+import android.content.{Context, Intent, DialogInterface}
+import android.graphics.Rect
+import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.support.v4.view.ViewPager
+import android.text.InputType
+import android.util.TypedValue
+import android.view.View.MeasureSpec
+import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
+import android.view.inputmethod.EditorInfo
 import android.widget._
 
 import android.support.v4.app.FragmentManager
+import macroid.contrib.Layouts.RuleRelativeLayout
 import scala.collection.JavaConversions._
 
 import com.hanhuy.android.irc.model._
@@ -70,61 +72,110 @@ object MainActivity {
 class MainActivity extends ActionBarActivity with EventBus.RefOwner with Contexts[Activity] {
   import Tweaks._
   import ViewGroup.LayoutParams._
-  lazy val themeAttrs = getTheme.obtainStyledAttributes(R.styleable.AppTheme)
+
+  var inputHeight = Option.empty[Int]
+
+  lazy val inputBackground = {
+    val themeAttrs = getTheme.obtainStyledAttributes(R.styleable.AppTheme)
+    val c = themeAttrs.getDrawable(R.styleable.AppTheme_inputBackground)
+    themeAttrs.recycle()
+    c
+  }
+
+  lazy val drawerBackground = {
+    val themeAttrs = getTheme.obtainStyledAttributes(R.styleable.AppTheme)
+    val c = themeAttrs.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0)
+    themeAttrs.recycle()
+    c
+  }
 
   private var nickcomplete = slot[ImageButton]
 
-  lazy val mainButtonLayout = l[LinearLayout](
-    w[ImageButton] <~ id(R.id.btn_new_messages) <~
-      image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
-        adapter.goToNewMessages()
-        Ui(true)
-      } <~ wire(_newmessages),
-      w[ImageButton] <~ id(R.id.btn_nick_complete) <~
-        image(R.drawable.ic_btn_search) <~ On.click {
-        proc.nickComplete(input)
-        Ui(true)
-      } <~ hide <~ wire(nickcomplete),
-    w[EditText] <~ id(R.id.input) <~ lp[LinearLayout](0, WRAP_CONTENT, 1.0f) <~
-      hint(R.string.input_placeholder),
-    w[ImageButton] <~ id(R.id.btn_speech_rec) <~
-      image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~ On.click {
-      val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-      intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-      intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-      try {
-        startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
-      } catch {
-        case x: Exception =>
-          e("Unable to request speech recognition", x)
-          Toast.makeText(this, R.string.speech_unsupported,
-            Toast.LENGTH_SHORT).show()
-      }
-      Ui(true)
-    }
-  ) <~ horizontal <~ llMatchWidth
+  lazy val buttonTweaks = tweak { b: ImageButton =>
+    b.setFocusable(false)
+    b.setFocusableInTouchMode(false)
+  }
 
-  lazy val mainContentLayout = l[LinearLayout](
-    w[TabPageIndicator] <~ id(R.id.tabs) <~ llMatchWidth,
-    w[ViewPager] <~ id(R.id.pager) <~ lp[LinearLayout](MATCH_PARENT, 0, 1.0f),
-    mainButtonLayout <~ horizontal
-  ) <~ vertical <~ llMatchParent
+  lazy val drawerWidth = sw(600 dp) ? (288 dp) | (192 dp)
 
-  lazy val mainLayout = l[DrawerLayout](
-    mainContentLayout <~ llMatchParent,
+  lazy val inputTweaks = tweak { e: EditText =>
+    import InputType._
+    import EditorInfo._
+    e.setInputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_AUTO_CORRECT)
+    e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
+  }
+
+  import RuleRelativeLayout.Rule
+  lazy val mainLayout = l[KitKatDrawerLayout](
+    l[RuleRelativeLayout](
+      w[TabPageIndicator] <~ id(R.id.tabs) <~
+        lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
+          Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)),
+      w[ViewPager] <~ id(R.id.pager) <~ lp[RuleRelativeLayout](
+        MATCH_PARENT, MATCH_PARENT,
+        Rule(RelativeLayout.BELOW, R.id.tabs),
+        Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
+      l[LinearLayout](
+        w[ImageButton] <~ id(R.id.btn_new_messages) <~
+          image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
+          adapter.goToNewMessages()
+          Ui(true)
+        } <~ wire(_newmessages) <~ buttonTweaks,
+        w[ImageButton] <~ id(R.id.btn_nick_complete) <~
+          image(R.drawable.ic_btn_search) <~ On.click {
+          proc.nickComplete(input)
+          Ui(true)
+        } <~ hide <~ wire(nickcomplete) <~ buttonTweaks,
+        w[EditText] <~ id(R.id.input) <~
+          lp[LinearLayout](0, WRAP_CONTENT, 1.0f) <~
+          hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
+          newerThan(19) ? bg(inputBackground) <~ margin(all = 4 dp),
+        w[ImageButton] <~ id(R.id.btn_speech_rec) <~
+          image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~
+          On.click {
+            val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+          intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            try {
+              startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
+            } catch {
+              case x: Exception =>
+                e("Unable to request speech recognition", x)
+                Toast.makeText(this, R.string.speech_unsupported,
+                  Toast.LENGTH_SHORT).show()
+            }
+            Ui(true)
+          } <~ buttonTweaks
+      ) <~ horizontal <~
+        lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
+          Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)) <~ kitkatMarginBottom <~
+        wire(buttonLayout)
+    ) <~ llMatchParent,
     l[LinearLayout](
-      w[ListView] <~ id(R.id.channel_list) <~ llMatchParent
+      w[ListView] <~ id(R.id.channel_list) <~ llMatchParent <~ listTweaks <~ kitkatPadding
     ) <~ id(R.id.drawer_left) <~
-      lp[DrawerLayout](192 dp, MATCH_PARENT, Gravity.LEFT) <~
-      bg(themeAttrs.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0)),
+      lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.LEFT) <~
+      bg(drawerBackground),
     l[LinearLayout](
-      w[TextView] <~ id(R.id.user_count) <~ llMatchWidth,
-      w[ListView] <~ id(R.id.nick_list) <~ llMatchParent
+      w[TextView] <~ id(R.id.user_count) <~ llMatchWidth <~
+        margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin)) <~ kitkatPaddingTop,
+      w[ListView] <~ id(R.id.nick_list) <~ llMatchParent <~ listTweaks <~ kitkatPaddingBottom
     ) <~ id(R.id.drawer_right) <~ vertical <~
-      lp[DrawerLayout](192 dp, MATCH_PARENT, Gravity.RIGHT) <~
-      bg(themeAttrs.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0))
-  ) <~ id(R.id.drawer_layout)
+      lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.RIGHT) <~
+      bg(drawerBackground)
+  ) <~ id(R.id.drawer_layout) <~
+    lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~ tweak { v: ViewGroup =>
+    }
+
+
+  lazy val listTweaks = tweak { l: ListView =>
+    l.setCacheColorHint(drawerBackground)
+    l.setFastScrollEnabled(true)
+    l.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE)
+    l.setPadding(12 dp, 12 dp, 12 dp, 12 dp)
+    newerThan(19) ? l.setClipToPadding(false)
+  }
 
   private var manager: IrcManager = null
   val _richactivity: RichActivity = this
@@ -173,6 +224,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   private var _newmessages = slot[ImageButton]
   def newmessages = _newmessages.get
   private var speechrec = slot[ImageButton]
+  private var buttonLayout = slot[View]
 
   lazy val proc = new MainInputProcessor(this)
   lazy val input = {
@@ -190,8 +242,18 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
-    //setContentView(R.layout.main)
-    setContentView(getUi(mainLayout))
+    val view = getUi(mainLayout)
+    view.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
+      override def onPreDraw() = {
+        buttonLayout exists { l =>
+          view.getViewTreeObserver.removeOnPreDrawListener(this)
+          val lp = l.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
+          inputHeight = Some(l.getMeasuredHeight + lp.topMargin)
+          true
+        }
+      }
+    })
+    setContentView(view)
 
     if (bundle != null)
       page = bundle.getInt("page")
@@ -372,7 +434,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   }
 
   def pageChanged(idx: Int) {
-    input.setVisibility(if (idx == 0) View.GONE else View.VISIBLE)
+    input.setVisibility(if (idx == 0) View.INVISIBLE else View.VISIBLE)
 
     val m = getSupportFragmentManager
     if ((0 until m.getBackStackEntryCount) exists { i =>
@@ -556,3 +618,35 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   }
 }
 
+// workaround for https://code.google.com/p/android/issues/detail?id=63777
+class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
+  var adjustment = Option.empty[Int]
+  var change = Option.empty[Int]
+
+  override def fitSystemWindows(insets: Rect) = {
+    val adj = insets.top + insets.bottom
+
+    adjustment foreach { a =>
+      if (adj > a) {
+        change = Some(adj - a)
+      } else if (adj < a) {
+        change = None
+      }
+    }
+    adjustment = Some(adj)
+
+    super.fitSystemWindows(insets)
+  }
+
+  override def onMeasure(mw: Int, mh: Int) {
+    import Tweaks._
+    newerThan(19) ? {
+      val h = MeasureSpec.getSize(mh)
+      super.onMeasure(mw, change map { i =>
+        MeasureSpec.makeMeasureSpec(h - i, MeasureSpec.EXACTLY)
+      } getOrElse mh)
+    } getOrElse {
+      super.onMeasure(mw, mh)
+    }
+  }
+}

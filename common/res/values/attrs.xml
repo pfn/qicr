@@ -2,5 +2,6 @@
 <resources>
     <declare-styleable name="AppTheme">
         <attr name="qicrDrawerBackground" format="color"/>
+        <attr name="inputBackground" format="reference"/>
     </declare-styleable>
 </resources>
