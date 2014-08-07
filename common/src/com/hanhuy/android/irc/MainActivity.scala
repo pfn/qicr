@@ -3,7 +3,7 @@ package com.hanhuy.android.irc
 import android.app.{NotificationManager, Activity, AlertDialog}
 import android.content.{Context, Intent, DialogInterface}
 import android.graphics.Rect
-import android.os.Bundle
+import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.v4.view.ViewPager
 import android.text.InputType
@@ -620,32 +620,28 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
 // workaround for https://code.google.com/p/android/issues/detail?id=63777
 class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
-  var adjustment = Option.empty[Int]
-  var change = Option.empty[Int]
+  var adjustment = Integer.MAX_VALUE
+  var change = 0
 
   override def fitSystemWindows(insets: Rect) = {
     val adj = insets.top + insets.bottom
 
-    adjustment foreach { a =>
-      if (adj > a) {
-        change = Some(adj - a)
-      } else if (adj < a) {
-        change = None
-      }
+    if (adj > adjustment) {
+      change = adj - adjustment
+    } else if (adj < adjustment) {
+      change = 0
     }
-    adjustment = Some(adj)
+    adjustment = adj
 
     super.fitSystemWindows(insets)
   }
 
   override def onMeasure(mw: Int, mh: Int) {
-    import Tweaks._
-    newerThan(19) ? {
+    if (Build.VERSION.SDK_INT >= 19) {
       val h = MeasureSpec.getSize(mh)
-      super.onMeasure(mw, change map { i =>
-        MeasureSpec.makeMeasureSpec(h - i, MeasureSpec.EXACTLY)
-      } getOrElse mh)
-    } getOrElse {
+      val s = MeasureSpec.getMode(mh)
+      super.onMeasure(mw, MeasureSpec.makeMeasureSpec(h - change, s))
+    } else {
       super.onMeasure(mw, mh)
     }
   }

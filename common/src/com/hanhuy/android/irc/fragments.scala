@@ -474,6 +474,7 @@ with EventBus.RefOwner with Contexts[Fragment] {
   }
 
   override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
+    adapter.notifyDataSetChanged()
     v.findView(TR.server_checked_text).setChecked(true)
     val activity = getActivity
     val manager = activity.getSupportFragmentManager
