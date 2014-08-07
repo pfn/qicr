@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view._
+import android.view.inputmethod.InputMethodManager
+import android.widget.AbsListView.OnScrollListener
 import android.widget._
 
 import android.support.v4.app._
@@ -166,8 +168,24 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
       l.setDivider(new ColorDrawable(Color.BLACK))
       l.setDividerHeight(0)
       l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
+      l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
       l.setSelector(R.drawable.message_selector)
       newerThan(19) ? l.setClipToPadding(false)
+      l.setDrawSelectorOnTop(true)
+      l.setOnScrollListener(new OnScrollListener {
+        import OnScrollListener._
+        override def onScrollStateChanged(v: AbsListView, s: Int) {
+          if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
+            val imm = getActivity.systemService[InputMethodManager]
+            val focused = Option(getActivity.getCurrentFocus)
+            focused foreach { f =>
+              imm.hideSoftInputFromWindow(f.getWindowToken, 0)
+            }
+          }
+        }
+
+        override def onScroll(p1: AbsListView, p2: Int, p3: Int, p4: Int) {}
+      })
     }
 
   val manager = IrcManager.start()
@@ -231,18 +249,6 @@ extends MessagesFragment(a) with EventBus.RefOwner with Contexts[Fragment] {
   var tag = getFragmentTag(channel)
   def this() = this(null, null)
   def channelReady = channel != null
-
-  override lazy val layout = w[ListView] <~ kitkatPadding <~
-    FullDsl.id(android.R.id.list) <~
-    tweak { l: ListView =>
-      l.setSelector(R.drawable.message_selector)
-      l.setDrawSelectorOnTop(true)
-      l.setDivider(new ColorDrawable(Color.BLACK))
-      l.setDividerHeight(0)
-      l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
-      l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
-      newerThan(19) ? l.setClipToPadding(false)
-  } <~ llMatchParent
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
