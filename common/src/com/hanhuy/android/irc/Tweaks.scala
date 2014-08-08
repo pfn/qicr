@@ -3,9 +3,11 @@ package com.hanhuy.android.irc
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.text.InputType
 import android.util.TypedValue
+import android.view.inputmethod.EditorInfo
 import android.view.{View, ViewGroup}
-import android.widget.{TextView, ImageView, LinearLayout}
+import android.widget._
 
 import macroid._
 import macroid.FullDsl._
@@ -80,5 +82,18 @@ object Tweaks {
     top = statusBarHeight + actionBarHeight, bottom = navBarHeight)
   def kitkatMarginBottom(implicit ctx: ActivityContext) =
     newerThan(19) ? margin(bottom = navBarHeight)
+
+  lazy val buttonTweaks = tweak { b: ImageButton =>
+    b.setFocusable(false)
+    b.setFocusableInTouchMode(false)
+  }
+
+  lazy val inputTweaks = tweak { e: EditText =>
+    import InputType._
+    import EditorInfo._
+    e.setInputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_AUTO_CORRECT)
+    e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
+  }
+
 }
 

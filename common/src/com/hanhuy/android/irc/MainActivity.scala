@@ -7,7 +7,6 @@ import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.v4.view.ViewPager
 import android.text.InputType
-import android.util.TypedValue
 import android.view.View.MeasureSpec
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
@@ -91,19 +90,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
   private var nickcomplete = slot[ImageButton]
 
-  lazy val buttonTweaks = tweak { b: ImageButton =>
-    b.setFocusable(false)
-    b.setFocusableInTouchMode(false)
-  }
-
   lazy val drawerWidth = sw(600 dp) ? (288 dp) | (192 dp)
-
-  lazy val inputTweaks = tweak { e: EditText =>
-    import InputType._
-    import EditorInfo._
-    e.setInputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_AUTO_CORRECT)
-    e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
-  }
 
   import RuleRelativeLayout.Rule
   lazy val mainLayout = l[KitKatDrawerLayout](

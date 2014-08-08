@@ -1,18 +1,23 @@
 package com.hanhuy.android.irc
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.text.TextUtils.TruncateAt
 import com.hanhuy.android.common._
 import AndroidConversions._
 
 import android.appwidget.{AppWidgetManager, AppWidgetProvider}
-import android.widget.{Toast, RemoteViews, RemoteViewsService}
+import android.widget._
 import android.content.{DialogInterface, Context, BroadcastReceiver, Intent}
 import android.app.{AlertDialog, Activity, PendingIntent}
-import android.view.View
+import android.view.{Gravity, ViewGroup, View}
 import com.hanhuy.android.irc.model._
 import android.widget.RemoteViewsService.RemoteViewsFactory
 import android.os.{Handler, Bundle}
 import android.speech.RecognizerIntent
 import com.hanhuy.android.irc.model.BusEvent._
+import macroid.Contexts
+import macroid.contrib.TextTweaks
 
 object Widgets extends EventBus.RefOwner {
   val ACTION_LAUNCH = "com.hanhuy.android.irc.action.LAUNCH"
@@ -425,7 +430,64 @@ with RemoteViewsService.RemoteViewsFactory {
 }
 
 // TODO refactor and cleanup, so ugly, copy/paste from MainActivity
-class WidgetChatActivity extends Activity with TypedActivity {
+class WidgetChatActivity
+extends Activity with TypedActivity with Contexts[Activity] {
+  import Tweaks._
+  import macroid._
+  import macroid.FullDsl._
+  import ViewGroup.LayoutParams._
+
+  lazy val windowWidth = sw(600) ? (480 dp) | (320 dp)
+
+  lazy val layout = l[LinearLayout](
+    l[FrameLayout](
+      w[ImageView] <~
+        image(R.drawable.ic_appicon) <~
+        On.click {
+          val launchIntent = new Intent(this, classOf[MainActivity])
+          launchIntent.putExtra(IrcManager.EXTRA_SUBJECT,
+            getIntent.getStringExtra(IrcManager.EXTRA_SUBJECT))
+          startActivity(launchIntent)
+          finish()
+          Ui(true)
+        } <~
+        lp[FrameLayout](WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER | Gravity.LEFT),
+      w[TextView] <~ id(R.id.title) <~
+        lp[FrameLayout](MATCH_PARENT, MATCH_PARENT, Gravity.FILL) <~
+        tweak { tv: TextView =>
+          tv.setMaxLines(1)
+          tv.setTextAppearance(this, android.R.attr.textAppearanceMedium)
+          tv.setEllipsize(TruncateAt.END)
+          tv.setGravity(Gravity.CENTER)
+        } <~ padding(left = 48 dp, right = 48 dp)
+    ) <~ lp[LinearLayout](MATCH_PARENT, 48 dp) <~ bg("#77555555"),
+    w[TextView] <~ id(R.id.empty_list) <~ hide <~
+      lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
+      tweak { tv: TextView =>
+        tv.setGravity(Gravity.CENTER)
+        tv.setTextAppearance(this, android.R.attr.textAppearanceMedium)
+      } <~ text(R.string.no_messages),
+    w[ListView] <~ id(R.id.message_list) <~
+      lp[LinearLayout](MATCH_PARENT, 0, 1.0f) <~ tweak { l: ListView =>
+        l.setSelector(R.drawable.message_selector)
+        l.setDrawSelectorOnTop(true)
+        l.setDivider(new ColorDrawable(Color.BLACK))
+        l.setDividerHeight(0)
+        l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
+        l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
+      },
+    l[LinearLayout](
+      w[ImageButton] <~ id(R.id.btn_nick_complete) <~ buttonTweaks <~
+        image(R.drawable.ic_btn_search),
+      w[EditText] <~ id(R.id.input) <~ inputTweaks <~
+        hint(R.string.input_placeholder) <~
+        lp[LinearLayout](0, WRAP_CONTENT, 1.0f),
+      w[ImageButton] <~ id(R.id.btn_speech_rec) <~ buttonTweaks <~
+        image(android.R.drawable.ic_btn_speak_now) <~
+        lp[LinearLayout](WRAP_CONTENT, WRAP_CONTENT)
+    ) <~ horizontal <~ llMatchWidth
+  ) <~ vertical <~ lp[FrameLayout](windowWidth, 320 dp, Gravity.CENTER)
+
   import collection.JavaConversions._
   val REQUEST_SPEECH_RECOGNITION = 1
   lazy val x: RichActivity = this
@@ -456,7 +518,7 @@ class WidgetChatActivity extends Activity with TypedActivity {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.widget_chat)
+    setContentView(getUi(layout))
     withAppender { m =>
       val (a,title) = m match {
         case s: Server      => (s.messages,s.name)
