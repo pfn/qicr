@@ -3,6 +3,8 @@ package com.hanhuy.android.irc
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.text.TextUtils.TruncateAt
+import android.view.inputmethod.InputMethodManager
+import android.widget.AbsListView.OnScrollListener
 import com.hanhuy.android.common._
 import AndroidConversions._
 
@@ -475,6 +477,20 @@ extends Activity with TypedActivity with Contexts[Activity] {
         l.setDividerHeight(0)
         l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
+        l.setOnScrollListener(new OnScrollListener {
+          import OnScrollListener._
+          override def onScrollStateChanged(v: AbsListView, s: Int) {
+            if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
+              val imm = WidgetChatActivity.this.systemService[InputMethodManager]
+              val focused = Option(getCurrentFocus)
+              focused foreach { f =>
+                imm.hideSoftInputFromWindow(f.getWindowToken, 0)
+              }
+            }
+          }
+
+          override def onScroll(p1: AbsListView, p2: Int, p3: Int, p4: Int) {}
+        })
       },
     l[LinearLayout](
       w[ImageButton] <~ id(R.id.btn_nick_complete) <~ buttonTweaks <~

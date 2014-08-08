@@ -1,5 +1,7 @@
 package com.hanhuy.android.irc.model
 
+import android.app.Activity
+import android.text.util.Linkify
 import com.hanhuy.android.irc._
 
 import com.hanhuy.android.common.{AndroidConversions, UiBus, EventBus, SpannedGenerator}
@@ -7,15 +9,14 @@ import AndroidConversions._
 import SpannedGenerator._
 import MessageLike._
 import TypedResource._
+import macroid.ActivityContext
 
 import scala.ref.WeakReference
 
 import android.graphics.Typeface
-import android.view.LayoutInflater
+import android.view.{Gravity, LayoutInflater, View, ViewGroup}
 import android.content.Context
-import android.widget.BaseAdapter
-import android.widget.TextView
-import android.view.{View, ViewGroup}
+import android.widget.{AbsListView, BaseAdapter, TextView}
 
 import java.text.SimpleDateFormat
 
@@ -31,6 +32,8 @@ trait MessageAppender {
 }
 
 object MessageAdapter {
+  lazy val font = Typeface.createFromAsset(
+    Application.context.getAssets, "DejaVuSansMono.ttf")
   val NICK_COLORS = Array(
     0xff33b5e5, 0xffaa66cc, 0xff99cc00, 0xffffbb33, 0xffff4444,
     0xff0099cc, 0xff9933cc, 0xff669900, 0xffff8800, 0xffcc0000)
@@ -166,6 +169,25 @@ object MessageAdapter {
 }
 
 class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
+  import Tweaks._
+  import Linkify._
+  import macroid._
+  import macroid.FullDsl._
+  import ViewGroup.LayoutParams._
+
+  lazy implicit val ctx = ActivityContext(_activity.get.get)
+  lazy implicit val actx = AppContext(Application.context)
+
+  lazy val messageLayout = w[TextView] <~ id(android.R.id.text1) <~
+    lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~
+    tweak { tv: TextView =>
+      tv.setAutoLinkMask(WEB_URLS | EMAIL_ADDRESSES | MAP_ADDRESSES)
+      tv.setLinksClickable(true)
+      tv.setTextAppearance(Application.context, android.R.attr.textAppearanceSmall)
+      tv.setTypeface(Typeface.MONOSPACE)
+      tv.setGravity(Gravity.CENTER_VERTICAL)
+    } <~ padding(left = 6 dp, right = 6 dp)
+
   implicit var channel: ChannelLike = _
   var showJoinPartQuit = false
   var _maximumSize = DEFAULT_MAXIMUM_SIZE
@@ -198,9 +220,9 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
     Some(Application.context) } map {
     _.systemService[LayoutInflater] } getOrElse (
     throw new IllegalStateException("no context available"))
-  var _activity: WeakReference[Context] = _
+  var _activity: WeakReference[Activity] = _
   // can't make this IrcService due to resource changes on recreation
-  def context_= (c: Context) = {
+  def context_= (c: Activity) = {
     if (c != null) {
       _activity = new WeakReference(c)
       IrcManager.instance foreach { manager =>
@@ -218,8 +240,6 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   def context = _activity.get orElse Some(Application.context) getOrElse {
     throw new IllegalStateException }
   // would be nice to move this into the companion
-  lazy val font =
-    Typeface.createFromAsset(context.getAssets, "DejaVuSansMono.ttf")
 
   def clear() {
     messages.clear()
@@ -254,14 +274,12 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   override def getItem(pos: Int) : MessageLike = filteredMessages(pos)
   override def getCount : Int = filteredMessages.size
 
-  override def getView(pos: Int, convertView: View, container: ViewGroup) =
-    createViewFromResource(pos, convertView, container)
-  private def createViewFromResource(
-      pos: Int, convertView: View, container: ViewGroup): View = {
+  override def getView(pos: Int, convertView: View, container: ViewGroup) = {
     val c = if (convertView == null || convertView.getContext == context)
       convertView.asInstanceOf[TextView] else null
     val view = if (c != null) c else {
-      val v = inflater.inflate(TR.layout.message_item, container, false)
+      val v = getUi(messageLayout)
+
       if (!icsAndNewer)
         v.setTypeface(font)
       v.setMovementMethod(LinkMovementMethod.getInstance)
