@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc
 
-import android.app.{AlertDialog, Dialog}
+import android.app.{Activity, AlertDialog, Dialog}
 import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
@@ -415,11 +415,10 @@ extends MessagesFragment(if (server != null) server.messages else null) {
 class ServersFragment extends ListFragment
 with EventBus.RefOwner with Contexts[Fragment] {
   val manager = IrcManager.start()
-  var adapter: ServerArrayAdapter = _
+  var adapter: ServersAdapter = _
   var _server: Option[Server] = None // currently selected server
   var serverMessagesFragmentShowing: Option[String] = None
 
-  import ViewGroup.LayoutParams._
   lazy val layout = l[LinearLayout](
     l[LinearLayout](
       w[TextView] <~ text(R.string.server_none) <~ llMatchWidth <~
@@ -454,10 +453,9 @@ with EventBus.RefOwner with Contexts[Fragment] {
     super.onActivityCreated(bundle)
     // retain instance results in the list items having the wrong theme?
     // so recreate the adapter here
-    adapter = new ServerArrayAdapter(getActivity)
+    adapter = new ServersAdapter(getActivity)
     setListAdapter(adapter)
     if (manager != null) {
-      manager.getServers.foreach(adapter.add)
       adapter.notifyDataSetChanged()
     }
   }
@@ -587,14 +585,12 @@ with EventBus.RefOwner with Contexts[Fragment] {
 
   def removeListener(server: Server) {
     if (adapter != null) {
-      adapter.remove(server)
       adapter.notifyDataSetChanged()
     }
   }
 
   def addListener(server: Server) {
     if (adapter == null) return
-    adapter.add(server)
     adapter.notifyDataSetChanged()
   }
 
@@ -681,47 +677,57 @@ with EventBus.RefOwner with Contexts[Fragment] {
 
     menu.findItem(R.id.add_server).setVisible(!found)
   }
-}
+  class ServersAdapter(context: Activity) extends BaseAdapter {
+    val manager = IrcManager.start()
 
-class ServerArrayAdapter(context: Context)
-extends ArrayAdapter[Server](
-    context, R.layout.server_item, R.id.server_item_text) {
+    override def getCount = manager.getServers.size
 
-  override def getView(pos: Int, reuseView: View, parent: ViewGroup) = {
-    import Server.State._
-    val server = getItem(pos)
-    val list = parent.asInstanceOf[ListView]
-    val v = super.getView(pos, reuseView, parent)
-    val checked = list.getCheckedItemPosition
-    val img = v.findView(TR.server_item_status)
+    override def getItemId(p1: Int) = p1
 
-    v.findView(TR.server_item_progress).setVisibility(
-      if (server.state == Server.State.CONNECTING) View.VISIBLE
+    override def getItem(x: Int) = manager.getServers(x)
+
+    override def getView(pos: Int, convertView: View, parent: ViewGroup) = {
+      import Server.State._
+      val server = getItem(pos)
+      val list = parent.asInstanceOf[ListView]
+
+      val v = if (convertView != null) convertView.asInstanceOf[ViewGroup] else
+        context.getLayoutInflater.inflate(TR.layout.server_item, parent, false)
+
+      val checked = list.getCheckedItemPosition
+      val img = v.findView(TR.server_item_status)
+
+      v.findView(TR.server_item_text).setText(server.name)
+      v.findView(TR.server_item_progress).setVisibility(
+        if (server.state == Server.State.CONNECTING) View.VISIBLE
         else View.INVISIBLE)
 
-    img.setImageResource(server.state match {
-      case INITIAL      => android.R.drawable.presence_offline
-      case DISCONNECTED => android.R.drawable.presence_busy
-      case CONNECTED    => android.R.drawable.presence_online
-      case CONNECTING   => android.R.drawable.presence_away
-    })
+      img.setImageResource(server.state match {
+        case INITIAL      => android.R.drawable.presence_offline
+        case DISCONNECTED => android.R.drawable.presence_busy
+        case CONNECTED    => android.R.drawable.presence_online
+        case CONNECTING   => android.R.drawable.presence_away
+      })
 
-    img.setVisibility(
-      if (server.state != Server.State.CONNECTING)
-        View.VISIBLE else View.INVISIBLE)
+      img.setVisibility(
+        if (server.state != Server.State.CONNECTING)
+          View.VISIBLE else View.INVISIBLE)
 
-    val t = v.findView(TR.server_checked_text)
-    t.setChecked(pos == checked)
+      val t = v.findView(TR.server_checked_text)
+      t.setChecked(pos == checked)
 
-    val lag = if (server.state == CONNECTED) {
-      val l = server.currentPing flatMap { p =>
-        if (server.currentLag == 0) None
+      val lag = if (server.state == CONNECTED) {
+        val l = server.currentPing flatMap { p =>
+          if (server.currentLag == 0) None
           else Some((System.currentTimeMillis - p).toInt)
-      } getOrElse server.currentLag
-      Server.intervalString(l)
-    } else ""
-    t.setText(lag)
+        } getOrElse server.currentLag
+        Server.intervalString(l)
+      } else ""
+      t.setText(lag)
 
-    v
+      v
+    }
   }
 }
+
+

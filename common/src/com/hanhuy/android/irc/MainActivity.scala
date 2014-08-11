@@ -222,6 +222,8 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
   override def onCreate(bundle: Bundle) {
     LifecycleService.start()
+    getWindow.setSoftInputMode(
+      WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
     manager = IrcManager.start()
     val mode = settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)

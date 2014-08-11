@@ -7,7 +7,7 @@ import com.hanhuy.android.irc.model._
 
 import android.app.NotificationManager
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
-import android.os.{Handler, HandlerThread}
+import android.os.{Build, Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
 import android.widget.Toast
@@ -629,7 +629,8 @@ class IrcManager extends EventBus.RefOwner {
             new Intent(ACTION_NEXT_CHANNEL),
             PendingIntent.FLAG_UPDATE_CURRENT))
         .build
-      n.priority = Notification.PRIORITY_HIGH
+      if (Build.VERSION.SDK_INT >= 16)
+        n.priority = Notification.PRIORITY_HIGH
       n
     } getOrElse builder.build
   }

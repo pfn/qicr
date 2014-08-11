@@ -4,7 +4,7 @@
     android:gravity="center_vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
-    <RelativeLayout
+    <FrameLayout
         android:gravity="center"
         android:measureAllChildren="true"
         android:layout_width="wrap_content"
@@ -12,7 +12,7 @@
         <ProgressBar
             android:id="@+id/server_item_progress"
             android:gravity="center"
-            android:layout_centerInParent="true"
+            android:layout_gravity="center"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingLeft="6dip"
@@ -23,14 +23,14 @@
         <ImageView
             android:id="@+id/server_item_status"
             android:gravity="center_vertical"
-            android:layout_centerInParent="true"
+            android:layout_gravity="center"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:paddingLeft="6dip"
             android:paddingRight="6dip"
             android:scaleType="centerInside"
             android:src="@android:drawable/presence_offline"/>
-    </RelativeLayout>
+    </FrameLayout>
     <TextView
         android:id="@+id/server_item_text"
         android:gravity="center_vertical"

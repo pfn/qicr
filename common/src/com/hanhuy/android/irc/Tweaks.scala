@@ -40,6 +40,9 @@ object Tweaks {
     }
   }
   def image(resid: Int) = Tweak[ImageView](_.setImageResource(resid))
+
+  def bgres(resid: Int) = Tweak[View](_.setBackgroundResource(resid))
+
   def bg(drawable: Drawable) = Tweak[View](_.setBackgroundDrawable(drawable))
   def bg(color: Int) = Tweak[View](_.setBackgroundColor(color))
   def bg(color: String) = Tweak[View](
@@ -55,7 +58,11 @@ object Tweaks {
 
   def sw(w: Int)(implicit ctx: AppContext) = minWidth(w) & minHeight(w)
 
-  def newerThan(v: Int) = MediaQuery(v >= Build.VERSION.SDK_INT)
+  def phone(implicit c: AppContext) = !sw(600 dp)
+
+  def tablet(implicit c: AppContext) = sw(600 dp)
+
+  def newerThan(v: Int) = MediaQuery(Build.VERSION.SDK_INT >= v)
 
   def actionBarHeight(implicit ctx: ActivityContext) = {
     val tv = new TypedValue
@@ -66,7 +73,8 @@ object Tweaks {
     } else 0
   }
   def statusBarHeight(implicit ctx: ActivityContext) = {
-    val id = ctx.get.getResources.getIdentifier("status_bar_height", "dimen", "android")
+    val id = ctx.get.getResources.getIdentifier(
+      "status_bar_height", "dimen", "android")
     if (id != 0) ctx.get.getResources.getDimensionPixelSize(id) else 0
   }
 
@@ -77,13 +85,15 @@ object Tweaks {
   }
   def kitkatPaddingTop(implicit ctx: ActivityContext) =
     newerThan(19) ? padding(top = statusBarHeight + actionBarHeight)
-  def kitkatPaddingBottom(implicit ctx: ActivityContext) =
-    newerThan(19) ? padding(bottom = navBarHeight)
-  def kitkatPadding(implicit ctx: ActivityContext) =
+  def kitkatPaddingBottom(implicit ctx: ActivityContext, c2: AppContext) =
+    ((tablet | portrait) & newerThan(19)) ? padding(bottom = navBarHeight)
+  def kitkatPadding(implicit ctx: ActivityContext, c2: AppContext) =
     newerThan(19) ? padding(
-    top = statusBarHeight + actionBarHeight, bottom = navBarHeight)
-  def kitkatMarginBottom(implicit ctx: ActivityContext) =
-    newerThan(19) ? margin(bottom = navBarHeight)
+      top = statusBarHeight + actionBarHeight,
+      bottom = (tablet | portrait) ? navBarHeight | 0)
+
+  def kitkatMarginBottom(implicit ctx: ActivityContext, c2: AppContext) =
+    ((tablet | portrait) & newerThan(19)) ? margin(bottom = navBarHeight)
 
   def buttonTweaks(implicit c: AppContext) = tweak { b: ImageButton =>
     b.setFocusable(false)

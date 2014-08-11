@@ -95,7 +95,7 @@ with EventBus.RefOwner {
 
   def serverStateChanged(server: Server) {
     server.state match {
-    case Server.State.DISCONNECTED => {
+    case Server.State.DISCONNECTED =>
       // iterate channels and flag them as disconnected
       (0 until channels.size) foreach { i =>
         if (channels(i).server == server) {
@@ -103,15 +103,13 @@ with EventBus.RefOwner {
           refreshTabTitle(i + channelBase)
         }
       }
-    }
-    case Server.State.CONNECTED => {
+    case Server.State.CONNECTED =>
       (0 until channels.size) foreach { i =>
         if (channels(i).server == server) {
           tabs(i + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
           refreshTabTitle(i + channelBase)
         }
       }
-    }
     case _ => ()
     }
   }
