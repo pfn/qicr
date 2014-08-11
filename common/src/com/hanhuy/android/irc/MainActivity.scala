@@ -6,11 +6,9 @@ import android.graphics.Rect
 import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.v4.view.ViewPager
-import android.text.InputType
 import android.view.View.MeasureSpec
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
-import android.view.inputmethod.EditorInfo
 import android.widget._
 
 import android.support.v4.app.FragmentManager
@@ -103,20 +101,20 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
         Rule(RelativeLayout.BELOW, R.id.tabs),
         Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
       l[LinearLayout](
-        w[ImageButton] <~ id(R.id.btn_new_messages) <~
-          image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
-          adapter.goToNewMessages()
-          Ui(true)
-        } <~ wire(_newmessages) <~ buttonTweaks,
         w[ImageButton] <~ id(R.id.btn_nick_complete) <~
           image(R.drawable.ic_btn_search) <~ On.click {
           proc.nickComplete(input)
           Ui(true)
         } <~ hide <~ wire(nickcomplete) <~ buttonTweaks,
+        w[ImageButton] <~ id(R.id.btn_new_messages) <~
+          image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
+          adapter.goToNewMessages()
+          Ui(true)
+        } <~ wire(_newmessages) <~ buttonTweaks,
         w[EditText] <~ id(R.id.input) <~
           lp[LinearLayout](0, WRAP_CONTENT, 1.0f) <~
           hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
-          newerThan(19) ? bg(inputBackground) <~ margin(all = 4 dp),
+          bg(inputBackground) <~ margin(all = 4 dp),
         w[ImageButton] <~ id(R.id.btn_speech_rec) <~
           image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~
           On.click {
@@ -152,8 +150,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
       lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.RIGHT) <~
       bg(drawerBackground)
   ) <~ id(R.id.drawer_layout) <~
-    lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~ tweak { v: ViewGroup =>
-    }
+    lp[FrameLayout](MATCH_PARENT, MATCH_PARENT)
 
 
   lazy val listTweaks = tweak { l: ListView =>
@@ -224,6 +221,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   private var page = -1 // used for restoring tab selection on recreate
 
   override def onCreate(bundle: Bundle) {
+    LifecycleService.start()
     manager = IrcManager.start()
     val mode = settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)

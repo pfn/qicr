@@ -19,12 +19,14 @@
         <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix.Light</item>
         <item name="qicrDrawerBackground">#e0dddddd</item>
         <item name="inputBackground">@drawable/input_background_light</item>
+        <item name="android:imageButtonStyle">@style/Widget.ImageButton.Light</item>
     </style>
 
     <style name="AppTheme.Dark" parent="@style/Theme.AppCompat">
       <!-- seems to break autoLink text...
       <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
       -->
+        <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
         <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
         <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix</item>
         <item name="qicrDrawerBackground">#cc222222</item>
@@ -39,5 +41,11 @@
     </style>
     <style name="TabPageIndicatorTextFix.Light">
         <item name="android:textColor">@android:color/black</item>
+    </style>
+    <style name="Widget.ImageButton.Dark" parent="@android:style/Widget.ImageButton">
+        <item name="android:background">@drawable/btn_selector_dark</item>
+    </style>
+    <style name="Widget.ImageButton.Light" parent="@android:style/Widget.ImageButton">
+        <item name="android:background">@drawable/btn_selector_light</item>
     </style>
 </resources>

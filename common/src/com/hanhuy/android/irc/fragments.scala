@@ -424,7 +424,7 @@ with EventBus.RefOwner with Contexts[Fragment] {
     l[LinearLayout](
       w[TextView] <~ text(R.string.server_none) <~ llMatchWidth <~
         margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin)),
-      w[Button] <~ id(R.id.add_server) <~ text(R.id.add_server) <~
+      w[Button] <~ id(R.id.add_server) <~ text(R.string.add_server) <~
         On.click {
           getActivity.servers.addServerSetupFragment()
           Ui(true)

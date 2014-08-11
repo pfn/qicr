@@ -1,10 +1,12 @@
 package com.hanhuy.android.irc
 
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.text.InputType
 import android.util.TypedValue
+import android.view.View.MeasureSpec
 import android.view.inputmethod.EditorInfo
 import android.view.{View, ViewGroup}
 import android.widget._
@@ -83,10 +85,11 @@ object Tweaks {
   def kitkatMarginBottom(implicit ctx: ActivityContext) =
     newerThan(19) ? margin(bottom = navBarHeight)
 
-  lazy val buttonTweaks = tweak { b: ImageButton =>
+  def buttonTweaks(implicit c: AppContext) = tweak { b: ImageButton =>
     b.setFocusable(false)
     b.setFocusableInTouchMode(false)
-  }
+    b.setScaleType(ImageView.ScaleType.CENTER_INSIDE)
+  } + lp[LinearLayout](48 dp, 48 dp)
 
   lazy val inputTweaks = tweak { e: EditText =>
     import InputType._
@@ -97,3 +100,11 @@ object Tweaks {
 
 }
 
+class SquareImageButton(c: Context) extends ImageButton(c) {
+  override def onMeasure(mw: Int, mh: Int) = {
+    val w = MeasureSpec.getSize(mw)
+    val h = MeasureSpec.getSize(mh)
+    val m = if (w > h) mw else mh
+    super.onMeasure(m, m)
+  }
+}

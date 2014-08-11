@@ -8,8 +8,6 @@ import com.hanhuy.android.common.{AndroidConversions, UiBus, EventBus, SpannedGe
 import AndroidConversions._
 import SpannedGenerator._
 import MessageLike._
-import TypedResource._
-import macroid.ActivityContext
 
 import scala.ref.WeakReference
 
@@ -175,18 +173,21 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
   import macroid.FullDsl._
   import ViewGroup.LayoutParams._
 
-  lazy implicit val ctx = ActivityContext(_activity.get.get)
+  // this is so ugly FIXME
   lazy implicit val actx = AppContext(Application.context)
 
-  lazy val messageLayout = w[TextView] <~ id(android.R.id.text1) <~
-    lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~
-    tweak { tv: TextView =>
-      tv.setAutoLinkMask(WEB_URLS | EMAIL_ADDRESSES | MAP_ADDRESSES)
-      tv.setLinksClickable(true)
-      tv.setTextAppearance(Application.context, android.R.attr.textAppearanceSmall)
-      tv.setTypeface(Typeface.MONOSPACE)
-      tv.setGravity(Gravity.CENTER_VERTICAL)
-    } <~ padding(left = 6 dp, right = 6 dp)
+  def messageLayout = {
+    implicit val ctx = ActivityContext(_activity.get.get)
+    w[TextView] <~ id(android.R.id.text1) <~
+      lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~
+      tweak { tv: TextView =>
+        tv.setAutoLinkMask(WEB_URLS | EMAIL_ADDRESSES | MAP_ADDRESSES)
+        tv.setLinksClickable(true)
+        tv.setTextAppearance(Application.context, android.R.attr.textAppearanceSmall)
+        tv.setTypeface(Typeface.MONOSPACE)
+        tv.setGravity(Gravity.CENTER_VERTICAL)
+      } <~ padding(left = 6 dp, right = 6 dp)
+  }
 
   implicit var channel: ChannelLike = _
   var showJoinPartQuit = false
