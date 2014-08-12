@@ -5,7 +5,8 @@ import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.os.Bundle
+import android.os.{Build, Bundle}
+import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
@@ -229,9 +230,6 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
     }
   }
 
-  override def onCreateView(inflater: LayoutInflater,
-      container: ViewGroup, bundle: Bundle) : View = getUi(layout)
-
   override def onResume() {
     super.onResume()
     if (adapter != null) // scroll to bottom on resume
@@ -242,6 +240,26 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
     bundle.putInt("id", id)
     bundle.putString("tag", tag)
   }
+
+  override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) : View = {
+    val v = getUi(layout): View
+    v.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
+      override def onPreDraw() = {
+        val height = for {
+          a <- MainActivity.instance
+          h <- a.inputHeight
+        } yield h
+        height exists { h =>
+          v.getViewTreeObserver.removeOnPreDrawListener(this)
+          val p = v.getPaddingBottom + h
+          v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight,  p)
+          true
+        }
+      }
+    })
+    v
+  }
+
 }
 
 class ChannelFragment(a: MessageAdapter, var channel: Channel)
@@ -264,26 +282,6 @@ extends MessagesFragment(a) with EventBus.RefOwner with Contexts[Fragment] {
       manager.add(id, channel)
       a.channel = channel
     }
-  }
-
-  override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) : View = {
-    val v = getUi(layout): View
-    val listener = new ViewTreeObserver.OnPreDrawListener {
-      override def onPreDraw() = {
-        val height = for {
-          a <- MainActivity.instance
-          h <- a.inputHeight
-        } yield h
-        height exists { h =>
-          v.getViewTreeObserver.removeOnPreDrawListener(this)
-          val p = v.getPaddingBottom + h
-          v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight,  p)
-          true
-        }
-      }
-    }
-    v.getViewTreeObserver.addOnPreDrawListener(listener)
-    v
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
@@ -366,6 +364,7 @@ extends MessagesFragment(a) {
     }
     false
   }
+
 }
 
 class ServerMessagesFragment(var server: Server)

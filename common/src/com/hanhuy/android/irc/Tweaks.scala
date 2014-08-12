@@ -89,11 +89,14 @@ object Tweaks {
     ((tablet | portrait) & newerThan(19)) ? padding(bottom = navBarHeight)
   def kitkatPadding(implicit ctx: ActivityContext, c2: AppContext) =
     newerThan(19) ? padding(
-      top = statusBarHeight + actionBarHeight,
-      bottom = (tablet | portrait) ? navBarHeight | 0)
+      top    = statusBarHeight + actionBarHeight,
+      bottom = (tablet | portrait) ? navBarHeight | 0,
+      right  = (phone & landscape) ? navBarHeight | 0)
 
-  def kitkatMarginBottom(implicit ctx: ActivityContext, c2: AppContext) =
-    ((tablet | portrait) & newerThan(19)) ? margin(bottom = navBarHeight)
+  def kitkatInputMargin(implicit ctx: ActivityContext, c2: AppContext) =
+    newerThan(19) ? margin(
+      bottom = (tablet | portrait) ? navBarHeight | 0,
+      right  = (phone & landscape) ? navBarHeight | 0)
 
   def buttonTweaks(implicit c: AppContext) = tweak { b: ImageButton =>
     b.setFocusable(false)

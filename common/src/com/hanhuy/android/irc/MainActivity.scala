@@ -134,7 +134,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
           } <~ buttonTweaks
       ) <~ horizontal <~
         lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
-          Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)) <~ kitkatMarginBottom <~
+          Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)) <~ kitkatInputMargin <~
         wire(buttonLayout)
     ) <~ llMatchParent,
     l[LinearLayout](
@@ -384,6 +384,9 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
         val page = i.getIntExtra(IrcManager.EXTRA_PAGE, 0)
         //tabhost.setCurrentTab(page)
         pager.setCurrentItem(page)
+      } else if (page != -1) {
+        pager.setCurrentItem(page)
+        page = -1
       }
       // scroll tabwidget if necessary
       pageChanged(adapter.page)
