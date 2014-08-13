@@ -12,14 +12,13 @@ import android.appwidget.{AppWidgetManager, AppWidgetProvider}
 import android.widget._
 import android.content.{DialogInterface, Context, BroadcastReceiver, Intent}
 import android.app.{AlertDialog, Activity, PendingIntent}
-import android.view.{Gravity, ViewGroup, View}
+import android.view.{Gravity, ViewGroup, View, WindowManager}
 import com.hanhuy.android.irc.model._
 import android.widget.RemoteViewsService.RemoteViewsFactory
 import android.os.{Handler, Bundle}
 import android.speech.RecognizerIntent
 import com.hanhuy.android.irc.model.BusEvent._
 import macroid.Contexts
-import macroid.contrib.TextTweaks
 
 object Widgets extends EventBus.RefOwner {
   val ACTION_LAUNCH = "com.hanhuy.android.irc.action.LAUNCH"
@@ -441,7 +440,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
 
   lazy val windowWidth = sw(600) ? (480 dp) | (320 dp)
 
-  lazy val layout = l[LinearLayout](
+  lazy val layout = l[FrameLayout](
     l[FrameLayout](
       w[ImageView] <~
         image(R.drawable.ic_appicon) <~
@@ -470,13 +469,15 @@ extends Activity with TypedActivity with Contexts[Activity] {
         tv.setTextAppearance(this, android.R.attr.textAppearanceMedium)
       } <~ text(R.string.no_messages),
     w[ListView] <~ id(R.id.message_list) <~
-      lp[LinearLayout](MATCH_PARENT, 0, 1.0f) <~ tweak { l: ListView =>
+      lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~ margin(top = 48 dp) <~
+      tweak { l: ListView =>
         l.setSelector(R.drawable.message_selector)
         l.setDrawSelectorOnTop(true)
         l.setDivider(new ColorDrawable(Color.BLACK))
         l.setDividerHeight(0)
         l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
+        l.setClipToPadding(false)
         l.setOnScrollListener(new OnScrollListener {
           import OnScrollListener._
           override def onScrollStateChanged(v: AbsListView, s: Int) {
@@ -491,18 +492,22 @@ extends Activity with TypedActivity with Contexts[Activity] {
 
           override def onScroll(p1: AbsListView, p2: Int, p3: Int, p4: Int) {}
         })
-      },
+      } <~ padding(bottom = 48 dp),
     l[LinearLayout](
       w[ImageButton] <~ id(R.id.btn_nick_complete) <~ buttonTweaks <~
         image(R.drawable.ic_btn_search),
       w[EditText] <~ id(R.id.input) <~ inputTweaks <~
         hint(R.string.input_placeholder) <~
-        lp[LinearLayout](0, WRAP_CONTENT, 1.0f),
+        lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~ margin(all = 4 dp) <~
+        padding(left = 8 dp, right = 8 dp),
       w[ImageButton] <~ id(R.id.btn_speech_rec) <~ buttonTweaks <~
         image(android.R.drawable.ic_btn_speak_now) <~
         lp[LinearLayout](WRAP_CONTENT, WRAP_CONTENT)
-    ) <~ horizontal <~ llMatchWidth
-  ) <~ vertical <~ lp[FrameLayout](windowWidth, 320 dp, Gravity.CENTER)
+    ) <~ horizontal <~ lp[FrameLayout](MATCH_PARENT, 48 dp, Gravity.BOTTOM)
+  ) <~ tweak { v: View =>
+    val lp = new WindowManager.LayoutParams(windowWidth, 320 dp,
+      WindowManager.LayoutParams.TYPE_APPLICATION, 0, 0)
+  }
 
   import collection.JavaConversions._
   val REQUEST_SPEECH_RECOGNITION = 1

@@ -51,11 +51,12 @@
                 android:enabled="@bool/is_v11plus"
                 android:permission="android.permission.BIND_REMOTEVIEWS"/>
         <activity
-                android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar"
+                android:theme="@style/AppTheme.Dialog.Dark"
                 android:name=".WidgetChatActivity"
                 android:allowTaskReparenting="true"
                 android:launchMode="singleInstance"
                 android:exported="true"
+                android:windowSoftInputMode="adjustResize"
                 android:enabled="@bool/is_v11plus"/>
     </application>
 </manifest>

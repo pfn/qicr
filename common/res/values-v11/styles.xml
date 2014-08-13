@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme.Dialog.Dark"
+         parent="@android:style/Theme.DeviceDefault.Dialog.NoActionBar">
+        <!-- seems to break autoLink text...
+        <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
+        -->
+        <item name="android:editTextBackground">@drawable/input_background_dark</item>
+        <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
+    </style>
+</resources>
