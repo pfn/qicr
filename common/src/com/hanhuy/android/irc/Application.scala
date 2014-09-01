@@ -1,6 +1,5 @@
 package com.hanhuy.android.irc
 
-import android.content.Intent
 import org.acra.ACRA
 import org.acra.annotation.ReportsCrashes
 

@@ -9,6 +9,7 @@ import android.support.v4.view.ViewPager
 import android.view.View.MeasureSpec
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
+import android.view.inputmethod.InputMethodManager
 import android.widget._
 
 import android.support.v4.app.FragmentManager
@@ -252,6 +253,14 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     drawer.setDrawerListener(new DrawerLayout.SimpleDrawerListener {
       override def onDrawerClosed(drawerView: View) {
         HoneycombSupport.stopActionMode()
+      }
+
+      override def onDrawerOpened(drawerView: View) {
+        val imm = systemService[InputMethodManager]
+        val focused = Option(getCurrentFocus)
+        focused foreach { f =>
+          imm.hideSoftInputFromWindow(f.getWindowToken, 0)
+        }
       }
     })
     channels.setOnItemClickListener { (pos: Int) =>

@@ -166,7 +166,7 @@ object MessageAdapter {
   }
 }
 
-class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
+class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.RefOwner {
   import Tweaks._
   import Linkify._
   import macroid._
@@ -189,7 +189,7 @@ class MessageAdapter extends BaseAdapter with EventBus.RefOwner {
       } <~ padding(left = 6 dp, right = 6 dp)
   }
 
-  implicit var channel: ChannelLike = _
+  implicit val channel = _channel
   var showJoinPartQuit = false
   var _maximumSize = DEFAULT_MAXIMUM_SIZE
   def maximumSize = _maximumSize

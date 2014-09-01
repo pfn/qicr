@@ -547,7 +547,6 @@ extends Activity with TypedActivity with Contexts[Activity] {
           IrcManager.instance.get.lastChannel = Some(c)
           c.newMessages = false
           c.newMentions = false
-          c.messages.channel = c
           (c.messages,c.name)
       }
       a.context = this

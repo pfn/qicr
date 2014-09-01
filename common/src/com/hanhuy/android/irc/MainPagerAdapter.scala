@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ServerComparator
 import com.hanhuy.android.irc.model.Channel
@@ -207,6 +208,10 @@ with EventBus.RefOwner {
       } orNull)
 
     refreshTabTitle(pos)
+    val imm = activity.systemService[InputMethodManager]
+    Option(activity.getCurrentFocus) foreach { f =>
+      imm.hideSoftInputFromWindow(f.getWindowToken, 0)
+    }
   }
 
   def selectTab(cname: String, sname: String) {
@@ -263,8 +268,8 @@ with EventBus.RefOwner {
       val tag = MainActivity.getFragmentTag(c)
       val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else c match {
-        case ch: Channel => new ChannelFragment(ch.messages, ch)
-        case qu: Query   => new QueryFragment(qu.messages, qu)
+        case ch: Channel => new ChannelFragment(ch)
+        case qu: Query   => new QueryFragment(qu)
       }
       val info = insertTab(c.name, frag, idx - 1)
       refreshTabTitle(idx + channelBase - 1) // why -1?

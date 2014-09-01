@@ -6,10 +6,11 @@ import android.Dependencies.apklib
 
 object QicrBuild extends android.AutoBuild {
   lazy val root = Project(id = "qicr", base = file(".")) settings(Seq(
-    packageT in Compile <<= packageT in Android in lite,
-    packageRelease      <<= packageRelease in Android in lite,
-    packageDebug        <<= packageDebug in Android in lite,
-    run                 <<= run in Android in lite
+    packageT in Compile    <<= packageT in Android in lite,
+    packageRelease         <<= packageRelease in Android in lite,
+    packageDebug           <<= packageDebug in Android in lite,
+    run                    <<= run in Android in lite,
+    packageName in Android  := "com.hanhuy.android.irc" // for pidcat
   ): _*) aggregate(lite, common)
 
   lazy val lite = Project(id = "lite", base = file("lite")) androidBuildWith common settings(

@@ -35,7 +35,7 @@ object ChannelLike {
 
 abstract class ChannelLike(val server: Server, val name: String)
 extends MessageAppender with Ordered[ChannelLike] {
-    val messages = new MessageAdapter
+    val messages = new MessageAdapter(this)
 
   if (ChannelLike.created.get(server -> name).isDefined) {
     Log.e("ChannelLike", "Already created: " + this, new IllegalStateException)

@@ -33,7 +33,7 @@ object Server {
 class Server extends MessageAppender with Ordered[Server]{
 
   import Server._
-  val messages = new MessageAdapter
+  val messages = new MessageAdapter(null)
 
   def add(m: MessageLike) = {
     ServiceBus.send(ServerMessage(this, m))
@@ -93,7 +93,7 @@ class Server extends MessageAppender with Ordered[Server]{
   var currentLag: Int = 0
 
   var currentNick = nickname
-  override def toString() = name
+  override def toString = name
 
   def blank(s: String) : Boolean = s == null || s == ""
   def valid: Boolean = {

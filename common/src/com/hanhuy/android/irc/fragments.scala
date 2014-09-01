@@ -159,9 +159,8 @@ class ServerSetupFragment extends DialogFragment {
   }
 }
 
-abstract class MessagesFragment(_a: MessageAdapter = null)
+abstract class MessagesFragment(val adapter: MessageAdapter)
 extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
-  def this() = this(null)
 
   lazy val layout = w[ListView] <~ FullDsl.id(android.R.id.list) <~ llMatchParent <~
     kitkatPadding <~ tweak { l: ListView =>
@@ -193,21 +192,14 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
   var id = -1
   var tag: String
 
-  var _adapter = _a
-  def adapter = _adapter
+  if (getActivity != null) adapter.context = getActivity
 
-  def adapter_=(a: MessageAdapter) = {
-    _adapter = a
-    if (getActivity != null) _adapter.context = getActivity
-
-    setListAdapter(_adapter)
-    manager.add(id, _adapter)
-    try { // TODO FIXME figure out how to do this better
-      getListView.setSelection(
-        if (adapter.getCount() > 0) _adapter.getCount()-1 else 0)
-    } catch {
-      case e: IllegalStateException => d("Content view not ready")
-    }
+  setListAdapter(adapter)
+  manager.add(id, adapter)
+  try { // TODO FIXME figure out how to do this better
+    getListView.setSelection(if (adapter.getCount > 0) adapter.getCount - 1 else 0)
+  } catch {
+    case e: IllegalStateException => d("Content view not ready")
   }
 
   override def onCreate(bundle: Bundle) {
@@ -220,20 +212,14 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
     if (bundle != null)
       tag = bundle.getString("tag")
 
-    if (adapter != null) { // this works by way of the network being slow
-      adapter.context = getActivity
-      manager.add(id, adapter)
-      setListAdapter(adapter)
-    }
-    if (adapter == null && id != -1) {
-      manager.messages.get(id) foreach { adapter = _ }
-    }
+    adapter.context = getActivity
+    manager.add(id, adapter)
+    setListAdapter(adapter)
   }
 
   override def onResume() {
     super.onResume()
-    if (adapter != null) // scroll to bottom on resume
-      getListView.setSelection(adapter.getCount()-1)
+    getListView.setSelection(adapter.getCount - 1)
   }
   override def onSaveInstanceState(bundle: Bundle) {
     super.onSaveInstanceState(bundle)
@@ -262,26 +248,14 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
 
 }
 
-class ChannelFragment(a: MessageAdapter, var channel: Channel)
-extends MessagesFragment(a) with EventBus.RefOwner with Contexts[Fragment] {
+class ChannelFragment(val channel: Channel)
+  extends MessagesFragment(channel.messages) with EventBus.RefOwner with Contexts[Fragment] {
   var tag = getFragmentTag(channel)
-  def this() = this(null, null)
   def channelReady = channel != null
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
-
-    val activity = getActivity
-    if (channel == null) {
-        val c = manager.chans.get(bundle.getInt("id"))
-        c.foreach(ch => channel = ch.asInstanceOf[Channel])
-    }
-    // this apparently works by virtue of the network being slow?
-    if (id != -1 && channelReady && a != null) {
-      manager.add(id, channel)
-      a.channel = channel
-    }
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
@@ -320,18 +294,13 @@ extends MessagesFragment(a) with EventBus.RefOwner with Contexts[Fragment] {
   }
 }
 
-class QueryFragment(a: MessageAdapter, val query: Query)
-extends MessagesFragment(a) {
+class QueryFragment(query: Query)
+extends MessagesFragment(query.messages) {
   var tag = getFragmentTag(query)
-  def this() = this(null, null)
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
-    if (id != -1 && query != null) {
-      manager.add(id, query)
-      a.channel = query
-    }
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
@@ -370,7 +339,6 @@ extends MessagesFragment(a) {
 class ServerMessagesFragment(var server: Server)
 extends MessagesFragment(if (server != null) server.messages else null) {
   var tag = getFragmentTag(server)
-  def this() = this(null)
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
@@ -525,7 +493,9 @@ with EventBus.RefOwner with Contexts[Fragment] {
       fragment = new ServerMessagesFragment(server)
       tx.add(R.id.servers_container, fragment, name)
     } else {
-      fragment.adapter = server.messages
+      tx.remove(fragment)
+      fragment = new ServerMessagesFragment(server)
+      tx.add(R.id.servers_container, fragment, name)
       if (fragment.isDetached)
         tx.attach(fragment)
       // fragment is sometimes visible without being shown?
