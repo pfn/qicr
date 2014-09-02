@@ -162,6 +162,8 @@ class ServerSetupFragment extends DialogFragment {
 abstract class MessagesFragment(val adapter: MessageAdapter)
 extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
 
+  def tag: String
+
   lazy val layout = w[ListView] <~ FullDsl.id(android.R.id.list) <~ llMatchParent <~
     kitkatPadding <~ tweak { l: ListView =>
       l.setDrawSelectorOnTop(true)
@@ -189,13 +191,10 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
     }
 
   val manager = IrcManager.start()
-  var id = -1
-  var tag: String
 
   if (getActivity != null) adapter.context = getActivity
 
   setListAdapter(adapter)
-  manager.add(id, adapter)
   try { // TODO FIXME figure out how to do this better
     getListView.setSelection(if (adapter.getCount > 0) adapter.getCount - 1 else 0)
   } catch {
@@ -206,25 +205,13 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
     super.onCreate(bundle)
     val activity = getActivity
 
-    id = if (id == -1 && bundle != null) bundle.getInt("id")
-      else manager.newMessagesId()
-
-    if (bundle != null)
-      tag = bundle.getString("tag")
-
     adapter.context = getActivity
-    manager.add(id, adapter)
     setListAdapter(adapter)
   }
 
   override def onResume() {
     super.onResume()
     getListView.setSelection(adapter.getCount - 1)
-  }
-  override def onSaveInstanceState(bundle: Bundle) {
-    super.onSaveInstanceState(bundle)
-    bundle.putInt("id", id)
-    bundle.putString("tag", tag)
   }
 
   override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) : View = {
@@ -266,12 +253,10 @@ class ChannelFragment(val channel: Channel)
       val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
 
-      d("Requesting tab close for: " + channel + " <= " + id)
       def removeChannel() {
         if (channel != null && channel.state == Channel.State.JOINED) {
           manager.channels.get(channel) foreach { _.part() }
         }
-        manager.remove(id)
         manager.remove(channel)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
@@ -294,7 +279,7 @@ class ChannelFragment(val channel: Channel)
   }
 }
 
-class QueryFragment(query: Query)
+class QueryFragment(val query: Query)
 extends MessagesFragment(query.messages) {
   var tag = getFragmentTag(query)
 
@@ -311,12 +296,6 @@ extends MessagesFragment(query.messages) {
       val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
       def removeQuery() {
-        manager.chans.get(id) foreach { q =>
-          val query = q.asInstanceOf[Query]
-          manager.remove(query)
-        }
-
-        manager.remove(id)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (prompt) {
@@ -336,7 +315,7 @@ extends MessagesFragment(query.messages) {
 
 }
 
-class ServerMessagesFragment(var server: Server)
+class ServerMessagesFragment(val server: Server)
 extends MessagesFragment(if (server != null) server.messages else null) {
   var tag = getFragmentTag(server)
   override def onCreate(bundle: Bundle) {
@@ -344,13 +323,6 @@ extends MessagesFragment(if (server != null) server.messages else null) {
     setHasOptionsMenu(true)
 
     val activity = getActivity
-    if (id != -1 && server != null)
-      manager.add(id, server)
-
-    if (server == null) {
-      val _s = manager.servs.get(bundle.getInt("id"))
-      _s.foreach(srv => server = srv)
-    }
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -368,7 +340,6 @@ extends MessagesFragment(if (server != null) server.messages else null) {
 
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
     if (R.id.server_close == item.getItemId) {
-      manager.remove(id)
       getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
       true
     } else {

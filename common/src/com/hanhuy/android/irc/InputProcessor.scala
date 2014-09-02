@@ -181,14 +181,8 @@ extends InputProcessor(activity) {
 
   def currentState = activity.adapter.getItem(activity.adapter.page) match {
     case s: ServersFragment => (s._server, None)
-    case c: ChannelFragment =>
-      manager.chans.get(c.id) map { ch =>
-        (Some(ch.server), Some(ch))
-      } getOrElse (None, None)
-    case q: QueryFragment =>
-      manager.chans.get(q.id) map { qu =>
-        (Some(qu.server), Some(qu))
-      } getOrElse (None, None)
+    case c: ChannelFragment => (Some(c.channel.server), Some(c.channel))
+    case q: QueryFragment => (Some(q.query.server), Some(q.query))
     case _ => (None, None)
   }
   def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {

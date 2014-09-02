@@ -149,7 +149,6 @@ class IrcManager extends EventBus.RefOwner {
 
   def remove(id: Int) {
     _messages -= id
-    _chans -= id
     _servs -= id
   }
 
@@ -166,19 +165,13 @@ class IrcManager extends EventBus.RefOwner {
   // TODO find a way to automatically(?) purge the adapters
   // worst-case: leak memory on the int, but not the adapter
   def messages = _messages
-  def chans    = _chans
   def servs    = _servs
   private var _messages = Map.empty[Int,MessageAdapter]
-  private var _chans    = Map.empty[Int,ChannelLike]
   private var _servs    = Map.empty[Int,Server]
 
   def add(id: Int, s: Server) {
     _servs += ((id, s))
   }
-  def add(id: Int, ch: ChannelLike) {
-    _chans += ((id, ch))
-  }
-
   def add(idx: Int, adapter: MessageAdapter) {
     _messages += ((idx, adapter))
   }
