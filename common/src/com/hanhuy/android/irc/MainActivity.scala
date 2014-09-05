@@ -456,11 +456,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     f match {
       // post to thread to make sure it shows up when done paging
       case m: MessagesFragment => UiBus.post {
-        try {
-          m.getListView.setSelection(m.getListAdapter.getCount - 1)
-        } catch {
-          case x: Exception => e("Failed to set list position", x)
-        }
+        m.scrollToEnd()
       }
       case _ => ()
     }

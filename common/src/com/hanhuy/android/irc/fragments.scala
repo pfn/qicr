@@ -162,15 +162,16 @@ class ServerSetupFragment extends DialogFragment {
 }
 
 abstract class MessagesFragment(_adapter: Option[MessageAdapter])
-extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
+extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 
   lazy val adapter = _adapter.get
   var lookupId: String = ""
+  var listView = slot[ListView]
 
   def tag: String
 
-  lazy val layout = w[ListView] <~ FullDsl.id(android.R.id.list) <~ llMatchParent <~
-    kitkatPadding <~ tweak { l: ListView =>
+  lazy val layout = w[ListView] <~ id(android.R.id.list) <~ llMatchParent <~
+    kitkatPadding <~ wire(listView) <~ tweak { l: ListView =>
       l.setDrawSelectorOnTop(true)
       l.setDivider(new ColorDrawable(Color.BLACK))
       l.setDividerHeight(0)
@@ -179,6 +180,7 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
       l.setSelector(R.drawable.message_selector)
       newerThan(19) ? l.setClipToPadding(false)
       l.setDrawSelectorOnTop(true)
+      l.setAdapter(adapter)
       l.setOnScrollListener(new OnScrollListener {
         import OnScrollListener._
         override def onScrollStateChanged(v: AbsListView, s: Int) {
@@ -197,21 +199,10 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
 
   val manager = IrcManager.start()
 
-  if (getActivity != null) adapter.context = getActivity
-
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     if (bundle != null)
       lookupId = bundle.getString("channel.key")
-    val activity = getActivity
-
-    adapter.context = getActivity
-    setListAdapter(adapter)
-    try { // TODO FIXME figure out how to do this better
-      getListView.setSelection(if (adapter.getCount > 0) adapter.getCount - 1 else 0)
-    } catch {
-      case e: IllegalStateException => d("Content view not ready")
-    }
   }
 
 
@@ -223,25 +214,39 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
 
   override def onResume() {
     super.onResume()
-    getListView.setSelection(adapter.getCount - 1)
+    adapter.context = getActivity
+    scrollToEnd()
   }
 
-  override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) : View = {
+  def scrollToEnd() {
+    listView foreach (_.setSelection(adapter.getCount - 1))
+  }
+
+  override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) = {
+    adapter.context = getActivity
     val v = getUi(layout): View
-    v.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
-      override def onPreDraw() = {
-        val height = for {
-          a <- MainActivity.instance
-          h <- a.inputHeight
-        } yield h
-        height exists { h =>
-          v.getViewTreeObserver.removeOnPreDrawListener(this)
-          val p = v.getPaddingBottom + h
-          v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight,  p)
-          true
+    def inputHeight = for {
+      a <- MainActivity.instance
+      h <- a.inputHeight
+    } yield h
+
+    inputHeight map { h =>
+      val p = v.getPaddingBottom + h
+      v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight, p)
+    } getOrElse {
+      v.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
+        override def onPreDraw() = {
+          val height = inputHeight
+          inputHeight exists { h =>
+            v.getViewTreeObserver.removeOnPreDrawListener(this)
+            val p = v.getPaddingBottom + h
+            v.setPadding(
+              v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight, p)
+            true
+          }
         }
-      }
-    })
+      })
+    }
     v
   }
 
