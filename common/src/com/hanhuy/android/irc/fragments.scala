@@ -1,5 +1,7 @@
 package com.hanhuy.android.irc
 
+import java.util.UUID
+
 import android.app.{Activity, AlertDialog, Dialog}
 import android.content.Context
 import android.content.DialogInterface
@@ -159,8 +161,11 @@ class ServerSetupFragment extends DialogFragment {
   }
 }
 
-abstract class MessagesFragment(val adapter: MessageAdapter)
+abstract class MessagesFragment(_adapter: Option[MessageAdapter])
 extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
+
+  lazy val adapter = _adapter.get
+  var lookupId: String = ""
 
   def tag: String
 
@@ -194,19 +199,26 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
 
   if (getActivity != null) adapter.context = getActivity
 
-  setListAdapter(adapter)
-  try { // TODO FIXME figure out how to do this better
-    getListView.setSelection(if (adapter.getCount > 0) adapter.getCount - 1 else 0)
-  } catch {
-    case e: IllegalStateException => d("Content view not ready")
-  }
-
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
+    if (bundle != null)
+      lookupId = bundle.getString("channel.key")
     val activity = getActivity
 
     adapter.context = getActivity
     setListAdapter(adapter)
+    try { // TODO FIXME figure out how to do this better
+      getListView.setSelection(if (adapter.getCount > 0) adapter.getCount - 1 else 0)
+    } catch {
+      case e: IllegalStateException => d("Content view not ready")
+    }
+  }
+
+
+  override def onSaveInstanceState(outState: Bundle) = {
+    lookupId = UUID.randomUUID.toString
+    outState.putString("channel.key", lookupId)
+    super.onSaveInstanceState(outState)
   }
 
   override def onResume() {
@@ -235,14 +247,27 @@ extends ListFragment with EventBus.RefOwner with Contexts[Fragment] {
 
 }
 
-class ChannelFragment(val channel: Channel)
-  extends MessagesFragment(channel.messages) with EventBus.RefOwner with Contexts[Fragment] {
-  var tag = getFragmentTag(channel)
-  def channelReady = channel != null
+class ChannelFragment(_channel: Option[Channel])
+  extends MessagesFragment(_channel map (_.messages)) with EventBus.RefOwner with Contexts[Fragment] {
 
+  def this() = this(None)
+
+  lazy val channel = _channel.getOrElse {
+    IrcManager.instance.get.getChannel(lookupId): Channel
+  }
+
+  override lazy val adapter = channel.messages
+
+  lazy val tag = getFragmentTag(channel)
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
+
     setHasOptionsMenu(true)
+  }
+
+  override def onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    IrcManager.instance.get.saveChannel(lookupId, channel)
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
@@ -279,15 +304,24 @@ class ChannelFragment(val channel: Channel)
   }
 }
 
-class QueryFragment(val query: Query)
-extends MessagesFragment(query.messages) {
-  var tag = getFragmentTag(query)
+class QueryFragment(_query: Option[Query])
+extends MessagesFragment(_query map (_.messages)) {
+  def this() = this(None)
+  lazy val query = _query.getOrElse {
+    IrcManager.instance.get.getChannel(lookupId): Query
+  }
+  override lazy val adapter = query.messages
+  lazy val tag = getFragmentTag(query)
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
   }
 
+  override def onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    IrcManager.instance.get.saveChannel(lookupId, query)
+  }
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
     inflater.inflate(R.menu.query_menu, menu)
 
@@ -315,9 +349,14 @@ extends MessagesFragment(query.messages) {
 
 }
 
-class ServerMessagesFragment(val server: Server)
-extends MessagesFragment(if (server != null) server.messages else null) {
-  var tag = getFragmentTag(server)
+class ServerMessagesFragment(_server: Option[Server])
+extends MessagesFragment(_server map (_.messages)) {
+  def this() = this(None)
+  lazy val server = _server.getOrElse {
+    IrcManager.instance.get.getChannel(lookupId): Server
+  }
+  override lazy val adapter = server.messages
+  lazy val tag = getFragmentTag(server)
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
@@ -325,6 +364,10 @@ extends MessagesFragment(if (server != null) server.messages else null) {
     val activity = getActivity
   }
 
+  override def onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    IrcManager.instance.get.saveChannel(lookupId, server)
+  }
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
     if (server == null) return // presumably on a tablet?
     inflater.inflate(R.menu.server_messages_menu, menu)
@@ -461,11 +504,11 @@ with EventBus.RefOwner with Contexts[Fragment] {
 
     serverMessagesFragmentShowing = Some(name)
     if (fragment == null) {
-      fragment = new ServerMessagesFragment(server)
+      fragment = new ServerMessagesFragment(Some(server))
       tx.add(R.id.servers_container, fragment, name)
     } else {
       tx.remove(fragment)
-      fragment = new ServerMessagesFragment(server)
+      fragment = new ServerMessagesFragment(Some(server))
       tx.add(R.id.servers_container, fragment, name)
       if (fragment.isDetached)
         tx.attach(fragment)

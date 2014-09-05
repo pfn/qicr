@@ -268,8 +268,8 @@ with EventBus.RefOwner {
       val tag = MainActivity.getFragmentTag(c)
       val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else c match {
-        case ch: Channel => new ChannelFragment(ch)
-        case qu: Query   => new QueryFragment(qu)
+        case ch: Channel => new ChannelFragment(Some(ch))
+        case qu: Query   => new QueryFragment(Some(qu))
       }
       val info = insertTab(c.name, frag, idx - 1)
       refreshTabTitle(idx + channelBase - 1) // why -1?
@@ -288,7 +288,7 @@ with EventBus.RefOwner {
       servers = insert(servers, idx - 1, s)
       val tag = MainActivity.getFragmentTag(s)
       val f = fm.findFragmentByTag(tag)
-      val frag = if (f != null) f else new ServerMessagesFragment(s)
+      val frag = if (f != null) f else new ServerMessagesFragment(Some(s))
       val info = insertTab(s.name, frag, idx - 1)
       refreshTabTitle(idx)
       pager.setCurrentItem(idx)

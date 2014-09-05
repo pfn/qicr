@@ -83,6 +83,17 @@ class IrcManager extends EventBus.RefOwner {
   filter.addAction(ACTION_PREV_CHANNEL)
   filter.addAction(ACTION_CANCEL_MENTION)
 
+  private var channelHolder = Map.empty[String,AnyRef]
+  def getChannel[A](id: String): A = {
+    val c = channelHolder(id)
+    channelHolder -= id
+    c.asInstanceOf[A]
+  }
+
+  def saveChannel(id: String, c: AnyRef): Unit = {
+    channelHolder += id -> c
+  }
+
   def getString(s: Int, args: Any*) = Application.context.getString(s,
     args map { _.asInstanceOf[Object] }: _*)
 
