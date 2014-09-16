@@ -161,16 +161,17 @@ class ServerSetupFragment extends DialogFragment {
   }
 }
 
-abstract class MessagesFragment(_adapter: Option[MessageAdapter])
+abstract class MessagesFragment
 extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 
-  lazy val adapter = _adapter.get
+  def adapter: Option[MessageAdapter]
+
   var lookupId: String = ""
   var listView = slot[ListView]
 
   def tag: String
 
-  lazy val layout = w[ListView] <~ id(android.R.id.list) <~ llMatchParent <~
+  def layout = w[ListView] <~ id(android.R.id.list) <~ llMatchParent <~
     kitkatPadding <~ wire(listView) <~ tweak { l: ListView =>
       l.setDrawSelectorOnTop(true)
       l.setDivider(new ColorDrawable(Color.BLACK))
@@ -180,7 +181,7 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
       l.setSelector(R.drawable.message_selector)
       newerThan(19) ? l.setClipToPadding(false)
       l.setDrawSelectorOnTop(true)
-      l.setAdapter(adapter)
+      l.setAdapter(adapter.get)
       l.setOnScrollListener(new OnScrollListener {
         import OnScrollListener._
         override def onScrollStateChanged(v: AbsListView, s: Int) {
@@ -203,6 +204,12 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
     super.onCreate(bundle)
     if (bundle != null)
       lookupId = bundle.getString("channel.key")
+
+    if (!adapter.isDefined) {
+      manager.queueCreateActivity(0)
+      if (!getActivity.isFinishing)
+        getActivity.finish()
+    }
   }
 
 
@@ -214,16 +221,19 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 
   override def onResume() {
     super.onResume()
-    adapter.context = getActivity
+    adapter foreach (_.context = getActivity)
     scrollToEnd()
   }
 
   def scrollToEnd() {
-    listView foreach (_.setSelection(adapter.getCount - 1))
+    for {
+      l <- listView
+      a <- adapter
+    } l.setSelection(a.getCount - 1)
   }
 
   override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) = {
-    adapter.context = getActivity
+    adapter foreach (_.context = getActivity)
     val v = getUi(layout): View
     def inputHeight = for {
       a <- MainActivity.instance
@@ -253,15 +263,15 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 }
 
 class ChannelFragment(_channel: Option[Channel])
-  extends MessagesFragment(_channel map (_.messages)) with EventBus.RefOwner with Contexts[Fragment] {
+  extends MessagesFragment with EventBus.RefOwner with Contexts[Fragment] {
 
   def this() = this(None)
 
-  lazy val channel = _channel.getOrElse {
-    IrcManager.instance.get.getChannel(lookupId): Channel
+  lazy val channel = _channel orElse {
+    IrcManager.instance.get.getChannel(lookupId): Option[Channel]
   }
 
-  override lazy val adapter = channel.messages
+  override lazy val adapter = channel map (_.messages)
 
   lazy val tag = getFragmentTag(channel)
   override def onCreate(bundle: Bundle) {
@@ -283,25 +293,29 @@ class ChannelFragment(_channel: Option[Channel])
       val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
 
-      def removeChannel() {
-        if (channel != null && channel.state == Channel.State.JOINED) {
-          manager.channels.get(channel) foreach { _.part() }
+      channel foreach { c =>
+        def removeChannel() {
+          if (channel != null && c.state == Channel.State.JOINED) {
+            manager.channels.get(c) foreach {
+              _.part()
+            }
+          }
+          manager.remove(c)
+          activity.adapter.removeTab(activity.adapter.getItemPosition(this))
         }
-        manager.remove(channel)
-        activity.adapter.removeTab(activity.adapter.getItemPosition(this))
-      }
-      if (channel != null && channel.state == Channel.State.JOINED && prompt) {
-        val builder = new AlertDialog.Builder(activity)
-        builder.setTitle(R.string.channel_close_confirm_title)
-        builder.setMessage(getString(R.string.channel_close_confirm))
-        builder.setPositiveButton(R.string.yes, () => {
+        if (channel != null && c.state == Channel.State.JOINED && prompt) {
+          val builder = new AlertDialog.Builder(activity)
+          builder.setTitle(R.string.channel_close_confirm_title)
+          builder.setMessage(getString(R.string.channel_close_confirm))
+          builder.setPositiveButton(R.string.yes, () => {
+            removeChannel()
+            c.state = Channel.State.PARTED
+          })
+          builder.setNegativeButton(R.string.no, null)
+          builder.create().show()
+        } else {
           removeChannel()
-          channel.state = Channel.State.PARTED
-        })
-        builder.setNegativeButton(R.string.no, null)
-        builder.create().show()
-      } else {
-        removeChannel()
+        }
       }
       return true
     }
@@ -309,13 +323,12 @@ class ChannelFragment(_channel: Option[Channel])
   }
 }
 
-class QueryFragment(_query: Option[Query])
-extends MessagesFragment(_query map (_.messages)) {
+class QueryFragment(_query: Option[Query]) extends MessagesFragment {
   def this() = this(None)
-  lazy val query = _query.getOrElse {
-    IrcManager.instance.get.getChannel(lookupId): Query
+  lazy val query = _query orElse {
+    IrcManager.instance.get.getChannel(lookupId): Option[Query]
   }
-  override lazy val adapter = query.messages
+  override lazy val adapter = query map (_.messages)
   lazy val tag = getFragmentTag(query)
 
   override def onCreate(bundle: Bundle) {
@@ -335,6 +348,7 @@ extends MessagesFragment(_query map (_.messages)) {
       val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
       def removeQuery() {
+        manager.remove(query.get)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
       }
       if (prompt) {
@@ -354,13 +368,12 @@ extends MessagesFragment(_query map (_.messages)) {
 
 }
 
-class ServerMessagesFragment(_server: Option[Server])
-extends MessagesFragment(_server map (_.messages)) {
+class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
   def this() = this(None)
-  lazy val server = _server.getOrElse {
-    IrcManager.instance.get.getChannel(lookupId): Server
+  lazy val server = _server orElse {
+    IrcManager.instance.get.getChannel(lookupId): Option[Server]
   }
-  override lazy val adapter = server.messages
+  override lazy val adapter = server map (_.messages)
   lazy val tag = getFragmentTag(server)
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
@@ -376,7 +389,7 @@ extends MessagesFragment(_server map (_.messages)) {
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
     if (server == null) return // presumably on a tablet?
     inflater.inflate(R.menu.server_messages_menu, menu)
-    val connected = server.state match {
+    val connected = server.get.state match {
       case Server.State.INITIAL      => false
       case Server.State.DISCONNECTED => false
       case _                         => true
@@ -391,7 +404,7 @@ extends MessagesFragment(_server map (_.messages)) {
       getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
       true
     } else {
-      val r = getActivity.servers.onServerMenuItemClicked(item, Option(server))
+      val r = getActivity.servers.onServerMenuItemClicked(item, server)
       if (r) HoneycombSupport.invalidateActionBar()
       r
     }

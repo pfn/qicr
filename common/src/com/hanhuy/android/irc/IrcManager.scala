@@ -84,10 +84,12 @@ class IrcManager extends EventBus.RefOwner {
   filter.addAction(ACTION_CANCEL_MENTION)
 
   private var channelHolder = Map.empty[String,AnyRef]
-  def getChannel[A](id: String): A = {
-    val c = channelHolder(id)
-    channelHolder -= id
-    c.asInstanceOf[A]
+  def getChannel[A](id: String): Option[A] = {
+    val c = channelHolder.get(id)
+    if (c.isDefined) {
+      channelHolder -= id
+      c.asInstanceOf[Option[A]]
+    } else None
   }
 
   def saveChannel(id: String, c: AnyRef): Unit = {
@@ -180,9 +182,6 @@ class IrcManager extends EventBus.RefOwner {
   private var _messages = Map.empty[Int,MessageAdapter]
   private var _servs    = Map.empty[Int,Server]
 
-  def add(id: Int, s: Server) {
-    _servs += ((id, s))
-  }
   def add(idx: Int, adapter: MessageAdapter) {
     _messages += ((idx, adapter))
   }

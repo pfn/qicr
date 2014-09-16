@@ -201,10 +201,10 @@ with ServerListener with MessageListener with ModeListener {
       }
     } else {
       UiBus.run {
-        manager.channels.values collect {
+        manager.channels.values.collect {
           case c: Channel if c.hasUser(newnick) && manager._channels.get(c).isDefined =>
             manager._channels(c)
-        } foreach { c =>
+        }.toSeq.distinct foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
             c.add(NickChange(oldnick.getNick, newnick.getNick))
@@ -455,15 +455,12 @@ with ServerListener with MessageListener with ModeListener {
                 if (p == ping) {
                   val t = System.currentTimeMillis
                   server.currentLag = (t - p).toInt
-                  // only schedule the next ping if it works
-                  // need another job to update if no response?
-                  // TODO make interval into a pref?
-                  manager.handler.delayed(30000) {
-                    manager.ping(c, server)
-                  }
                   UiBus.send(BusEvent.ServerChanged(server))
-                  return // don't print
                 }
+              }
+              // TODO make interval into a pref?
+              manager.handler.delayed(30000) {
+                manager.ping(c, server)
               }
             }
           case _ => ()

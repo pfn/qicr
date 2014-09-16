@@ -1,11 +1,8 @@
 package com.hanhuy.android.irc.model
 
 import android.graphics.Color
-import com.hanhuy.android.irc.TR
-import com.hanhuy.android.irc.TypedResource
 import com.hanhuy.android.irc._
 import com.hanhuy.android.common.{R => _, _}
-import com.hanhuy.android.irc.model.BusEvent.NickListChanged
 import SpannedGenerator._
 
 import android.view.{Gravity, LayoutInflater, View, ViewGroup}
@@ -20,8 +17,8 @@ import AndroidConversions._
 
 object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[
-    MainActivity,Map[Channel,NickListAdapter]]()
-  def apply(activity: MainActivity, channel: Channel) = {
+    MainActivity,Map[Option[Channel],NickListAdapter]]()
+  def apply(activity: MainActivity, channel: Option[Channel]) = {
     val m = adapters.getOrElse(activity, {
       adapters += ((activity, Map.empty))
       adapters(activity)
@@ -30,7 +27,7 @@ object NickListAdapter {
     m.getOrElse(channel, {
       adapters += ((activity,
         m + ((channel, new NickListAdapter(
-          new WeakReference(activity), channel)))))
+          new WeakReference(activity), channel.get)))))
       adapters(activity)(channel)
     })
   }

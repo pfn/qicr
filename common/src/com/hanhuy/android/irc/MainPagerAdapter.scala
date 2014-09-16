@@ -265,7 +265,7 @@ with EventBus.RefOwner {
     if (idx < 0) {
       idx = idx * -1
       channels = insert(channels, idx - 1, c)
-      val tag = MainActivity.getFragmentTag(c)
+      val tag = MainActivity.getFragmentTag(Option(c))
       val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else c match {
         case ch: Channel => new ChannelFragment(Some(ch))
@@ -286,7 +286,7 @@ with EventBus.RefOwner {
     if (idx < 0) {
       idx = idx * -1
       servers = insert(servers, idx - 1, s)
-      val tag = MainActivity.getFragmentTag(s)
+      val tag = MainActivity.getFragmentTag(Option(s))
       val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else new ServerMessagesFragment(Some(s))
       val info = insertTab(s.name, frag, idx - 1)

@@ -50,19 +50,20 @@ object MainActivity {
 
   implicit def toMainActivity(a: Activity) = a.asInstanceOf[MainActivity]
 
-  def getFragmentTag(s: Server) = if (s != null) "fragment:server:" + s.name
-    else "fragment:server:null-server-input"
+  def getFragmentTag(c: Option[MessageAppender]) = {
+    c match {
+      case Some(ch: ChannelLike) =>
+        val s = ch.server
+        val sinfo = if (s == null) "server-object-null:"
+        else "%s::%s::%d::%s::%s::".format(
+          s.name, s.hostname, s.port, s.username, s.nickname)
 
-  def getFragmentTag(c: ChannelLike) = {
-    val s = if (c == null) null else c.server
-    val sinfo = if (s == null) "server-object-null:"
-      else "%s::%s::%d::%s::%s::".format(
-        s.name, s.hostname, s.port, s.username, s.nickname)
-    "fragment:" + sinfo + (c match {
-    case ch: Channel => ch.name 
-    case qu: Query   => qu.name
-    case _ => "null"
-    })
+        "fragment:" + sinfo + ch.name
+      case Some(s: Server) =>
+        "fragment:server:" + s.name
+      case None =>
+        "none"
+    }
   }
 
   var instance = Option.empty[MainActivity]
@@ -511,7 +512,9 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
                   proc.processor.WhoisCommand.execute(Some(nick))
                 case R_id_nick_insert => insertNick(pos)
                 case R_id_nick_start_chat =>
-                  manager.startQuery(c.channel.server, nick)
+                  c.channel.foreach { ch =>
+                    manager.startQuery(ch.server, nick)
+                  }
               }
 
               ()
