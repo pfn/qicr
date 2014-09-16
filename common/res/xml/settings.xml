@@ -91,5 +91,9 @@
             android:summary="@string/pref_irc_debug_summary"
             android:defaultValue="false"
         />
+        <Preference
+            android:key="debug.log"
+            android:title="Submit logs"
+            android:summary="Send logcat to aid in issue diagnosis"/>
     </PreferenceCategory>
 </PreferenceScreen>

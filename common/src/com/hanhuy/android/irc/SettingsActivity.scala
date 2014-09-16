@@ -1,14 +1,15 @@
 package com.hanhuy.android.irc
 
+import android.preference.Preference.OnPreferenceClickListener
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 
-import android.app.Activity
+import android.app.{Fragment, Activity}
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.preference.PreferenceManager
-import android.preference.PreferenceFragment
+import android.preference.{Preference, PreferenceManager, PreferenceFragment}
 import com.hanhuy.android.common.{AndroidConversions, ServiceBus, UiBus}
+import org.acra.ACRA
 
 import scala.reflect.ClassTag
 
@@ -113,9 +114,23 @@ class SettingsFragmentActivity extends Activity {
   }
 }
 
-class SettingsFragment extends PreferenceFragment {
-    override def onCreate(bundle: Bundle) {
-        super.onCreate(bundle)
-        addPreferencesFromResource(R.xml.settings)
-    }
+class SettingsFragment
+extends PreferenceFragment with macroid.Contexts[Fragment] {
+  import macroid.FullDsl._
+  override def onCreate(bundle: Bundle) {
+    super.onCreate(bundle)
+    addPreferencesFromResource(R.xml.settings)
+
+    getPreferenceScreen.findPreference(
+      "debug.log").setOnPreferenceClickListener(
+        new OnPreferenceClickListener {
+          override def onPreferenceClick(pref: Preference) = {
+            getUi(toast("Debug log sent") <~ fry)
+            val e = new Exception("User submitted log")
+            e.setStackTrace(Array.empty)
+            ACRA.getErrorReporter.handleSilentException(e)
+            true
+          }
+        })
+  }
 }

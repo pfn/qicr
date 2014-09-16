@@ -457,10 +457,10 @@ with ServerListener with MessageListener with ModeListener {
                   server.currentLag = (t - p).toInt
                   UiBus.send(BusEvent.ServerChanged(server))
                 }
-              }
-              // TODO make interval into a pref?
-              manager.handler.delayed(30000) {
-                manager.ping(c, server)
+                // TODO make interval into a pref?
+                manager.handler.delayed(30000) {
+                  manager.ping(c, server)
+                }
               }
             }
           case _ => ()

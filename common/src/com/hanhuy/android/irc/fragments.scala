@@ -181,7 +181,8 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
       l.setSelector(R.drawable.message_selector)
       newerThan(19) ? l.setClipToPadding(false)
       l.setDrawSelectorOnTop(true)
-      l.setAdapter(adapter.get)
+      if (!getActivity.isFinishing)
+        l.setAdapter(adapter.get)
       l.setOnScrollListener(new OnScrollListener {
         import OnScrollListener._
         override def onScrollStateChanged(v: AbsListView, s: Int) {

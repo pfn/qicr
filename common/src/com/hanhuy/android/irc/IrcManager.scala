@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import java.nio.charset.Charset
 import javax.net.ssl.SSLContext
 
 import android.text.TextUtils
@@ -516,6 +517,7 @@ class IrcManager extends EventBus.RefOwner {
     val ircserver = new IrcServer(server.hostname, server.port,
       server.password, server.ssl)
     val connection = new IrcConnection2
+    connection.setCharset(Charset.forName("utf-8"))
     i("Connecting to server: " +
       (server.hostname, server.port, server.ssl))
     connection.setServer(ircserver)
