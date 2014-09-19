@@ -466,7 +466,7 @@ with ServerListener with MessageListener with ModeListener {
           case _ => ()
         }
       }
-      UiBus.run {
+      if (line.getCommand != "PONG") UiBus.run {
         server.add(ServerInfo("[%s](%s):[%s]" format (
           line.getCommand, line.getArguments,
           line.getMessage)))

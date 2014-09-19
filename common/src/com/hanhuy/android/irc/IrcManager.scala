@@ -84,7 +84,7 @@ class IrcManager extends EventBus.RefOwner {
   filter.addAction(ACTION_PREV_CHANNEL)
   filter.addAction(ACTION_CANCEL_MENTION)
 
-  private var channelHolder = Map.empty[String,AnyRef]
+  private var channelHolder = Map.empty[String,MessageAppender]
   def getChannel[A](id: String): Option[A] = {
     val c = channelHolder.get(id)
     if (c.isDefined) {
@@ -93,7 +93,7 @@ class IrcManager extends EventBus.RefOwner {
     } else None
   }
 
-  def saveChannel(id: String, c: AnyRef): Unit = {
+  def saveChannel(id: String, c: MessageAppender): Unit = {
     channelHolder += id -> c
   }
 
@@ -113,7 +113,7 @@ class IrcManager extends EventBus.RefOwner {
         val intent = new Intent(Application.context, classOf[MainActivity])
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.putExtra(EXTRA_PAGE, page)
-        Application.context.startActivity(intent)
+        UiBus.post { Application.context.startActivity(intent) }
       }
     case BusEvent.PreferenceChanged(_, k) =>
       if (k == Settings.IRC_DEBUG) {

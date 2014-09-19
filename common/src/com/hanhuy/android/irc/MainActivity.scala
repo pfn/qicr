@@ -235,10 +235,12 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     view.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
       override def onPreDraw() = {
         buttonLayout exists { l =>
-          view.getViewTreeObserver.removeOnPreDrawListener(this)
-          val lp = l.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
-          inputHeight = Some(l.getMeasuredHeight + lp.topMargin)
-          true
+          if (l.getMeasuredHeight > 0) {
+            view.getViewTreeObserver.removeOnPreDrawListener(this)
+            val lp = l.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
+            inputHeight = Some(l.getMeasuredHeight + lp.topMargin)
+            true
+          } else false
         }
       }
     })

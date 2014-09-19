@@ -269,7 +269,7 @@ class ChannelFragment(_channel: Option[Channel])
   def this() = this(None)
 
   lazy val channel = _channel orElse {
-    IrcManager.instance.get.getChannel(lookupId): Option[Channel]
+    IrcManager.instance.get.getChannel[Channel](lookupId)
   }
 
   override lazy val adapter = channel map (_.messages)
@@ -283,7 +283,9 @@ class ChannelFragment(_channel: Option[Channel])
 
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
-    IrcManager.instance.get.saveChannel(lookupId, channel)
+    channel foreach { c =>
+      IrcManager.instance.get.saveChannel(lookupId, c)
+    }
   }
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
@@ -327,7 +329,7 @@ class ChannelFragment(_channel: Option[Channel])
 class QueryFragment(_query: Option[Query]) extends MessagesFragment {
   def this() = this(None)
   lazy val query = _query orElse {
-    IrcManager.instance.get.getChannel(lookupId): Option[Query]
+    IrcManager.instance.get.getChannel[Query](lookupId)
   }
   override lazy val adapter = query map (_.messages)
   lazy val tag = getFragmentTag(query)
@@ -339,7 +341,9 @@ class QueryFragment(_query: Option[Query]) extends MessagesFragment {
 
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
-    IrcManager.instance.get.saveChannel(lookupId, query)
+    query foreach { q =>
+      IrcManager.instance.get.saveChannel(lookupId, q)
+    }
   }
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
     inflater.inflate(R.menu.query_menu, menu)
@@ -372,7 +376,7 @@ class QueryFragment(_query: Option[Query]) extends MessagesFragment {
 class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
   def this() = this(None)
   lazy val server = _server orElse {
-    IrcManager.instance.get.getChannel(lookupId): Option[Server]
+    IrcManager.instance.get.getChannel[Server](lookupId)
   }
   override lazy val adapter = server map (_.messages)
   lazy val tag = getFragmentTag(server)
@@ -385,7 +389,9 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
 
   override def onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
-    IrcManager.instance.get.saveChannel(lookupId, server)
+    server foreach { s =>
+      IrcManager.instance.get.saveChannel(lookupId, s)
+    }
   }
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
     if (server == null) return // presumably on a tablet?
