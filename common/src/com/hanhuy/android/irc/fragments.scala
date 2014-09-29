@@ -172,7 +172,8 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
   def tag: String
 
   def layout = w[ListView] <~ id(android.R.id.list) <~ llMatchParent <~
-    kitkatPadding <~ wire(listView) <~ tweak { l: ListView =>
+    kitkatPadding(getActivity.tabs.getVisibility == View.GONE) <~
+    wire(listView) <~ tweak { l: ListView =>
       l.setDrawSelectorOnTop(true)
       l.setDivider(new ColorDrawable(Color.BLACK))
       l.setDividerHeight(0)
@@ -435,12 +436,12 @@ with EventBus.RefOwner with Contexts[Fragment] {
           Ui(true)
         } <~ llMatchWidth <~
         margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))
-    ) <~ id(android.R.id.empty) <~ vertical <~ llMatchParent <~ kitkatPadding,
+    ) <~ id(android.R.id.empty) <~ vertical <~ llMatchParent <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE),
     w[ListView] <~ id(android.R.id.list) <~ tweak { l: ListView =>
       l.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE)
       l.setDrawSelectorOnTop(false)
       newerThan(19) ? l.setClipToPadding(false)
-    } <~ llMatchParent <~ kitkatPadding
+    } <~ llMatchParent <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE)
   )
 
   UiBus += {

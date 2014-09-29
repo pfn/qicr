@@ -97,7 +97,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     l[RuleRelativeLayout](
       w[TabPageIndicator] <~ id(R.id.tabs) <~
         lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
-          Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)),
+          Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)) <~ kitkatPaddingTop,
       w[ViewPager] <~ id(R.id.pager) <~ lp[RuleRelativeLayout](
         MATCH_PARENT, MATCH_PARENT,
         Rule(RelativeLayout.BELOW, R.id.tabs),
@@ -433,6 +433,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     Option(drawerRight.findView(TR.nick_list).getAdapter) foreach {
       _.unregisterDataSetObserver(observer)
     }
+    ServiceBus.send(BusEvent.MainActivityDestroy)
   }
 
   def pageChanged(idx: Int) {

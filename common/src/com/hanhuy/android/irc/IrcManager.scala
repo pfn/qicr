@@ -108,6 +108,7 @@ class IrcManager extends EventBus.RefOwner {
   ServiceBus += {
     case BusEvent.MainActivityStart => _showing = true
     case BusEvent.MainActivityStop  => _showing = false
+    case BusEvent.MainActivityDestroy =>
       recreateActivity foreach { page =>
         recreateActivity = None
         val intent = new Intent(Application.context, classOf[MainActivity])

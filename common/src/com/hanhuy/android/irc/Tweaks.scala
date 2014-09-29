@@ -87,6 +87,12 @@ object Tweaks {
     newerThan(19) ? padding(top = statusBarHeight + actionBarHeight)
   def kitkatPaddingBottom(implicit ctx: ActivityContext, c2: AppContext) =
     ((tablet | portrait) & newerThan(19)) ? padding(bottom = navBarHeight)
+
+  def kitkatPadding(padTop: Boolean)(implicit ctx: ActivityContext, c2: AppContext) =
+    newerThan(19) ? padding(
+      top    = if (padTop) statusBarHeight + actionBarHeight else 0,
+      bottom = (tablet | portrait) ? navBarHeight | 0,
+      right  = (phone & landscape) ? navBarHeight | 0)
   def kitkatPadding(implicit ctx: ActivityContext, c2: AppContext) =
     newerThan(19) ? padding(
       top    = statusBarHeight + actionBarHeight,

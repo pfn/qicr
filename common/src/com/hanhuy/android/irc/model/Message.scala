@@ -62,6 +62,7 @@ object BusEvent {
   case object IrcManagerStart extends BusEvent
   case object IrcManagerStop extends BusEvent
   case object MainActivityStart extends BusEvent
+  case object MainActivityDestroy extends BusEvent
   case object MainActivityStop extends BusEvent
   case class ChannelStatusChanged(channel: ChannelLike) extends BusEvent
   case class ServerChanged(server: Server) extends BusEvent
