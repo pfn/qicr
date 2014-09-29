@@ -426,6 +426,7 @@ with EventBus.RefOwner with Contexts[Fragment] {
   var _server: Option[Server] = None // currently selected server
   var serverMessagesFragmentShowing: Option[String] = None
 
+  import ViewGroup.LayoutParams._
   lazy val layout = l[LinearLayout](
     l[LinearLayout](
       w[TextView] <~ text(R.string.server_none) <~ llMatchWidth <~
@@ -436,13 +437,13 @@ with EventBus.RefOwner with Contexts[Fragment] {
           Ui(true)
         } <~ llMatchWidth <~
         margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))
-    ) <~ id(android.R.id.empty) <~ vertical <~ llMatchParent <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE),
+    ) <~ id(android.R.id.empty) <~ vertical <~ lp[LinearLayout](0, MATCH_PARENT, 1) <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE),
     w[ListView] <~ id(android.R.id.list) <~ tweak { l: ListView =>
       l.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE)
       l.setDrawSelectorOnTop(false)
       newerThan(19) ? l.setClipToPadding(false)
-    } <~ llMatchParent <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE)
-  )
+    } <~ lp[LinearLayout](0, MATCH_PARENT, 1) <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE)
+  ) <~ id(R.id.servers_container) <~ horizontal
 
   UiBus += {
     case e: BusEvent.ServerAdded   => addListener(e.server)

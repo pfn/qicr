@@ -368,8 +368,13 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
           chan = "#" + chan
 
         withConnection { conn =>
-          val c = conn.createChannel(chan)
-          password map { p => c.join(p) } getOrElse c.join()
+          if (conn.isConnected) {
+            val c = conn.createChannel(chan)
+            password map { p => c.join(p)} getOrElse c.join()
+          } else {
+            addCommandError("Not connected")
+          }
+
         }
       } getOrElse addCommandError(R.string.usage_join)
     }
