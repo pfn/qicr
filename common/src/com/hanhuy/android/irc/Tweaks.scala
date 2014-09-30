@@ -58,9 +58,9 @@ object Tweaks {
 
   def sw(w: Int)(implicit ctx: AppContext) = minWidth(w) & minHeight(w)
 
-  def phone(implicit c: AppContext) = !sw(600 dp)
-
-  def tablet(implicit c: AppContext) = sw(600 dp)
+  // 550dp instead of typical 600dp because of use of DisplayMetrics vs Display
+  def phone(implicit c: AppContext) = !sw(550 dp)
+  def tablet(implicit c: AppContext) = sw(550 dp)
 
   def newerThan(v: Int) = MediaQuery(Build.VERSION.SDK_INT >= v)
 
@@ -78,7 +78,7 @@ object Tweaks {
     if (id != 0) ctx.get.getResources.getDimensionPixelSize(id) else 0
   }
 
-  def navBarHeight(implicit ctx: ActivityContext) = {
+  def navBarHeight(implicit ctx: AppContext) = {
     val id = ctx.get.getResources.getIdentifier(
       "navigation_bar_height", "dimen", "android")
     if (id != 0) ctx.get.getResources.getDimensionPixelSize(id) else 0
