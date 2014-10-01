@@ -1,0 +1,3 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <bool name="is_v16plus">true</bool>
+</resources>

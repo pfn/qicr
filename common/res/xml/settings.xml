@@ -93,6 +93,7 @@
         />
         <Preference
             android:key="debug.log"
+            android:enabled="@bool/is_v16plus"
             android:title="Submit logs"
             android:summary="Send logcat to aid in issue diagnosis"/>
     </PreferenceCategory>

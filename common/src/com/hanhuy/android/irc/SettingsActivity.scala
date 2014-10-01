@@ -1,12 +1,13 @@
 package com.hanhuy.android.irc
 
 import android.preference.Preference.OnPreferenceClickListener
+import android.text.{Editable, TextWatcher}
+import android.widget.EditText
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 
-import android.app.{Fragment, Activity}
-import android.content.Context
-import android.content.SharedPreferences
-import android.os.Bundle
+import android.app.{AlertDialog, Fragment, Activity}
+import android.content.{DialogInterface, Context, SharedPreferences}
+import android.os.{Build, Bundle}
 import android.preference.{Preference, PreferenceManager, PreferenceFragment}
 import com.hanhuy.android.common.{AndroidConversions, ServiceBus, UiBus}
 import org.acra.ACRA
@@ -117,6 +118,7 @@ class SettingsFragmentActivity extends Activity {
 class SettingsFragment
 extends PreferenceFragment with macroid.Contexts[Fragment] {
   import macroid.FullDsl._
+  import AndroidConversions._
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     addPreferencesFromResource(R.xml.settings)
@@ -125,10 +127,37 @@ extends PreferenceFragment with macroid.Contexts[Fragment] {
       "debug.log").setOnPreferenceClickListener(
         new OnPreferenceClickListener {
           override def onPreferenceClick(pref: Preference) = {
-            getUi(toast("Debug log sent") <~ fry)
-            val e = new Exception("User submitted log")
-            e.setStackTrace(Array.empty)
-            ACRA.getErrorReporter.handleSilentException(e)
+            val b = new AlertDialog.Builder(getActivity)
+            b.setTitle("Submit debug logs")
+            b.setMessage("Add details about this log")
+            val edit = new EditText(getActivity)
+            b.setView(edit)
+            b.setPositiveButton("Send", { () =>
+              getUi(toast("Debug log sent") <~ fry)
+              val e = new Exception("User submitted log: " + edit.getText)
+              e.setStackTrace(Array(new StackTraceElement(
+                Build.BRAND, Build.MODEL, Build.PRODUCT,
+                (System.currentTimeMillis / 1000).toInt)))
+              ACRA.getErrorReporter.handleSilentException(e)
+              ()
+            })
+            b.setNegativeButton("Cancel", {(d: DialogInterface, i: Int) =>
+              d.dismiss()
+            })
+            val d = b.show()
+            val button = d.getButton(DialogInterface.BUTTON_POSITIVE)
+            button.setEnabled(false)
+            edit.addTextChangedListener(new TextWatcher {
+              override def afterTextChanged(p1: Editable) {}
+              override def beforeTextChanged(p1: CharSequence,
+                                             p2: Int, p3: Int, p4: Int) { }
+
+              override def onTextChanged(p1: CharSequence,
+                                         p2: Int, p3: Int, p4: Int) {
+                button.setEnabled(p1.length > 0)
+              }
+
+            })
             true
           }
         })
