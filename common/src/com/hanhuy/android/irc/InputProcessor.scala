@@ -326,15 +326,16 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
         case Some(query: Query)=>
           if (query.server.state != Server.State.CONNECTED)
             return addCommandError(R.string.error_server_disconnected)
-          val conn = manager.connections(query.server)
-          val user = conn.createUser(query.name)
-          if (action) {
-            query.add(CtcpAction(query.server.currentNick, l))
-            user.sendAction(l)
-          } else {
-            query.add(Privmsg(query.server.currentNick, l))
-            user.sendMessage(l)
-          }
+          manager.connections.get(query.server) map { conn =>
+            val user = conn.createUser(query.name)
+            if (action) {
+              query.add(CtcpAction(query.server.currentNick, l))
+              user.sendAction(l)
+            } else {
+              query.add(Privmsg(query.server.currentNick, l))
+              user.sendMessage(l)
+            }
+          } getOrElse addCommandError("No connection found for this session")
         case _ => addCommandError(R.string.error_no_channel)
       }
     }
