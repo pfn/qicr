@@ -43,7 +43,6 @@ abstract class InputProcessor(activity: Activity) {
   def currentState: (Option[Server],Option[ChannelLike])
 
   def onEditorActionListener(v: View, action: Int, e: KeyEvent): Boolean = {
-    Log.i(TAG, "editoraction: " + action + " e: " + e)
     val input = v.asInstanceOf[EditText]
     if (action == EditorInfo.IME_ACTION_SEND)
       false // ignored for now
@@ -186,7 +185,6 @@ extends InputProcessor(activity) {
     case _ => (None, None)
   }
   def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
-    Log.i(TAG, "key: " + k + " e: " + e)
     // keyboard shortcuts / honeycomb and above only
     if (KeyEvent.ACTION_UP == e.getAction) {
       val meta = e.getMetaState
@@ -386,7 +384,9 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   }
 
   object QuitCommand extends Command {
-    override def execute(args: Option[String]) = activity.exit(args)
+    override def execute(args: Option[String]) = MainActivity.instance map {
+      _.exit(args)
+    }
   }
 
   object QuoteCommand extends Command {

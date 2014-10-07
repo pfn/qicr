@@ -385,7 +385,10 @@ with ServerListener with MessageListener with ModeListener {
         case 319 =>
           buf.append("\n%1   channels: %2" formatSpans(whoisPrefix, m))
         case 338 =>
-          buf.append("\n%1   %2: %3" formatSpans(whoisPrefix, m, args(2)))
+          if (args.length > 2)
+            buf.append("\n%1   %2: %3" formatSpans(whoisPrefix, m, args(2)))
+          else
+            buf.append("\n%1   %2" formatSpans(whoisPrefix, m))
         case 317 =>
           val (idle, time) = (args(2).toInt, args(3).toLong * 1000)
           buf.append("\n%1   %2: %3, %4" formatSpans(whoisPrefix, m,

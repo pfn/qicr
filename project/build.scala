@@ -36,7 +36,7 @@ object QicrBuild extends android.AutoBuild {
     libraryDependencies ++= Seq(
       "org.macroid" %% "macroid" % "2.0.0-M3",
       "com.hanhuy" %% "android-common" % "0.3-SNAPSHOT",
-      "com.sorcix" % "sirc" % "1.1.5",
+      "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
       "ch.acra" % "acra" % "4.5.0",
       apklib("com.viewpagerindicator" % "library" % "2.4.1"),
       "com.android.support" % "support-v4" % "20.0.0",
