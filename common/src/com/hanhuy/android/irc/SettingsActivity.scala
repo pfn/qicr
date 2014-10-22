@@ -2,10 +2,15 @@ package com.hanhuy.android.irc
 
 import android.preference.Preference.OnPreferenceClickListener
 import android.text.{Editable, TextWatcher}
+import android.view.{ViewGroup, LayoutInflater}
 import android.widget.EditText
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
+import macroid._
+import macroid.FullDsl._
+import Tweaks._
 
-import android.app.{AlertDialog, Fragment, Activity}
+import android.app.{Activity, AlertDialog, Fragment}
+import android.support.v7.app.ActionBarActivity
 import android.content.{DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
 import android.preference.{Preference, PreferenceManager, PreferenceFragment}
@@ -103,13 +108,17 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
 }
 
 // android3.0+
-class SettingsFragmentActivity extends Activity {
+// now actionbaractivity for material on <5.0
+class SettingsFragmentActivity extends ActionBarActivity with IdGeneration with Contexts[Activity] {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     val f = getFragmentManager.findFragmentByTag("settings fragment")
     if (f == null) {
       val tx = getFragmentManager.beginTransaction()
-      tx.add(android.R.id.content, new SettingsFragment, "settings fragment")
+      val content = new android.widget.FrameLayout(this)
+      content.setId(Id.content)
+      setContentView(getUi(content <~ kitkatPadding))
+      tx.add(Id.content, new SettingsFragment, "settings fragment")
       tx.commit()
     }
   }
@@ -119,6 +128,7 @@ class SettingsFragment
 extends PreferenceFragment with macroid.Contexts[Fragment] {
   import macroid.FullDsl._
   import AndroidConversions._
+
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     addPreferencesFromResource(R.xml.settings)

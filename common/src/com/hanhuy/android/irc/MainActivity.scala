@@ -114,9 +114,10 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
           Ui(true)
         } <~ wire(_newmessages) <~ buttonTweaks,
         w[EditText] <~ id(R.id.input) <~
-          lp[LinearLayout](0, WRAP_CONTENT, 1.0f) <~
+          lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~
           hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
-          bg(inputBackground) <~ margin(all = 4 dp),
+          padding(left = 8 dp, right = 8 dp) <~ margin(all = 4 dp) <~
+          bg(inputBackground),
         w[ImageButton] <~ id(R.id.btn_speech_rec) <~
           image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~
           On.click {
@@ -135,7 +136,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
             Ui(true)
           } <~ buttonTweaks
       ) <~ horizontal <~
-        lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
+        lp[RuleRelativeLayout](MATCH_PARENT, 48 dp,
           Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)) <~ kitkatInputMargin <~
         wire(buttonLayout)
     ) <~ llMatchParent,
@@ -540,6 +541,12 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     channels.setItemChecked(idx, true)
   }
 
+  def toggleNickList(): Unit = {
+    if (drawer.isDrawerOpen(Gravity.RIGHT))
+      drawer.closeDrawer(Gravity.RIGHT)
+    else
+      drawer.openDrawer(Gravity.RIGHT)
+  }
   override def onCreateOptionsMenu(menu: Menu): Boolean = {
     val inflater = new MenuInflater(this)
     inflater.inflate(R.menu.main_menu, menu)

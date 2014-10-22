@@ -293,6 +293,9 @@ class ChannelFragment(_channel: Option[Channel])
     inflater.inflate(R.menu.channel_menu, menu)
 
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
+    if (R.id.nicklist == item.getItemId) {
+      MainActivity.instance foreach { _.toggleNickList() }
+    }
     if (R.id.channel_close == item.getItemId) {
       val activity = getActivity
       val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
