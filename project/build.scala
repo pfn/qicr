@@ -21,6 +21,7 @@ object QicrBuild extends android.AutoBuild {
       _.data.getName startsWith "android-support-v4") },
     resolvers += Resolver.sonatypeRepo("snapshots"),
     proguardCache in Android += ProguardCache("macroid") % "org.macroid",
+    proguardCache in Android += ProguardCache("android.support") % "com.android.support",
     proguardScala in Android := true
     )
 

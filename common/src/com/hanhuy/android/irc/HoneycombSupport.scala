@@ -73,7 +73,7 @@ object HoneycombSupport {
     bar.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST)
     bar.setDisplayOptions(0, ActionBar.DISPLAY_SHOW_TITLE)
     bar.setListNavigationCallbacks(
-      a.DropDownAdapter, a.actionBarNavigationListener _)
+      a.DropDownNavAdapter, a.actionBarNavigationListener _)
   }
 
   def isSpinnerNavigation =

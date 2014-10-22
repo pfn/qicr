@@ -26,7 +26,7 @@ import RichLogger.{w => _, _}
 import com.hanhuy.android.common._
 import com.viewpagerindicator.TabPageIndicator
 import AndroidConversions._
-import android.support.v7.app.ActionBarActivity
+import android.support.v7.app.{ActionBarDrawerToggle, ActionBarActivity}
 import android.support.v4.widget.DrawerLayout
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
@@ -196,6 +196,8 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   private var showNickComplete = false
   private var showSpeechRec = false
 
+  lazy val drawerToggle = new ActionBarDrawerToggle(this,
+    drawer, R.string.app_name, R.string.app_name)
   lazy val servers = { // because of retain instance
     val f = getSupportFragmentManager.findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
@@ -254,9 +256,11 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
     drawer.setScrimColor(0x11000000)
     drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
-    drawer.setDrawerListener(new DrawerLayout.SimpleDrawerListener {
+    drawer.setDrawerListener(new DrawerLayout.DrawerListener {
       override def onDrawerClosed(drawerView: View) {
         HoneycombSupport.stopActionMode()
+        if (drawerView == drawerLeft)
+          drawerToggle.onDrawerClosed(drawerView)
       }
 
       override def onDrawerOpened(drawerView: View) {
@@ -265,7 +269,17 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
         focused foreach { f =>
           imm.hideSoftInputFromWindow(f.getWindowToken, 0)
         }
+        if (drawerView == drawerLeft)
+          drawerToggle.onDrawerOpened(drawerView)
       }
+
+      override def onDrawerSlide(p1: View, p2: Float) = {
+        if (p1 == drawerLeft)
+          drawerToggle.onDrawerSlide(p1, p2)
+      }
+
+      override def onDrawerStateChanged(p1: Int) =
+        drawerToggle.onDrawerStateChanged(p1)
     })
     channels.setOnItemClickListener { (pos: Int) =>
       pager.setCurrentItem(pos)
@@ -292,6 +306,19 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     setRequestedOrientation(
       if (settings.get(Settings.ROTATE_LOCK))
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
+  }
+
+  override def onPostCreate(savedInstanceState: Bundle) {
+    super.onPostCreate(savedInstanceState)
+    val nav = settings.get(Settings.NAVIGATION_MODE)
+    getSupportActionBar.setDisplayShowHomeEnabled(true)
+    if (nav == Settings.NAVIGATION_MODE_DRAWER) {
+      getSupportActionBar.setDisplayHomeAsUpEnabled(true)
+    } else {
+      getSupportActionBar.setIcon(R.drawable.ic_appicon)
+    }
+    drawerToggle.syncState()
+    drawerToggle.setDrawerIndicatorEnabled(true)
   }
 
   override def onActivityResult(req: Int, res: Int, i: Intent) {
@@ -366,6 +393,8 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
             tabs.setVisibility(View.VISIBLE)
             drawer.setDrawerLockMode(
               DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerLeft)
+            getSupportActionBar.setIcon(R.drawable.ic_appicon)
+            getSupportActionBar.setDisplayHomeAsUpEnabled(false)
           case Settings.NAVIGATION_MODE_DRAWER =>
             tabs.setVisibility(View.GONE)
             drawer.setDrawerLockMode(
@@ -556,7 +585,9 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     true
   }
 
+
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
+    drawerToggle.onOptionsItemSelected(item)
     val R_id_exit = R.id.exit
     val R_id_settings = R.id.settings
     val R_id_toggle_theme = R.id.toggle_theme

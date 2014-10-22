@@ -145,6 +145,7 @@ with EventBus.RefOwner {
   val refreshTabRunnable: Runnable = () => {
     tabindicators.notifyDataSetChanged()
     DropDownAdapter.notifyDataSetChanged()
+    DropDownNavAdapter.notifyDataSetChanged()
   }
   def refreshTabTitle(pos: Int) {
     UiBus.handler.removeCallbacks(refreshTabRunnable)
@@ -348,7 +349,12 @@ with EventBus.RefOwner {
     }
   }
 
-  object DropDownAdapter extends BaseAdapter {
+  object DropDownAdapter extends BaseDropDownAdapter
+  object DropDownNavAdapter extends BaseDropDownAdapter {
+    override def getViewTypeCount = 1
+  }
+
+  class BaseDropDownAdapter extends BaseAdapter {
     lazy val inflater = activity.systemService[LayoutInflater]
     override def getItem(pos: Int) = tabs(pos)
     override def getCount = tabs.length

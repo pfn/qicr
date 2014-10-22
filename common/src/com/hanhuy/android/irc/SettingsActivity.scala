@@ -39,7 +39,7 @@ object Settings {
   val HIDE_KEYBOARD = Setting[Boolean]("ui_hide_kbd_after_send", false)
   val IRC_DEBUG = Setting[Boolean]("irc_debug_log", false)
   val NAVIGATION_MODE = Setting[String]("ui_selector_mode2",
-    NAVIGATION_MODE_TABS)
+    NAVIGATION_MODE_DRAWER)
   val QUIT_MESSAGE = Setting[String]("irc_quit_message",
     R.string.pref_quit_message_default)
   val SPEECH_REC_EOL = Setting[String]("speech_cmd_eol",
