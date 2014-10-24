@@ -105,6 +105,7 @@
                 android:layout_gravity="center"
                 android:gravity="center|left"
                 android:layout_height="match_parent"
+                android:textColorHint="@android:color/darker_gray"
                 android:hint="Chat here..."
                 android:layout_weight="1"/>
         <ImageView

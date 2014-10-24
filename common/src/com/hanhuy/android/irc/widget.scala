@@ -438,7 +438,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
   import macroid.FullDsl._
   import ViewGroup.LayoutParams._
 
-  lazy val windowWidth = sw(600) ? (480 dp) | (320 dp)
+  lazy val windowWidth = sw(550 dp) ? (480 dp) | (320 dp)
 
   lazy val layout = l[FrameLayout](
     l[FrameLayout](

@@ -62,9 +62,10 @@
                 android:background="@android:drawable/editbox_background"
                 android:layout_width="0dp"
                 android:layout_gravity="center"
-                android:gravity="center|left"
+                android:gravity="center"
+                android:textColor="@android:color/black"
                 android:layout_height="match_parent"
-                android:hint="Chat here..."
+                android:text="@string/open"
                 android:layout_weight="1"/>
         <ImageView
                 android:id="@+id/go_next"
