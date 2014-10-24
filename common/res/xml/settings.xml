@@ -29,7 +29,7 @@
                 android:key="ui_selector_mode2"
                 android:entries="@array/selector_options"
                 android:entryValues="@array/selector_option_values"
-                android:defaultValue="Tabs"
+                android:defaultValue="Drawer"
                 android:title="@string/pref_selector_mode_title"
                 />
         <CheckBoxPreference

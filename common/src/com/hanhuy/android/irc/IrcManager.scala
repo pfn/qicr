@@ -3,7 +3,13 @@ package com.hanhuy.android.irc
 import java.nio.charset.Charset
 import javax.net.ssl.SSLContext
 
-import android.text.TextUtils
+import android.app.Notification.Action
+import android.appwidget.AppWidgetManager
+import android.graphics.Typeface
+import android.text.{Layout, StaticLayout, TextPaint, TextUtils}
+import android.text.style.TextAppearanceSpan
+import android.util.DisplayMetrics
+import android.view.{WindowManager, View}
 import com.hanhuy.android.irc.model._
 
 import android.app.NotificationManager
@@ -11,7 +17,7 @@ import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
 import android.os.{Build, Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
-import android.widget.Toast
+import android.widget.{RemoteViews, Toast}
 import android.support.v4.app.NotificationCompat
 
 import com.sorcix.sirc.IrcDebug
@@ -34,6 +40,7 @@ import com.hanhuy.android.irc.model.BusEvent
 import org.acra.ACRA
 
 object IrcManager {
+  implicit val wm = SystemService[WindowManager](Context.WINDOW_SERVICE)
   implicit val TAG = LogcatTag("IrcManager")
 
   // notification IDs
@@ -123,7 +130,11 @@ class IrcManager extends EventBus.RefOwner {
           IrcDebug.setLogStream(PrintStream)
         IrcDebug.setEnabled(debug)
       }
-    case BusEvent.ChannelMessage(ch, msg) => lastChannel foreach { c =>
+    case BusEvent.ChannelMessage(ch, msg) =>
+      val first = channels.keySet.toSeq sortWith { (a,b) =>
+        ChannelLikeComparator.compare(a,b) < 0} headOption
+
+      lastChannel orElse first foreach { c =>
       if (!showing && c == ch) {
         val text = getString(R.string.notif_connected_servers, connections.size)
 
@@ -583,8 +594,11 @@ class IrcManager extends EventBus.RefOwner {
 
   def runningNotification(text: CharSequence): Notification = {
     val intent = new Intent(Application.context, classOf[MainActivity])
-    lastChannel foreach { c =>
-      intent.putExtra(EXTRA_SUBJECT, c.server.name + EXTRA_SPLITTER + c.name)
+    val first = channels.keySet.toSeq sortWith { (a,b) =>
+      ChannelLikeComparator.compare(a,b) < 0} headOption
+
+    lastChannel orElse first foreach { c =>
+      intent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
     }
     val pending = PendingIntent.getActivity(Application.context, RUNNING_ID,
       intent, PendingIntent.FLAG_UPDATE_CURRENT)
@@ -597,16 +611,8 @@ class IrcManager extends EventBus.RefOwner {
       .setContentTitle(getString(R.string.notif_title))
 
 
-    lastChannel map { c =>
-      val title = c.name
-      val msgs = if (c.messages.filteredMessages.size > 0) {
-        TextUtils.concat(
-          c.messages.filteredMessages.takeRight(5).map { m =>
-            MessageAdapter.formatText(Application.context, m)(c)
-          }.flatMap (m => Seq(m, "\n")).init:_*)
-      } else {
-        getString(R.string.no_messages)
-      }
+    lastChannel orElse first map { c =>
+      val MAX_LINES = 9
 
       val chatIntent = new Intent(Application.context, classOf[WidgetChatActivity])
       chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
@@ -615,10 +621,6 @@ class IrcManager extends EventBus.RefOwner {
         Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
 
       val n = builder
-        .setStyle(new NotificationCompat.BigTextStyle()
-        .setBigContentTitle(title)
-        .setSummaryText(text)
-        .bigText(msgs))
         .setContentIntent(PendingIntent.getActivity(Application.context,
         ACTION_QUICK_CHAT.hashCode, chatIntent,
         PendingIntent.FLAG_UPDATE_CURRENT))
@@ -635,8 +637,57 @@ class IrcManager extends EventBus.RefOwner {
             new Intent(ACTION_NEXT_CHANNEL),
             PendingIntent.FLAG_UPDATE_CURRENT))
         .build
-      if (Build.VERSION.SDK_INT >= 16)
+
+      if (Build.VERSION.SDK_INT >= 16) {
+        val title = c.name
+        val msgs = if (c.messages.filteredMessages.size > 0) {
+          TextUtils.concat(
+            c.messages.filteredMessages.takeRight(MAX_LINES).map { m =>
+              MessageAdapter.formatText(Application.context, m)(c)
+            }.flatMap (m => Seq(m, "\n")).init:_*)
+        } else {
+          getString(R.string.no_messages)
+        }
+
+        // TODO also account for the padding on the notification and textview
+        val tas = new TextAppearanceSpan(
+          Application.context, android.R.style.TextAppearance_Small)
+        val paint = new TextPaint
+        paint.setTypeface(Typeface.create(tas.getFamily, tas.getTextStyle))
+        paint.setTextSize(tas.getTextSize)
+        val d = Application.context.getResources.getDimension(
+          R.dimen.notification_panel_width)
+        val metrics = new DisplayMetrics
+        Application.context.systemService[WindowManager].getDefaultDisplay.getMetrics(metrics)
+        val width = if (d < 0) metrics.widthPixels else d.toInt
+
+        val layout = new StaticLayout(msgs, paint, width,
+          Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, true)
+        val lines = layout.getLineCount
+        val startOffset = if (lines > MAX_LINES) {
+          layout.getLineStart(lines - MAX_LINES)
+        } else 0
         n.priority = Notification.PRIORITY_HIGH
+        val view = new RemoteViews(
+          Application.context.getPackageName, R.layout.notification_content)
+        view.setTextViewText(R.id.title, title)
+        view.setTextViewText(R.id.content, msgs.subSequence(
+          startOffset, msgs.length))
+        view.setOnClickPendingIntent(R.id.go_prev,
+          PendingIntent.getBroadcast(Application.context,
+            ACTION_PREV_CHANNEL.hashCode,
+            new Intent(ACTION_PREV_CHANNEL),
+            PendingIntent.FLAG_UPDATE_CURRENT))
+        view.setOnClickPendingIntent(R.id.widget_input, pending)
+        view.setOnClickPendingIntent(R.id.go_next,
+          PendingIntent.getBroadcast(Application.context,
+            ACTION_NEXT_CHANNEL.hashCode,
+            new Intent(ACTION_NEXT_CHANNEL),
+            PendingIntent.FLAG_UPDATE_CURRENT))
+
+        n.bigContentView = view
+      }
+
       n
     } getOrElse builder.build
   }

@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc
 
-import android.graphics.Color
+import android.graphics.{Point, Color}
 import android.graphics.drawable.ColorDrawable
 import android.text.TextUtils.TruncateAt
 import android.view.inputmethod.InputMethodManager
@@ -501,12 +501,11 @@ extends Activity with TypedActivity with Contexts[Activity] {
         lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~ margin(all = 4 dp) <~
         padding(left = 8 dp, right = 8 dp),
       w[ImageButton] <~ id(R.id.btn_speech_rec) <~ buttonTweaks <~
-        image(android.R.drawable.ic_btn_speak_now) <~
-        lp[LinearLayout](WRAP_CONTENT, WRAP_CONTENT)
+        image(android.R.drawable.ic_btn_speak_now)
     ) <~ horizontal <~ lp[FrameLayout](MATCH_PARENT, 48 dp, Gravity.BOTTOM)
   ) <~ tweak { v: View =>
     val lp = new WindowManager.LayoutParams(windowWidth, 320 dp,
-      WindowManager.LayoutParams.TYPE_APPLICATION, 0, 0)
+      WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG, 0, 0)
   }
 
   import collection.JavaConversions._
@@ -540,6 +539,10 @@ extends Activity with TypedActivity with Contexts[Activity] {
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(getUi(layout))
+    val p = new Point
+    getWindow.getWindowManager.getDefaultDisplay.getSize(p)
+    getWindow.setLayout(windowWidth, p.y - (192 dp))
+
     withAppender { m =>
       val (a,title) = m match {
         case s: Server      => (s.messages,s.name)
