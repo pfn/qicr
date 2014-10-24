@@ -72,6 +72,15 @@
             android:singleLine="true"
         />
     </PreferenceCategory>
+    <PreferenceCategory android:title="Notifications">
+        <CheckBoxPreference
+                android:key="notification_running_enable"
+                android:title="@string/pref_running_notification_title"
+                android:summary="@string/pref_running_notification_summary"
+                android:enabled="@bool/is_v16plus"
+                android:defaultValue="true"
+                />
+    </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_irc">
         <EditTextPreference
             android:key="irc_quit_message"

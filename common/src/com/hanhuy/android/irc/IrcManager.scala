@@ -623,22 +623,9 @@ class IrcManager extends EventBus.RefOwner {
       val n = builder
         .setContentIntent(PendingIntent.getActivity(Application.context,
         ACTION_QUICK_CHAT.hashCode, chatIntent,
-        PendingIntent.FLAG_UPDATE_CURRENT))
-        .addAction(android.R.drawable.ic_media_previous, getString(R.string.prev),
-          PendingIntent.getBroadcast(Application.context,
-            ACTION_PREV_CHANNEL.hashCode,
-            new Intent(ACTION_PREV_CHANNEL),
-            PendingIntent.FLAG_UPDATE_CURRENT))
-        .addAction(android.R.drawable.sym_action_chat,
-          getString(R.string.open), pending)
-        .addAction(android.R.drawable.ic_media_next, getString(R.string.next),
-          PendingIntent.getBroadcast(Application.context,
-            ACTION_NEXT_CHANNEL.hashCode,
-            new Intent(ACTION_NEXT_CHANNEL),
-            PendingIntent.FLAG_UPDATE_CURRENT))
-        .build
+        PendingIntent.FLAG_UPDATE_CURRENT)).build
 
-      if (Build.VERSION.SDK_INT >= 16) {
+      if (Build.VERSION.SDK_INT >= 16 && settings.get(Settings.RUNNING_NOTIFICATION)) {
         val title = c.name
         val msgs = if (c.messages.filteredMessages.size > 0) {
           TextUtils.concat(

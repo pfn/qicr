@@ -81,4 +81,10 @@
     </string-array>
     <!-- default here because it's true on honeycomb -v11 and newer -->
     <bool name="pref_show_nick_complete_default">false</bool>
+    <string name="pref_running_notification_title">Show the large running
+        notification
+    </string>
+    <string name="pref_running_notification_summary">Enable the rich, navigable
+        running notification (might require restart)
+    </string>
 </resources>
