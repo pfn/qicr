@@ -622,7 +622,8 @@ class IrcManager extends EventBus.RefOwner {
 
       val n = builder
         .setContentIntent(PendingIntent.getActivity(Application.context,
-        ACTION_QUICK_CHAT.hashCode, chatIntent,
+        ACTION_QUICK_CHAT.hashCode,
+        if (Build.VERSION.SDK_INT < 11) intent else chatIntent,
         PendingIntent.FLAG_UPDATE_CURRENT)).build
 
       if (Build.VERSION.SDK_INT >= 16 && settings.get(Settings.RUNNING_NOTIFICATION)) {
