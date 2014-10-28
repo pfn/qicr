@@ -1,23 +1,27 @@
 package com.hanhuy.android.irc
 
 import android.content.Context
-import android.graphics.Color
+import android.graphics.{Point, Color}
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.text.InputType
 import android.util.TypedValue
 import android.view.View.MeasureSpec
 import android.view.inputmethod.EditorInfo
-import android.view.{View, ViewGroup}
+import android.view.{WindowManager, View, ViewGroup}
 import android.widget._
+import com.hanhuy.android.common.{SystemService, AndroidConversions}
 
 import macroid._
 import macroid.FullDsl._
+
+import scala.reflect.ClassTag
 
 /**
  * @author pfnguyen
  */
 object Tweaks {
+  implicit val wm = SystemService[WindowManager](Context.WINDOW_SERVICE)
   import ViewGroup.LayoutParams._
 
   lazy val llMatchParent = lp[LinearLayout](MATCH_PARENT, MATCH_PARENT, 0)
@@ -56,11 +60,29 @@ object Tweaks {
 
   def tweak[A <: View,B](f: A => B) = Tweak[A](a => f(a))
 
-  def sw(w: Int)(implicit ctx: AppContext) = minWidth(w) & minHeight(w)
+  def sw(w: Int)(implicit ctx: AppContext) = {
+    import AndroidConversions._
+    val p = new Point
+    val d = ctx.get.systemService[WindowManager].getDefaultDisplay
+    if (Build.VERSION.SDK_INT >= 17) {
+      d.getRealSize(p)
+    } else if (Build.VERSION.SDK_INT >= 14) {
+      type RawSizeHack = {
+        def getRawWidth: Int
+        def getRawHeight: Int
+      }
+      val d2 = d.asInstanceOf[RawSizeHack]
+      p.x = d2.getRawWidth
+      p.y = d2.getRawHeight
+    } else {
+      p.x = d.getWidth
+      p.y = d.getHeight
+    }
+    MediaQuery(w <= p.x && w <= p.y)
+  }
 
-  // 550dp instead of typical 600dp because of use of DisplayMetrics vs Display
-  def phone(implicit c: AppContext) = !sw(550 dp)
-  def tablet(implicit c: AppContext) = sw(550 dp)
+  def phone(implicit c: AppContext) = !sw(600 dp)
+  def tablet(implicit c: AppContext) = sw(600 dp)
 
   def newerThan(v: Int) = MediaQuery(Build.VERSION.SDK_INT >= v)
 
@@ -117,6 +139,53 @@ object Tweaks {
     e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
   }
 
+  val textCapWords = tweak { e: EditText =>
+    import InputType._
+    e.setInputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_CAP_WORDS)
+  }
+
+  val textUri = tweak { e: EditText =>
+    import InputType._
+    e.setInputType(TYPE_CLASS_TEXT | TYPE_TEXT_VARIATION_URI)
+  }
+
+  val number = tweak { e: EditText =>
+    import InputType._
+    e.setInputType(TYPE_CLASS_NUMBER)
+  }
+
+  val textPassword = tweak { e: EditText =>
+    import InputType._
+    e.setInputType(TYPE_TEXT_VARIATION_PASSWORD | TYPE_CLASS_TEXT)
+  }
+
+  private lazy val primitiveMap: Map[Class[_],Class[_]] = Map(
+    classOf[java.lang.Integer]   -> java.lang.Integer.TYPE,
+    classOf[java.lang.Double]    -> java.lang.Double.TYPE,
+    classOf[java.lang.Short]     -> java.lang.Short.TYPE,
+    classOf[java.lang.Float]     -> java.lang.Float.TYPE,
+    classOf[java.lang.Character] -> java.lang.Character.TYPE,
+    classOf[java.lang.Byte]      -> java.lang.Byte.TYPE
+  )
+  abstract class LpRelation[V <: ViewGroup, LP <: ViewGroup.LayoutParams : ClassTag] {
+    def lpType = implicitly[ClassTag[LP]].runtimeClass
+    def lp(args: Any*) = lpType.getConstructor(
+      args map { a =>
+        val c = a.getClass
+        primitiveMap.getOrElse(c, c)
+      }:_*).newInstance(args map (_.asInstanceOf[AnyRef]): _*).asInstanceOf[LP]
+  }
+  implicit object LLRelation extends LpRelation[LinearLayout, LinearLayout.LayoutParams]
+  implicit object TRRelation extends LpRelation[TableRow, TableRow.LayoutParams]
+
+  def lp2[V <: ViewGroup,LP <: ViewGroup.LayoutParams, C](args: Any*)
+                                                         (p: LP => C)
+                                                         (implicit r: LpRelation[V,LP]) = tweak {
+    v: View =>
+      val lp = r.lp(args: _*)
+      p(lp)
+      v.setLayoutParams(lp)
+  }
 }
 
 class SquareImageButton(c: Context) extends ImageButton(c) {

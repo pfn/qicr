@@ -36,7 +36,7 @@ object Widgets extends EventBus.RefOwner {
   val PID_GO_PREV = 5
   val PID_CHAT = 6
 
-  private var settings: Settings = null
+  lazy val settings = Settings(Application.context)
 
   ServiceBus += {
     case ChannelStatusChanged(_)   => updateStatusWidget()
@@ -60,8 +60,6 @@ object Widgets extends EventBus.RefOwner {
   }
 
   def apply(c: Context) = {
-    if (settings == null)
-      settings = Settings(c)
     this
   }
 
@@ -329,7 +327,7 @@ class WidgetStatusService extends RemoteViewsService {
     IrcManager.instance map { _ => new WidgetStatusViewsFactory } getOrElse {
       Widgets.setInitialView(this, AppWidgetManager.getInstance(this),
         Widgets(this).ids)
-      null
+      new WidgetEmptyViewsFactory
     }
   }
 }
@@ -438,7 +436,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
   import macroid.FullDsl._
   import ViewGroup.LayoutParams._
 
-  lazy val windowWidth = sw(550 dp) ? (480 dp) | (320 dp)
+  lazy val windowWidth = sw(600 dp) ? (480 dp) | (320 dp)
 
   lazy val layout = l[FrameLayout](
     l[FrameLayout](
@@ -504,8 +502,14 @@ extends Activity with TypedActivity with Contexts[Activity] {
         image(android.R.drawable.ic_btn_speak_now)
     ) <~ horizontal <~ lp[FrameLayout](MATCH_PARENT, 48 dp, Gravity.BOTTOM)
   ) <~ tweak { v: View =>
-    val lp = new WindowManager.LayoutParams(windowWidth, 320 dp,
-      WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG, 0, 0)
+    val p = new Point
+    getWindow.getWindowManager.getDefaultDisplay.getSize(p)
+    // p.y - 192.dp is the real desired height...
+    // but ADJUST_RESIZE doesn't seem to work... with a specified height
+    val lp = new WindowManager.LayoutParams(windowWidth, MATCH_PARENT,
+      WindowManager.LayoutParams.TYPE_APPLICATION, 0, 0)
+    lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+    v.setLayoutParams(lp)
   }
 
   import collection.JavaConversions._
@@ -538,10 +542,8 @@ extends Activity with TypedActivity with Contexts[Activity] {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    setContentView(getUi(layout))
-    val p = new Point
-    getWindow.getWindowManager.getDefaultDisplay.getSize(p)
-    getWindow.setLayout(windowWidth, p.y - (192 dp))
+    val v = getUi(layout)
+    setContentView(v, v.getLayoutParams)
 
     withAppender { m =>
       val (a,title) = m match {

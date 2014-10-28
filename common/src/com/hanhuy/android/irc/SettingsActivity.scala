@@ -113,12 +113,12 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
 class SettingsFragmentActivity extends ActionBarActivity with IdGeneration with Contexts[Activity] {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
+    val content = new android.widget.FrameLayout(this)
+    content.setId(Id.content)
+    setContentView(getUi(content <~ kitkatPadding))
     val f = getFragmentManager.findFragmentByTag("settings fragment")
     if (f == null) {
       val tx = getFragmentManager.beginTransaction()
-      val content = new android.widget.FrameLayout(this)
-      content.setId(Id.content)
-      setContentView(getUi(content <~ kitkatPadding))
       tx.add(Id.content, new SettingsFragment, "settings fragment")
       tx.commit()
     }

@@ -8,6 +8,8 @@ import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.{Build, Bundle}
+import android.text.method.TransformationMethod
+import android.util.TypedValue
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
 import android.view.inputmethod.InputMethodManager
@@ -33,45 +35,146 @@ import Tweaks._
 import macroid._
 import macroid.FullDsl._
 
-// TODO remove retainInstance -- messes up with theme change
-// TODO fix dialog dismiss on-recreate
-class ServerSetupFragment extends DialogFragment {
-  val manager = IrcManager.start()
-  var thisview: View = _
+import scala.util.Try
 
-  var _server: Server = _
+// TODO fix dialog dismiss on-recreate
+class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
+  val manager = IrcManager.start()
+
+  // hack to store text
+  var idholder = 0x10001000
+  import ViewGroup.LayoutParams._
+
+  lazy val listSepStyle = {
+    val tv = new TypedValue
+    getActivity.getTheme.resolveAttribute(
+      android.R.attr.listSeparatorTextViewStyle, tv, true)
+    tv.resourceId
+  }
+  def header = {
+    new TextView(getActivity, null, listSepStyle)
+  }
+  lazy val label = lp2(WRAP_CONTENT, WRAP_CONTENT) { lp: TableRow.LayoutParams =>
+    lp.rightMargin = 12 dp
+  }
+  lazy val inputTweaks = tweak { e: EditText =>
+    e.setSingleLine(true)
+    e.setId(idholder)
+    idholder = idholder + 1
+  } + lp[TableRow](0, WRAP_CONTENT, 1)
+  var layoutInit = false
+  lazy val layout = {
+    layoutInit = true
+    getUi(l[ScrollView](
+      l[TableLayout](
+        header <~ text("Connection Info"),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Name"),
+          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(server_name) <~
+            textCapWords
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Server address"),
+          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(server_host) <~
+            textUri
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Port"),
+          w[EditText] <~ inputTweaks <~ hint("Default: 6667") <~ wire(port) <~
+            number
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[View],
+          w[CheckBox] <~ label <~ text("Enable Autoconnect") <~ wire(autoconnect)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[View],
+          w[CheckBox] <~ label <~ text("Enable SSL") <~ wire(ssl)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        header <~ text("User Info"),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Nickname"),
+          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(nickname)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Alt. nick"),
+          w[EditText] <~ inputTweaks <~ hint("Default: <Nickname>_") <~ wire(altnick)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Real name"),
+          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(realname) <~
+            textCapWords
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Username"),
+          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(username)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Password"),
+          w[EditText] <~ inputTweaks <~ hint("optional") <~ wire(password) <~
+            textPassword
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        header <~ text("Session Options"),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Auto join"),
+          w[EditText] <~ inputTweaks <~ hint("#chan1 key;#chan2") <~ wire(autojoin)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[TextView] <~ label <~ text("Auto run"),
+          w[EditText] <~ inputTweaks <~ hint("m pfn hi there;") <~ wire(autorun)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
+      ) <~ lp[ScrollView](MATCH_PARENT, MATCH_PARENT) <~ tweak { t: TableLayout =>
+        t.setColumnStretchable(1, true)
+      }
+    ) <~ lp[LinearLayout](MATCH_PARENT, MATCH_PARENT, 1.0f) <~
+      margin(all = 4 dp) <~ (tablet ? kitkatPadding))
+  }
+
+  var server_name: EditText = _
+  var server_host: EditText = _
+  var port: EditText = _
+  var ssl: CheckBox = _
+  var autoconnect: CheckBox = _
+  var nickname: EditText = _
+  var altnick: EditText = _
+  var realname: EditText = _
+  var username: EditText = _
+  var password: EditText = _
+  var autojoin: EditText = _
+  var autorun: EditText = _
+
+  val _server: Server = new Server
   def server: Server = {
     val s = _server
-    if (s == null) return _server
-    s.name        = thisview.findView(TR.add_server_name)
-    s.hostname    = thisview.findView(TR.add_server_host)
-    s.port        = thisview.findView(TR.add_server_port)
-    s.ssl         = thisview.findView(TR.add_server_ssl)
-    s.autoconnect = thisview.findView(TR.add_server_autoconnect)
-    s.nickname    = thisview.findView(TR.add_server_nickname)
-    s.altnick     = thisview.findView(TR.add_server_altnick)
-    s.realname    = thisview.findView(TR.add_server_realname)
-    s.username    = thisview.findView(TR.add_server_username)
-    s.password    = thisview.findView(TR.add_server_password)
-    s.autojoin    = thisview.findView(TR.add_server_autojoin)
-    s.autorun     = thisview.findView(TR.add_server_autorun)
+    s.name        = server_name
+    s.hostname    = server_host
+    s.port        = Try(port.toInt).toOption getOrElse 6667
+    s.ssl         = ssl
+    s.autoconnect = autoconnect
+    s.nickname    = nickname
+    s.altnick     = altnick
+    s.realname    = realname
+    s.username    = username
+    s.password    = password
+    s.autojoin    = autojoin
+    s.autorun     = autorun
     _server
   }
   def server_=(s: Server) = {
-    _server = s
-    if (thisview != null && s != null) {
-      thisview.findView(TR.add_server_name).setText(s.name)
-      thisview.findView(TR.add_server_host).setText(s.hostname)
-      thisview.findView(TR.add_server_port).setText("" + s.port)
-      thisview.findView(TR.add_server_ssl).setChecked(s.ssl)
-      thisview.findView(TR.add_server_autoconnect).setChecked(s.autoconnect)
-      thisview.findView(TR.add_server_nickname).setText(s.nickname)
-      thisview.findView(TR.add_server_altnick).setText(s.altnick)
-      thisview.findView(TR.add_server_realname).setText(s.realname)
-      thisview.findView(TR.add_server_username).setText(s.username)
-      thisview.findView(TR.add_server_password).setText(s.password)
-      thisview.findView(TR.add_server_autojoin).setText(s.autojoin)
-      thisview.findView(TR.add_server_autorun).setText(s.autorun)
+    _server.id = s.id
+    if (layoutInit && s != null) {
+      server_name.setText(s.name)
+      server_host.setText(s.hostname)
+      port.setText("" + s.port)
+      ssl.setChecked(s.ssl)
+      autoconnect.setChecked(s.autoconnect)
+      nickname.setText(s.nickname)
+      altnick.setText(s.altnick)
+      realname.setText(s.realname)
+      username.setText(s.username)
+      password.setText(s.password)
+      autojoin.setText(s.autojoin)
+      autorun.setText(s.autorun)
     }
   }
 
@@ -116,13 +219,10 @@ class ServerSetupFragment extends DialogFragment {
     // otherwise an AndroidRuntimeException occurs
     if (dialogShown) return super.onCreateView(inflater, container, bundle)
 
-    createView(inflater, container)
-  }
-
-  private def createView(inflater: LayoutInflater, c: ViewGroup): View = {
-    thisview = inflater.inflate(R.layout.fragment_server_setup, c, false)
-    server = _server
-    thisview
+    val l = layout
+    if (bundle == null)
+      server = _server
+    l
   }
 
   var dialogShown = false
@@ -137,8 +237,10 @@ class ServerSetupFragment extends DialogFragment {
       .setTitle(R.string.server_details)
       .setPositiveButton(R.string.save_server, null)
       .setNegativeButton(R.string.cancel_server, null)
-      .setView(createView(getActivity.getLayoutInflater, null))
+      .setView(layout)
       .create()
+    if (bundle == null)
+      server = _server
     // block dismiss on positive button click
     d.setOnShowListener { () =>
       val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
