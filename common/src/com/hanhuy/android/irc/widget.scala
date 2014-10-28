@@ -352,25 +352,32 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
 
   def getViewAt(pos: Int) = {
     val intent = new Intent
-    all(pos) match {
-      case s: Server =>
-        val serverView = new RemoteViews(
-          Application.context.getPackageName, R.layout.widget_server_item)
-        serverView.setTextViewText(android.R.id.text1, s.name)
-        val intent = new Intent(Widgets.ACTION_STATUS_CLICK)
-        intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(s))
-        serverView.setOnClickFillInIntent(android.R.id.text1, intent)
-        serverView
-      case c: ChannelLike =>
-        val channelView = new RemoteViews(
-          Application.context.getPackageName, R.layout.widget_channel_item)
-        channelView.setTextViewText(android.R.id.text1, c.name)
-        val color = if (c.newMentions)
-          0xffff0000 else if (c.newMessages) 0xff00afaf else 0xffbebebe
-        channelView.setTextColor(android.R.id.text1, color)
-        channelView.setOnClickFillInIntent(android.R.id.text1, intent)
-        intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
-        channelView
+    if (pos < all.size) {
+      all(pos) match {
+        case s: Server =>
+          val serverView = new RemoteViews(
+            Application.context.getPackageName, R.layout.widget_server_item)
+          serverView.setTextViewText(android.R.id.text1, s.name)
+          val intent = new Intent(Widgets.ACTION_STATUS_CLICK)
+          intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(s))
+          serverView.setOnClickFillInIntent(android.R.id.text1, intent)
+          serverView
+        case c: ChannelLike =>
+          val channelView = new RemoteViews(
+            Application.context.getPackageName, R.layout.widget_channel_item)
+          channelView.setTextViewText(android.R.id.text1, c.name)
+          val color = if (c.newMentions)
+            0xffff0000
+          else if (c.newMessages) 0xff00afaf else 0xffbebebe
+          channelView.setTextColor(android.R.id.text1, color)
+          channelView.setOnClickFillInIntent(android.R.id.text1, intent)
+          intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
+          channelView
+      }
+    } else {
+      // just load a bogus item
+      new RemoteViews(
+        Application.context.getPackageName, R.layout.widget_server_item)
     }
   }
 
@@ -409,14 +416,16 @@ with RemoteViewsService.RemoteViewsFactory {
   def getViewAt(pos: Int) = {
     val views = new RemoteViews(Application.context.getPackageName,
       R.layout.widget_message_item)
-    views.setTextViewText(android.R.id.text1,
-      MessageAdapter.formatText(Application.context, items(pos))(channel))
+    if (pos < items.size)
+      views.setTextViewText(android.R.id.text1,
+        MessageAdapter.formatText(Application.context, items(pos))(channel))
     views
   }
 
   def getCount = items.size
   def getViewTypeCount = 1
-  def getItemId(pos: Int) = System.identityHashCode(items(pos))
+  def getItemId(pos: Int) = if (pos < items.size)
+    System.identityHashCode(items(pos)) else -1
   def hasStableIds = true
   def onDataSetChanged() {
     items = messages.filteredMessages.takeRight(MAX_LINES)

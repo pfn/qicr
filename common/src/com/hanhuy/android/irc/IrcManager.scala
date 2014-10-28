@@ -39,6 +39,8 @@ import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.BusEvent
 import org.acra.ACRA
 
+import scala.util.Try
+
 object IrcManager {
   implicit val wm = SystemService[WindowManager](Context.WINDOW_SERVICE)
   implicit val TAG = LogcatTag("IrcManager")
@@ -236,7 +238,9 @@ class IrcManager extends EventBus.RefOwner {
       v("Launching autoconnect servers")
       config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
-        s.messages.maximumSize = settings.get(Settings.MESSAGE_LINES).toInt
+        s.messages.maximumSize = Try(
+          settings.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
+          MessageAdapter.DEFAULT_MAXIMUM_SIZE
       }
       ServiceBus.send(IrcManagerStart)
     }

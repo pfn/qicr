@@ -24,6 +24,7 @@ import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 
 import scala.reflect.ClassTag
+import scala.util.Try
 
 trait MessageAppender {
   def add(m: MessageLike): Unit
@@ -176,6 +177,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
   // this is so ugly FIXME
   lazy implicit val actx = AppContext(Application.context)
 
+  // TODO FIXME might activity might be None
   def messageLayout = {
     implicit val ctx = ActivityContext(_activity.get.get)
     w[TextView] <~ id(android.R.id.text1) <~
@@ -206,7 +208,8 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     // only register once to prevent memory leak
   UiBus += { case BusEvent.PreferenceChanged(s, k) =>
     if (k == Settings.MESSAGE_LINES) {
-      val max = s.get(Settings.MESSAGE_LINES).toInt
+      val max = Try(s.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
+        DEFAULT_MAXIMUM_SIZE
       maximumSize = max
     } else if (k == Settings.SHOW_JOIN_PART_QUIT) {
       showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
