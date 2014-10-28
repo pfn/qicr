@@ -161,7 +161,7 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
     _server
   }
   def server_=(s: Server) = {
-    _server.id = s.id
+    _server.copy(s)
     if (layoutInit && s != null) {
       server_name.setText(s.name)
       server_host.setText(s.hostname)
@@ -685,6 +685,7 @@ with EventBus.RefOwner with Contexts[Fragment] {
     }
 
     fragment.server = server
+    getActivity.input.setVisibility(View.INVISIBLE)
     UiBus.post { HoneycombSupport.invalidateActionBar() }
   }
 

@@ -127,6 +127,25 @@ class Server extends MessageAppender with Ordered[Server]{
     values
   }
 
+  def copy(other: Server): Unit = {
+    id = other.id
+    name = other.name
+    hostname = other.hostname
+    autoconnect = other.autoconnect
+    port = other.port
+    ssl = other.ssl
+    nickname = other.nickname
+    altnick = other.altnick
+    realname = other.realname
+    username = other.username
+    password = other.password
+    autojoin = other.autojoin
+    autorun = other.autorun
+    logging = other.logging
+    sasl = other.sasl
+    socks = other.socks
+  }
+
   override def equals(o: Any): Boolean = o match {
     case s: Server => id == s.id
     case _ => false
