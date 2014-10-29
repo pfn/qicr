@@ -123,11 +123,10 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
           w[TextView] <~ label <~ text("Auto run"),
           w[EditText] <~ inputTweaks <~ hint("m pfn hi there;") <~ wire(autorun)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
-      ) <~ lp[ScrollView](MATCH_PARENT, MATCH_PARENT) <~ tweak { t: TableLayout =>
-        t.setColumnStretchable(1, true)
-      }
+      ) <~ lp[ScrollView](MATCH_PARENT, MATCH_PARENT) <~ margin(all = 8 dp) <~
+        tweak { t: TableLayout => t.setColumnStretchable(1, true) }
     ) <~ lp[LinearLayout](MATCH_PARENT, MATCH_PARENT, 1.0f) <~
-      margin(all = 4 dp) <~ (tablet ? kitkatPadding))
+      (tablet ? kitkatPadding))
   }
 
   var server_name: EditText = _
