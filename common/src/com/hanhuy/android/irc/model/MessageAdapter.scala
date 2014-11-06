@@ -46,14 +46,14 @@ object MessageAdapter {
       (implicit channel: ChannelLike = null): CharSequence = {
     val ch = Option(channel)
     msg match {
-      case Whois(text) => text
-      case MessageLike.Query => formatText(c, msg, R.string.query_template,
+      case Whois(text,_) => text
+      case MessageLike.Query(_) => formatText(c, msg, R.string.query_template,
         colorNick(ch.get.name))
-      case Privmsg(s, m, o, v) => gets(c, R.string.message_template, msg,
+      case Privmsg(s, m, o, v,_) => gets(c, R.string.message_template, msg,
          s, m, (o,v))
-      case Notice(s, m) => gets(c, R.string.notice_template, msg, s, m)
-      case CtcpAction(s, m) => gets(c, R.string.action_template, msg, s, m)
-      case CtcpRequest(server, t, cmd, args) =>
+      case Notice(s, m,_) => gets(c, R.string.notice_template, msg, s, m)
+      case CtcpAction(s, m,_) => gets(c, R.string.action_template, msg, s, m)
+      case CtcpRequest(server, t, cmd, args,_) =>
         ch flatMap { chan =>
           if (chan.server != server)
             Some(formatText(c, msg, R.string.ctcp_request_template_s,
@@ -65,7 +65,7 @@ object MessageAdapter {
           formatText(c, msg, R.string.ctcp_request_template,
             colorNick(t), textColor(nickColor(cmd), cmd), args getOrElse "")
         }
-      case CtcpReply(server, s, cmd, a) => a map { arg =>
+      case CtcpReply(server, s, cmd, a,_) => a map { arg =>
         ch flatMap { chan =>
           if (chan.server != server)
             Some(formatText(c, msg, R.string.ctcp_response_template_s_3,
@@ -90,30 +90,30 @@ object MessageAdapter {
             textColor(nickColor(cmd), cmd), colorNick(s))
         }
       }
-      case Topic(src, t) => src map { s =>
+      case Topic(src, t,_) => src map { s =>
         formatText(c, msg, R.string.topic_template_2,
           colorNick(s), bold(italics(channel.name)), t)
       } getOrElse {
         formatText(c, msg, R.string.topic_template_1,
           bold(italics(channel.name)), t)
       }
-      case NickChange(o, n) =>
+      case NickChange(o, n,_) =>
         formatText(c, msg, R.string.nick_change_template,
           colorNick(o), colorNick(n))
-      case Join(n, u)    => formatText(c, msg, R.string.join_template,
+      case Join(n, u,_)    => formatText(c, msg, R.string.join_template,
         colorNick(n), u)
-      case Part(n, u, m) => formatText(c, msg, R.string.part_template,
+      case Part(n, u, m,_) => formatText(c, msg, R.string.part_template,
         colorNick(n), u, if (m == null) "" else m)
-      case Quit(n, u, m) => formatText(c, msg, R.string.quit_template,
+      case Quit(n, u, m,_) => formatText(c, msg, R.string.quit_template,
         colorNick(n), u, m)
-      case Kick(o, n, m) => formatText(c, msg, R.string.kick_template,
+      case Kick(o, n, m,_) => formatText(c, msg, R.string.kick_template,
         colorNick(o), colorNick(n),
         if (m == null) "" else m)
-      case CommandError(m)  => formatText(c, msg, -1, m)
-      case ServerInfo(m)    => formatText(c, msg, -1, m)
-      case Motd(m)          => formatText(c, msg, -1, m)
-      case SslInfo(m)       => formatText(c, msg, -1, m)
-      case SslError(m)      => formatText(c, msg, -1, m)
+      case CommandError(m,_)  => formatText(c, msg, -1, m)
+      case ServerInfo(m,_)    => formatText(c, msg, -1, m)
+      case Motd(m,_)          => formatText(c, msg, -1, m)
+      case SslInfo(m,_)       => formatText(c, msg, -1, m)
+      case SslError(m,_)      => formatText(c, msg, -1, m)
     }
   }
 
@@ -263,9 +263,9 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     else {
       filterCache getOrElse {
         val filtered = messages.filter {
-          case Join(_,_)   => false
-          case Part(_,_,_) => false
-          case Quit(_,_,_) => false
+          case Join(_,_,_)   => false
+          case Part(_,_,_,_) => false
+          case Quit(_,_,_,_) => false
           case _           => true
         }
         filterCache = Some(filtered)

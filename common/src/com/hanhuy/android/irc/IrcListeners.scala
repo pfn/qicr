@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.app.NotificationManager
 import com.hanhuy.android.irc.model.BusEvent
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ChannelLike
@@ -12,6 +13,9 @@ import android.widget.Toast
 import android.util.Log
 
 import com.sorcix.sirc._
+import com.sorcix.sirc.event.MessageEventListener.{Message, Action}
+import com.sorcix.sirc.event.ServerEventListener.{Invite, Nick, Mode}
+import com.sorcix.sirc.event.{ServerEventListener, MessageEventListener}
 
 import scala.util.control.Exception._
 import com.hanhuy.android.common.{UiBus, SpannedGenerator, AndroidConversions}
@@ -26,7 +30,6 @@ import com.hanhuy.android.irc.model.MessageLike.Join
 import com.hanhuy.android.irc.model.MessageLike.Motd
 import com.hanhuy.android.irc.model.MessageLike.Part
 import com.hanhuy.android.irc.model.MessageLike.Quit
-import scala.Some
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.CtcpReply
 import com.hanhuy.android.irc.model.MessageLike.NickChange
@@ -78,7 +81,8 @@ object IrcListeners {
   implicit def toQicrChannel(c: ChannelLike) = c.asInstanceOf[QicrChannel]
 }
 class IrcListeners(manager: IrcManager) extends AdvancedListener
-with ServerListener with MessageListener with ModeListener {
+with ServerListener with ModeListener
+with ServerEventListener with MessageEventListener {
   // ServerListener
   // TODO send BusEvents instead
   override def onConnect(c: IrcConnection) {
@@ -121,59 +125,21 @@ with ServerListener with MessageListener with ModeListener {
     manager._connections.get(c) foreach { manager.serverDisconnected }
   }
   override def onInvite(c: IrcConnection, src: User, user: User,
-      channel: Channel) {
-    // TODO
-  }
+                        channel: Channel) { }
 
   override def onJoin(c: IrcConnection, channel: Channel, user: User) {
-    if (user.isUs)
-      manager.addChannel(c, channel)
-    UiBus.run {
-      // sometimes channel hasn't been set yet (on connect)
-      manager._channels.get(channel) foreach { ch =>
-        UiBus.send(BusEvent.NickListChanged(ch))
-        if (!user.isUs)
-          ch.add(Join(user.getNick, user.address))
-      }
-    }
   }
 
   override def onKick(c: IrcConnection, channel: Channel,
       user: User, op: User, msg: String) {
-    UiBus.run {
-      manager._channels.get(channel) map { ch =>
-        if (user.isUs) {
-          // TODO update adapter's channel state
-          ch.state = QicrChannel.State.KICKED
-        } else {
-          UiBus.send(BusEvent.NickListChanged(ch))
-        }
-        ch.add(Kick(op.getNick, user.getNick, msg))
-      }
-    }
   }
 
   override def onPart(c: IrcConnection, channel: Channel,
       user: User, msg: String) {
-    if (!manager._channels.contains(channel)) return
-      UiBus.run {
-        val ch = manager._channels(channel)
-        if (user.isUs) {
-          ch.state = QicrChannel.State.PARTED
-        } else {
-          UiBus.send(BusEvent.NickListChanged(ch))
-      }
-      ch.add(Part(user.getNick, user.address, msg))
-    }
   }
 
   override def onTopic(c: IrcConnection, channel: Channel,
       src: User, topic: String) {
-    manager._channels.get(channel) foreach { c =>
-      UiBus.run {
-        c.add(Topic(if (src != null) Some(src.getNick) else None, topic))
-      }
-    }
   }
 
   override def onMode(c: IrcConnection, channel: Channel,
@@ -187,51 +153,9 @@ with ServerListener with MessageListener with ModeListener {
   }
 
   override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
-    val server = manager._connections(c)
-    if (oldnick.isUs || newnick.isUs) {
-      server.currentNick = newnick.getNick
-
-      UiBus.run {
-        manager._channels.values foreach { c =>
-          if (c.server == server) {
-            UiBus.send(BusEvent.NickListChanged(c))
-            c.add(NickChange(oldnick.getNick, newnick.getNick))
-          }
-        }
-      }
-    } else {
-      UiBus.run {
-        manager.channels.values.collect {
-          case c: Channel if c.hasUser(newnick) && manager._channels.get(c).isDefined =>
-            manager._channels(c)
-        }.toSeq.distinct foreach { c =>
-          if (c.server == server) {
-            UiBus.send(BusEvent.NickListChanged(c))
-            c.add(NickChange(oldnick.getNick, newnick.getNick))
-          }
-        }
-      }
-    }
   }
 
   override def onQuit(c: IrcConnection, user: User, msg: String) {
-    if (user.isUs) return
-    manager._connections.get(c) foreach { server =>
-      UiBus.run {
-        try { // guard can change values if slow...
-          manager.channels.values collect {
-            case c: Channel if c.hasUser(user) => manager._channels.get(c)
-          } foreach { c =>
-            if (c.isDefined && c.get.server == server) {
-              UiBus.send(BusEvent.NickListChanged(c.get))
-              c.get.add(Quit(user.getNick, user.address, msg))
-            }
-          }
-        } catch {
-          case _: MatchError => ()
-        }
-      }
-    }
   }
 
     // ModeListener
@@ -257,83 +181,7 @@ with ServerListener with MessageListener with ModeListener {
   override def onVoice(c: IrcConnection, channel: Channel,
       src: User, user: User) = ()
 
-  // MessageListener
-  override def onAction(c: IrcConnection, src: User, channel: Channel,
-      msg: String) {
-    manager._channels.get(channel) foreach { c =>
-      val action = CtcpAction(src.getNick, msg)
-      UiBus.run { c.add(action) }
-      if (matchesNick(c.server, msg))
-        manager.addChannelMention(c, action)
-    }
-  }
-
-  override def onMessage(c: IrcConnection, src: User, channel: Channel,
-      msg: String) {
-    manager._channels.get(channel) foreach {
-      c =>
-
-        val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice)
-        if (matchesNick(c.server, msg))
-          manager.addChannelMention(c, pm)
-
-        UiBus.run {
-          c.add(pm)
-        }
-    }
-  }
-
-  override def onNotice(c: IrcConnection, src: User, channel: Channel,
-      msg: String) {
-    val c = manager._channels(channel)
-    val notice = Notice(src.getNick, msg)
-    UiBus.run { c.add(notice) }
-    if (matchesNick(c.server, msg))
-      manager.addChannelMention(c, notice)
-  }
-
   val CtcpPing = """(\d+)\s+(\d+)""".r
-  override def onCtcpReply(c: IrcConnection, src: User,
-      cmd: String, reply: String) {
-    val s = manager._connections(c)
-    val r = CtcpReply(s, src.getNick, cmd, cmd match {
-      case "PING" => reply match {
-        case CtcpPing(seconds, micros) =>
-          catching(classOf[Exception]) opt {
-            // prevent malicious overflow causing a crash
-            val ts = seconds.toLong * 1000 + (micros.toLong / 1000)
-            Server.intervalString(System.currentTimeMillis - ts)
-          } orElse Option(reply)
-        case _ => Option(reply)
-      }
-      case _ => Option(reply)
-    })
-
-    // TODO show in current WidgetChatActivity
-    if (manager.showing) {
-      UiBus.run {
-        val msg = MessageAdapter.formatText(Application.context, r)
-        MainActivity.instance map { activity =>
-          val tab = activity.adapter.currentTab
-          tab.channel orElse tab.server map { _.add(r) } getOrElse {
-            s.add(r)
-            Toast.makeText(Application.context, msg, Toast.LENGTH_LONG).show()
-          }
-        }
-      }
-    } else {
-      s.add(r)
-    }
-  }
-
-  override def onAction(c: IrcConnection, src: User, action: String) =
-    UiBus.run { manager.addQuery(c, src.getNick, action, action = true) }
-
-  override def onNotice(c: IrcConnection, src: User, msg: String) =
-    UiBus.run { manager.addQuery(c, src.getNick, msg, notice = true) }
-
-  override def onPrivateMessage(c: IrcConnection, src: User, msg: String) =
-    UiBus.run { manager.addQuery(c, src.getNick, msg) }
 
   def handleWhois(line: IrcPacket, start: Boolean = false) {
     val nick = line.getArgumentsArray()(1)
@@ -481,4 +329,228 @@ with ServerListener with MessageListener with ModeListener {
   override def onUnknownReply(c: IrcConnection, line: IrcPacket) = ()
 
   private var whoisBuffer: Map[String,List[IrcPacket]] = Map.empty
+
+  override def onInvite(invite: Invite) = () // TODO
+
+  override def onNick(nick: Nick): Unit = {
+    val c = nick.connection
+    val oldnick = nick.oldUser
+    val newnick = nick.newUser
+    val server = manager._connections(c)
+    if (oldnick.isUs || newnick.isUs) {
+      server.currentNick = newnick.getNick
+
+      UiBus.run {
+        manager._channels.values foreach { c =>
+          if (c.server == server) {
+            UiBus.send(BusEvent.NickListChanged(c))
+            c.add(NickChange(oldnick.getNick, newnick.getNick, nick.timestamp))
+          }
+        }
+      }
+    } else {
+      UiBus.run {
+        manager.channels.values.collect {
+          case c: Channel if c.hasUser(newnick) && manager._channels.get(c).isDefined =>
+            manager._channels(c)
+        }.toSeq.distinct foreach { c =>
+          if (c.server == server) {
+            UiBus.send(BusEvent.NickListChanged(c))
+            c.add(NickChange(oldnick.getNick, newnick.getNick, nick.timestamp))
+          }
+        }
+      }
+    }
+  }
+
+  override def onQuit(quit: ServerEventListener.Quit): Unit = {
+    val user = quit.sender
+    val msg = quit.message
+    val c = quit.connection
+    if (user.isUs) return
+    manager._connections.get(c) foreach { server =>
+      UiBus.run {
+        try { // guard can change values if slow...
+          manager.channels.values collect {
+            case c: Channel if c.hasUser(user) => manager._channels.get(c)
+          } foreach { c =>
+            if (c.isDefined && c.get.server == server) {
+              UiBus.send(BusEvent.NickListChanged(c.get))
+              c.get.add(Quit(user.getNick, user.address, msg, quit.timestamp))
+            }
+          }
+        } catch {
+          case _: MatchError => ()
+        }
+      }
+    }
+  }
+
+  override def onMode(mode: Mode) = () // TODO
+
+  override def onPart(part: ServerEventListener.Part): Unit = {
+    val channel = part.channel
+    val user = part.sender
+    val msg = part.message
+    if (!manager._channels.contains(channel)) return
+    UiBus.run {
+      val ch = manager._channels(channel)
+      if (user.isUs) {
+        ch.state = QicrChannel.State.PARTED
+      } else {
+        UiBus.send(BusEvent.NickListChanged(ch))
+      }
+      ch.add(Part(user.getNick, user.address, msg, part.timestamp))
+    }
+  }
+
+  override def onTopic(topic: ServerEventListener.Topic): Unit = {
+    val channel = topic.channel
+    val src = topic.sender
+    manager._channels.get(channel) foreach { c =>
+      UiBus.run {
+        c.add(Topic(if (src != null) Some(src.getNick) else None, topic.topic, topic.timestamp))
+      }
+    }
+  }
+
+  override def onKick(kick: ServerEventListener.Kick): Unit = {
+    val channel = kick.channel
+    val msg = kick.message
+    val user = kick.target
+    val op = kick.sender
+    UiBus.run {
+      manager._channels.get(channel) map { ch =>
+        if (user.isUs) {
+          // TODO update adapter's channel state
+          ch.state = QicrChannel.State.KICKED
+        } else {
+          UiBus.send(BusEvent.NickListChanged(ch))
+        }
+        ch.add(Kick(op.getNick, user.getNick, msg, kick.timestamp))
+      }
+    }
+
+  }
+
+  override def onJoin(join: ServerEventListener.Join): Unit = {
+    val user = join.sender
+    val channel = join.channel
+    val c = join.connection
+
+    if (user.isUs)
+      manager.addChannel(c, channel)
+    UiBus.run {
+      // sometimes channel hasn't been set yet (on connect)
+      manager._channels.get(channel) foreach { ch =>
+        UiBus.send(BusEvent.NickListChanged(ch))
+        if (!user.isUs)
+          ch.add(Join(user.getNick, user.address, join.timestamp))
+      }
+    }
+
+  }
+
+  override def onPrivateMessage(m: Message) {
+    UiBus.run {
+      manager.addQuery(
+        m.connection, m.sender.getNick, m.message, ts = m.timestamp)
+    }
+  }
+
+  override def onMessage(message: Message) {
+    val channel = message.target
+    val src = message.sender
+    val msg = message.message
+    if (src.isUs) {
+      val nm = Application.context.systemService[NotificationManager]
+      nm.cancel(IrcManager.MENTION_ID)
+      nm.cancel(IrcManager.PRIVMSG_ID)
+    }
+    manager._channels.get(channel) foreach {
+      c =>
+
+        val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice, ts = message.timestamp)
+        if (matchesNick(c.server, msg) && !src.isUs)
+          manager.addChannelMention(c, pm)
+
+        UiBus.run {
+          c.add(pm)
+        }
+    }
+  }
+
+  override def onCtcpReply(ctcp: MessageEventListener.CtcpReply) {
+    val c = ctcp.connection
+    val src = ctcp.sender
+    val cmd = ctcp.command
+    val reply = ctcp.message
+    val s = manager._connections(c)
+    val r = CtcpReply(s, src.getNick, cmd, cmd match {
+      case "PING" => reply match {
+        case CtcpPing(seconds, micros) =>
+          catching(classOf[Exception]) opt {
+            // prevent malicious overflow causing a crash
+            val ts = seconds.toLong * 1000 + (micros.toLong / 1000)
+            Server.intervalString(System.currentTimeMillis - ts)
+          } orElse Option(reply)
+        case _ => Option(reply)
+      }
+      case _ => Option(reply)
+    }, ctcp.timestamp)
+
+    // TODO show in current WidgetChatActivity
+    if (manager.showing) {
+      UiBus.run {
+        val msg = MessageAdapter.formatText(Application.context, r)
+        MainActivity.instance map { activity =>
+          val tab = activity.adapter.currentTab
+          tab.channel orElse tab.server map { _.add(r) } getOrElse {
+            s.add(r)
+            Toast.makeText(Application.context, msg, Toast.LENGTH_LONG).show()
+          }
+        }
+      }
+    } else {
+      s.add(r)
+    }
+  }
+
+  override def onNotice(n: MessageEventListener.Notice) {
+    val channel = n.target
+    val src = n.sender
+    val msg = n.message
+    if (channel != null) {
+      val c = manager._channels(channel)
+      val notice = Notice(src.getNick, msg, n.timestamp)
+      UiBus.run {
+        c.add(notice)
+      }
+      if (matchesNick(c.server, msg) && !src.isUs)
+        manager.addChannelMention(c, notice)
+    } else UiBus.run {
+      manager.addQuery(n.connection,
+        src.getNick, msg, notice = true, ts = n.timestamp)
+    }
+  }
+
+  override def onAction(a: Action) {
+    val channel = a.target
+    val src = a.sender
+    val msg = a.action
+
+    if (channel != null) {
+      manager._channels.get(channel) foreach { c =>
+        val action = CtcpAction(src.getNick, msg, a.timestamp)
+        UiBus.run {
+          c.add(action)
+        }
+        if (matchesNick(c.server, msg) && !src.isUs)
+          manager.addChannelMention(c, action)
+      }
+    } else UiBus.run {
+      manager.addQuery(a.connection, src.getNick, msg,
+        action = true, ts = a.timestamp)
+    }
+  }
 }

@@ -12,48 +12,48 @@ object MessageLike {
         def sender: String
         def message: String
     }
-    case object Query extends MessageLike
-    case class Kick(op: String, nick: String, msg: String) extends MessageLike
-    case class Join(nick: String, uhost: String) extends MessageLike
-    case class Part(nick: String, uhost: String, msg: String)
+    case class Query(ts: Date = new Date) extends MessageLike
+    case class Kick(op: String, nick: String, msg: String, ts: Date = new Date) extends MessageLike
+    case class Join(nick: String, uhost: String, ts: Date = new Date) extends MessageLike
+    case class Part(nick: String, uhost: String, msg: String, ts: Date = new Date)
     extends MessageLike
-    case class Quit(nick: String, uhost: String, msg: String)
+    case class Quit(nick: String, uhost: String, msg: String, ts: Date = new Date)
     extends MessageLike
 
     case class CtcpRequest(server: Server, target: String, cmd: String,
-      args: Option[String])
+      args: Option[String], ts: Date = new Date)
     extends MessageLike
     case class CtcpReply(server: Server, src: String, cmd: String,
-      args: Option[String]) extends MessageLike
-    case class NickChange(oldnick: String, newnick: String) extends MessageLike
-    case class CommandError(message: String) extends MessageLike
-    case class ServerInfo(message: String) extends MessageLike
-    case class SslInfo(message: String) extends MessageLike
-    case class SslError(message: String) extends MessageLike
-    case class Motd(message: String) extends MessageLike
-    case class Topic(sender: Option[String], topic: String) extends MessageLike
-    case class Whois(whois: CharSequence) extends MessageLike
+      args: Option[String], ts: Date = new Date) extends MessageLike
+    case class NickChange(oldnick: String, newnick: String, ts: Date = new Date) extends MessageLike
+    case class CommandError(message: String, ts: Date = new Date) extends MessageLike
+    case class ServerInfo(message: String, ts: Date = new Date) extends MessageLike
+    case class SslInfo(message: String, ts: Date = new Date) extends MessageLike
+    case class SslError(message: String, ts: Date = new Date) extends MessageLike
+    case class Motd(message: String, ts: Date = new Date) extends MessageLike
+    case class Topic(sender: Option[String], topic: String, ts: Date = new Date) extends MessageLike
+    case class Whois(whois: CharSequence, ts: Date = new Date) extends MessageLike
 
     // too hard to reference R.string, hardcode <> -- and *
     case class Privmsg(sender: String, message: String,
-            op: Boolean = false, voice: Boolean = false) extends MessageLike
+            op: Boolean = false, voice: Boolean = false, ts: Date = new Date) extends MessageLike
     with ChatMessage {
         override def toString = "<" +
                 (if (op) "@" else if (voice) "+" else "") +
                 sender + "> " + message
     }
-    case class CtcpAction(sender: String, message: String) extends MessageLike
+    case class CtcpAction(sender: String, message: String, ts: Date = new Date) extends MessageLike
     with ChatMessage {
         override def toString = " * " + sender + " " + message
     }
-    case class Notice(sender: String, message: String) extends MessageLike
+    case class Notice(sender: String, message: String, ts: Date = new Date) extends MessageLike
     with ChatMessage {
         override def toString = "-" + sender + "- " + message
     }
 }
 
 trait MessageLike {
-    val ts: Date = new Date()
+    def ts: Date
 }
 
 trait BusEvent extends com.hanhuy.android.common.BusEvent

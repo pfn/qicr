@@ -3,12 +3,10 @@ package com.hanhuy.android.irc
 import java.util.UUID
 
 import android.app.{Activity, AlertDialog, Dialog}
-import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.os.{Build, Bundle}
-import android.text.method.TransformationMethod
+import android.os.Bundle
 import android.util.TypedValue
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
@@ -25,11 +23,10 @@ import com.hanhuy.android.irc.model.MessageAdapter
 import com.hanhuy.android.irc.model.BusEvent
 
 import com.hanhuy.android.common.AndroidConversions._
-import com.hanhuy.android.common.{RichLogger, UiBus, EventBus}
+import com.hanhuy.android.common.{UiBus, EventBus}
 
 import MainActivity._
 import TypedResource._
-import RichLogger.{w => _, _}
 
 import Tweaks._
 import macroid._
@@ -349,7 +346,6 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
     } getOrElse {
       v.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
         override def onPreDraw() = {
-          val height = inputHeight
           inputHeight exists { h =>
             v.getViewTreeObserver.removeOnPreDrawListener(this)
             val p = v.getPaddingBottom + h
@@ -488,8 +484,6 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setHasOptionsMenu(true)
-
-    val activity = getActivity
   }
 
   override def onSaveInstanceState(outState: Bundle) {

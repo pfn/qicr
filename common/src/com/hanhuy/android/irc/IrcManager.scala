@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc
 
 import java.nio.charset.Charset
+import java.util.Date
 import javax.net.ssl.SSLContext
 
 import android.app.Notification.Action
@@ -24,6 +25,7 @@ import com.sorcix.sirc.IrcDebug
 import com.sorcix.sirc.IrcServer
 import com.sorcix.sirc.IrcConnection
 import com.sorcix.sirc.NickNameException
+import com.sorcix.sirc.cap.{CompoundNegotiator, ServerTimeNegotiator}
 import com.sorcix.sirc.{Channel => SircChannel}
 
 import com.hanhuy.android.common._
@@ -346,7 +348,7 @@ class IrcManager extends EventBus.RefOwner {
   def startQuery(server: Server, nick: String) {
     val query = queries.getOrElse((server, nick.toLowerCase), {
       val q = Query(server, nick)
-      q add MessageLike.Query
+      q add MessageLike.Query()
       queries += (((server, nick.toLowerCase),q))
       q
     })
@@ -355,7 +357,7 @@ class IrcManager extends EventBus.RefOwner {
 
   def addQuery(c: IrcConnection, _nick: String, msg: String,
                sending: Boolean = false, action: Boolean = false,
-               notice: Boolean = false) {
+               notice: Boolean = false, ts: Date = new Date) {
     val server = _connections.getOrElse(c, { return })
 
     val query = queries.getOrElse((server, _nick.toLowerCase), {
@@ -368,9 +370,9 @@ class IrcManager extends EventBus.RefOwner {
     val nick = if (sending) server.currentNick else _nick
 
     UiBus.run {
-      val m = if (notice) Notice(nick, msg)
-      else if (action) CtcpAction(nick, msg)
-      else Privmsg(nick, msg)
+      val m = if (notice) Notice(nick, msg, ts)
+      else if (action) CtcpAction(nick, msg, ts)
+      else Privmsg(nick, msg, ts = ts)
       UiBus.send(BusEvent.PrivateMessage(query, m))
       ServiceBus.send(BusEvent.PrivateMessage(query, m))
 
@@ -439,7 +441,7 @@ class IrcManager extends EventBus.RefOwner {
 
   // TODO decouple
   def addChannelMention(c: ChannelLike, m: MessageLike) {
-    if (!showing)
+    if (!showing && c.isNew(m))
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
         getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
   }
@@ -533,6 +535,8 @@ class IrcManager extends EventBus.RefOwner {
     val ircserver = new IrcServer(server.hostname, server.port,
       server.password, server.ssl)
     val connection = new IrcConnection2
+    connection.setCapNegotiatorListener(
+      new CompoundNegotiator(new ServerTimeNegotiator))
     connection.setCharset(Charset.forName("utf-8"))
     i("Connecting to server: " +
       (server.hostname, server.port, server.ssl))
@@ -548,7 +552,8 @@ class IrcManager extends EventBus.RefOwner {
     connection.setAdvancedListener(listener)
     connection.addServerListener(listener)
     connection.addModeListener(listener)
-    connection.addMessageListener(listener)
+    connection.addServerEventListener(listener)
+    connection.addMessageEventListener(listener)
 
     try {
       server.currentNick = server.nickname

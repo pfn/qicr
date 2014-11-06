@@ -1,11 +1,11 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.IrcListeners
+import com.hanhuy.android.irc.{MessageLog, IrcListeners}
 
 import MessageLike._
 import scala.annotation.tailrec
 import android.util.Log
-import com.hanhuy.android.common.{UiBus, ServiceBus}
+import com.hanhuy.android.common.{AndroidConversions, UiBus, ServiceBus}
 
 object Channel {
   trait State
@@ -54,13 +54,26 @@ extends MessageAppender with Ordered[ChannelLike] {
         }
     }
     override def hashCode(): Int = name.hashCode()
+    var lastTs = 0l
+    def isNew(m: MessageLike) = lastTs <= m.ts.getTime
+
     def add(m: MessageLike) {
+      if (isNew(m)) {
         messages.add(m)
         val msg = m match {
-        case Privmsg(src, m2, o, v) => newMessages = true; m2
-        case CtcpAction(src, m2)    => newMessages = true; m2
-        case Notice(src, m2)        => newMessages = true; m2
-        case _ => ""
+          case Privmsg(src, m2, o, v, _) =>
+            lastTs = m.ts.getTime
+            newMessages = true
+            m2
+          case CtcpAction(src, m2, _) =>
+            lastTs = m.ts.getTime
+            newMessages = true
+            m2
+          case Notice(src, m2, _) =>
+            lastTs = m.ts.getTime
+            newMessages = true
+            m2
+          case _ => ""
         }
 
         if (IrcListeners.matchesNick(server, msg)) {
@@ -69,6 +82,8 @@ extends MessageAppender with Ordered[ChannelLike] {
         }
         ServiceBus.send(BusEvent.ChannelMessage(this, m))
         UiBus.send(BusEvent.ChannelMessage(this, m))
+//        AndroidConversions.async { MessageLog.log(m, this) }
+      }
     }
 
     override def toString = name
