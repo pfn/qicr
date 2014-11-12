@@ -90,6 +90,11 @@
             android:singleLine="true"
         />
         <CheckBoxPreference
+                android:key="irc_logging"
+                android:title="@string/pref_irc_logging_title"
+                android:defaultValue="false"
+                />
+        <CheckBoxPreference
             android:key="irc_show_join_part_quit"
             android:title="@string/pref_show_join_part_quit_title"
             android:defaultValue="false"

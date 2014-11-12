@@ -26,6 +26,10 @@ import android.text.method.LinkMovementMethod
 import scala.reflect.ClassTag
 import scala.util.Try
 
+import Tweaks._
+import macroid._
+import macroid.FullDsl._
+
 trait MessageAppender {
   def add(m: MessageLike): Unit
 }
@@ -138,20 +142,20 @@ object MessageAdapter {
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
       msg: String, modes: (Boolean,Boolean) = (false, false))(
       implicit channel: ChannelLike) = {
-    val server = channel.server
+    val server = Option(channel) map (_.server)
     val (op, voice) = modes
 
     val prefix = {if (op) "@" else if (voice) "+" else ""}
 
     if (channel.isInstanceOf[Query]) {
-      if (server.currentNick equalsIgnoreCase src)
+      if (server exists (_.currentNick equalsIgnoreCase src))
         formatText(c, m, res, textColor(0xff009999, src), msg)
       else
         formatText(c, m, res, textColor(0xffcc0000, src), msg)
-    } else if (server.currentNick equalsIgnoreCase src) {
+    } else if (server exists (_.currentNick equalsIgnoreCase src)) {
       formatText(c, m, res, "%1%2" formatSpans (prefix, bold(src)), msg)
-    } else if (IrcListeners.matchesNick(server, msg) &&
-        !server.currentNick.equalsIgnoreCase(src)) {
+    } else if (server exists (s => IrcListeners.matchesNick(s, msg) &&
+        !s.currentNick.equalsIgnoreCase(src))) {
       formatText(c, m, res, "%1%2" formatSpans(prefix,
         bold(italics(colorNick(src)))), bold(msg))
     } else
@@ -165,21 +169,11 @@ object MessageAdapter {
     if (nick != "***" && inMain)
       SpannedGenerator.span(NickClick(text), text) else text
   }
-}
-
-class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.RefOwner {
-  import Tweaks._
-  import Linkify._
-  import macroid._
-  import macroid.FullDsl._
-  import ViewGroup.LayoutParams._
-
-  // this is so ugly FIXME
   lazy implicit val actx = AppContext(Application.context)
-
-  // TODO FIXME might activity might be None
-  def messageLayout = {
-    implicit val ctx = ActivityContext(_activity.get.get)
+  def messageLayout(ctx: Activity) = {
+    implicit val c = ActivityContext(ctx)
+    import Linkify._
+    import ViewGroup.LayoutParams._
     w[TextView] <~ id(android.R.id.text1) <~
       lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~
       tweak { tv: TextView =>
@@ -190,6 +184,13 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
         tv.setGravity(Gravity.CENTER_VERTICAL)
       } <~ padding(left = 6 dp, right = 6 dp)
   }
+}
+
+class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.RefOwner {
+
+  // this is so ugly FIXME
+
+  // TODO FIXME might activity might be None
 
   implicit val channel = _channel
   var showJoinPartQuit = false
@@ -220,10 +221,6 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     }
   }
 
-  def inflater = _activity.get orElse {
-    Some(Application.context) } map {
-    _.systemService[LayoutInflater] } getOrElse (
-    throw new IllegalStateException("no context available"))
   var _activity: WeakReference[Activity] = _
   // can't make this IrcService due to resource changes on recreation
   def context_= (c: Activity) = {
@@ -282,7 +279,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     val c = if (convertView == null || convertView.getContext == context)
       convertView.asInstanceOf[TextView] else null
     val view = if (c != null) c else {
-      val v = getUi(messageLayout)
+      val v = getUi(messageLayout(_activity.get.get))
 
       if (!icsAndNewer)
         v.setTypeface(font)

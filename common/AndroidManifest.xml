@@ -54,6 +54,12 @@
                 android:enabled="@bool/is_v11plus"
                 android:permission="android.permission.BIND_REMOTEVIEWS"/>
         <activity
+            android:theme="@style/AppTheme.Dark"
+            android:name=".MessageLogActivity"
+            android:launchMode="singleInstance"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"/>
+        <activity
                 android:theme="@style/AppTheme.Dialog.Dark"
                 android:name=".WidgetChatActivity"
                 android:allowTaskReparenting="true"

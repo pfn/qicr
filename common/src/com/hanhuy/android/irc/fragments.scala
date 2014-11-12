@@ -386,12 +386,23 @@ class ChannelFragment(_channel: Option[Channel])
     }
   }
 
-  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
+  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) = {
     inflater.inflate(R.menu.channel_menu, menu)
+    if (!getActivity.settings.get(Settings.IRC_LOGGING)) {
+      val item = menu.findItem(R.id.channel_log)
+      item.setVisible(false)
+    }
+  }
 
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
     if (R.id.nicklist == item.getItemId) {
       MainActivity.instance foreach { _.toggleNickList() }
+    }
+    if (R.id.channel_log == item.getItemId) {
+      startActivity(MessageLogActivity.createIntent(channel.get))
+      getActivity.overridePendingTransition(
+        R.anim.slide_in_left, R.anim.slide_out_right)
+      return true
     }
     if (R.id.channel_close == item.getItemId) {
       val activity = getActivity
@@ -407,7 +418,7 @@ class ChannelFragment(_channel: Option[Channel])
           manager.remove(c)
           activity.adapter.removeTab(activity.adapter.getItemPosition(this))
         }
-        if (channel != null && c.state == Channel.State.JOINED && prompt) {
+        if (c.state == Channel.State.JOINED && prompt) {
           val builder = new AlertDialog.Builder(activity)
           builder.setTitle(R.string.channel_close_confirm_title)
           builder.setMessage(getString(R.string.channel_close_confirm))

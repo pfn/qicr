@@ -1,11 +1,12 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.{MessageLog, IrcListeners}
+import com.hanhuy.android.irc.{MessageLog, IrcManager, IrcListeners}
 
 import MessageLike._
 import scala.annotation.tailrec
 import android.util.Log
 import com.hanhuy.android.common.{AndroidConversions, UiBus, ServiceBus}
+import AndroidConversions._
 
 object Channel {
   trait State
@@ -55,7 +56,7 @@ extends MessageAppender with Ordered[ChannelLike] {
     }
     override def hashCode(): Int = name.hashCode()
     var lastTs = 0l
-    def isNew(m: MessageLike) = lastTs <= m.ts.getTime
+    def isNew(m: MessageLike) = lastTs < m.ts.getTime
 
     def add(m: MessageLike) {
       if (isNew(m)) {
@@ -82,7 +83,7 @@ extends MessageAppender with Ordered[ChannelLike] {
         }
         ServiceBus.send(BusEvent.ChannelMessage(this, m))
         UiBus.send(BusEvent.ChannelMessage(this, m))
-//        AndroidConversions.async { MessageLog.log(m, this) }
+        MessageLog.log(m, this)
       }
     }
 
@@ -90,6 +91,8 @@ extends MessageAppender with Ordered[ChannelLike] {
 
   def compare(that: ChannelLike): Int =
     ChannelLikeComparator.compare(this, that)
+
+  lazy val manager = IrcManager.start()
 }
 
 class Channel private(s: Server, n: String) extends ChannelLike(s, n) {

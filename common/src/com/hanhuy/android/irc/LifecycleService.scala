@@ -21,16 +21,22 @@ class LifecycleService extends Service with EventBus.RefOwner {
   import IrcManager._
   override def onBind(intent: Intent) = null
 
+  var uiRefCount = 0
+
   ServiceBus += {
     case ExitApplication =>
       stopForeground(true)
       stopSelf()
     case MainActivityStart =>
+      uiRefCount += 1
       stopForeground(true)
     case MainActivityStop =>
-      IrcManager.instance foreach { m =>
-        if (m.running) {
-          startForeground(RUNNING_ID, m.runningNotification(m.runningString))
+      uiRefCount -= 1
+      if (uiRefCount == 0) {
+        IrcManager.instance foreach { m =>
+          if (m.running) {
+            startForeground(RUNNING_ID, m.runningNotification(m.runningString))
+          }
         }
       }
   }
