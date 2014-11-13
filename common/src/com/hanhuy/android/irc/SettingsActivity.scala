@@ -35,7 +35,7 @@ object Settings {
   val NAVIGATION_MODE_DROPDOWN = "Drop Down"
   val NAVIGATION_MODE_DRAWER = "Drawer"
 
-  val IRC_LOGGING = Setting[Boolean]("irc_logging", false)
+  val IRC_LOGGING = Setting[Boolean]("irc_logging", true)
   val RUNNING_NOTIFICATION = Setting[Boolean]("notification_running_enable", true)
   val WIDGET_IDS = Setting[String]("internal_widget_ids", "")
   val HIDE_KEYBOARD = Setting[Boolean]("ui_hide_kbd_after_send", false)

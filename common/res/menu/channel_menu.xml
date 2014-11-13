@@ -16,7 +16,7 @@
           android:title="Channel Log"
           />
     <item android:id="@+id/channel_close"
-        android:showAsAction="never"
+        qicr:showAsAction="never"
         android:icon="@drawable/ic_menu_end_conversation"
         android:menuCategory="container"
         android:orderInCategory="3"

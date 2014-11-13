@@ -591,8 +591,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
       drawer.openDrawer(Gravity.RIGHT)
   }
   override def onCreateOptionsMenu(menu: Menu): Boolean = {
-    val inflater = new MenuInflater(this)
-    inflater.inflate(R.menu.main_menu, menu)
+    getMenuInflater.inflate(R.menu.main_menu, menu)
     val item = menu.findItem(R.id.toggle_rotate_lock)
     val locked = settings.get(Settings.ROTATE_LOCK)
     item.setChecked(locked)
@@ -673,19 +672,19 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
 // workaround for https://code.google.com/p/android/issues/detail?id=63777
 class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
-  var adjustment = Integer.MAX_VALUE
+  var baseline = Integer.MAX_VALUE
   var change = 0
 
   override def fitSystemWindows(insets: Rect) = {
     val adj = insets.top + insets.bottom
+    baseline = math.min(adj, baseline)
     MainActivity.bottomInsets = insets.bottom
 
-    if (adj > adjustment) {
-      change = adj - adjustment
-    } else if (adj < adjustment) {
+    if (baseline != Integer.MAX_VALUE && adj > baseline) {
+      change = adj - baseline
+    } else if (adj == baseline) {
       change = 0
     }
-    adjustment = adj
 
     super.fitSystemWindows(insets)
   }

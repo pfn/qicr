@@ -20,6 +20,7 @@ object QicrBuild extends android.AutoBuild {
     unmanagedClasspath in Compile ~= { _ filterNot (
       _.data.getName startsWith "android-support-v4") },
     resolvers += Resolver.sonatypeRepo("snapshots"),
+    proguardOptions in Android += "-keep class android.support.v7.widget.SearchView { <init>(...); }",
     proguardCache in Android += ProguardCache("macroid") % "org.macroid",
     proguardCache in Android += ProguardCache("android.support") % "com.android.support",
     proguardScala in Android := true

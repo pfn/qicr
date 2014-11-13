@@ -13,11 +13,15 @@ import android.graphics.drawable.ColorDrawable
 import android.os.{Bundle, Handler, HandlerThread}
 import android.provider.BaseColumns
 import MessageLog._
+import android.support.v4.view.MenuItemCompat
 import android.support.v7.app.ActionBarActivity
-import android.text.TextUtils.TruncateAt
+import android.support.v7.widget.SearchView.{OnCloseListener, OnQueryTextListener}
+import android.text.format.DateFormat
 import android.text.method.LinkMovementMethod
 import android.view.ViewGroup.LayoutParams._
-import android.view.{MenuItem, Gravity, ViewGroup, View}
+import android.view._
+import android.view.inputmethod.InputMethodManager
+import android.widget.AbsListView.OnScrollListener
 import android.widget._
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
@@ -138,9 +142,11 @@ object MessageLog {
   /**
    * the returned adapter must be closed when done
    */
-  def get(c: Activity, serverId: Long, channel: String): LogAdapter = {
+  def get(c: Activity, serverId: Long, channel: String): LogAdapter =
     instance.get(c, serverId, channel)
-  }
+
+  def get(c: Activity, serverId: Long, channel: String, query: String): LogAdapter =
+    instance.get(c, serverId, channel, query)
 
   def log(m: MessageLike, c: ChannelLike) = if (settings.get(Settings.IRC_LOGGING))
     handler.post { () => instance.log(m, c) }
@@ -254,16 +260,14 @@ class MessageLog private(context: Context)
     })
   }
 
-  def log(m: MessageLike, c: ChannelLike) = {
-    val entry = m match {
-      case Privmsg(sender, message, _, _, ts) =>
-        logEntry(Entry(getChannel(c), sender, ts.getTime, message))
-      case Notice(sender, message, ts) =>
-        logEntry(Entry(getChannel(c), sender, ts.getTime, message, notice = true))
-      case CtcpAction(sender, message, ts) =>
-        logEntry(Entry(getChannel(c), sender, ts.getTime, message, action = true))
-      case _ => None
-    }
+  def log(m: MessageLike, c: ChannelLike) = m match {
+    case Privmsg(sender, message, _, _, ts) =>
+      logEntry(Entry(getChannel(c), sender, ts.getTime, message))
+    case Notice(sender, message, ts) =>
+      logEntry(Entry(getChannel(c), sender, ts.getTime, message, notice = true))
+    case CtcpAction(sender, message, ts) =>
+      logEntry(Entry(getChannel(c), sender, ts.getTime, message, action = true))
+    case _ =>
   }
 
   def logEntry(e: Entry) = synchronized {
@@ -284,32 +288,32 @@ class MessageLog private(context: Context)
 
   def get(ctx: Activity, netId: Long, channel: String): LogAdapter =
     get(ctx, channels(netId -> channel))
+  def get(ctx: Activity, netId: Long, channel: String, query: String): LogAdapter =
+    get(ctx, channels(netId -> channel), query)
 
-  // must be an Activity context for theming
-  def get(ctx: Activity, channel: Channel): LogAdapter = {
-    val db = getReadableDatabase
-    val query =
-      s"""
-         |SELECT * FROM $TABLE_LOGS WHERE $FIELD_CHANNEL = ? ORDER BY $FIELD_TIMESTAMP
-       """.stripMargin
-    val cursor = db.rawQuery(query, Array(String.valueOf(channel.id)))
-
+  def adapterFor(ctx: Activity, cursor: Cursor, db: SQLiteDatabase) = {
     val sendercol = cursor.getColumnIndexOrThrow(FIELD_SENDER)
     val tscol     = cursor.getColumnIndexOrThrow(FIELD_TIMESTAMP)
     val msgcol    = cursor.getColumnIndexOrThrow(FIELD_MESSAGE)
     val actioncol = cursor.getColumnIndexOrThrow(FIELD_ACTION)
     val notifycol = cursor.getColumnIndexOrThrow(FIELD_NOTICE)
 
-    new CursorAdapter(Application.context, cursor, 0) with Closeable {
+    new CursorAdapter(Application.context, cursor) with Closeable {
+
       override def newView(context: Context, c: Cursor, v: ViewGroup) = {
         val v = getUi(MessageAdapter.messageLayout(ctx))
         v.setMovementMethod(LinkMovementMethod.getInstance)
-        bindView(v, context, c)
+        bindView(v, ctx, c)
         v
       }
 
+      override def getItem(p: Int) = {
+        cursor.moveToPosition(p)
+        cursor.getLong(tscol): java.lang.Long
+      }
+
       override def bindView(v: View, context: Context, c: Cursor) = {
-        val entry = Entry(channel, c.getString(sendercol), c.getLong(tscol),
+        val entry = Entry(null, c.getString(sendercol), c.getLong(tscol),
           c.getString(msgcol),
           action = c.getInt(actioncol) != 0, notice = c.getInt(notifycol) != 0)
         val m: MessageLike = if (entry.action) {
@@ -328,6 +332,32 @@ class MessageLog private(context: Context)
       }
     }
   }
+
+  // must be an Activity context for theming
+  def get(ctx: Activity, channel: Channel): LogAdapter = {
+    val db = getReadableDatabase
+    val query =
+      s"""
+         |SELECT * FROM $TABLE_LOGS WHERE $FIELD_CHANNEL = ? ORDER BY $FIELD_TIMESTAMP
+       """.stripMargin
+    val cursor = db.rawQuery(query, Array(String.valueOf(channel.id)))
+    adapterFor(ctx, cursor, db)
+  }
+
+  def get(ctx: Activity, channel: Channel, q: String): LogAdapter = {
+    val db = getReadableDatabase
+    val query =
+      s"""
+         |SELECT * FROM $TABLE_LOGS WHERE $FIELD_CHANNEL = ?
+         | AND ($FIELD_SENDER = ? OR $FIELD_MESSAGE LIKE ?)
+         |  ORDER BY $FIELD_TIMESTAMP
+       """.stripMargin
+    d(s"query: $query")
+    d("args: " + Seq(String.valueOf(channel.id), q, s"%$q%"))
+    val cursor = db.rawQuery(query,
+      Array(String.valueOf(channel.id), q, s"%$q%"))
+    adapterFor(ctx, cursor, db)
+  }
 }
 
 object MessageLogActivity {
@@ -337,6 +367,9 @@ object MessageLogActivity {
     val intent = new Intent(Application.context, classOf[MessageLogActivity])
     intent.putExtra(EXTRA_SERVER, c.server.id)
     intent.putExtra(EXTRA_CHANNEL, c.name)
+    intent.addFlags(
+      Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS |
+      Intent.FLAG_ACTIVITY_NO_HISTORY)
     intent
   }
 }
@@ -344,8 +377,9 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
   import MessageLogActivity._
   implicit val TAG = LogcatTag("MessageLogActivity")
   var listview: ListView = _
+  var dateText: TextView = _
+
   lazy val layout = l[FrameLayout](
-    l[FrameLayout](
     w[TextView] <~ id(R.id.empty_list) <~ hide <~
       lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
       tweak { tv: TextView =>
@@ -365,12 +399,27 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
         l.setFastScrollEnabled(true)
       } <~ kitkatPadding
-    )
   )
 
   var adapter = Option.empty[LogAdapter]
+  var nid = -1l
+  var channel = ""
+  lazy val dfmt = DateFormat.getDateFormat(this)
+  lazy val tfmt = DateFormat.getTimeFormat(this)
+
+  def setAdapter(a: LogAdapter): Unit = {
+    adapter = Some(a)
+    listview.setAdapter(a)
+    if (a.getCount > 0) {
+      val t = a.getItem(0)
+      getSupportActionBar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+    }
+    adapter foreach { a => listview.setSelection(a.getCount - 1) }
+  }
 
   override def onCreate(savedInstanceState: Bundle) = {
+    val mode = settings.get(Settings.DAYNIGHT_MODE)
+    setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
     super.onCreate(savedInstanceState)
     val bar = getSupportActionBar
     bar.setDisplayHomeAsUpEnabled(true)
@@ -378,16 +427,32 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     setContentView(getUi(layout))
 
     val intent = getIntent
-    val id = intent.getLongExtra(EXTRA_SERVER, -1)
-    val channel = intent.getStringExtra(EXTRA_CHANNEL)
-    if (id == -1) {
+    nid = intent.getLongExtra(EXTRA_SERVER, -1)
+    channel = intent.getStringExtra(EXTRA_CHANNEL)
+    if (nid == -1) {
       finish()
     } else {
-      val a = MessageLog.get(this, id, channel)
-      bar.setTitle("channel logs")
-      bar.setSubtitle(channel)
-      adapter = Some(a)
-      listview.setAdapter(a)
+      val a = MessageLog.get(this, nid, channel)
+      bar.setTitle(s"log: $channel")
+      setAdapter(a)
+
+      listview.setOnScrollListener(new OnScrollListener {
+        var first = 0
+
+        override def onScrollStateChanged(p1: AbsListView, p2: Int) = ()
+
+        override def onScroll(p1: AbsListView, fst: Int, vis: Int, total: Int) {
+          if (fst != first) {
+            adapter foreach { a =>
+              if (fst < a.getCount) {
+                val t = a.getItem(fst)
+                bar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+              }
+            }
+          }
+          first = fst
+        }
+      })
     }
   }
 
@@ -400,7 +465,6 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
 
   override def onResume() {
     super.onResume()
-    adapter foreach { a => listview.setSelection(a.getCount - 1) }
   }
 
   override def onDestroy(): Unit = {
@@ -415,11 +479,44 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
 
   override def onStart() {
     super.onStart()
-    ServiceBus.send(BusEvent.MainActivityStart)
   }
 
   override def onStop() {
     super.onStop()
-    ServiceBus.send(BusEvent.MainActivityStop)
+  }
+
+  override def onCreateOptionsMenu(menu: Menu) = {
+    getMenuInflater.inflate(R.menu.log_menu, menu)
+    val item = menu.findItem(R.id.menu_search)
+    val searchView = MenuItemCompat.getActionView(
+      item).asInstanceOf[android.support.v7.widget.SearchView]
+    searchView.setOnCloseListener(new OnCloseListener {
+      override def onClose() = {
+        listview.setAdapter(null)
+        adapter foreach (_.close())
+        setAdapter(MessageLog.get(MessageLogActivity.this, nid, channel))
+        false
+      }
+    })
+    searchView.setOnQueryTextListener(new OnQueryTextListener {
+      override def onQueryTextSubmit(p1: String) = {
+        val imm = MessageLogActivity.this.systemService[InputMethodManager]
+        val focused = Option(getCurrentFocus)
+        focused foreach { f =>
+          f.clearFocus()
+          imm.hideSoftInputFromWindow(f.getWindowToken, 0)
+        }
+        val query = searchView.getQuery.toString
+        if (query.trim.nonEmpty) {
+          listview.setAdapter(null)
+          adapter foreach (_.close())
+          setAdapter(MessageLog.get(MessageLogActivity.this, nid, channel, query))
+        }
+        true
+      }
+
+      override def onQueryTextChange(p1: String) = true
+    })
+    true
   }
 }
