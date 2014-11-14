@@ -8,7 +8,7 @@ import android.text.InputType
 import android.util.TypedValue
 import android.view.View.MeasureSpec
 import android.view.inputmethod.EditorInfo
-import android.view.{WindowManager, View, ViewGroup}
+import android.view._
 import android.widget._
 import com.hanhuy.android.common.{SystemService, AndroidConversions}
 
@@ -103,7 +103,8 @@ object Tweaks {
   def navBarHeight(implicit ctx: AppContext) = {
     val id = ctx.get.getResources.getIdentifier(
       "navigation_bar_height", "dimen", "android")
-    if (id != 0) ctx.get.getResources.getDimensionPixelSize(id) else 0
+    if (id != 0 && hasSystemNav)
+      ctx.get.getResources.getDimensionPixelSize(id) else 0
   }
   def kitkatPaddingTop(implicit ctx: ActivityContext) =
     newerThan(19) ? padding(top = statusBarHeight + actionBarHeight)
@@ -186,6 +187,8 @@ object Tweaks {
       p(lp)
       v.setLayoutParams(lp)
   }
+
+  lazy val hasSystemNav = !KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK)
 }
 
 class SquareImageButton(c: Context) extends ImageButton(c) {

@@ -67,20 +67,6 @@ object MainActivity {
   }
 
   var instance = Option.empty[MainActivity]
-
-  // yuck  :(
-  private var _bottomInsets = Option.empty[Int]
-  def bottomInsets = _bottomInsets
-  def bottomInsets_=(insets: Int) = {
-    if (_bottomInsets.isEmpty) {
-      _bottomInsets = Some(insets)
-      if (insets == 0) {
-        instance map { a =>
-          getUi(a.buttonLayout <~ Tweaks.margin(all = 0))
-        }
-      }
-    }
-  }
 }
 class MainActivity extends ActionBarActivity with EventBus.RefOwner with Contexts[Activity] {
   import Tweaks._
@@ -678,7 +664,6 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
   override def fitSystemWindows(insets: Rect) = {
     val adj = insets.top + insets.bottom
     baseline = math.min(adj, baseline)
-    MainActivity.bottomInsets = insets.bottom
 
     if (baseline != Integer.MAX_VALUE && adj > baseline) {
       change = adj - baseline
