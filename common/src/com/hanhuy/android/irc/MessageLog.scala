@@ -6,7 +6,7 @@ import java.util.Date
 
 import android.app.Activity
 import android.content.{Intent, ContentValues, Context}
-import android.database.Cursor
+import android.database.{DataSetObserver, Cursor}
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -22,6 +22,7 @@ import android.view.ViewGroup.LayoutParams._
 import android.view._
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
+import android.widget.ExpandableListView.OnChildClickListener
 import android.widget._
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
@@ -160,6 +161,9 @@ object MessageLog {
   lazy val handler = new Handler(handlerThread.getLooper)
   lazy val settings = Settings(Application.context)
   private val instance = new MessageLog(Application.context)
+
+  def networks = instance.networks
+  def channels = instance.channels
 }
 
 class MessageLog private(context: Context)
@@ -287,9 +291,9 @@ class MessageLog private(context: Context)
   }
 
   def get(ctx: Activity, netId: Long, channel: String): LogAdapter =
-    get(ctx, channels(netId -> channel))
+    get(ctx, channels(netId -> channel.toLowerCase))
   def get(ctx: Activity, netId: Long, channel: String, query: String): LogAdapter =
-    get(ctx, channels(netId -> channel), query)
+    get(ctx, channels(netId -> channel.toLowerCase), query)
 
   def adapterFor(ctx: Activity, cursor: Cursor, db: SQLiteDatabase) = {
     val sendercol = cursor.getColumnIndexOrThrow(FIELD_SENDER)
@@ -363,6 +367,15 @@ class MessageLog private(context: Context)
 object MessageLogActivity {
   val EXTRA_SERVER = "com.hanhuy.android.irc.EXTRA_SERVER_ID"
   val EXTRA_CHANNEL = "com.hanhuy.android.irc.EXTRA_CHANNEL"
+  def createIntent(c: Channel) = {
+    val intent = new Intent(Application.context, classOf[MessageLogActivity])
+    intent.putExtra(EXTRA_SERVER, c.network.id)
+    intent.putExtra(EXTRA_CHANNEL, c.name)
+    intent.addFlags(
+      Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS |
+        Intent.FLAG_ACTIVITY_NO_HISTORY)
+    intent
+  }
   def createIntent(c: ChannelLike) = {
     val intent = new Intent(Application.context, classOf[MessageLogActivity])
     intent.putExtra(EXTRA_SERVER, c.server.id)
@@ -417,16 +430,8 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     adapter foreach { a => listview.setSelection(a.getCount - 1) }
   }
 
-  override def onCreate(savedInstanceState: Bundle) = {
-    val mode = settings.get(Settings.DAYNIGHT_MODE)
-    setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
-    super.onCreate(savedInstanceState)
+  override def onNewIntent(intent: Intent) = {
     val bar = getSupportActionBar
-    bar.setDisplayHomeAsUpEnabled(true)
-    bar.setDisplayShowHomeEnabled(true)
-    setContentView(getUi(layout))
-
-    val intent = getIntent
     nid = intent.getLongExtra(EXTRA_SERVER, -1)
     channel = intent.getStringExtra(EXTRA_CHANNEL)
     if (nid == -1) {
@@ -456,7 +461,139 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     }
   }
 
+  override def onCreate(savedInstanceState: Bundle) = {
+    val mode = settings.get(Settings.DAYNIGHT_MODE)
+    setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
+    super.onCreate(savedInstanceState)
+
+    val bar = getSupportActionBar
+    bar.setDisplayHomeAsUpEnabled(true)
+    bar.setDisplayShowHomeEnabled(true)
+    setContentView(getUi(layout))
+
+    onNewIntent(getIntent)
+  }
+
+  lazy val label = lp2(WRAP_CONTENT, WRAP_CONTENT) { lp: TableRow.LayoutParams =>
+    lp.rightMargin = 12 dp
+  } + tweak { v: TextView =>
+    v.setTextAppearance(this, android.R.style.TextAppearance_Medium) }
+
+  val Menu_log_others = R.id.menu_log_others
+  val Menu_log_info = R.id.menu_log_info
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
+    case Menu_log_others =>
+      val othersLayout = getUi(
+        w[ExpandableListView] <~ padding(all = 12 dp)
+      )
+
+      val popup = new PopupWindow(othersLayout, 300 dp, 300 dp, true)
+      val networks = MessageLog.networks.values.toList
+      val channels = MessageLog.channels.values.toList.groupBy(_.network)
+      othersLayout.setAdapter(new BaseExpandableListAdapter {
+
+        override def getChildId(p1: Int, p2: Int) = channels(networks(p1))(p2).id
+
+        override def getChild(p1: Int, p2: Int) = channels(networks(p1))(p2)
+
+        override def getGroupCount = networks.size
+
+        override def isChildSelectable(p1: Int, p2: Int) = true
+
+        override def getGroupId(p1: Int) = networks(p1).id
+
+        override def getGroup(p1: Int) = networks(p1)
+
+        override def getChildrenCount(p1: Int) = channels(networks(p1)).size
+
+        override def hasStableIds = true
+
+        override def getChildView(p1: Int, p2: Int, p3: Boolean, p4: View, p5: ViewGroup) = {
+          val text = if (p4 == null) {
+            val v = new TextView(MessageLogActivity.this,
+              null, android.R.style.TextAppearance_Medium)
+            v.setLayoutParams(new AbsListView.LayoutParams(MATCH_PARENT, 48 dp))
+            v.setPadding(48 dp, 0, 0, 0)
+            v.setGravity(Gravity.CENTER_VERTICAL)
+            v
+          } else
+            p4.asInstanceOf[TextView]
+
+          text.setText(getChild(p1, p2).name)
+          text
+        }
+
+        override def getGroupView(p1: Int, p2: Boolean, p3: View, p4: ViewGroup) = {
+          val text = if (p3 == null) {
+            val v = new TextView(MessageLogActivity.this,
+              null, android.R.style.TextAppearance_Large)
+            v.setLayoutParams(new AbsListView.LayoutParams(MATCH_PARENT, 48 dp))
+            v.setGravity(Gravity.CENTER_VERTICAL)
+            v.setPadding(36 dp, 0, 0, 0)
+            v
+          } else
+            p3.asInstanceOf[TextView]
+
+          text.setText(getGroup(p1).name)
+          text
+        }
+      })
+      (0 until networks.size) foreach (i => othersLayout.expandGroup(i))
+      othersLayout.setOnChildClickListener(new OnChildClickListener {
+        override def onChildClick(p1: ExpandableListView,
+                                  p2: View, p3: Int, p4: Int, p5: Long) = {
+          val c = channels(networks(p3))(p4)
+          startActivity(createIntent(c))
+          popup.dismiss()
+          true
+        }
+      })
+      popup.setBackgroundDrawable(
+        getResources.getDrawable(R.drawable.log_info_background))
+      popup.setOutsideTouchable(true)
+      popup.showAtLocation(getWindow.getDecorView, Gravity.CENTER, 0, 0)
+
+      true
+    case Menu_log_info =>
+      var databaseSize: TextView = null
+      var channelLines: TextView = null
+      var channelName: TextView = null
+
+      val infoLayout = getUi(
+        l[TableLayout](
+          l[TableRow](
+            w[TextView] <~ label <~ text("Log Name"),
+            w[TextView] <~ label <~ wire(channelName)
+          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          l[TableRow](
+            w[TextView] <~ label <~ text("Line Count"),
+            w[TextView] <~ label <~ wire(channelLines)
+          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          l[TableRow](
+            w[TextView] <~ label <~ text("Database Size"),
+            w[TextView] <~ label <~ wire(databaseSize)
+          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
+        ) <~ padding(all = 12 dp) <~
+          tweak { v: View => v.setClickable(true) }
+      )
+      val f = getDatabasePath(DATABASE_NAME)
+      val size = (f.length: Double) match {
+        case x if x > 1000000000 => "%.3f GB" format (x / 1000000000)
+        case x if x > 1000000    => "%.2f MB" format (x / 1000000)
+        case x if x > 1000       => "%.0f KB" format (x / 1000)
+        case x => s"$x bytes"
+      }
+      databaseSize.setText(size)
+      channelName.setText(channel)
+      adapter foreach { a => channelLines.setText(s"${a.getCount}") }
+
+      val popup = new PopupWindow(infoLayout, 300 dp, 300 dp, true)
+      popup.setBackgroundDrawable(
+        getResources.getDrawable(R.drawable.log_info_background))
+      popup.setOutsideTouchable(true)
+      popup.showAtLocation(getWindow.getDecorView, Gravity.CENTER, 0, 0)
+
+      true
     case android.R.id.home =>
       onBackPressed()
       true

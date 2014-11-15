@@ -1,12 +1,9 @@
 package com.hanhuy.android.irc
 
-import android.app.{Notification, PendingIntent, Service}
+import android.app.Service
 import android.content.Intent
-import android.support.v4.app.NotificationCompat
-import android.text.TextUtils
 import com.hanhuy.android.common.{ServiceBus, EventBus}
 import com.hanhuy.android.irc.model.BusEvent.{ExitApplication, MainActivityStop, MainActivityStart}
-import com.hanhuy.android.irc.model.MessageAdapter
 
 /**
  * @author pfnguyen
