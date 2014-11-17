@@ -4,7 +4,7 @@ import java.io.Closeable
 
 import java.util.Date
 
-import android.app.Activity
+import android.app.{AlertDialog, Activity}
 import android.content.{Intent, ContentValues, Context}
 import android.database.{DataSetObserver, Cursor}
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
@@ -164,28 +164,23 @@ object MessageLog {
 
   def networks = instance.networks
   def channels = instance.channels
+
+  def delete(nid: Long, channel: String) = instance.delete(nid, channel)
+  def deleteAll() = instance.deleteAll()
 }
 
 class MessageLog private(context: Context)
   extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
-  def networks = {
-    if (_networks.isEmpty)
-      _networks = initialNetworks
-    _networks
-  }
+  def networks = _networks getOrElse initialNetworks
 
-  def networks_=(n: Map[Long,Network]) = _networks = n
-  def channels_=(c: Map[(Long,String),Channel]) = _channels = c
+  def networks_=(n: Map[Long,Network]) = _networks = Some(n)
+  def channels_=(c: Map[(Long,String),Channel]) = _channels = Some(c)
 
-  def channels = {
-    if (_channels.isEmpty)
-      _channels = initialChannels
-    _channels
-  }
+ def channels = _channels getOrElse initialChannels
 
-  private var _networks = Map.empty[Long,Network]
-  private var _channels = Map.empty[(Long,String),Channel]
+  private var _networks = Option.empty[Map[Long,Network]]
+  private var _channels = Option.empty[Map[(Long,String),Channel]]
 
   lazy val initialNetworks = {
     val db = getReadableDatabase
@@ -242,6 +237,7 @@ class MessageLog private(context: Context)
   private def getChannel(channel: ChannelLike): Channel = synchronized {
     val network = networks.getOrElse(channel.server.id, {
       val net = Network(channel.server.name, channel.server.id)
+      d(s"Inserting: $net, previous existing: $networks")
       val db = getWritableDatabase
       db.insertOrThrow(TABLE_SERVERS, null, net.values)
       db.close()
@@ -254,12 +250,13 @@ class MessageLog private(context: Context)
         case q: Query => true
         case c: ModelChannel => false
       }
-      val ch = Channel(network, -1, channel.name, 0, query)
+      val ch = Channel(network, -1, channel.name.toLowerCase, 0, query)
+      channels += (network.id, ch.name) -> ch
       val db = getWritableDatabase
       val id = db.insertOrThrow(TABLE_CHANNELS, null, ch.values)
       db.close()
       val ch2 = ch.copy(id = id)
-      channels += (network.id, ch2.name) -> ch2
+      channels += (network.id, ch2.name.toLowerCase) -> ch2
       ch2
     })
   }
@@ -288,6 +285,35 @@ class MessageLog private(context: Context)
       db.endTransaction()
       db.close()
     }
+  }
+
+  def delete(netId: Long, channel: String) = synchronized {
+    val c = channels(netId -> channel)
+
+    val db = getWritableDatabase
+    db.beginTransaction()
+    db.delete(TABLE_LOGS, s"$FIELD_CHANNEL = ?", Array(c.id.toString))
+    db.delete(TABLE_CHANNELS, s"$FIELD_SERVER = ? AND $FIELD_NAME = ?",
+      Array(netId.toString, channel))
+    db.setTransactionSuccessful()
+    db.endTransaction()
+    db.execSQL("VACUUM")
+    db.close()
+    channels -= (netId -> channel)
+  }
+
+  def deleteAll() = synchronized {
+    val db = getWritableDatabase
+    db.beginTransaction()
+    db.delete(TABLE_LOGS, null, null)
+    db.delete(TABLE_CHANNELS, null, null)
+    db.delete(TABLE_SERVERS, null, null)
+    db.setTransactionSuccessful()
+    db.endTransaction()
+    db.execSQL("VACUUM")
+    db.close()
+    channels = Map.empty
+    networks = Map.empty
   }
 
   def get(ctx: Activity, netId: Long, channel: String): LogAdapter =
@@ -434,9 +460,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     val bar = getSupportActionBar
     nid = intent.getLongExtra(EXTRA_SERVER, -1)
     channel = intent.getStringExtra(EXTRA_CHANNEL)
-    if (nid == -1) {
-      finish()
-    } else {
+    if (MessageLog.channels.contains(nid -> channel.toLowerCase)) {
       val a = MessageLog.get(this, nid, channel)
       bar.setTitle(s"log: $channel")
       setAdapter(a)
@@ -458,6 +482,9 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
           first = fst
         }
       })
+    } else {
+      Toast.makeText(this, "No logs available", Toast.LENGTH_SHORT).show()
+      finish()
     }
   }
 
@@ -481,15 +508,33 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
 
   val Menu_log_others = R.id.menu_log_others
   val Menu_log_info = R.id.menu_log_info
+  val Menu_log_delete = R.id.menu_log_delete
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
+    case Menu_log_delete =>
+      val builder = new AlertDialog.Builder(this)
+      builder.setTitle("Delete Logs?")
+      builder.setMessage("Delete all logs or messages from the current window?")
+      builder.setPositiveButton("Current", () => {
+        MessageLog.delete(nid, channel)
+        finish()
+      })
+      builder.setNegativeButton("Cancel", null)
+      builder.setNeutralButton("All", () => {
+        MessageLog.deleteAll()
+        finish()
+      })
+      builder.create().show()
+      true
     case Menu_log_others =>
       val othersLayout = getUi(
         w[ExpandableListView] <~ padding(all = 12 dp)
       )
 
       val popup = new PopupWindow(othersLayout, 300 dp, 300 dp, true)
-      val networks = MessageLog.networks.values.toList
-      val channels = MessageLog.channels.values.toList.groupBy(_.network)
+      val networks = MessageLog.networks.values.toList.sortBy(_.name)
+      val channels = MessageLog.channels.values.toList.groupBy(_.network).map {
+        case (k,v) => k -> v.sortBy(_.name)
+      }
       othersLayout.setAdapter(new BaseExpandableListAdapter {
 
         override def getChildId(p1: Int, p2: Int) = channels(networks(p1))(p2).id
@@ -558,6 +603,8 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       var databaseSize: TextView = null
       var channelLines: TextView = null
       var channelName: TextView = null
+      var channelEnd: TextView = null
+      var channelStart: TextView = null
 
       val infoLayout = getUi(
         l[TableLayout](
@@ -566,16 +613,33 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
             w[TextView] <~ label <~ wire(channelName)
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
+            w[TextView] <~ label <~ text("Start"),
+            w[TextView] <~ wire(channelStart)
+          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          l[TableRow](
+            w[TextView] <~ label <~ text("End"),
+            w[TextView] <~ wire(channelEnd)
+          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          l[TableRow](
             w[TextView] <~ label <~ text("Line Count"),
             w[TextView] <~ label <~ wire(channelLines)
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          w[View] <~ lp[TableLayout](MATCH_PARENT, 16 dp),
           l[TableRow](
-            w[TextView] <~ label <~ text("Database Size"),
+            w[TextView] <~ label <~ text("All Logs"),
             w[TextView] <~ label <~ wire(databaseSize)
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
         ) <~ padding(all = 12 dp) <~
           tweak { v: View => v.setClickable(true) }
       )
+
+
+      adapter foreach { a =>
+        val start = a.getItem(0)
+        channelStart.setText(dfmt.format(start) + " " + tfmt.format(start))
+        val end = if (a.getCount > 1) a.getItem(a.getCount - 1) else start
+        channelEnd.setText(dfmt.format(end) + " " + tfmt.format(end))
+      }
       val f = getDatabasePath(DATABASE_NAME)
       val size = (f.length: Double) match {
         case x if x > 1000000000 => "%.3f GB" format (x / 1000000000)
@@ -587,7 +651,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       channelName.setText(channel)
       adapter foreach { a => channelLines.setText(s"${a.getCount}") }
 
-      val popup = new PopupWindow(infoLayout, 300 dp, 300 dp, true)
+      val popup = new PopupWindow(infoLayout, 300 dp, 160 dp, true)
       popup.setBackgroundDrawable(
         getResources.getDrawable(R.drawable.log_info_background))
       popup.setOutsideTouchable(true)

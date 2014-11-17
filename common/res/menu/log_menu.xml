@@ -13,7 +13,7 @@
     <item android:id="@+id/menu_log_info"
           android:menuCategory="container"
           qicr:showAsAction="never"
-          android:orderInCategory="30"
+          android:orderInCategory="40"
           android:title="Info"
           android:icon="@android:drawable/ic_menu_info_details"
           />
@@ -21,6 +21,13 @@
           android:menuCategory="container"
           qicr:showAsAction="never"
           android:orderInCategory="20"
-          android:title="More Logs"
+          android:title="Other Logs"
           />
+    <item android:id="@+id/menu_log_delete"
+          android:menuCategory="container"
+          qicr:showAsAction="never"
+          android:orderInCategory="30"
+          android:title="Delete Logs"
+          />
+
 </menu>
