@@ -457,8 +457,13 @@ class QueryFragment(_query: Option[Query]) extends MessagesFragment {
       manager.saveChannel(lookupId, q)
     }
   }
-  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
+  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) = {
     inflater.inflate(R.menu.query_menu, menu)
+    if (!getActivity.settings.get(Settings.IRC_LOGGING)) {
+      val item = menu.findItem(R.id.channel_log)
+      item.setVisible(false)
+    }
+  }
 
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
     if (R.id.query_close == item.getItemId) {
@@ -478,6 +483,11 @@ class QueryFragment(_query: Option[Query]) extends MessagesFragment {
         return true
       } else
         removeQuery()
+      return true
+    } else if (R.id.channel_log == item.getItemId) {
+      startActivity(MessageLogActivity.createIntent(query.get))
+      getActivity.overridePendingTransition(
+        R.anim.slide_in_left, R.anim.slide_out_right)
       return true
     }
     false

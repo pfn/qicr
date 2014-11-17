@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:qicr="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/channel_log"
+          qicr:showAsAction="ifRoom"
+          android:icon="@android:drawable/ic_menu_agenda"
+          android:menuCategory="container"
+          android:orderInCategory="1"
+          android:title="Message Log"
+            />
     <item android:id="@+id/query_close"
         android:icon="@drawable/ic_menu_end_conversation"
         qicr:showAsAction="ifRoom|withText"
         android:menuCategory="container"
-        android:orderInCategory="1"
+        android:orderInCategory="2"
         android:title="@string/query_close"/>
 </menu>
