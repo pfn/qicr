@@ -39,7 +39,7 @@ import macroid.FullDsl._
 object MessageLog {
   implicit val TAG = LogcatTag("MessageLog")
   val DATABASE_NAME    = "logs"
-  val DATABASE_VERSION = 1
+  val DATABASE_VERSION = 2
 
   val TABLE_SERVERS  = "servers"
   val TABLE_CHANNELS = "channels"
@@ -99,10 +99,24 @@ object MessageLog {
     s"""
        |CREATE TABLE $TABLE_SERVERS (
        |  ${BaseColumns._ID} INTEGER PRIMARY KEY,
-       |  $FIELD_NAME        TEXT NOT NULL,
-       |  CONSTRAINT unq_server UNIQUE ($FIELD_NAME ASC)
+       |  $FIELD_NAME        TEXT NOT NULL
        |);
      """.stripMargin
+
+  val UPGRADES: Map[Int,Seq[String]] = Map(
+    2 -> Seq(
+      "PRAGMA foreign_keys=OFF",
+      s"""
+         |CREATE TABLE new_$TABLE_SERVERS (
+         |  ${BaseColumns._ID} INTEGER PRIMARY KEY,
+         |  $FIELD_NAME        TEXT NOT NULL
+         |);
+       """.stripMargin,
+      s"INSERT INTO new_$TABLE_SERVERS SELECT * FROM $TABLE_SERVERS",
+      s"DROP TABLE $TABLE_SERVERS",
+      s"ALTER TABLE new_$TABLE_SERVERS RENAME TO $TABLE_SERVERS"
+    )
+  )
 
   case class Network(name: String, id: Long = -1) {
     def values: ContentValues = {
@@ -226,7 +240,18 @@ class MessageLog private(context: Context)
     db.execSQL(TABLE_LOGS_CHANNEL_INDEX_DDL)
   }
 
-  override def onUpgrade(db: SQLiteDatabase, prev: Int, version: Int) = ()
+  override def onUpgrade(db: SQLiteDatabase, prev: Int, ver: Int) = synchronized {
+    if (prev < ver) {
+      db.beginTransaction()
+      Range(prev, ver + 1) foreach { v =>
+        d("Upgrading to: " + v)
+        UPGRADES.getOrElse(v, Seq.empty) foreach db.execSQL
+      }
+
+      db.setTransactionSuccessful()
+      db.endTransaction()
+    }
+  }
 
   override def onOpen(db: SQLiteDatabase) = synchronized {
     super.onOpen(db)
