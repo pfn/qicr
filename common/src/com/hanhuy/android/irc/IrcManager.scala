@@ -571,16 +571,20 @@ class IrcManager extends EventBus.RefOwner {
 
     try {
       server.currentNick = server.nickname
-      connection.connect(sslctx)
-      state = Server.State.CONNECTED
+      if (server.state == Server.State.CONNECTING) {
+        connection.connect(sslctx)
+        state = Server.State.CONNECTED
+      }
     } catch {
       case e: NickNameException =>
         connection.setNick(server.altnick)
         server.currentNick = server.altnick
         serverMessage(getString(R.string.server_nick_retry), server)
         try {
-          connection.connect(sslctx)
-          state = Server.State.CONNECTED
+          if (server.state == Server.State.CONNECTING) {
+            connection.connect(sslctx)
+            state = Server.State.CONNECTED
+          }
         } catch {
           case e: Exception =>
             RichLogger.w("Failed to connect, nick exception?", e)
@@ -606,6 +610,9 @@ class IrcManager extends EventBus.RefOwner {
         }
         serverMessage(getString(R.string.server_disconnected), server)
     }
+
+    if (server.state == Server.State.DISCONNECTED)
+      connection.disconnect()
 
     if (state == Server.State.CONNECTED)
       ping(connection, server)
