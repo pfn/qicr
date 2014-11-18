@@ -117,11 +117,11 @@ with ServerEventListener with MessageEventListener {
         }
       }
     } getOrElse {
-      Log.w(TAG, "server not found in onConnect?!", new StackTrace)
+      Log.w(TAG, s"server not found in onConnect?! $c", new StackTrace)
     }
   }
   override def onDisconnect(c: IrcConnection) {
-    //Log.w(TAG, "Connection dropped: " + c, new StackTrace)
+//    Log.w(TAG, "Connection dropped: " + c, new StackTrace)
     manager._connections.get(c) foreach { manager.serverDisconnected }
   }
   override def onInvite(c: IrcConnection, src: User, user: User,

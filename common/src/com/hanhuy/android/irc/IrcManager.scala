@@ -4,13 +4,11 @@ import java.nio.charset.Charset
 import java.util.Date
 import javax.net.ssl.SSLContext
 
-import android.app.Notification.Action
-import android.appwidget.AppWidgetManager
 import android.graphics.Typeface
 import android.text.{Layout, StaticLayout, TextPaint, TextUtils}
 import android.text.style.TextAppearanceSpan
 import android.util.DisplayMetrics
-import android.view.{WindowManager, View}
+import android.view.WindowManager
 import com.hanhuy.android.irc.model._
 
 import android.app.NotificationManager
@@ -18,7 +16,7 @@ import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
 import android.os.{Build, Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
-import android.widget.{RemoteViews, Toast}
+import android.widget.RemoteViews
 import android.support.v4.app.NotificationCompat
 
 import com.sorcix.sirc.IrcDebug
@@ -32,7 +30,7 @@ import com.hanhuy.android.common._
 import AndroidConversions._
 import RichLogger._
 import IrcManager._
-import android.net.ConnectivityManager
+import android.net.{NetworkInfo, ConnectivityManager}
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.BusEvent.{IrcManagerStop, IrcManagerStart, ChannelStatusChanged}
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
@@ -44,6 +42,7 @@ import org.acra.ACRA
 import scala.util.Try
 
 object IrcManager {
+  implicit val cm = SystemService[ConnectivityManager](Context.CONNECTIVITY_SERVICE)
   implicit val wm = SystemService[WindowManager](Context.WINDOW_SERVICE)
   implicit val TAG = LogcatTag("IrcManager")
 
@@ -111,6 +110,7 @@ class IrcManager extends EventBus.RefOwner {
   def getString(s: Int, args: Any*) = Application.context.getString(s,
     args map { _.asInstanceOf[Object] }: _*)
 
+  private var lastRunning = 0l
   private var _running = false
   private var _showing = false
   def showing = _showing
@@ -303,7 +303,6 @@ class IrcManager extends EventBus.RefOwner {
         }
         synchronized {
           disconnectCount += 1
-          d("disconnectCount: " + disconnectCount)
           notify()
         }
       }
@@ -322,6 +321,7 @@ class IrcManager extends EventBus.RefOwner {
       if ((!disconnected || showing) && !quitting) {
         i("Stopping context because all connections closed")
         _running = false
+        lastRunning = System.currentTimeMillis
       }
     }
   }
@@ -484,18 +484,32 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   val connReceiver = new BroadcastReceiver {
+    // convoluted because this broadcast gets spammed  :-/
+    // only take a real action on connectivity if net info has changed
+    case class NetInfo(typ: String, name: String)
+    // this broadcast is sticky...
+    var hasRunOnce = false
+    var lastConnectedInfo = NetInfo("", "")
     def onReceive(c: Context, intent: Intent) {
       intent.getAction match {
         case ConnectivityManager.CONNECTIVITY_ACTION =>
-          if (_running) {
-            getServers foreach (disconnect(_, None, true))
-            if (!intent.hasExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY) ||
-              !intent.getBooleanExtra(
-                ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
+          val cmm = c.systemService[ConnectivityManager]
+          val info = cmm.getActiveNetworkInfo
+          val inf = if (info != null)
+            NetInfo(info.getTypeName, info.getExtraInfo) else NetInfo("", "")
+          val connectivity = !intent.getBooleanExtra(
+            ConnectivityManager.EXTRA_NO_CONNECTIVITY, false) &&
+            info != null && info.isConnected
+          if (_running || (System.currentTimeMillis - lastRunning) < 15000) {
+            if (hasRunOnce && (!connectivity || lastConnectedInfo != inf))
+              getServers foreach (disconnect(_, None, true))
+            if (hasRunOnce && connectivity && lastConnectedInfo != inf) {
               getServers filter { _.autoconnect } foreach connect
               nm.cancel(DISCON_ID)
             }
           }
+          lastConnectedInfo = if (connectivity) inf else NetInfo("", "")
+          hasRunOnce = true
       }
     }
   }
