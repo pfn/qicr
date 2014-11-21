@@ -485,7 +485,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     val bar = getSupportActionBar
     nid = intent.getLongExtra(EXTRA_SERVER, -1)
     channel = intent.getStringExtra(EXTRA_CHANNEL)
-    if (MessageLog.channels.contains(nid -> channel.toLowerCase)) {
+    if (channel != null && MessageLog.channels.contains(nid -> channel.toLowerCase)) {
       val a = MessageLog.get(this, nid, channel)
       bar.setTitle(s"log: $channel")
       setAdapter(a)
