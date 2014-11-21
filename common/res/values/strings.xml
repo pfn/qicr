@@ -152,6 +152,7 @@
     <string name="command_kick_1">kick</string>
     <string name="command_kick_2">k</string>
     <string name="command_raw">raw</string>
+    <string name="command_clear">clear</string>
 
     <string name="settings">Settings</string>
     <string name="toggle_theme">Day/Night mode</string>
@@ -161,6 +162,7 @@
     <string name="help_text">
       available commands:\n
       /action /me\n
+      /clear\n
       /ctcp\n
       /h /help\n
       /j /join\n
@@ -175,6 +177,7 @@
     <string name="help_text_complete_TODO">
       available commands:\n
       /action /me\n
+      /clear\n
       /ctcp\n
       /h /help\n
       /ignore\n

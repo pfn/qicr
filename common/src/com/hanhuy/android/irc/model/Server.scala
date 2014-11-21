@@ -35,6 +35,8 @@ class Server extends MessageAppender with Ordered[Server]{
   import Server._
   val messages = new MessageAdapter(null)
 
+  override def clear() = messages.clear()
+
   def add(m: MessageLike) = {
     ServiceBus.send(ServerMessage(this, m))
     messages.add(m)

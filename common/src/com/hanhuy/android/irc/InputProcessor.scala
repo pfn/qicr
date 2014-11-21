@@ -514,6 +514,14 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
     override def execute(args: Option[String]) = TODO
   }
 
+  object ClearCommand extends Command {
+    override def execute(args: Option[String]): Unit = {
+      channel map { c =>
+        c.clear()
+      } getOrElse addCommandError(R.string.error_no_channel)
+    }
+  }
+
   object RawCommand extends Command {
     override def execute(args: Option[String]) {
       args map { line =>
@@ -555,5 +563,6 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
               ,(getString(R.string.command_topic),    TopicCommand)
               ,(getString(R.string.command_invite),   InviteCommand)
               ,(getString(R.string.command_raw),      RawCommand)
+              ,(getString(R.string.command_clear),    ClearCommand)
               )
 }

@@ -28,7 +28,7 @@ object QicrBuild extends android.AutoBuild {
 
   lazy val common = Project(id = "common", base = file("common")) settings(Seq(
     scalaVersion := "2.11.2",
-    scalacOptions in Compile += "-deprecation",
+    scalacOptions in Compile ++= Seq("-deprecation", "-Xexperimental"),
     javacOptions in Compile  += "-deprecation",
     unmanagedClasspath in Compile ~= { _ filterNot (
       _.data.getName startsWith "android-support-v4") },

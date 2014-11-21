@@ -42,8 +42,6 @@ import org.acra.ACRA
 import scala.util.Try
 
 object IrcManager {
-  implicit val cm = SystemService[ConnectivityManager](Context.CONNECTIVITY_SERVICE)
-  implicit val wm = SystemService[WindowManager](Context.WINDOW_SERVICE)
   implicit val TAG = LogcatTag("IrcManager")
 
   // notification IDs

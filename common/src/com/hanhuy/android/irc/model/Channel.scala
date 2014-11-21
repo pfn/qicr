@@ -58,6 +58,10 @@ extends MessageAppender with Ordered[ChannelLike] {
     var lastTs = 0l
     def isNew(m: MessageLike) = lastTs < m.ts.getTime
 
+    def clear(): Unit = {
+      messages.clear()
+    }
+
     def add(m: MessageLike) {
       if (isNew(m)) {
         messages.add(m)

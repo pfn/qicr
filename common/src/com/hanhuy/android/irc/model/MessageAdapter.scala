@@ -32,6 +32,7 @@ import macroid.FullDsl._
 
 trait MessageAppender {
   def add(m: MessageLike): Unit
+  def clear(): Unit
 }
 
 object MessageAdapter {
