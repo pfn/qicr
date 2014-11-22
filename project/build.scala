@@ -17,8 +17,6 @@ object QicrBuild extends android.AutoBuild {
     sourceGenerators in Compile <<= (sourceGenerators in Compile) (g => Seq(g.last)),
     scalaVersion := "2.11.2",
     transitiveAndroidLibs in Android := false,
-    unmanagedClasspath in Compile ~= { _ filterNot (
-      _.data.getName startsWith "android-support-v4") },
     resolvers += Resolver.sonatypeRepo("snapshots"),
     proguardOptions in Android += "-keep class android.support.v7.widget.SearchView { <init>(...); }",
     proguardCache in Android += ProguardCache("macroid") % "org.macroid",
@@ -30,7 +28,7 @@ object QicrBuild extends android.AutoBuild {
     scalaVersion := "2.11.2",
     scalacOptions in Compile ++= Seq("-deprecation", "-Xexperimental"),
     javacOptions in Compile  += "-deprecation",
-    unmanagedClasspath in Compile ~= { _ filterNot (
+    unmanagedJars in Compile ~= { _ filterNot (
       _.data.getName startsWith "android-support-v4") },
 
     resolvers += Resolver.sonatypeRepo("snapshots"),

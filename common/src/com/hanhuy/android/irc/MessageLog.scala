@@ -517,6 +517,10 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     val mode = settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
     super.onCreate(savedInstanceState)
+    import android.content.pm.ActivityInfo._
+    setRequestedOrientation(
+      if (settings.get(Settings.ROTATE_LOCK))
+        SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
 
     val bar = getSupportActionBar
     bar.setDisplayHomeAsUpEnabled(true)
