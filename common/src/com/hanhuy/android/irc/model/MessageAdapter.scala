@@ -95,7 +95,7 @@ object MessageAdapter {
             textColor(nickColor(cmd), cmd), colorNick(s))
         }
       }
-      case Topic(src, t,_) => src map { s =>
+      case Topic(src, t,_,_) => src map { s =>
         formatText(c, msg, R.string.topic_template_2,
           colorNick(s), bold(italics(channel.name)), t)
       } getOrElse {

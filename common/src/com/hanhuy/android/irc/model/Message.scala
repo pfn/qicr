@@ -31,7 +31,7 @@ object MessageLike {
     case class SslInfo(message: String, ts: Date = new Date) extends MessageLike
     case class SslError(message: String, ts: Date = new Date) extends MessageLike
     case class Motd(message: String, ts: Date = new Date) extends MessageLike
-    case class Topic(sender: Option[String], topic: String, ts: Date = new Date) extends MessageLike
+    case class Topic(sender: Option[String], topic: String, ts: Date = new Date, forceShow: Boolean = false) extends MessageLike
     case class Whois(whois: CharSequence, ts: Date = new Date) extends MessageLike
 
     // too hard to reference R.string, hardcode <> -- and *

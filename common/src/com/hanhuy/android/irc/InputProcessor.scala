@@ -450,7 +450,15 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   }
 
   object TopicCommand extends Command {
-    override def execute(args: Option[String]) = TODO
+    override def execute(args: Option[String]) {
+      channel match {
+        case Some(c: Channel) =>
+          args map { _ => TODO } getOrElse {
+            c.topic foreach (t => c.add(t.copy(forceShow = true)))
+          }
+        case _ => TODO
+      }
+    }
   }
 
   object InviteCommand extends Command {

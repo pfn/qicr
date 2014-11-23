@@ -173,6 +173,7 @@
       /raw\n
       /quit\n
       / /quote\n
+      /topic\n
     </string>
     <string name="help_text_complete_TODO">
       available commands:\n

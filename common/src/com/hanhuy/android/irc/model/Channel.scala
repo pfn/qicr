@@ -102,10 +102,23 @@ abstract class ChannelLike(val server: Server, val name: String)
 class Channel private(s: Server, n: String) extends ChannelLike(s, n) {
   import Channel._
   private var _state: State = State.NEW
+  def topic = lastTopic
+  private var lastTopic = Option.empty[Topic]
   def state = _state
   def state_=(state: State) = {
     ServiceBus.send(BusEvent.ChannelStateChanged(this, _state))
     _state = state
+  }
+
+  override def add(m: MessageLike) = m match {
+    case t@Topic(sender, topic, ts, force) =>
+      // do not repeat topic when re-connecting to a bnc
+      if (!lastTopic.exists(_.topic == topic) || force)
+        super.add(m)
+
+      lastTopic = Some(t)
+    case _ =>
+      super.add(m)
   }
 }
 class Query private(s: Server, n: String) extends ChannelLike(s, n) {
