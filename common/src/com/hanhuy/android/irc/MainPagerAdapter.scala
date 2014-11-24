@@ -203,7 +203,7 @@ with EventBus.RefOwner {
     HoneycombSupport.setSelectedNavigationItem(pos)
     HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
       t.server map { s =>
-        val chan = if (activity.settings.get(Settings.NAVIGATION_MODE) ==
+        val chan = if (Settings.get(Settings.NAVIGATION_MODE) ==
           Settings.NAVIGATION_MODE_DRAWER) " " + t.title else ""
         " - %s%s: %s" format(s.name, chan, Server.intervalString(s.currentLag))
       } orNull)

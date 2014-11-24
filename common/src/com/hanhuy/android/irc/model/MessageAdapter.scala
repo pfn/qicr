@@ -228,13 +228,12 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     if (c != null) {
       _activity = new WeakReference(c)
       IrcManager.instance foreach { manager =>
-        val s = manager.settings
         // It'd be nice to register a ServiceBus listener, but no way
         // to clean up when this adapter goes away?
         // add it to UiBus here maybe?
-        maximumSize = s.get(Settings.MESSAGE_LINES).toInt
-        showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
-        MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
+        maximumSize = Settings.get(Settings.MESSAGE_LINES).toInt
+        showJoinPartQuit = Settings.get(Settings.SHOW_JOIN_PART_QUIT)
+        MessageAdapter.showTimestamp = Settings.get(Settings.SHOW_TIMESTAMP)
       }
     }
   }

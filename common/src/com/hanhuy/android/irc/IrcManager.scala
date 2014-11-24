@@ -82,7 +82,7 @@ class IrcManager extends EventBus.RefOwner {
   IrcConnection.ABOUT = getString(R.string.version, version)
   v("Creating service")
   Widgets(Application.context) // load widgets listeners
-  val ircdebug = settings.get(Settings.IRC_DEBUG)
+  val ircdebug = Settings.get(Settings.IRC_DEBUG)
   if (ircdebug)
     IrcDebug.setLogStream(PrintStream)
   IrcDebug.setEnabled(ircdebug)
@@ -127,7 +127,7 @@ class IrcManager extends EventBus.RefOwner {
       }
     case BusEvent.PreferenceChanged(_, k) =>
       if (k == Settings.IRC_DEBUG) {
-        val debug = settings.get(Settings.IRC_DEBUG)
+        val debug = Settings.get(Settings.IRC_DEBUG)
         if (debug)
           IrcDebug.setLogStream(PrintStream)
         IrcDebug.setEnabled(debug)
@@ -158,9 +158,6 @@ class IrcManager extends EventBus.RefOwner {
   }
   // used to schedule an irc ping every 30 seconds
   lazy val handler = new Handler(handlerThread.getLooper)
-
-  lazy val config   = new Config(Application.context)
-  lazy val settings = Settings(Application.context)
 
   def connections  = mconnections
   def _connections = m_connections
@@ -236,10 +233,10 @@ class IrcManager extends EventBus.RefOwner {
         new Intent(Application.context, classOf[LifecycleService]))
 
       v("Launching autoconnect servers")
-      config.servers.foreach { s =>
+      Config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
         s.messages.maximumSize = Try(
-          settings.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
+          Settings.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
           MessageAdapter.DEFAULT_MAXIMUM_SIZE
       }
       ServiceBus.send(IrcManagerStart)
@@ -290,7 +287,7 @@ class IrcManager extends EventBus.RefOwner {
       async {
         try {
           val m = message getOrElse {
-            settings.get(Settings.QUIT_MESSAGE)
+            Settings.get(Settings.QUIT_MESSAGE)
           }
           c.disconnect(m)
         } catch {
@@ -336,10 +333,10 @@ class IrcManager extends EventBus.RefOwner {
     _running = true
   }
 
-  def getServers = config.servers
+  def getServers = Config.servers
 
   def addServer(server: Server) {
-    config.addServer(server)
+    Config.addServer(server)
     UiBus.send(BusEvent.ServerAdded(server))
   }
 
@@ -408,12 +405,12 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   def updateServer(server: Server) = {
-    config.updateServer(server)
+    Config.updateServer(server)
     UiBus.send(BusEvent.ServerChanged(server))
   }
 
   def deleteServer(server: Server) {
-    config.deleteServer(server)
+    Config.deleteServer(server)
     UiBus.send(BusEvent.ServerRemoved(server))
   }
 
@@ -654,7 +651,7 @@ class IrcManager extends EventBus.RefOwner {
         if (Build.VERSION.SDK_INT < 11) intent else chatIntent,
         PendingIntent.FLAG_UPDATE_CURRENT)).build
 
-      if (Build.VERSION.SDK_INT >= 16 && settings.get(Settings.RUNNING_NOTIFICATION)) {
+      if (Build.VERSION.SDK_INT >= 16 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
         val title = c.name
         val msgs = if (c.messages.filteredMessages.size > 0) {
           TextUtils.concat(

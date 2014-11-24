@@ -388,7 +388,7 @@ class ChannelFragment(_channel: Option[Channel])
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) = {
     inflater.inflate(R.menu.channel_menu, menu)
-    if (!getActivity.settings.get(Settings.IRC_LOGGING)) {
+    if (!Settings.get(Settings.IRC_LOGGING)) {
       val item = menu.findItem(R.id.channel_log)
       item.setVisible(false)
     }
@@ -406,7 +406,7 @@ class ChannelFragment(_channel: Option[Channel])
     }
     if (R.id.channel_close == item.getItemId) {
       val activity = getActivity
-      val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
+      val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
 
       channel foreach { c =>
         def removeChannel() {
@@ -459,7 +459,7 @@ class QueryFragment(_query: Option[Query]) extends MessagesFragment {
   }
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) = {
     inflater.inflate(R.menu.query_menu, menu)
-    if (!getActivity.settings.get(Settings.IRC_LOGGING)) {
+    if (!Settings.get(Settings.IRC_LOGGING)) {
       val item = menu.findItem(R.id.channel_log)
       item.setVisible(false)
     }
@@ -468,7 +468,7 @@ class QueryFragment(_query: Option[Query]) extends MessagesFragment {
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
     if (R.id.query_close == item.getItemId) {
       val activity = getActivity
-      val prompt = activity.settings.get(Settings.CLOSE_TAB_PROMPT)
+      val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
       def removeQuery() {
         manager.remove(query.get)
         activity.adapter.removeTab(activity.adapter.getItemPosition(this))
@@ -692,7 +692,7 @@ with EventBus.RefOwner with Contexts[Fragment] {
       tx.addToBackStack(SERVER_SETUP_STACK)
       tx.commit() // can't commit a show
     } else {
-      val m = activity.settings.get(Settings.DAYNIGHT_MODE)
+      val m = Settings.get(Settings.DAYNIGHT_MODE)
       fragment.setStyle(DialogFragment.STYLE_NO_TITLE,
         if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
       fragment.show(tx, SERVER_SETUP_FRAGMENT)

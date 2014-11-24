@@ -60,14 +60,19 @@ object Settings {
     AndroidConversions.honeycombAndNewer)
   val DAYNIGHT_MODE = Setting[Boolean]("ui_daynight_mode", false)
 
-  def apply(c: Context) = {
-    new Settings(c.getApplicationContext)
+
+  private lazy val instance = new Settings
+
+  def get[A](setting: Setting[A])(implicit m: ClassTag[A]): A =
+    instance.get(setting)
+  def set[A](setting: Setting[A], value: A)(implicit m: ClassTag[A]): Unit = {
+    instance.set(setting, value)
   }
 }
 
-class Settings(val context: Context)
+class Settings private()
 extends SharedPreferences.OnSharedPreferenceChangeListener {
-    val p = PreferenceManager.getDefaultSharedPreferences(context)
+    val p = PreferenceManager.getDefaultSharedPreferences(Application.context)
     p.registerOnSharedPreferenceChangeListener(this)
 
     override def onSharedPreferenceChanged(p: SharedPreferences, key: String) {
@@ -80,7 +85,7 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
   def get[A](setting: Setting[A])(implicit m: ClassTag[A]): A = {
     val result = if (classOf[String] == m.runtimeClass) {
       val default: String = setting.defaultRes map {
-        context.getString
+        Application.context.getString
       } getOrElse setting.default.asInstanceOf[String]
       p.getString(setting.key, default)
     } else if (classOf[Boolean] == m.runtimeClass) {

@@ -50,7 +50,7 @@ abstract class InputProcessor(activity: Activity) {
       val line = input.getText
       handleLine(line)
       clear(input)
-      !manager.settings.get(Settings.HIDE_KEYBOARD)
+      !Settings.get(Settings.HIDE_KEYBOARD)
     } else
       false
   }

@@ -163,7 +163,7 @@ object MessageLog {
   def get(c: Activity, serverId: Long, channel: String, query: String): LogAdapter =
     instance.get(c, serverId, channel, query)
 
-  def log(m: MessageLike, c: ChannelLike) = if (settings.get(Settings.IRC_LOGGING))
+  def log(m: MessageLike, c: ChannelLike) = if (Settings.get(Settings.IRC_LOGGING))
     handler.post { () => instance.log(m, c) }
 
   lazy val handlerThread = {
@@ -173,7 +173,6 @@ object MessageLog {
   }
   // used to schedule an irc ping every 30 seconds
   lazy val handler = new Handler(handlerThread.getLooper)
-  lazy val settings = Settings(Application.context)
   private val instance = new MessageLog(Application.context)
 
   def networks = instance.networks
@@ -514,12 +513,12 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
   }
 
   override def onCreate(savedInstanceState: Bundle) = {
-    val mode = settings.get(Settings.DAYNIGHT_MODE)
+    val mode = Settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
     super.onCreate(savedInstanceState)
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
-      if (settings.get(Settings.ROTATE_LOCK))
+      if (Settings.get(Settings.ROTATE_LOCK))
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
 
     val bar = getSupportActionBar

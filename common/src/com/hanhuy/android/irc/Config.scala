@@ -40,34 +40,71 @@ object Config {
   val FIELD_SASLUSER    = "sasluser"
   val FIELD_SASLPASS    = "saslpass"
 
-  val TABLE_SERVERS_DDL = "CREATE TABLE " + TABLE_SERVERS + " (" +
-    BaseColumns._ID   + " INTEGER PRIMARY KEY, " +
-    FIELD_NAME        + " TEXT NOT NULL, " +
-    FIELD_AUTOCONNECT + " INTEGER NOT NULL, " +
-    FIELD_HOSTNAME    + " TEXT NOT NULL, " +
-    FIELD_PORT        + " INTEGER NOT NULL, " +
-    FIELD_SSL         + " INTEGER NOT NULL, " +
-    FIELD_LOGGING     + " INTEGER NOT NULL, " +
-    FIELD_NICKNAME    + " TEXT NOT NULL, " +
-    FIELD_ALTNICK     + " TEXT NOT NULL, " +
-    FIELD_USERNAME    + " TEXT NOT NULL, " +
-    FIELD_PASSWORD    + " TEXT, " +
-    FIELD_REALNAME    + " TEXT NOT NULL, " +
-    FIELD_AUTOJOIN    + " TEXT, " +
-    FIELD_AUTORUN     + " TEXT, " +
-    FIELD_USESOCKS    + " INTEGER NOT NULL, " +
-    FIELD_SOCKSHOST   + " TEXT, " +
-    FIELD_SOCKSPORT   + " INTEGER, " +
-    FIELD_SOCKSUSER   + " TEXT, " +
-    FIELD_SOCKSPASS   + " TEXT, " +
-    FIELD_USESASL     + " INTEGER NOT NULL, " +
-    FIELD_SASLUSER    + " TEXT, " +
-    FIELD_SASLPASS    + " TEXT " +
-  ");"
+  val TABLE_SERVERS_DDL =
+    s"""
+       |CREATE TABLE $TABLE_SERVERS  (
+       |  ${BaseColumns._ID}  INTEGER PRIMARY KEY,
+       |  $FIELD_NAME         TEXT NOT NULL,
+       |  $FIELD_AUTOCONNECT  INTEGER NOT NULL,
+       |  $FIELD_HOSTNAME     TEXT NOT NULL,
+       |  $FIELD_PORT         INTEGER NOT NULL,
+       |  $FIELD_SSL          INTEGER NOT NULL,
+       |  $FIELD_LOGGING      INTEGER NOT NULL,
+       |  $FIELD_NICKNAME     TEXT NOT NULL,
+       |  $FIELD_ALTNICK      TEXT NOT NULL,
+       |  $FIELD_USERNAME     TEXT NOT NULL,
+       |  $FIELD_PASSWORD     TEXT,
+       |  $FIELD_REALNAME     TEXT NOT NULL,
+       |  $FIELD_AUTOJOIN     TEXT,
+       |  $FIELD_AUTORUN      TEXT,
+       |  $FIELD_USESOCKS     INTEGER NOT NULL,
+       |  $FIELD_SOCKSHOST    TEXT,
+       |  $FIELD_SOCKSPORT    INTEGER,
+       |  $FIELD_SOCKSUSER    TEXT,
+       |  $FIELD_SOCKSPASS    TEXT,
+       |  $FIELD_USESASL      INTEGER NOT NULL,
+       |  $FIELD_SASLUSER     TEXT,
+       |  $FIELD_SASLPASS     TEXT
+       |);
+     """.stripMargin
+
+  val TABLE_IGNORES = "ignores"
+  val TABLE_IGNORES_DDL =
+    s"""
+       |CREATE TABLE $TABLE_IGNORES (
+       |  $FIELD_NICKNAME TEXT NOT NULL,
+       |  CONSTRAINT unq_ignore UNIQUE ($FIELD_NICKNAME)
+       |);
+     """.stripMargin
+
+  object Ignores {
+    var _ignored = Set.empty[String]
+    def ignored = _ignored
+    def ignored_+=(n: String) = {
+      val newIgnores = _ignored + n
+      val diff = newIgnores -- _ignored
+      _ignored = newIgnores
+      ()
+    }
+  }
+
+  val addServer    = instance.addServer _
+  val updateServer = instance.updateServer _
+  val deleteServer = instance.deleteServer _
+
+  def servers = instance.servers
+
+  private lazy val instance = new Config
 }
-class Config(context: Context)
-extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
-  override def onCreate(db: SQLiteDatabase) = db.execSQL(TABLE_SERVERS_DDL)
+class Config private()
+extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERSION) {
+  override def onCreate(db: SQLiteDatabase) = {
+    db.beginTransaction()
+    db.execSQL(TABLE_SERVERS_DDL)
+    db.execSQL(TABLE_IGNORES_DDL)
+    db.setTransactionSuccessful()
+    db.endTransaction()
+  }
   override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) = ()
 
   private var _servers = listServers
@@ -115,7 +152,7 @@ extends SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
       list
     } catch {
       case e: Exception =>
-        Toast.makeText(context,
+        Toast.makeText(Application.context,
           "Failed to open database", Toast.LENGTH_LONG).show()
         Log.e(TAG, "Unable to open database", e)
         Seq.empty[Server]

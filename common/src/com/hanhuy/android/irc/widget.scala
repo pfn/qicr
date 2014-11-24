@@ -36,8 +36,6 @@ object Widgets extends EventBus.RefOwner {
   val PID_GO_PREV = 5
   val PID_CHAT = 6
 
-  lazy val settings = Settings(Application.context)
-
   ServiceBus += {
     case ChannelStatusChanged(_)   => updateStatusWidget()
     case ServerMessage(server, _)  => updateMessageWidget(server)
@@ -64,11 +62,11 @@ object Widgets extends EventBus.RefOwner {
   }
 
   def ids: Array[Int] = {
-    val _ids = settings.get(Settings.WIDGET_IDS)
+    val _ids = Settings.get(Settings.WIDGET_IDS)
 
     if (_ids.length == 0) Array.empty else _ids.split(",") map (_.toInt)
   }
-  def ids_= (ids: Array[Int]) = settings.set(
+  def ids_= (ids: Array[Int]) = Settings.set(
     Settings.WIDGET_IDS, ids mkString ",")
 
   def setMessageView(c: Context, id: Int, subject: String,
@@ -290,9 +288,9 @@ class WidgetProvider extends AppWidgetProvider {
   }
 
   def nextPrevMessages(c: Context, intent: Intent, direction: Int) {
-    val manager = IrcManager.instance.get
-    def all = manager.channels.keys.toList.sortWith(_<_).groupBy(_.server)
-      .toList.sortWith(_._1<_._1) flatMap { case (k,v) => k :: v }
+    val manager = IrcManager.start()
+    def all = manager.channels.keys.toList.sortWith(_ < _).groupBy(_.server)
+      .toList.sortWith(_._1 < _._1) flatMap { case (k, v) => k :: v}
 
     val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
     val m = Widgets.appenderForSubject(subject).get
@@ -527,7 +525,6 @@ extends Activity with TypedActivity with Contexts[Activity] {
   import x._
   lazy val input = findView(TR.input)
   lazy val list = findView(TR.message_list)
-  lazy val settings = IrcManager.instance.get.settings
   private var proc: InputProcessor = _
 
   private def withAppender[A](f: MessageAppender => A): Option[A] = {
@@ -586,10 +583,10 @@ extends Activity with TypedActivity with Contexts[Activity] {
               Toast.LENGTH_SHORT).show()
         }
       }
-      if (!settings.get(Settings.SHOW_NICK_COMPLETE))
+      if (!Settings.get(Settings.SHOW_NICK_COMPLETE))
         complete.setVisibility(View.GONE)
 
-      if (!settings.get(Settings.SHOW_SPEECH_REC))
+      if (!Settings.get(Settings.SHOW_SPEECH_REC))
         speechrec.setVisibility(View.GONE)
     } getOrElse {
       Toast.makeText(this, "Channel cannot be found", Toast.LENGTH_SHORT).show()
@@ -612,8 +609,8 @@ extends Activity with TypedActivity with Contexts[Activity] {
       return
     }
 
-    val eol = settings.get(Settings.SPEECH_REC_EOL)
-    val clearLine = settings.get(Settings.SPEECH_REC_CLEAR_LINE)
+    val eol = Settings.get(Settings.SPEECH_REC_EOL)
+    val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
 
     results find { r => r == eol || r == clearLine } match {
       case Some(c) =>

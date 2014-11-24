@@ -169,32 +169,27 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   import _richactivity.{findView => _, _}
   val _typedactivity: TypedViewHolder = this; import _typedactivity._
 
-  lazy val settings = {
-    val s = Settings(this)
-    UiBus += { case BusEvent.PreferenceChanged(_, key) =>
-      List(Settings.SHOW_NICK_COMPLETE,
-        Settings.SHOW_SPEECH_REC,
-        Settings.NAVIGATION_MODE) foreach { r =>
-        if (r == key) {
-          r match {
+  UiBus += { case BusEvent.PreferenceChanged(_, key) =>
+    List(Settings.SHOW_NICK_COMPLETE,
+      Settings.SHOW_SPEECH_REC,
+      Settings.NAVIGATION_MODE) foreach { r =>
+      if (r == key) {
+        r match {
           case Settings.SHOW_NICK_COMPLETE =>
-            showNickComplete = s.get(Settings.SHOW_NICK_COMPLETE)
+            showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
           case Settings.SHOW_SPEECH_REC =>
-            showSpeechRec = s.get(Settings.SHOW_SPEECH_REC)
+            showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
           case Settings.NAVIGATION_MODE =>
-             // flag recreate onResume
+            // flag recreate onResume
             toggleSelectorMode = true
-          }
         }
       }
     }
-    showNickComplete = s.get(Settings.SHOW_NICK_COMPLETE)
-    showSpeechRec = s.get(Settings.SHOW_SPEECH_REC)
-    s
   }
+  private var showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
+  private var showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
+
   private var toggleSelectorMode = false
-  private var showNickComplete = false
-  private var showSpeechRec = false
 
   lazy val drawerToggle = new ActionBarDrawerToggle(this,
     drawer, R.string.app_name, R.string.app_name)
@@ -230,7 +225,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     getWindow.setSoftInputMode(
       WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
     manager = IrcManager.start()
-    val mode = settings.get(Settings.DAYNIGHT_MODE)
+    val mode = Settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
@@ -288,7 +283,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     channels.setAdapter(adapter.DropDownAdapter)
 
     HoneycombSupport.init(this)
-    settings.get(Settings.NAVIGATION_MODE) match {
+    Settings.get(Settings.NAVIGATION_MODE) match {
       case Settings.NAVIGATION_MODE_DROPDOWN =>
         HoneycombSupport.setupSpinnerNavigation(adapter)
         drawer.setDrawerLockMode(
@@ -304,13 +299,13 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
-      if (settings.get(Settings.ROTATE_LOCK))
+      if (Settings.get(Settings.ROTATE_LOCK))
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
   }
 
   override def onPostCreate(savedInstanceState: Bundle) {
     super.onPostCreate(savedInstanceState)
-    val nav = settings.get(Settings.NAVIGATION_MODE)
+    val nav = Settings.get(Settings.NAVIGATION_MODE)
     getSupportActionBar.setDisplayShowHomeEnabled(true)
     if (nav == Settings.NAVIGATION_MODE_DRAWER) {
       getSupportActionBar.setDisplayHomeAsUpEnabled(true)
@@ -335,8 +330,8 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
       return
     }
 
-    val eol = settings.get(Settings.SPEECH_REC_EOL)
-    val clearLine = settings.get(Settings.SPEECH_REC_CLEAR_LINE)
+    val eol = Settings.get(Settings.SPEECH_REC_EOL)
+    val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
 
     results find { r => r == eol || r == clearLine } match {
     case Some(c) =>
@@ -382,7 +377,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     nm.cancel(IrcManager.PRIVMSG_ID)
     nm.cancel(IrcManager.RUNNING_ID)
     if (toggleSelectorMode) {
-      val newnav = settings.get(Settings.NAVIGATION_MODE)
+      val newnav = Settings.get(Settings.NAVIGATION_MODE)
       val isDropNav = HoneycombSupport.isSpinnerNavigation
       if ((isDropNav && newnav != Settings.NAVIGATION_MODE_DROPDOWN) ||
           (!isDropNav && newnav == Settings.NAVIGATION_MODE_DROPDOWN)) {
@@ -579,7 +574,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   override def onCreateOptionsMenu(menu: Menu): Boolean = {
     getMenuInflater.inflate(R.menu.main_menu, menu)
     val item = menu.findItem(R.id.toggle_rotate_lock)
-    val locked = settings.get(Settings.ROTATE_LOCK)
+    val locked = Settings.get(Settings.ROTATE_LOCK)
     item.setChecked(locked)
     true
   }
@@ -602,15 +597,15 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
       startActivity(intent)
       true
     case R_id_toggle_theme =>
-      val mode = settings.get(Settings.DAYNIGHT_MODE)
-      settings.set(Settings.DAYNIGHT_MODE, !mode)
+      val mode = Settings.get(Settings.DAYNIGHT_MODE)
+      Settings.set(Settings.DAYNIGHT_MODE, !mode)
       _recreate()
       true
     case R_id_toggle_rotate_lock =>
       import android.content.pm.ActivityInfo._
       val locked = !item.isChecked
       item.setChecked(locked)
-      settings.set(Settings.ROTATE_LOCK, locked)
+      Settings.set(Settings.ROTATE_LOCK, locked)
       setRequestedOrientation(
         if (locked) SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
       true
@@ -629,7 +624,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   }
 
   def exit(message: Option[String] = None) {
-    val prompt = settings.get(Settings.QUIT_PROMPT)
+    val prompt = Settings.get(Settings.QUIT_PROMPT)
     if (IrcManager.instance.exists (_.connected) && prompt) {
       val builder = new AlertDialog.Builder(this)
       builder.setTitle(R.string.quit_confirm_title)
