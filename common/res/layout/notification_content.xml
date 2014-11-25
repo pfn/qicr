@@ -2,7 +2,7 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
              android:layout_width="match_parent"
-             android:background="@drawable/widget_background"
+             android:background="@drawable/notification_background"
              android:orientation="vertical"
              android:layout_height="256dp">
 
