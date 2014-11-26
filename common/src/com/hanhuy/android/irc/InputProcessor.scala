@@ -519,7 +519,41 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   }
 
   object IgnoreCommand extends Command {
-    override def execute(args: Option[String]) = TODO
+    override def execute(args: Option[String]) = {
+      args map { toIgnore =>
+        toIgnore.trim.split("\\s+") foreach { i =>
+          Config.Ignores += i
+
+          addCommandError(getString(R.string.ignore_add_prefix, i))
+        }
+
+        ()
+      } getOrElse {
+        if (Config.Ignores.isEmpty)
+          addCommandError(R.string.error_ignores_empty)
+        else {
+          addCommandError(getString(R.string.ignore_list_prefix,
+            Config.Ignores map ( "  " + _ ) mkString "\n"))
+        }
+        ()
+      }
+    }
+  }
+
+  object UnignoreCommand extends Command {
+    override def execute(args: Option[String]) = {
+      args map { toUnignore =>
+        toUnignore.trim.split("\\s+") foreach { i =>
+          Config.Ignores -= i
+
+          addCommandError(getString(R.string.ignore_remove_prefix, i))
+        }
+
+        ()
+      } getOrElse {
+        addCommandError(R.string.usage_unignore)
+      }
+    }
   }
 
   object ClearCommand extends Command {
@@ -547,6 +581,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   }
 
   val commands = Map((getString(R.string.command_ignore),   IgnoreCommand)
+              ,(getString(R.string.command_unignore), UnignoreCommand)
               ,(getString(R.string.command_whowas),   WhowasCommand)
               ,(getString(R.string.command_whois_1),  WhoisCommand)
               ,(getString(R.string.command_whois_2),  WhoisCommand)

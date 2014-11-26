@@ -354,27 +354,29 @@ class IrcManager extends EventBus.RefOwner {
                sending: Boolean = false, action: Boolean = false,
                notice: Boolean = false, ts: Date = new Date) {
     val server = _connections.getOrElse(c, { return })
-
-    val query = queries.getOrElse((server, _nick.toLowerCase), {
-      val q = Query(server, _nick)
-      queries += (((server, _nick.toLowerCase),q))
-      q
-    })
-    mchannels += ((query,null))
-
     val nick = if (sending) server.currentNick else _nick
 
-    UiBus.run {
-      val m = if (notice) Notice(nick, msg, ts)
-      else if (action) CtcpAction(nick, msg, ts)
-      else Privmsg(nick, msg, ts = ts)
-      UiBus.send(BusEvent.PrivateMessage(query, m))
-      ServiceBus.send(BusEvent.PrivateMessage(query, m))
+    if (!Config.Ignores(nick)) {
+      val query = queries.getOrElse((server, _nick.toLowerCase), {
+        val q = Query(server, _nick)
+        queries += (((server, _nick.toLowerCase), q))
+        q
+      })
+      mchannels += ((query, null))
 
-      query.add(m)
-      if (!showing)
-        showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
-          m.toString, Some(query))
+
+      UiBus.run {
+        val m = if (notice) Notice(nick, msg, ts)
+        else if (action) CtcpAction(nick, msg, ts)
+        else Privmsg(nick, msg, ts = ts)
+        UiBus.send(BusEvent.PrivateMessage(query, m))
+        ServiceBus.send(BusEvent.PrivateMessage(query, m))
+
+        query.add(m)
+        if (!showing)
+          showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
+            m.toString, Some(query))
+      }
     }
   }
 

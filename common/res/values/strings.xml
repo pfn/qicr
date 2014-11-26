@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ignore">Ignore</string>
     <string name="open">Open</string>
     <string name="prev">Prev</string>
     <string name="next">Next</string>
@@ -74,6 +75,7 @@
     <string name="query_close_confirm">
         Are you sure you would like to close and leave this query?</string>
 
+    <string name="usage_unignore">Usage: /unignore &lt;nicks...&gt;</string>
     <string name="usage_raw">Usage: /raw &lt;raw command&gt;</string>
     <string name="usage_nick">Usage: /nick &lt;nick&gt;</string>
     <string name="usage_join">Usage: /join &lt;channel&gt; [password]</string>
@@ -103,7 +105,6 @@
     <string name="ctcp_request_template" formatted="false">
         [ctcp(%1)] %2 %3</string>
 
-    <!-- TODO colorize? -->
     <string name="nick_change_template" formatted="false">
         -!- %1 is now known as %2</string>
     <string name="join_template" formatted="false">
@@ -120,6 +121,10 @@
     <string name="topic_template_2" formatted="false">
         *** %1 changed the topic of %2 to: %3</string>
 
+    <string name="ignore_remove_prefix">Unignoring: %s</string>
+    <string name="ignore_add_prefix">Ignoring: %s</string>
+    <string name="ignore_list_prefix">Ignored:\n%s</string>
+    <string name="error_ignores_empty">Ignore list empty</string>
     <string name="error_no_channel">
         You are not on a channel or query, try /help</string>
     <string name="error_server_disconnected">You are not connected</string>
@@ -147,6 +152,7 @@
     <string name="command_whois_1">whois</string>
     <string name="command_whois_2">wi</string>
     <string name="command_ignore">ignore</string>
+    <string name="command_unignore">unignore</string>
     <string name="command_nick">nick</string>
     <string name="command_ctcp">ctcp</string>
     <string name="command_kick_1">kick</string>
@@ -165,6 +171,7 @@
       /clear\n
       /ctcp\n
       /h /help\n
+      /ignore\n
       /j /join\n
       /m /msg\n
       /nick\n
@@ -174,6 +181,7 @@
       /quit\n
       / /quote\n
       /topic\n
+      /unignore\n
     </string>
     <string name="help_text_complete_TODO">
       available commands:\n

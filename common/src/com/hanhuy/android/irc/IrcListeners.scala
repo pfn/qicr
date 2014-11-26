@@ -122,7 +122,7 @@ with ServerEventListener with MessageEventListener {
   }
   override def onDisconnect(c: IrcConnection) {
 //    Log.w(TAG, "Connection dropped: " + c, new StackTrace)
-    manager._connections.get(c) foreach { manager.serverDisconnected }
+    manager._connections.get(c) foreach manager.serverDisconnected
   }
   override def onInvite(c: IrcConnection, src: User, user: User,
                         channel: Channel) { }

@@ -124,7 +124,7 @@ object HoneycombSupport {
 
   def startNickActionMode(nick: String)(f: (MenuItem => Unit)) {
     NickListActionModeSetup.callback = f
-    NickListActionModeSetup.nick = nick
+    NickListActionModeSetup.nick = nick.dropWhile(n => Set(' ','@','+')(n))
     _actionmode = new WeakReference(
       activity.startSupportActionMode(NickListActionModeSetup))
   }
@@ -143,13 +143,11 @@ object HoneycombSupport {
       val inflater = new MenuInflater(activity)
       inflater.inflate(R.menu.nicklist_menu, menu)
       mode.setTitle(nick)
-      /*
-      List(R.id.nick_insert,
-        R.id.nick_start_chat).foreach(i =>
-          MenuItemCompat.setShowAsAction(menu.findItem(i),
-            MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT)
-        )
-        */
+      val item = menu.findItem(R.id.nick_ignore)
+      item.setIcon(if (Config.Ignores(nick))
+        R.drawable.ic_menu_end_conversation_on
+      else
+        R.drawable.ic_menu_end_conversation)
       true
     }
 

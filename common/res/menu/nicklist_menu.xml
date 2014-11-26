@@ -9,8 +9,10 @@
           qicr:showAsAction="ifRoom|withText"
           android:icon="@drawable/ic_menu_start_conversation"
           android:title="@string/nick_start_chat"/>
-    <item android:id="@+id/nick_insert"
-        android:icon="@drawable/ic_menu_paste"
-        qicr:showAsAction="ifRoom|withText"
-        android:title="@string/nick_insert"/>
+    <item android:id="@+id/nick_ignore"
+          qicr:showAsAction="ifRoom|withText"
+          android:checkable="true"
+          android:checked="true"
+          android:icon="@drawable/ic_menu_end_conversation"
+          android:title="@string/ignore"/>
 </menu>

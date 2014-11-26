@@ -522,23 +522,24 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
           nick += (if (cursor == 0) ", " else " ")
           input.getText.insert(cursor, nick)
         }
-        nicks.setOnItemClickListener {
-          (pos: Int) =>
+        nicks.setOnItemClickListener { (pos: Int) =>
             HoneycombSupport.startNickActionMode(
               nicks.getAdapter.getItem(pos).toString) { item: MenuItem =>
               // TODO refactor this callback (see messageadapter)
-              val R_id_nick_insert = R.id.nick_insert
               val R_id_nick_start_chat = R.id.nick_start_chat
               val R_id_nick_whois = R.id.nick_whois
-              var nick = nicks.getAdapter.getItem(pos).toString
-              val ch = nick.charAt(0)
-              if (ch == '@' || ch == '+')
-                nick = nick.substring(1)
+              val R_id_nick_ignore = R.id.nick_ignore
+              val nick = nicks.getAdapter.getItem(pos).toString.dropWhile(n => Set(' ','@','+')(n))
               item.getItemId match {
                 case R_id_nick_whois =>
                   proc.processor.channel = manager.lastChannel
                   proc.processor.WhoisCommand.execute(Some(nick))
-                case R_id_nick_insert => insertNick(pos)
+                case R_id_nick_ignore => ()
+                  proc.processor.channel = manager.lastChannel
+                  if (Config.Ignores(nick))
+                    proc.processor.UnignoreCommand.execute(Some(nick))
+                  else
+                    proc.processor.IgnoreCommand.execute(Some(nick))
                 case R_id_nick_start_chat =>
                   c.channel.foreach { ch =>
                     manager.startQuery(ch.server, nick)

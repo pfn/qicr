@@ -333,24 +333,24 @@ case class NickClick(nick: String) extends ClickableSpan {
   def onClick(v: View) {
     v.getContext match {
       case a: MainActivity =>
-        def insertNick() {
-          val cursor = a.input.getSelectionStart
-          // TODO make ", " a preference
-          a.input.getText.insert(cursor,
-            nick + (if (cursor == 0) ", " else " "))
-        }
         // TODO refactor this callback
         HoneycombSupport.startNickActionMode(nick) { item =>
           val manager = IrcManager.instance.get
-          val R_id_nick_insert = R.id.nick_insert
           val R_id_nick_start_chat = R.id.nick_start_chat
           val R_id_nick_whois = R.id.nick_whois
+          val R_id_nick_ignore = R.id.nick_ignore
           item.getItemId match {
             case R_id_nick_whois =>
               val proc = CommandProcessor(a, null)
               proc.channel = manager.lastChannel
               proc.WhoisCommand.execute(Some(nick))
-            case R_id_nick_insert => insertNick()
+            case R_id_nick_ignore => ()
+              val proc = CommandProcessor(a, null)
+              proc.channel = manager.lastChannel
+              if (Config.Ignores(nick))
+                proc.UnignoreCommand.execute(Some(nick))
+              else
+                proc.IgnoreCommand.execute(Some(nick))
             case R_id_nick_start_chat =>
               manager.startQuery(manager.lastChannel.get.server, nick)
           }

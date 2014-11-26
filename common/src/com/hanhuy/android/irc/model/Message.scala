@@ -78,6 +78,7 @@ object BusEvent {
   case class ChannelStateChanged(channel: Channel, oldstate: Channel.State)
     extends BusEvent
   case class NickListChanged(channel: Channel) extends BusEvent
+  case object IgnoreListChanged extends BusEvent
   case class NickChanged(channel: Channel, oldnick: String, newnick: String)
   extends BusEvent
   case class ChannelAdded(channel: Channel) extends BusEvent

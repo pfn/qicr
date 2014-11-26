@@ -447,7 +447,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
       tweak { tv: TextView =>
         tv.setGravity(Gravity.CENTER)
-        tv.setTextAppearance(this, android.R.attr.textAppearanceMedium)
+        tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
       } <~ text(R.string.no_messages) <~ kitkatPadding,
     w[ListView] <~ id(R.id.message_list) <~ wire(listview) <~
       lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~

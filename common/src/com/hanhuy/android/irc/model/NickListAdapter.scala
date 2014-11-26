@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc.model
 
 import android.graphics.Color
+import android.text.style.StrikethroughSpan
 import com.hanhuy.android.irc._
 import com.hanhuy.android.common.{R => _, _}
 import SpannedGenerator._
@@ -11,7 +12,7 @@ import android.widget.{AbsListView, BaseAdapter, TextView}
 import scala.collection.JavaConversions._
 
 import com.sorcix.sirc.{Channel => SircChannel}
-import com.hanhuy.android.irc.model.BusEvent.NickListChanged
+import com.hanhuy.android.irc.model.BusEvent.{IgnoreListChanged, NickListChanged}
 import scala.ref.WeakReference
 import AndroidConversions._
 
@@ -76,20 +77,19 @@ extends BaseAdapter with EventBus.RefOwner {
         case (_,_) => a.nick.compareToIgnoreCase(b.nick) < 0
       }
     }.map { n =>
-      "%1%2" formatSpans (String.valueOf(n.mode),
-        textColor(MessageAdapter.nickColor(n.nick), n.nick))
+      val colored = textColor(MessageAdapter.nickColor(n.nick), n.nick)
+      val s = if (Config.Ignores(n.nick))
+        span(new StrikethroughSpan, colored) else colored
+
+      "%1%2" formatSpans (String.valueOf(n.mode), s)
     }
     super.notifyDataSetChanged()
   }
 
-  override def getItemId(pos: Int) : Long = pos
+  override def getItemId(pos: Int) = pos
   override def getItem(pos: Int) = nicks(pos)
   override def getCount : Int = if (nicks != null) nicks.size else 0
-  override def getView(pos: Int, convertView: View, container: ViewGroup) :
-  View = createViewFromResource(pos, convertView, container)
-
-  private def createViewFromResource(
-                                      pos: Int, convertView: View, container: ViewGroup): View = {
+  override def getView(pos: Int, convertView: View, container: ViewGroup) = {
     val c = convertView.asInstanceOf[TextView]
     val view = if (c != null) c else getUi(layout)
 
@@ -99,5 +99,6 @@ extends BaseAdapter with EventBus.RefOwner {
 
   UiBus += {
     case NickListChanged(ch) => if (ch == channel) notifyDataSetChanged()
+    case IgnoreListChanged => notifyDataSetChanged()
   }
 }

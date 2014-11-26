@@ -1,20 +1,22 @@
 package com.hanhuy.android.irc
 
+import android.content.ContentValues
+import com.hanhuy.android.common.{UiBus, LogcatTag, RichLogger}
+import com.hanhuy.android.irc.model.BusEvent.IgnoreListChanged
 import com.hanhuy.android.irc.model.Server
 
-import android.content.Context
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
-import android.util.Log
 import android.widget.Toast
+import RichLogger._
 
 import Config._
 
 object Config {
-  val TAG = "QicrConfig"
+  implicit val TAG = LogcatTag("QicrConfig")
   // TODO encrypt the password with pbkdf2 on primary account username + salt
-  val DATABASE_VERSION = 1
+  val DATABASE_VERSION = 2
   val DATABASE_NAME = "config"
   val TABLE_SERVERS = "servers"
 
@@ -78,13 +80,36 @@ object Config {
      """.stripMargin
 
   object Ignores {
-    var _ignored = Set.empty[String]
-    def ignored = _ignored
-    def ignored_+=(n: String) = {
-      val newIgnores = _ignored + n
-      val diff = newIgnores -- _ignored
-      _ignored = newIgnores
-      ()
+    private lazy val initialIgnores = instance.listIgnores
+    private var _ignored = Option.empty[Set[String]]
+    private def ignored = _ignored getOrElse initialIgnores
+
+    def size = ignored.size
+    def isEmpty = ignored.isEmpty
+    def mkString(s: String) = ignored.mkString(s)
+    def map[A](f: String => A) = ignored.map(f)
+
+    def apply(s: String) = ignored.apply(s)
+
+    def +=(n: String) = {
+      val newIgnores = ignored + n
+      val change = newIgnores -- ignored
+      instance.addIgnores(change)
+      _ignored = Some(newIgnores)
+      UiBus.send(IgnoreListChanged)
+    }
+
+    def -=(n: String) = {
+      val newIgnores = ignored - n
+      val changed = ignored -- newIgnores
+      instance.deleteIgnores(changed)
+      _ignored = Some(newIgnores)
+      UiBus.send(IgnoreListChanged)
+    }
+
+    def clear(): Unit = {
+      instance.deleteIgnores(ignored)
+      _ignored = Some(Set.empty)
     }
   }
 
@@ -105,7 +130,22 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     db.setTransactionSuccessful()
     db.endTransaction()
   }
-  override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) = ()
+  val UPGRADES: Map[Int,Seq[String]] = Map(
+    2 -> Seq(TABLE_IGNORES_DDL)
+  )
+
+  override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) {
+    if (oldv < newv) {
+      db.beginTransaction()
+      Range(oldv, newv + 1) foreach { v =>
+        d("Upgrading to: " + v)
+        UPGRADES.getOrElse(v, Seq.empty) foreach db.execSQL
+      }
+
+      db.setTransactionSuccessful()
+      db.endTransaction()
+    }
+  }
 
   private var _servers = listServers
   def servers = _servers
@@ -151,10 +191,10 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       db.close()
       list
     } catch {
-      case e: Exception =>
+      case x: Exception =>
         Toast.makeText(Application.context,
           "Failed to open database", Toast.LENGTH_LONG).show()
-        Log.e(TAG, "Unable to open database", e)
+        e("Unable to open database", x)
         Seq.empty[Server]
     }
   }
@@ -175,7 +215,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       BaseColumns._ID + " = ?", Array[String]("" + server.id))
     db.close()
     if (rows != 1)
-      Log.e(TAG, "Wrong rows updated: " + rows, new StackTrace)
+      e("Wrong rows updated: " + rows, new StackTrace)
     _servers = server +: (_servers filterNot (_ == server))
   }
 
@@ -185,7 +225,43 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       BaseColumns._ID + " = ?", Array[String]("" + server.id))
     db.close()
     if (rows != 1)
-      Log.e(TAG, "Wrong rows deleted: " + rows, new StackTrace)
+      e("Wrong rows deleted: " + rows, new StackTrace)
     _servers = _servers filterNot (_ == server)
+  }
+
+  def listIgnores = {
+    val db = getReadableDatabase
+    val c = db.query(TABLE_IGNORES, Array(FIELD_NICKNAME), null, null, null, null, null)
+    val list = Stream.continually(c.moveToNext()).takeWhile (_==true).map { _ =>
+      c.getString(0)
+    } toSet
+
+    c.close()
+    db.close()
+    list
+  }
+
+  def deleteIgnores(ignores: Set[String]): Unit = {
+    val db = getWritableDatabase
+    db.beginTransaction()
+    ignores foreach { i =>
+      db.delete(TABLE_IGNORES, s"$FIELD_NICKNAME = ?", Array(i))
+    }
+    db.setTransactionSuccessful()
+    db.endTransaction()
+    db.close()
+  }
+
+  def addIgnores(ignores: Set[String]): Unit = {
+    val db = getWritableDatabase
+    val values = new ContentValues
+    db.beginTransaction()
+    ignores foreach { i =>
+      values.put(FIELD_NICKNAME, i)
+      db.insertOrThrow(TABLE_IGNORES, null, values)
+    }
+    db.setTransactionSuccessful()
+    db.endTransaction()
+    db.close()
   }
 }

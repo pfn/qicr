@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.{MessageLog, IrcManager, IrcListeners}
+import com.hanhuy.android.irc.{Config, MessageLog, IrcManager, IrcListeners}
 
 import MessageLike._
 import scala.annotation.tailrec
@@ -62,23 +62,19 @@ abstract class ChannelLike(val server: Server, val name: String)
     messages.clear()
   }
 
-  def add(m: MessageLike) {
+  def add(m: MessageLike) = synchronized {
     if (isNew(m)) {
-      messages.add(m)
       val msg = m match {
-        case Privmsg(src, m2, o, v, _) =>
+        case c: ChatMessage =>
           lastTs = m.ts.getTime
-          newMessages = true
-          m2
-        case CtcpAction(src, m2, _) =>
-          lastTs = m.ts.getTime
-          newMessages = true
-          m2
-        case Notice(src, m2, _) =>
-          lastTs = m.ts.getTime
-          newMessages = true
-          m2
-        case _ => ""
+          if (!Config.Ignores(c.sender)) {
+            newMessages = true
+            messages.add(m)
+          }
+          c.message
+        case _ =>
+          messages.add(m)
+          ""
       }
 
       if (IrcListeners.matchesNick(server, msg)) {
