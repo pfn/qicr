@@ -6,7 +6,7 @@ import android.app.{Activity, AlertDialog, Dialog}
 import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.os.Bundle
+import android.os.{Build, Bundle}
 import android.util.TypedValue
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
@@ -82,11 +82,11 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          w[CheckBox] <~ label <~ text("Enable Autoconnect") <~ wire(autoconnect)
+          checkbox <~ label <~ text("Enable Autoconnect") <~ wire(autoconnect)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          w[CheckBox] <~ label <~ text("Enable SSL") <~ wire(ssl)
+          checkbox <~ label <~ text("Enable SSL") <~ wire(ssl)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         header <~ text("User Info"),
         l[TableRow](
@@ -125,6 +125,9 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
     ) <~ lp[LinearLayout](MATCH_PARENT, MATCH_PARENT, 1.0f) <~
       (tablet ? kitkatPadding))
   }
+
+  def checkbox = if (Build.VERSION.SDK_INT >= 21) w[CheckBox] else
+    w[android.support.v7.internal.widget.TintCheckBox]
 
   var server_name: EditText = _
   var server_host: EditText = _

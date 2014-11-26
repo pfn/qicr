@@ -52,7 +52,7 @@ extends BaseAdapter with EventBus.RefOwner {
   implicit val app = AppContext(Application.context)
 
   val layout = w[TextView] <~ id(android.R.id.text1) <~
-    bg(activity().getResources.getDrawable(R.drawable.selector_background)) <~
+    bgres(R.drawable.selector_background) <~
     lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~ tweak { tv: TextView =>
       tv.setTextAppearance(activity(), android.R.attr.textAppearanceSmall)
       tv.setGravity(Gravity.CENTER_VERTICAL)

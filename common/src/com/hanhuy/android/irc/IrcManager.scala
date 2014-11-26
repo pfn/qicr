@@ -531,7 +531,7 @@ class IrcManager extends EventBus.RefOwner {
           idx % chans.size // FIXME refactor the above
         case _ => idx
       }
-      lastChannel = Option(chans(tgt))
+      lastChannel = if (chans.size > tgt) Option(chans(tgt)) else None
       nm.notify(RUNNING_ID, runningNotification(runningString))
     }
   }

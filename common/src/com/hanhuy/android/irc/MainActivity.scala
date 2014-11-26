@@ -88,7 +88,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     c
   }
 
-  private var nickcomplete = slot[ImageButton]
+  private var nickcomplete: ImageButton = _
 
   lazy val drawerWidth = sw(600 dp) ? (288 dp) | (192 dp)
 
@@ -112,7 +112,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
           image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
           adapter.goToNewMessages()
           Ui(true)
-        } <~ wire(_newmessages) <~ buttonTweaks,
+        } <~ wire(newmessages) <~ buttonTweaks,
         w[EditText] <~ id(R.id.input) <~
           lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~
           hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
@@ -205,10 +205,9 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   lazy val pager = findView(TR.pager)
   lazy val adapter = new MainPagerAdapter(this)
 
-  private var _newmessages = slot[ImageButton]
-  def newmessages = _newmessages.get
-  private var speechrec = slot[ImageButton]
-  private var buttonLayout = slot[View]
+  var newmessages: ImageButton = _
+  private var speechrec: ImageButton = _
+  private var buttonLayout: View = _
 
   lazy val proc = new MainInputProcessor(this)
   lazy val input = {
@@ -232,14 +231,12 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     val view = getUi(mainLayout)
     view.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
       override def onPreDraw() = {
-        buttonLayout exists { l =>
-          if (l.getMeasuredHeight > 0) {
-            view.getViewTreeObserver.removeOnPreDrawListener(this)
-            val lp = l.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
-            inputHeight = Some(l.getMeasuredHeight + lp.topMargin)
-            true
-          } else false
-        }
+        if (buttonLayout.getMeasuredHeight > 0) {
+          view.getViewTreeObserver.removeOnPreDrawListener(this)
+          val lp = buttonLayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
+          inputHeight = Some(buttonLayout.getMeasuredHeight + lp.topMargin)
+          true
+        } else false
       }
     })
     setContentView(view)
@@ -512,16 +509,6 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
           getString(R.string.users_count,
             nicks.getAdapter.getCount: java.lang.Integer))
         nicks.getAdapter.registerDataSetObserver(observer)
-        def insertNick(pos: Int) {
-          var nick = nicks.getAdapter.getItem(pos).toString
-          val c = nick.charAt(0)
-          if (c == '@' || c == '+')
-            nick = nick.substring(1)
-          val cursor = input.getSelectionStart
-          // TODO make ", " a preference
-          nick += (if (cursor == 0) ", " else " ")
-          input.getText.insert(cursor, nick)
-        }
         nicks.setOnItemClickListener { (pos: Int) =>
             HoneycombSupport.startNickActionMode(
               nicks.getAdapter.getItem(pos).toString) { item: MenuItem =>

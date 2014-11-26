@@ -19,6 +19,7 @@ object QicrBuild extends android.AutoBuild {
     transitiveAndroidLibs in Android := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
     proguardOptions in Android += "-keep class android.support.v7.widget.SearchView { <init>(...); }",
+    proguardOptions in Android += "-keep class android.support.v7.internal.widget.* { <init>(...); }",
     proguardCache in Android += ProguardCache("macroid") % "org.macroid",
     proguardCache in Android += ProguardCache("android.support") % "com.android.support",
     proguardScala in Android := true
