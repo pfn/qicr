@@ -52,7 +52,7 @@
     </rdf:RDF>
   </metadata>
   <path
-     style="fill:#ffffff;fill-opacity:0;stroke:#000000;stroke-width:2.16197228000000010;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+     style="fill:#000000;fill-opacity:0;stroke:#ffff20;stroke-width:2.16197228000000010;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
      d="M 24.9375 4.59375 A 22.022577 13.965536 0 0 0 2.28125 18.5625 A 22.022577 13.965536 0 0 0 32.84375 31.40625 L 32.9375 39.78125 L 39 28.90625 A 22.022577 13.965536 0 0 0 46.3125 18.5625 A 22.022577 13.965536 0 0 0 24.9375 4.59375 z "
      id="path2989" />
   <path
@@ -65,15 +65,16 @@
      y="22.31332"
      id="text3783"
      xml:space="preserve"
-     style="font-size:13.53582764px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Segoe Print;-inkscape-font-specification:Segoe Print Bold"
+     style="font-size:13.53582764000000100px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffff41;fill-opacity:1;stroke:none;font-family:Segoe Print;-inkscape-font-specification:Segoe Print Bold"
      sodipodi:linespacing="125%"><tspan
        x="4.692791"
        y="22.31332"
-       id="tspan3785">#qicr</tspan></text>
+       id="tspan3785"
+       style="fill:#ffff41;fill-opacity:1">#qicr</tspan></text>
   <g
      style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Sans"
      id="text3788"
-     transform="translate(1.0606601,0.8838835)">
+     transform="translate(-11.490485,21.92031)">
     <path
        d="m 1.625,36.746094 0.8984375,-2.773438 c 2.0703083,0.729192 3.5742131,1.360702 4.5117188,1.894531 C 6.787754,33.510443 6.6575458,31.889351 6.6445313,31.003906 l 2.8320312,0 c -0.039072,1.289091 -0.188811,2.903672 -0.4492187,4.84375 1.3411362,-0.677058 2.8775922,-1.302058 4.6093752,-1.875 l 0.898437,2.773438 c -1.653658,0.546898 -3.27475,0.911481 -4.863281,1.09375 0.794261,0.690126 1.914051,1.920593 3.359375,3.691406 L 10.6875,43.191406 C 9.9322821,42.162778 9.0403559,40.76304 8.0117188,38.992187 7.0481704,40.828144 6.2018171,42.227882 5.4726563,43.191406 L 3.1679688,41.53125 C 4.6783811,39.669291 5.7591092,38.438824 6.4101563,37.839844 4.7304644,37.514346 3.1354139,37.149763 1.625,36.746094 z"
        id="path3797"
@@ -82,7 +83,7 @@
   <g
      style="font-size:35.94126892px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Sans"
      id="text3792"
-     transform="translate(-32.173358,-11.136932)">
+     transform="translate(-104.40824,-14.672466)">
     <path
        d="m 88.17227,63.164857 -0.96522,-13.63592 0,-5.703571 3.913527,0 0,5.703571 -0.912571,13.63592 z m -0.824824,6.387999 0,-3.597636 3.632735,0 0,3.597636 z"
        id="path3800"
