@@ -126,9 +126,6 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
       (tablet ? kitkatPadding))
   }
 
-  def checkbox = if (Build.VERSION.SDK_INT >= 21) w[CheckBox] else
-    w[android.support.v7.internal.widget.TintCheckBox]
-
   var server_name: EditText = _
   var server_host: EditText = _
   var port: EditText = _
@@ -542,7 +539,7 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
 }
 
 class ServersFragment extends ListFragment
-with EventBus.RefOwner with Contexts[Fragment] {
+with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
   val manager = IrcManager.start()
   var adapter: ServersAdapter = _
   var _server: Option[Server] = None // currently selected server
@@ -603,7 +600,6 @@ with EventBus.RefOwner with Contexts[Fragment] {
 
   override def onListItemClick(list: ListView, v: View, pos: Int, id: Long) {
     adapter.notifyDataSetChanged()
-    v.findView(TR.server_checked_text).setChecked(true)
     val activity = getActivity
     val manager = activity.getSupportFragmentManager
     manager.popBackStack(SERVER_SETUP_STACK,
@@ -810,7 +806,7 @@ with EventBus.RefOwner with Contexts[Fragment] {
 
     menu.findItem(R.id.add_server).setVisible(!found)
   }
-  class ServersAdapter(context: Activity) extends BaseAdapter {
+  class ServersAdapter(context: Activity) extends BaseAdapter with IdGeneration {
     val manager = IrcManager.start()
 
     override def getCount = manager.getServers.size
@@ -819,45 +815,77 @@ with EventBus.RefOwner with Contexts[Fragment] {
 
     override def getItem(x: Int) = manager.getServers(x)
 
+    def progressBar = Ui(new ProgressBar(
+      context, null, 0, android.R.style.Widget_ProgressBar_Small))
+    val layout = l[LinearLayout](
+      l[FrameLayout](
+        progressBar <~ id(Id.server_item_progress) <~
+          lp[FrameLayout](WRAP_CONTENT dp, WRAP_CONTENT dp, Gravity.CENTER) <~
+          padding(left = 6 dp, right = 6 dp) <~ tweak { p: ProgressBar =>
+            p.setIndeterminate(true)
+          } <~ hide,
+        w[ImageView] <~ lp[FrameLayout](64 dp, 64 dp, Gravity.CENTER) <~
+          image(android.R.drawable.presence_offline) <~
+          tweak { v: ImageView =>
+            v.setScaleType(ImageView.ScaleType.CENTER_INSIDE)
+          } <~ padding(left = 6 dp, right = 6 dp) <~
+          id(Id.server_item_status)
+      ) <~ tweak { v: FrameLayout => v.setMeasureAllChildren(true) },
+      w[TextView] <~ lp[LinearLayout](0, 64 dp, 1) <~
+        padding(left = 6 dp, right = 6 dp) <~ tweak { tv: TextView =>
+          tv.setGravity(Gravity.CENTER_VERTICAL)
+          tv.setTextAppearance(context, android.R.style.TextAppearance_Large)
+        } <~ id(Id.server_item_text),
+      checkedText <~ lp[LinearLayout](96 dp, 64 dp) <~ padding(right = 6 dp) <~
+        tweak { tv: CheckedTextView =>
+          tv.setGravity(Gravity.CENTER_VERTICAL)
+          tv.setTextAppearance(context, android.R.style.TextAppearance_Small)
+
+          val vals = new TypedValue
+          getActivity.getTheme.resolveAttribute(
+            android.R.attr.listChoiceIndicatorSingle, vals, true)
+          tv.setCheckMarkDrawable(vals.resourceId)
+        } <~ id(Id.server_checked_text)
+    ) <~ tweak { l: LinearLayout => l.setGravity(Gravity.CENTER_VERTICAL) } <~
+      lp[AbsListView](MATCH_PARENT, WRAP_CONTENT)
+
     override def getView(pos: Int, convertView: View, parent: ViewGroup) = {
       import Server.State._
       val server = getItem(pos)
       val list = parent.asInstanceOf[ListView]
 
-      val v = if (convertView != null) convertView.asInstanceOf[ViewGroup] else
-        context.getLayoutInflater.inflate(TR.layout.server_item, parent, false)
+      val v = if (convertView != null)
+        convertView.asInstanceOf[ViewGroup]
+      else
+        getUi(layout)
 
       val checked = list.getCheckedItemPosition
-      val img = v.findView(TR.server_item_status)
+      val img = v.find[ImageView](Id.server_item_status)
 
-      v.findView(TR.server_item_text).setText(server.name)
-      v.findView(TR.server_item_progress).setVisibility(
-        if (server.state == Server.State.CONNECTING) View.VISIBLE
-        else View.INVISIBLE)
+      getUi(v.find[TextView](Id.server_item_text) <~ text(server.name))
+      getUi(v.find[View](Id.server_item_progress) <~ (
+        if (server.state == Server.State.CONNECTING) show
+        else hide))
 
-      img.setImageResource(server.state match {
+      getUi(img <~ image(server.state match {
         case INITIAL      => android.R.drawable.presence_offline
         case DISCONNECTED => android.R.drawable.presence_busy
         case CONNECTED    => android.R.drawable.presence_online
         case CONNECTING   => android.R.drawable.presence_away
+      }) <~ (if (server.state != Server.State.CONNECTING) show else hide))
+
+      val t = v.find[CheckedTextView](Id.server_checked_text)
+      getUi(t <~ tweak { tv: CheckedTextView =>
+        tv.setChecked(pos == checked)
+        val lag = if (server.state == CONNECTED) {
+          val l = server.currentPing flatMap { p =>
+            if (server.currentLag == 0) None
+            else Some((System.currentTimeMillis - p).toInt)
+          } getOrElse server.currentLag
+          Server.intervalString(l)
+        } else ""
+        tv.setText(lag)
       })
-
-      img.setVisibility(
-        if (server.state != Server.State.CONNECTING)
-          View.VISIBLE else View.INVISIBLE)
-
-      val t = v.findView(TR.server_checked_text)
-      t.setChecked(pos == checked)
-
-      val lag = if (server.state == CONNECTED) {
-        val l = server.currentPing flatMap { p =>
-          if (server.currentLag == 0) None
-          else Some((System.currentTimeMillis - p).toInt)
-        } getOrElse server.currentLag
-        Server.intervalString(l)
-      } else ""
-      t.setText(lag)
-
       v
     }
   }

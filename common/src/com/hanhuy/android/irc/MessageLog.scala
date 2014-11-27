@@ -36,6 +36,7 @@ import macroid.FullDsl._
 /**
  * @author pfnguyen
  */
+// TODO IMPLEMENT CONNECTION POOL HANDLING
 object MessageLog {
   implicit val TAG = LogcatTag("MessageLog")
   val DATABASE_NAME    = "logs"

@@ -189,6 +189,14 @@ object Tweaks {
   }
 
   lazy val hasSystemNav = !KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK)
+
+  def checkbox(implicit ctx: ActivityContext) = if (Build.VERSION.SDK_INT >= 21)
+    w[CheckBox] else w[android.support.v7.internal.widget.TintCheckBox]
+  def checkedText(implicit ctx: ActivityContext) =
+    if (Build.VERSION.SDK_INT >= 21)
+      w[CheckedTextView]
+    else
+      w[android.support.v7.internal.widget.TintCheckedTextView]
 }
 
 class SquareImageButton(c: Context) extends ImageButton(c) {
