@@ -36,7 +36,6 @@ import macroid.FullDsl._
 /**
  * @author pfnguyen
  */
-// TODO IMPLEMENT CONNECTION POOL HANDLING
 object MessageLog {
   implicit val TAG = LogcatTag("MessageLog")
   val DATABASE_NAME    = "logs"
@@ -208,7 +207,7 @@ class MessageLog private(context: Context)
     }.force.toMap
 
     c.close()
-    db.close()
+    close(db)
     networks
   }
 
@@ -228,7 +227,7 @@ class MessageLog private(context: Context)
         c.getLong(idcol), name, c.getLong(lastcol), c.getInt(querycol) != 0)
     }.force.toMap
     c.close()
-    db.close()
+    close(db)
     channels
   }
 
@@ -265,7 +264,7 @@ class MessageLog private(context: Context)
       d(s"Inserting: $net, previous existing: $networks")
       val db = getWritableDatabase
       db.insertOrThrow(TABLE_SERVERS, null, net.values)
-      db.close()
+      close(db)
       networks += (net.id -> net)
       net
     })
@@ -279,7 +278,7 @@ class MessageLog private(context: Context)
       channels += (network.id, ch.name) -> ch
       val db = getWritableDatabase
       val id = db.insertOrThrow(TABLE_CHANNELS, null, ch.values)
-      db.close()
+      close(db)
       val ch2 = ch.copy(id = id)
       channels += (network.id, ch2.name.toLowerCase) -> ch2
       ch2
@@ -308,7 +307,7 @@ class MessageLog private(context: Context)
       val newid = db.insertOrThrow(TABLE_LOGS, null, e.values)
       db.setTransactionSuccessful()
       db.endTransaction()
-      db.close()
+      close(db)
     }
   }
 
@@ -323,7 +322,7 @@ class MessageLog private(context: Context)
     db.setTransactionSuccessful()
     db.endTransaction()
     db.execSQL("VACUUM")
-    db.close()
+    close(db)
     channels -= (netId -> channel)
   }
 
@@ -336,9 +335,28 @@ class MessageLog private(context: Context)
     db.setTransactionSuccessful()
     db.endTransaction()
     db.execSQL("VACUUM")
-    db.close()
+    close(db)
     channels = Map.empty
     networks = Map.empty
+  }
+
+
+
+  var openCount = 0
+  override def getWritableDatabase = synchronized {
+    openCount += 1
+    super.getWritableDatabase
+  }
+
+  override def getReadableDatabase = synchronized {
+    openCount += 1
+    super.getReadableDatabase
+  }
+
+  def close(db: SQLiteDatabase): Unit = synchronized {
+    openCount -= 1
+    if (openCount == 0)
+      db.close()
   }
 
   def get(ctx: Activity, netId: Long, channel: String): LogAdapter =
@@ -383,7 +401,7 @@ class MessageLog private(context: Context)
 
       override def close(): Unit = {
         cursor.close()
-        db.close()
+        MessageLog.this.close(db)
       }
     }
   }
