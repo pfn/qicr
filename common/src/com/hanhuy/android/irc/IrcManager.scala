@@ -674,7 +674,8 @@ class IrcManager extends EventBus.RefOwner {
           R.dimen.notification_panel_width)
         val metrics = new DisplayMetrics
         Application.context.systemService[WindowManager].getDefaultDisplay.getMetrics(metrics)
-        val width = if (d < 0) metrics.widthPixels else d.toInt
+        // api21 has non-maxwidth notification panels on phones
+        val width = math.min(metrics.widthPixels, if (d < 0) metrics.widthPixels else d.toInt)
 
         val layout = new StaticLayout(msgs, paint, width,
           Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, true)
