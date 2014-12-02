@@ -408,8 +408,11 @@ with EventBus.RefOwner {
 
   override def getPageTitle(position: Int) = makeTabTitle(position)
 
+  val tabNotify: Runnable = () => tabindicators.notifyDataSetChanged()
+
   override def notifyDataSetChanged() {
-    tabindicators.notifyDataSetChanged()
+    UiBus.handler.removeCallbacks(tabNotify)
+    UiBus.handler.postDelayed(tabNotify, 50)
     super.notifyDataSetChanged()
   }
 }
