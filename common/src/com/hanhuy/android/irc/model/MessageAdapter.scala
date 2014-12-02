@@ -231,7 +231,9 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
         // It'd be nice to register a ServiceBus listener, but no way
         // to clean up when this adapter goes away?
         // add it to UiBus here maybe?
-        maximumSize = Settings.get(Settings.MESSAGE_LINES).toInt
+        maximumSize = Try(
+          Settings.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
+            Settings.MESSAGE_LINES.default.toInt
         showJoinPartQuit = Settings.get(Settings.SHOW_JOIN_PART_QUIT)
         MessageAdapter.showTimestamp = Settings.get(Settings.SHOW_TIMESTAMP)
       }

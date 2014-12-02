@@ -611,7 +611,7 @@ class IrcManager extends EventBus.RefOwner {
     if (server.state == Server.State.DISCONNECTED)
       connection.disconnect()
 
-    if (state == Server.State.CONNECTED)
+    if (state == Server.State.CONNECTED && connection.isConnected)
       ping(connection, server)
 
     UiBus.run { server.state = state }

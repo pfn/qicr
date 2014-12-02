@@ -541,6 +541,11 @@ with ServerEventListener with MessageEventListener {
 
     if (channel != null) {
       manager._channels.get(channel) foreach { c =>
+        if (src.isUs) {
+          val nm = Application.context.systemService[NotificationManager]
+          nm.cancel(IrcManager.MENTION_ID)
+          nm.cancel(IrcManager.PRIVMSG_ID)
+        }
         val action = CtcpAction(src.getNick, msg, a.timestamp)
         UiBus.run {
           c.add(action)

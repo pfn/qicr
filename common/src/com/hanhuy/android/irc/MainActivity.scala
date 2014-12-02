@@ -220,6 +220,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   private var page = -1 // used for restoring tab selection on recreate
 
   override def onCreate(bundle: Bundle) {
+    HoneycombSupport.init(this)
     LifecycleService.start()
     getWindow.setSoftInputMode(
       WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
@@ -279,7 +280,6 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     }
     channels.setAdapter(adapter.DropDownAdapter)
 
-    HoneycombSupport.init(this)
     Settings.get(Settings.NAVIGATION_MODE) match {
       case Settings.NAVIGATION_MODE_DROPDOWN =>
         HoneycombSupport.setupSpinnerNavigation(adapter)
