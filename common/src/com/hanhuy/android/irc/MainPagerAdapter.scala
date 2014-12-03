@@ -31,6 +31,8 @@ import AndroidConversions._
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 import TypedResource.activityToTyped
 
+import scala.util.Try
+
 object MainPagerAdapter {
   val TAG = "MainPagerAdapter"
 
@@ -148,8 +150,8 @@ with EventBus.RefOwner {
     DropDownNavAdapter.notifyDataSetChanged()
   }
   def refreshTabTitle(pos: Int) {
-    UiBus.handler.removeCallbacks(refreshTabRunnable)
-    UiBus.handler.postDelayed(refreshTabRunnable, 100)
+    if (!hasCallbacks(refreshTabRunnable))
+      UiBus.handler.postDelayed(refreshTabRunnable, 100)
   }
 
   def makeTabTitle(pos: Int) = {
@@ -410,9 +412,22 @@ with EventBus.RefOwner {
 
   val tabNotify: Runnable = () => tabindicators.notifyDataSetChanged()
 
+  lazy val hasCallbacksMethod = {
+    // private API present in android 4.1.1+
+    Try(classOf[android.os.Handler].getDeclaredMethod(
+      "hasCallbacks", classOf[Runnable])).toOption
+  }
+
+  def hasCallbacks(r: Runnable) = {
+    hasCallbacksMethod map (
+      _.invoke(UiBus.handler, r).asInstanceOf[Boolean]) getOrElse {
+      UiBus.handler.removeCallbacks(r)
+      false
+    }
+  }
   override def notifyDataSetChanged() {
-    UiBus.handler.removeCallbacks(tabNotify)
-    UiBus.handler.postDelayed(tabNotify, 50)
+    if (!hasCallbacks(tabNotify))
+      UiBus.handler.postDelayed(tabNotify, 100)
     super.notifyDataSetChanged()
   }
 }

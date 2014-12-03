@@ -641,8 +641,11 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
 // workaround for https://code.google.com/p/android/issues/detail?id=63777
 class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
-  var baseline = Integer.MAX_VALUE
-  var change = 0
+  private var baseline = Integer.MAX_VALUE
+  private var change = 0
+  private var imeShowing = false
+
+  def isImeShowing = imeShowing
 
   override def fitSystemWindows(insets: Rect) = {
     val adj = insets.top + insets.bottom
@@ -650,8 +653,10 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
 
     if (baseline != Integer.MAX_VALUE && adj > baseline) {
       change = adj - baseline
+      imeShowing = true
     } else if (adj == baseline) {
       change = 0
+      imeShowing = false
     }
 
     super.fitSystemWindows(insets)
