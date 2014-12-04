@@ -84,4 +84,5 @@ object BusEvent {
   case class ChannelAdded(channel: Channel) extends BusEvent
   case class StartQuery(query: Query) extends BusEvent
   case class PrivateMessage(query: Query, msg: MessageLike) extends BusEvent
+  case class IMEShowing(showing: Boolean) extends BusEvent
 }

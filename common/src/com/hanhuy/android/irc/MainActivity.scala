@@ -88,6 +88,10 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     c
   }
 
+  def imeShowing = _imeShowing
+  private var _imeShowing = false
+
+  private var kitkatDrawerLayout: KitKatDrawerLayout = _
   private var nickcomplete: ImageButton = _
 
   lazy val drawerWidth = sw(600 dp) ? (288 dp) | (192 dp)
@@ -118,6 +122,13 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
           hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
           padding(left = 8 dp, right = 8 dp) <~ margin(all = 4 dp) <~
           bg(inputBackground),
+        w[ImageButton] <~
+          image(android.R.drawable.ic_menu_send) <~ wire(send) <~
+          On.click {
+            proc.handleLine(input.getText)
+            InputProcessor.clear(input)
+            Ui(true)
+          } <~ buttonTweaks <~ hide,
         w[ImageButton] <~ id(R.id.btn_speech_rec) <~
           image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~
           On.click {
@@ -152,7 +163,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     ) <~ id(R.id.drawer_right) <~ vertical <~
       lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.RIGHT) <~
       bg(drawerBackground)
-  ) <~ id(R.id.drawer_layout) <~
+  ) <~ id(R.id.drawer_layout) <~ wire(kitkatDrawerLayout) <~
     lp[FrameLayout](MATCH_PARENT, MATCH_PARENT)
 
 
@@ -169,7 +180,12 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   import _richactivity.{findView => _, _}
   val _typedactivity: TypedViewHolder = this; import _typedactivity._
 
-  UiBus += { case BusEvent.PreferenceChanged(_, key) =>
+  UiBus += {
+    case BusEvent.IMEShowing(showing) =>
+      if (showing) send.setVisibility(View.GONE)
+      else if (input.getText.length > 0) send.setVisibility(View.VISIBLE)
+      _imeShowing = showing
+    case BusEvent.PreferenceChanged(_, key) =>
     List(Settings.SHOW_NICK_COMPLETE,
       Settings.SHOW_SPEECH_REC,
       Settings.NAVIGATION_MODE) foreach { r =>
@@ -206,6 +222,11 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   lazy val adapter = new MainPagerAdapter(this)
 
   var newmessages: ImageButton = _
+
+  def setSendVisible(b: Boolean) =
+    send.setVisibility(if (b) View.VISIBLE else View.GONE)
+
+  private var send: ImageButton = _
   private var speechrec: ImageButton = _
   private var buttonLayout: View = _
 
@@ -643,9 +664,6 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
   private var baseline = Integer.MAX_VALUE
   private var change = 0
-  private var imeShowing = false
-
-  def isImeShowing = imeShowing
 
   override def fitSystemWindows(insets: Rect) = {
     val adj = insets.top + insets.bottom
@@ -653,10 +671,10 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
 
     if (baseline != Integer.MAX_VALUE && adj > baseline) {
       change = adj - baseline
-      imeShowing = true
+      UiBus.send(BusEvent.IMEShowing(true))
     } else if (adj == baseline) {
       change = 0
-      imeShowing = false
+      UiBus.send(BusEvent.IMEShowing(false))
     }
 
     super.fitSystemWindows(insets)
