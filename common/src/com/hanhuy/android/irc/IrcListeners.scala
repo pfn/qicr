@@ -18,7 +18,7 @@ import com.sorcix.sirc.event.ServerEventListener.{Invite, Nick, Mode}
 import com.sorcix.sirc.event.{ServerEventListener, MessageEventListener}
 
 import scala.util.control.Exception._
-import com.hanhuy.android.common.{UiBus, SpannedGenerator, AndroidConversions}
+import com.hanhuy.android.common.{ServiceBus, UiBus, SpannedGenerator, AndroidConversions}
 import AndroidConversions._
 import SpannedGenerator._
 import IrcListeners._
@@ -462,13 +462,11 @@ with ServerEventListener with MessageEventListener {
     val channel = message.target
     val src = message.sender
     val msg = message.message
-    if (src.isUs) {
-      val nm = Application.context.systemService[NotificationManager]
-      nm.cancel(IrcManager.MENTION_ID)
-      nm.cancel(IrcManager.PRIVMSG_ID)
-    }
     manager._channels.get(channel) foreach {
       c =>
+        if (src.isUs) {
+          cancelNotifications(c)
+        }
 
         val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice, ts = message.timestamp)
         if (matchesNick(c.server, msg) && !src.isUs)
@@ -534,6 +532,21 @@ with ServerEventListener with MessageEventListener {
     }
   }
 
+  private def cancelNotifications(c: ChannelLike): Unit = {
+    val nm = Application.context.systemService[NotificationManager]
+    nm.cancel(IrcManager.MENTION_ID)
+    nm.cancel(IrcManager.PRIVMSG_ID)
+    c.newMessages = false
+    c.newMentions = false
+    ServiceBus.send(BusEvent.ChannelStatusChanged(c))
+    manager.channels.keys filter (n =>
+      n.newMentions && n.server == c.server && n != c) foreach {
+      changed =>
+        changed.newMentions = false
+        ServiceBus.send(BusEvent.ChannelStatusChanged(changed))
+    }
+  }
+
   override def onAction(a: Action) {
     val channel = a.target
     val src = a.sender
@@ -542,9 +555,7 @@ with ServerEventListener with MessageEventListener {
     if (channel != null) {
       manager._channels.get(channel) foreach { c =>
         if (src.isUs) {
-          val nm = Application.context.systemService[NotificationManager]
-          nm.cancel(IrcManager.MENTION_ID)
-          nm.cancel(IrcManager.PRIVMSG_ID)
+          cancelNotifications(c)
         }
         val action = CtcpAction(src.getNick, msg, a.timestamp)
         UiBus.run {

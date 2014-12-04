@@ -77,13 +77,16 @@ with EventBus.RefOwner {
 
   var page = 0
 
+  ServiceBus += {
+    case BusEvent.ChannelStatusChanged(_) =>
+      UiBus.run(channels foreach refreshTabTitle)
+  }
   UiBus += {
   case BusEvent.ServerChanged(server)   => serverStateChanged(server)
   case BusEvent.ChannelMessage(c, m)    => refreshTabTitle(c)
   case BusEvent.ChannelAdded(c)         => addChannel(c)
   case BusEvent.PrivateMessage(q, m)    => addChannel(q)
   case BusEvent.StartQuery(q)           => pager.setCurrentItem(addChannel(q))
-  case BusEvent.ChannelStatusChanged(_) => channels foreach refreshTabTitle
   }
 
   def refreshTabs() {
