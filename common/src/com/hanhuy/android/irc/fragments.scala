@@ -816,7 +816,7 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
     override def getItem(x: Int) = manager.getServers(x)
 
     def progressBar = Ui(new ProgressBar(
-      context, null, 0, android.R.style.Widget_ProgressBar_Small))
+      context, null, R.attr.qicrProgressSpinnerStyle))
     val layout = l[LinearLayout](
       l[FrameLayout](
         progressBar <~ id(Id.server_item_progress) <~

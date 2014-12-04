@@ -71,6 +71,7 @@ abstract class InputProcessor(activity: Activity) {
       activity match {
         case a: MainActivity =>
           a.setSendVisible(s.length > 0 && !a.imeShowing)
+        case _ =>
       }
       if (start != 0 || (count != s.length && count != 0)) {
         completionPrefix = None
