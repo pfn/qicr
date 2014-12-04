@@ -63,7 +63,7 @@ with EventBus.RefOwner {
   private var tabs = List.empty[TabInfo]
   lazy val channelcomp = ChannelLikeComparator
   lazy val servercomp  = ServerComparator
-  lazy val tabindicators = activity.findView(TR.tabs)
+  lazy val tabindicators = activity.tabs
 
   def channelBase = servers.size + 1
   def currentTab = tabs(page)

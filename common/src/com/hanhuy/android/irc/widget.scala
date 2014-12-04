@@ -458,7 +458,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
           Ui(true)
         } <~
         lp[FrameLayout](WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER | Gravity.LEFT),
-      w[TextView] <~ id(R.id.title) <~
+      w[TextView] <~ wire(_title) <~
         lp[FrameLayout](MATCH_PARENT, MATCH_PARENT, Gravity.FILL) <~
         tweak { tv: TextView =>
           tv.setMaxLines(1)
@@ -467,13 +467,13 @@ extends Activity with TypedActivity with Contexts[Activity] {
           tv.setGravity(Gravity.CENTER)
         } <~ padding(left = 48 dp, right = 48 dp)
     ) <~ lp[LinearLayout](MATCH_PARENT, 48 dp) <~ bg("#77555555"),
-    w[TextView] <~ id(R.id.empty_list) <~ hide <~
+    w[TextView] <~ /* FIXME id(android.R.id.empty) <~ */ hide <~
       lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
       tweak { tv: TextView =>
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.attr.textAppearanceMedium)
       } <~ text(R.string.no_messages),
-    w[ListView] <~ id(R.id.message_list) <~
+    w[ListView] <~ wire(_list) <~
       lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~ margin(top = 48 dp) <~
       tweak { l: ListView =>
         l.setSelector(R.drawable.message_selector)
@@ -499,13 +499,13 @@ extends Activity with TypedActivity with Contexts[Activity] {
         })
       } <~ padding(bottom = 48 dp),
     l[LinearLayout](
-      w[ImageButton] <~ id(R.id.btn_nick_complete) <~ buttonTweaks <~
+      w[ImageButton] <~ wire(_nickcomplete) <~ buttonTweaks <~
         image(R.drawable.ic_btn_search),
-      w[EditText] <~ id(R.id.input) <~ inputTweaks <~
+      w[EditText] <~ wire(_input) <~ inputTweaks <~
         hint(R.string.input_placeholder) <~
         lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~ margin(all = 4 dp) <~
         padding(left = 8 dp, right = 8 dp),
-      w[ImageButton] <~ id(R.id.btn_speech_rec) <~ buttonTweaks <~
+      w[ImageButton] <~ wire(_speechrec) <~ buttonTweaks <~
         image(android.R.drawable.ic_btn_speak_now)
     ) <~ horizontal <~ lp[FrameLayout](MATCH_PARENT, 48 dp, Gravity.BOTTOM)
   ) <~ tweak { v: View =>
@@ -523,8 +523,16 @@ extends Activity with TypedActivity with Contexts[Activity] {
   val REQUEST_SPEECH_RECOGNITION = 1
   lazy val x: RichActivity = this
   import x._
-  lazy val input = findView(TR.input)
-  lazy val list = findView(TR.message_list)
+  def input = _input
+  private var _input: EditText = _
+  def speechrec = _speechrec
+  private var _speechrec: View = _
+  def nickcomplete = _nickcomplete
+  private var _nickcomplete: View = _
+  private var _title: TextView = _
+  def titleview = _title
+  def list = _list
+  private var _list: ListView = _
   private var proc: InputProcessor = _
 
   private def withAppender[A](f: MessageAppender => A): Option[A] = {
@@ -562,14 +570,12 @@ extends Activity with TypedActivity with Contexts[Activity] {
       }
       a.context = this
       list.setAdapter(a)
-      findView(TR.title).setText(title)
+      titleview.setText(title)
       UiBus.post { list.setSelection(list.getAdapter.getCount - 1) }
       proc = new SimpleInputProcessor(this, m)
       input.addTextChangedListener(proc.TextListener)
       input.setOnEditorActionListener(proc.onEditorActionListener _)
-      val complete = findView(TR.btn_nick_complete)
-      complete onClick proc.nickComplete(input)
-      val speechrec = findView(TR.btn_speech_rec)
+      nickcomplete onClick proc.nickComplete(input)
       speechrec onClick {
         val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -584,7 +590,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
         }
       }
       if (!Settings.get(Settings.SHOW_NICK_COMPLETE))
-        complete.setVisibility(View.GONE)
+        nickcomplete.setVisibility(View.GONE)
 
       if (!Settings.get(Settings.SHOW_SPEECH_REC))
         speechrec.setVisibility(View.GONE)

@@ -68,7 +68,8 @@ object MainActivity {
 
   var instance = Option.empty[MainActivity]
 }
-class MainActivity extends ActionBarActivity with EventBus.RefOwner with Contexts[Activity] {
+class MainActivity extends ActionBarActivity with EventBus.RefOwner
+with Contexts[Activity] with IdGeneration {
   import Tweaks._
   import ViewGroup.LayoutParams._
 
@@ -99,29 +100,34 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   import RuleRelativeLayout.Rule
   lazy val mainLayout = l[KitKatDrawerLayout](
     l[RuleRelativeLayout](
-      w[TabPageIndicator] <~ id(R.id.tabs) <~
+      w[TabPageIndicator] <~ wire(_tabs) <~ id(Id.tabs) <~
         lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
           Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)) <~ kitkatPaddingTop,
-      w[ViewPager] <~ id(R.id.pager) <~ lp[RuleRelativeLayout](
+      // id must be set or else fragment manager complains
+      w[ViewPager] <~ wire(_pager) <~ id(Id.pager) <~ lp[RuleRelativeLayout](
         MATCH_PARENT, MATCH_PARENT,
-        Rule(RelativeLayout.BELOW, R.id.tabs),
+        Rule(RelativeLayout.BELOW, Id.tabs),
         Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
       l[LinearLayout](
-        w[ImageButton] <~ id(R.id.btn_nick_complete) <~
+        w[ImageButton] <~
           image(R.drawable.ic_btn_search) <~ On.click {
           proc.nickComplete(input)
           Ui(true)
         } <~ hide <~ wire(nickcomplete) <~ buttonTweaks,
-        w[ImageButton] <~ id(R.id.btn_new_messages) <~
+        w[ImageButton] <~
           image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
           adapter.goToNewMessages()
           Ui(true)
         } <~ wire(newmessages) <~ buttonTweaks,
-        w[EditText] <~ id(R.id.input) <~
+        w[EditText] <~ wire(_input) <~
           lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~
           hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
           padding(left = 8 dp, right = 8 dp) <~ margin(all = 4 dp) <~
-          bg(inputBackground),
+          bg(inputBackground) <~ tweak { e: EditText =>
+            e.setOnEditorActionListener(proc.onEditorActionListener _)
+            e.setOnKeyListener(proc.onKeyListener _)
+            e.addTextChangedListener(proc.TextListener)
+          },
         w[ImageButton] <~
           image(android.R.drawable.ic_menu_send) <~ wire(send) <~
           On.click {
@@ -129,7 +135,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
             InputProcessor.clear(input)
             Ui(true)
           } <~ buttonTweaks <~ hide,
-        w[ImageButton] <~ id(R.id.btn_speech_rec) <~
+        w[ImageButton] <~
           image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~
           On.click {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -152,18 +158,18 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
           wire(buttonLayout)
     ) <~ llMatchParent,
     l[LinearLayout](
-      w[ListView] <~ id(R.id.channel_list) <~ llMatchParent <~ listTweaks <~ kitkatPadding
-    ) <~ id(R.id.drawer_left) <~
+      w[ListView] <~ wire(_channels) <~ llMatchParent <~ listTweaks <~ kitkatPadding
+    ) <~ wire(_drawerLeft) <~
       lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.LEFT) <~
       bg(drawerBackground),
     l[LinearLayout](
-      w[TextView] <~ id(R.id.user_count) <~ llMatchWidth <~
+      w[TextView] <~ wire(_userCount) <~ llMatchWidth <~
         margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin)) <~ kitkatPaddingTop,
-      w[ListView] <~ id(R.id.nick_list) <~ llMatchParent <~ listTweaks <~ kitkatPaddingBottom
-    ) <~ id(R.id.drawer_right) <~ vertical <~
+      w[ListView] <~ wire(_nickList) <~ llMatchParent <~ listTweaks <~ kitkatPaddingBottom
+    ) <~ wire(_drawerRight) <~ vertical <~
       lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.RIGHT) <~
       bg(drawerBackground)
-  ) <~ id(R.id.drawer_layout) <~ wire(kitkatDrawerLayout) <~
+  ) <~ wire(kitkatDrawerLayout) <~
     lp[FrameLayout](MATCH_PARENT, MATCH_PARENT)
 
 
@@ -177,8 +183,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
 
   private var manager: IrcManager = null
   val _richactivity: RichActivity = this
-  import _richactivity.{findView => _, _}
-  val _typedactivity: TypedViewHolder = this; import _typedactivity._
+  import _richactivity._
 
   UiBus += {
     case BusEvent.IMEShowing(showing) =>
@@ -213,12 +218,21 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
     val f = getSupportFragmentManager.findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
   }
-  lazy val tabs = findView(TR.tabs)
-  lazy val drawer = findView(TR.drawer_layout)
-  lazy val drawerLeft = findView(TR.drawer_left)
-  lazy val drawerRight = findView(TR.drawer_right)
-  lazy val channels = drawerLeft.findView(TR.channel_list)
-  lazy val pager = findView(TR.pager)
+  def tabs = _tabs
+  private var _tabs: TabPageIndicator = _
+  def drawer = kitkatDrawerLayout
+  def drawerLeft = _drawerLeft
+  private var _drawerLeft: View = _
+  def nickList = _nickList
+  private var _nickList: ListView = _
+  def userCount = _userCount
+  private var _userCount: TextView = _
+  def drawerRight = _drawerRight
+  private var _drawerRight: View = _
+  def channels = _channels
+  private var _channels: ListView = _
+  def pager = _pager
+  private var _pager: ViewPager = _
   lazy val adapter = new MainPagerAdapter(this)
 
   var newmessages: ImageButton = _
@@ -231,13 +245,8 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   private var buttonLayout: View = _
 
   lazy val proc = new MainInputProcessor(this)
-  lazy val input = {
-    val i = findView(TR.input)
-    i.setOnEditorActionListener(proc.onEditorActionListener _)
-    i.setOnKeyListener(proc.onKeyListener _)
-    i.addTextChangedListener(proc.TextListener)
-    i
-  }
+  def input = _input
+  private var _input: EditText = _
   private var page = -1 // used for restoring tab selection on recreate
 
   override def onCreate(bundle: Bundle) {
@@ -473,7 +482,7 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   override def onDestroy() {
     super.onDestroy()
     // unregister, or else we have a memory leak on observer -> this
-    Option(drawerRight.findView(TR.nick_list).getAdapter) foreach {
+    Option(nickList.getAdapter) foreach {
       _.unregisterDataSetObserver(observer)
     }
     ServiceBus.send(BusEvent.MainActivityDestroy)
@@ -519,25 +528,24 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_UNLOCKED, drawerRight)
 
-        val nicks = drawerRight.findView(TR.nick_list)
-        Option(nicks.getAdapter) foreach { a =>
+        Option(nickList.getAdapter) foreach { a =>
           try { // throws because of the unregister in onStop  :-(
             a.unregisterDataSetObserver(observer)
           } catch { case _: Exception => }
         }
-        nicks.setAdapter(NickListAdapter(this, c.channel))
-        findView(TR.user_count).setText(
+        nickList.setAdapter(NickListAdapter(this, c.channel))
+        userCount.setText(
           getString(R.string.users_count,
-            nicks.getAdapter.getCount: java.lang.Integer))
-        nicks.getAdapter.registerDataSetObserver(observer)
-        nicks.setOnItemClickListener { (pos: Int) =>
+            nickList.getAdapter.getCount: java.lang.Integer))
+        nickList.getAdapter.registerDataSetObserver(observer)
+        nickList.setOnItemClickListener { (pos: Int) =>
             HoneycombSupport.startNickActionMode(
-              nicks.getAdapter.getItem(pos).toString) { item: MenuItem =>
+              nickList.getAdapter.getItem(pos).toString) { item: MenuItem =>
               // TODO refactor this callback (see messageadapter)
               val R_id_nick_start_chat = R.id.nick_start_chat
               val R_id_nick_whois = R.id.nick_whois
               val R_id_nick_ignore = R.id.nick_ignore
-              val nick = nicks.getAdapter.getItem(pos).toString.dropWhile(n => Set(' ','@','+')(n))
+              val nick = nickList.getAdapter.getItem(pos).toString.dropWhile(n => Set(' ','@','+')(n))
               item.getItemId match {
                 case R_id_nick_whois =>
                   proc.processor.channel = manager.lastChannel
@@ -652,10 +660,9 @@ class MainActivity extends ActionBarActivity with EventBus.RefOwner with Context
   // interesting, this causes a memory leak--fix by unregistering onStop
   val observer = new DataSetObserver {
     override def onChanged() {
-      val nicks = drawerRight.findView(TR.nick_list)
-      findView(TR.user_count).setText(
+      userCount.setText(
         getString(R.string.users_count,
-          nicks.getAdapter.getCount: java.lang.Integer))
+          nickList.getAdapter.getCount: java.lang.Integer))
     }
   }
 }
