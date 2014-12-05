@@ -100,6 +100,12 @@ object Tweaks {
     if (id != 0) ctx.get.getResources.getDimensionPixelSize(id) else 0
   }
 
+  def navBarWidth(implicit ctx: AppContext) = {
+    val id = ctx.get.getResources.getIdentifier(
+      "navigation_bar_width", "dimen", "android")
+    if (id != 0 && hasSystemNav)
+      ctx.get.getResources.getDimensionPixelSize(id) else 0
+  }
   def navBarHeight(implicit ctx: AppContext) = {
     val id = ctx.get.getResources.getIdentifier(
       "navigation_bar_height", "dimen", "android")
@@ -115,17 +121,17 @@ object Tweaks {
     newerThan(19) ? padding(
       top    = if (padTop) statusBarHeight + actionBarHeight else 0,
       bottom = (tablet | portrait) ? navBarHeight | 0,
-      right  = (phone & landscape) ? navBarHeight | 0)
+      right  = (phone & landscape) ? navBarWidth | 0)
   def kitkatPadding(implicit ctx: ActivityContext, c2: AppContext) =
     newerThan(19) ? padding(
       top    = statusBarHeight + actionBarHeight,
       bottom = (tablet | portrait) ? navBarHeight | 0,
-      right  = (phone & landscape) ? navBarHeight | 0)
+      right  = (phone & landscape) ? navBarWidth | 0)
 
   def kitkatInputMargin(implicit ctx: ActivityContext, c2: AppContext) =
     newerThan(19) ? margin(
       bottom = (tablet | portrait) ? navBarHeight | 0,
-      right  = (phone & landscape) ? navBarHeight | 0)
+      right  = (phone & landscape) ? navBarWidth | 0)
 
   def buttonTweaks(implicit c: AppContext) = tweak { b: ImageButton =>
     b.setFocusable(false)
@@ -188,7 +194,11 @@ object Tweaks {
       v.setLayoutParams(lp)
   }
 
-  lazy val hasSystemNav = !KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK)
+  lazy val hasSystemNav = {
+    val res = Application.context.getResources
+    val id = res.getIdentifier("config_showNavigationBar", "bool", "android")
+    if (id != 0) res.getBoolean(id) else false
+  }
 
   def checkbox(implicit ctx: ActivityContext) = if (Build.VERSION.SDK_INT >= 21)
     w[CheckBox] else w[android.support.v7.internal.widget.TintCheckBox]
