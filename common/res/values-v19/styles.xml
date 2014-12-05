@@ -1,29 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme.Light" parent="@style/Theme.AppCompat.Light">
-        <item name="qicrProgressSpinnerStyle">@android:style/Widget.Holo.ProgressBar.Small</item>
-        <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
-        <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
-        <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix.Light</item>
-        <item name="qicrDrawerBackground">#e0dddddd</item>
-        <item name="inputBackground">@drawable/input_background_light</item>
+    <style name="AppTheme.Light" parent="Base.AppTheme.Light">
+        <item name="qicrProgressSpinnerStyle">@android:style/Widget.DeviceDefault.ProgressBar.Small</item>
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:imageButtonStyle">@style/Widget.ImageButton.Light</item>
     </style>
 
-    <style name="AppTheme.Dark" parent="@style/Theme.AppCompat">
-        <!-- seems to break autoLink text...
-        <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
-        -->
-        <item name="qicrProgressSpinnerStyle">@android:style/Widget.Holo.ProgressBar.Small</item>
-        <item name="android:actionBarStyle">@android:style/Widget.Holo.ActionBar.Solid</item>
+    <style name="AppTheme.Dark" parent="Base.AppTheme.Dark">
+        <item name="qicrProgressSpinnerStyle">@android:style/Widget.DeviceDefault.ProgressBar.Small</item>
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowTranslucentStatus">true</item>
-        <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
-        <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix</item>
-        <item name="qicrDrawerBackground">#cc222222</item>
-        <item name="inputBackground">@drawable/input_background_dark</item>
-        <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
     </style>
 </resources>

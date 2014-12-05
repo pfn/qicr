@@ -13,7 +13,22 @@
         <item name="android:textColor">@color/tab_indicator_text</item>
     </style>
 
-    <style name="AppTheme.Light" parent="@style/Theme.AppCompat.Light">
+    <style name="Base.AppTheme.Dark" parent="@style/Theme.AppCompat">
+        <!-- seems to break autoLink text...
+        <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
+        -->
+        <item name="colorAccent">#a4c639</item>
+        <item name="colorPrimary">#a4c639</item>
+        <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
+        <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
+        <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
+        <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix</item>
+        <item name="qicrDrawerBackground">#cc222222</item>
+        <item name="inputBackground">@drawable/input_background_dark</item>
+    </style>
+    <style name="Base.AppTheme.Light" parent="@style/Theme.AppCompat.Light">
+        <item name="colorAccent">#a4c639</item>
+        <item name="colorPrimary">#a4c639</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
         <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
@@ -23,17 +38,9 @@
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Light</item>
     </style>
 
-    <style name="AppTheme.Dark" parent="@style/Theme.AppCompat">
-      <!-- seems to break autoLink text...
-      <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
-      -->
-        <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
-        <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
-        <item name="vpiIconPageIndicatorStyle">@style/Widget.IconPageIndicator</item>
-        <item name="vpiTabPageIndicatorStyle">@style/TabPageIndicatorTextFix</item>
-        <item name="qicrDrawerBackground">#cc222222</item>
-        <item name="inputBackground">@drawable/input_background_dark</item>
-    </style>
+    <style name="AppTheme.Light" parent="Base.AppTheme.Light"/>
+
+    <style name="AppTheme.Dark" parent="Base.AppTheme.Dark"/>
 
     <style name="TabPageIndicatorTextFix" parent="@style/Widget.TabPageIndicator">
         <!--
