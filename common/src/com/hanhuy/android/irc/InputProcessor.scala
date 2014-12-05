@@ -32,6 +32,8 @@ trait Command {
 }
 object InputProcessor {
   def clear(input: EditText) = TextKeyListener.clear(input.getText)
+  val VOICE_INPUT_METHOD = "com.google.android.googlequicksearchbox/" +
+    "com.google.android.voicesearch.ime.VoiceInputMethodService"
 }
 abstract class InputProcessor(activity: Activity) {
   val manager = IrcManager.start()
@@ -68,9 +70,14 @@ abstract class InputProcessor(activity: Activity) {
         start: Int, count: Int, after: Int) = ()
     override def onTextChanged(s: CharSequence,
         start: Int, before: Int, count: Int) {
+
+      import android.provider.{Settings => ASettings}
+      val currentIME = ASettings.Secure.getString(
+        activity.getContentResolver, ASettings.Secure.DEFAULT_INPUT_METHOD)
+      val voiceIME = VOICE_INPUT_METHOD == currentIME
       activity match {
         case a: MainActivity =>
-          a.setSendVisible(s.length > 0 && !a.imeShowing)
+          a.setSendVisible(s.length > 0 && (!a.imeShowing || voiceIME))
         case _ =>
       }
       if (start != 0 || (count != s.length && count != 0)) {
