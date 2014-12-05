@@ -3,7 +3,7 @@
     <item android:id="@+id/server_messages"
         android:icon="@android:drawable/ic_menu_info_details"
         android:title="@string/server_messages"
-        android:visible="@bool/is_phone"/>
+        />
     <item android:id="@+id/server_connect"
         android:icon="@drawable/ic_menu_refresh"
         android:title="@string/server_connect"/>

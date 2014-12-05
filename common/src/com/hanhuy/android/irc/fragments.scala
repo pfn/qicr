@@ -562,7 +562,7 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
       l.setDrawSelectorOnTop(false)
       newerThan(19) ? l.setClipToPadding(false)
     } <~ lp[LinearLayout](0, MATCH_PARENT, 1) <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE)
-  ) <~ id(R.id.servers_container) <~ horizontal
+  ) <~ id(Id.servers_container) <~ horizontal
 
   UiBus += {
     case e: BusEvent.ServerAdded   => addListener(e.server)
@@ -611,8 +611,8 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
     if (server.state == Server.State.CONNECTED) {
       activity.input.setVisibility(View.VISIBLE)
     }
-    if (activity.isLargeScreen)
-      addServerMessagesFragment(server)
+//    if (activity.isLargeScreen)
+//      addServerMessagesFragment(server)
 
     _server = Some(server)
   }
@@ -650,11 +650,11 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
     serverMessagesFragmentShowing = Some(name)
     if (fragment == null) {
       fragment = new ServerMessagesFragment(Some(server))
-      tx.add(R.id.servers_container, fragment, name)
+      tx.add(Id.servers_container, fragment, name)
     } else {
       tx.remove(fragment)
       fragment = new ServerMessagesFragment(Some(server))
-      tx.add(R.id.servers_container, fragment, name)
+      tx.add(Id.servers_container, fragment, name)
       if (fragment.isDetached)
         tx.attach(fragment)
       // fragment is sometimes visible without being shown?
@@ -686,16 +686,16 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
     val tx = mgr.beginTransaction()
     clearServerMessagesFragment(mgr, tx)
 
-    if (activity.isLargeScreen) {
-      tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
-      tx.addToBackStack(SERVER_SETUP_STACK)
-      tx.commit() // can't commit a show
-    } else {
+//    if (activity.isLargeScreen) {
+//      tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
+//      tx.addToBackStack(SERVER_SETUP_STACK)
+//      tx.commit() // can't commit a show
+//    } else {
       val m = Settings.get(Settings.DAYNIGHT_MODE)
       fragment.setStyle(DialogFragment.STYLE_NO_TITLE,
         if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
       fragment.show(tx, SERVER_SETUP_FRAGMENT)
-    }
+//    }
 
     fragment.server = server
     getActivity.input.setVisibility(View.INVISIBLE)
