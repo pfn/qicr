@@ -6,7 +6,7 @@ import java.util.Date
 
 import android.app.{AlertDialog, Activity}
 import android.content.{Intent, ContentValues, Context}
-import android.database.{DataSetObserver, Cursor}
+import android.database.Cursor
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -14,6 +14,7 @@ import android.os.{Bundle, Handler, HandlerThread}
 import android.provider.BaseColumns
 import MessageLog._
 import android.support.v4.view.MenuItemCompat
+import android.support.v4.widget.CursorAdapter
 import android.support.v7.app.ActionBarActivity
 import android.support.v7.widget.SearchView.{OnCloseListener, OnQueryTextListener}
 import android.text.format.DateFormat
@@ -23,7 +24,7 @@ import android.view._
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
 import android.widget.ExpandableListView.OnChildClickListener
-import android.widget._
+import android.widget.{CursorAdapter => _,_}
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
 import com.hanhuy.android.irc.model.{Channel => ModelChannel, _}
@@ -32,6 +33,9 @@ import AndroidConversions._
 import RichLogger.{w => _, _}
 import macroid._
 import macroid.FullDsl._
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * @author pfnguyen
@@ -371,7 +375,9 @@ class MessageLog private(context: Context)
     val actioncol = cursor.getColumnIndexOrThrow(FIELD_ACTION)
     val notifycol = cursor.getColumnIndexOrThrow(FIELD_NOTICE)
 
-    new CursorAdapter(Application.context, cursor) with Closeable {
+    cursor.getCount // force cursor window to load; side-effecting, boooo
+
+    new CursorAdapter(Application.context, cursor, 0) with Closeable {
 
       override def newView(context: Context, c: Cursor, v: ViewGroup) = {
         val v = getUi(MessageAdapter.messageLayout(ctx))
@@ -425,8 +431,6 @@ class MessageLog private(context: Context)
          | AND ($FIELD_SENDER = ? OR $FIELD_MESSAGE LIKE ?)
          |  ORDER BY $FIELD_TIMESTAMP
        """.stripMargin
-    d(s"query: $query")
-    d("args: " + Seq(String.valueOf(channel.id), q, s"%$q%"))
     val cursor = db.rawQuery(query,
       Array(String.valueOf(channel.id), q, s"%$q%"))
     adapterFor(ctx, cursor, db)
@@ -462,13 +466,13 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
   var dateText: TextView = _
 
   lazy val layout = l[FrameLayout](
-    w[TextView] <~ id(R.id.empty_list) <~ hide <~
+    w[TextView] <~ hide <~
       lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
       tweak { tv: TextView =>
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
       } <~ text(R.string.no_messages) <~ kitkatPadding,
-    w[ListView] <~ id(R.id.message_list) <~ wire(listview) <~
+    w[ListView] <~ wire(listview) <~
       lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~
       tweak { l: ListView =>
         l.setSelector(R.drawable.message_selector)
@@ -480,51 +484,47 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
         l.setClipToPadding(false)
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
         l.setFastScrollEnabled(true)
-      } <~ kitkatPadding
+      } <~ kitkatPadding,
+      w[ProgressBar] <~ wire(progressbar) <~
+        lp[FrameLayout](128 dp, 128 dp, Gravity.CENTER)
   )
 
+  var progressbar: ProgressBar = _
   var adapter = Option.empty[LogAdapter]
   var nid = -1l
   var channel = ""
   lazy val dfmt = DateFormat.getDateFormat(this)
   lazy val tfmt = DateFormat.getTimeFormat(this)
 
-  def setAdapter(a: LogAdapter): Unit = {
-    adapter = Some(a)
-    listview.setAdapter(a)
-    if (a.getCount > 0) {
-      val t = a.getItem(0)
-      getSupportActionBar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+  def setAdapter(a: Option[LogAdapter]): Unit = {
+    if (a.isEmpty)
+      getSupportActionBar.setSubtitle(null)
+    listview.setAdapter(a orNull)
+    progressbar.setVisibility(if (a.isEmpty) View.VISIBLE else View.GONE)
+    adapter foreach (_.close())
+
+    adapter = a
+
+    adapter foreach { a =>
+      if (a.getCount > 0) {
+        val t = a.getItem(0)
+        getSupportActionBar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+      }
+      listview.setSelection(a.getCount - 1)
     }
-    adapter foreach { a => listview.setSelection(a.getCount - 1) }
   }
 
   override def onNewIntent(intent: Intent) = {
     val bar = getSupportActionBar
     nid = intent.getLongExtra(EXTRA_SERVER, -1)
     channel = intent.getStringExtra(EXTRA_CHANNEL)
+    setAdapter(None)
     if (channel != null && MessageLog.channels.contains(nid -> channel.toLowerCase)) {
-      val a = MessageLog.get(this, nid, channel)
-      bar.setTitle(s"log: $channel")
-      setAdapter(a)
-
-      listview.setOnScrollListener(new OnScrollListener {
-        var first = 0
-
-        override def onScrollStateChanged(p1: AbsListView, p2: Int) = ()
-
-        override def onScroll(p1: AbsListView, fst: Int, vis: Int, total: Int) {
-          if (fst != first) {
-            adapter foreach { a =>
-              if (fst < a.getCount) {
-                val t = a.getItem(fst)
-                bar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
-              }
-            }
-          }
-          first = fst
-        }
-      })
+      bar.setTitle(s"logs: $channel")
+      bar.setSubtitle(null)
+      Future {
+        MessageLog.get(this, nid, channel)
+      } onSuccessUi { case a => setAdapter(Some(a)) }
     } else {
       Toast.makeText(this, "No logs available", Toast.LENGTH_SHORT).show()
       finish()
@@ -546,6 +546,23 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     setContentView(getUi(layout))
 
     onNewIntent(getIntent)
+    listview.setOnScrollListener(new OnScrollListener {
+      var first = 0
+
+      override def onScrollStateChanged(p1: AbsListView, p2: Int) = ()
+
+      override def onScroll(p1: AbsListView, fst: Int, vis: Int, total: Int) {
+        if (fst != first) {
+          adapter foreach { a =>
+            if (fst < a.getCount) {
+              val t = a.getItem(fst)
+              bar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+            }
+          }
+        }
+        first = fst
+      }
+    })
   }
 
   lazy val label = lp2(WRAP_CONTENT, WRAP_CONTENT) { lp: TableRow.LayoutParams =>
@@ -740,9 +757,11 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       item).asInstanceOf[android.support.v7.widget.SearchView]
     searchView.setOnCloseListener(new OnCloseListener {
       override def onClose() = {
-        listview.setAdapter(null)
-        adapter foreach (_.close())
-        setAdapter(MessageLog.get(MessageLogActivity.this, nid, channel))
+        setAdapter(None)
+
+        Future {
+          MessageLog.get(MessageLogActivity.this, nid, channel)
+        } onSuccessUi { case c => setAdapter(Some(c)) }
         false
       }
     })
@@ -756,9 +775,10 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
         }
         val query = searchView.getQuery.toString
         if (query.trim.nonEmpty) {
-          listview.setAdapter(null)
-          adapter foreach (_.close())
-          setAdapter(MessageLog.get(MessageLogActivity.this, nid, channel, query))
+          setAdapter(None)
+          Future {
+            MessageLog.get(MessageLogActivity.this, nid, channel, query)
+          } onSuccessUi { case c => setAdapter(Some(c)) }
         }
         true
       }
