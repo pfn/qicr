@@ -64,6 +64,7 @@ with EventBus.RefOwner {
   lazy val channelcomp = ChannelLikeComparator
   lazy val servercomp  = ServerComparator
   lazy val tabindicators = activity.tabs
+  private var navMode = Settings.get(Settings.NAVIGATION_MODE)
 
   def channelBase = servers.size + 1
   def currentTab = tabs(page)
@@ -78,6 +79,9 @@ with EventBus.RefOwner {
   var page = 0
 
   ServiceBus += {
+    case BusEvent.PreferenceChanged(_, s) =>
+      if (s == Settings.NAVIGATION_MODE.key)
+        navMode = Settings.get(Settings.NAVIGATION_MODE)
     case BusEvent.ChannelStatusChanged(_) =>
       UiBus.run(channels foreach refreshTabTitle)
   }
@@ -148,7 +152,8 @@ with EventBus.RefOwner {
   }
 
   val refreshTabRunnable: Runnable = () => {
-    tabindicators.notifyDataSetChanged()
+    if (navMode == Settings.NAVIGATION_MODE_TABS)
+      tabindicators.notifyDataSetChanged()
     DropDownAdapter.notifyDataSetChanged()
     DropDownNavAdapter.notifyDataSetChanged()
   }
@@ -429,7 +434,7 @@ with EventBus.RefOwner {
     }
   }
   override def notifyDataSetChanged() {
-    if (!hasCallbacks(tabNotify))
+    if (navMode == Settings.NAVIGATION_MODE_TABS && !hasCallbacks(tabNotify))
       UiBus.handler.postDelayed(tabNotify, 100)
     super.notifyDataSetChanged()
   }
