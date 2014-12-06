@@ -42,18 +42,14 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
   var idholder = 0x10001000
   import ViewGroup.LayoutParams._
 
-  lazy val listSepStyle = {
-    val tv = new TypedValue
-    getActivity.getTheme.resolveAttribute(
-      android.R.attr.listSeparatorTextViewStyle, tv, true)
-    tv.resourceId
-  }
   def header = {
-    new TextView(getActivity, null, listSepStyle)
+    new TextView(getActivity, null, android.R.attr.listSeparatorTextViewStyle)
   }
-  lazy val label = lp2(WRAP_CONTENT, WRAP_CONTENT) { lp: TableRow.LayoutParams =>
-    lp.rightMargin = 12 dp
-  }
+  def label = w[TextView] <~
+    lp2(WRAP_CONTENT, WRAP_CONTENT) { lp: TableRow.LayoutParams =>
+      lp.rightMargin = 12 dp
+    }
+
   lazy val inputTweaks = tweak { e: EditText =>
     e.setSingleLine(true)
     e.setId(idholder)
@@ -66,58 +62,58 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
       l[TableLayout](
         header <~ text("Connection Info"),
         l[TableRow](
-          w[TextView] <~ label <~ text("Name"),
+          label <~ text("Name"),
           w[EditText] <~ inputTweaks <~ hint("required") <~ wire(server_name) <~
             textCapWords
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          w[TextView] <~ label <~ text("Server address"),
+          label <~ text("Server address"),
           w[EditText] <~ inputTweaks <~ hint("required") <~ wire(server_host) <~
             textUri
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          w[TextView] <~ label <~ text("Port"),
+          label <~ text("Port"),
           w[EditText] <~ inputTweaks <~ hint("Default: 6667") <~ wire(port) <~
             number
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          checkbox <~ label <~ text("Enable Autoconnect") <~ wire(autoconnect)
+          checkbox <~ text("Enable Autoconnect") <~ wire(autoconnect)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          checkbox <~ label <~ text("Enable SSL") <~ wire(ssl)
+          checkbox <~ text("Enable SSL") <~ wire(ssl)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         header <~ text("User Info"),
         l[TableRow](
-          w[TextView] <~ label <~ text("Nickname"),
+          label <~ text("Nickname"),
           w[EditText] <~ inputTweaks <~ hint("required") <~ wire(nickname)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          w[TextView] <~ label <~ text("Alt. nick"),
+          label <~ text("Alt. nick"),
           w[EditText] <~ inputTweaks <~ hint("Default: <Nickname>_") <~ wire(altnick)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          w[TextView] <~ label <~ text("Real name"),
+          label <~ text("Real name"),
           w[EditText] <~ inputTweaks <~ hint("required") <~ wire(realname) <~
             textCapWords
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          w[TextView] <~ label <~ text("Username"),
+          label <~ text("Username"),
           w[EditText] <~ inputTweaks <~ hint("required") <~ wire(username)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          w[TextView] <~ label <~ text("Password"),
+          label <~ text("Password"),
           w[EditText] <~ inputTweaks <~ hint("optional") <~ wire(password) <~
             textPassword
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         header <~ text("Session Options"),
         l[TableRow](
-          w[TextView] <~ label <~ text("Auto join"),
+          label <~ text("Auto join"),
           w[EditText] <~ inputTweaks <~ hint("#chan1 key;#chan2") <~ wire(autojoin)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          w[TextView] <~ label <~ text("Auto run"),
+          label <~ text("Auto run"),
           w[EditText] <~ inputTweaks <~ hint("m pfn hi there;") <~ wire(autorun)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
       ) <~ lp[ScrollView](MATCH_PARENT, MATCH_PARENT) <~ margin(all = 8 dp) <~
@@ -255,6 +251,8 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
         }
       }
     }
+    d.getWindow.setSoftInputMode(
+      WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     d
   }
 }
