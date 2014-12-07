@@ -6,7 +6,7 @@ import android.app.{Activity, AlertDialog, Dialog}
 import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.os.{Build, Bundle}
+import android.os.Bundle
 import android.util.TypedValue
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
@@ -26,7 +26,6 @@ import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common.{UiBus, EventBus}
 
 import MainActivity._
-import TypedResource._
 
 import Tweaks._
 import macroid._

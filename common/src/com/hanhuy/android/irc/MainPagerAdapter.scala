@@ -29,7 +29,6 @@ import MainPagerAdapter._
 import com.hanhuy.android.common._
 import AndroidConversions._
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
-import TypedResource.activityToTyped
 
 import scala.util.Try
 
@@ -146,8 +145,12 @@ with EventBus.RefOwner {
 
     if (c.newMessages)
       t.flags |= TabInfo.FLAG_NEW_MESSAGES
+    else
+      t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
     if (c.newMentions)
       t.flags |= TabInfo.FLAG_NEW_MENTIONS
+    else
+      t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
     refreshTabTitle(idx + channelBase)
   }
 
@@ -208,7 +211,7 @@ with EventBus.RefOwner {
     manager.lastChannel = t.channel
 
     activity.newmessages.setVisibility(
-      if (channels.find(_.newMentions).isEmpty) View.GONE else View.VISIBLE)
+      if (hasNewMentions) View.VISIBLE else View.GONE)
 
     HoneycombSupport.setSelectedNavigationItem(pos)
     HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
@@ -224,6 +227,8 @@ with EventBus.RefOwner {
       imm.hideSoftInputFromWindow(f.getWindowToken, 0)
     }
   }
+
+  def hasNewMentions = channels.exists(_.newMentions)
 
   def selectTab(cname: String, sname: String) {
     val tab = tabs indexWhere {

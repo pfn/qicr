@@ -19,7 +19,6 @@ import scala.collection.JavaConversions._
 import com.hanhuy.android.irc.model._
 
 import MainActivity._
-import TypedResource._
 import com.hanhuy.android.common._
 import RichLogger.{w => _, _}
 
@@ -457,6 +456,8 @@ with Contexts[Activity] with IdGeneration {
     }
 
     refreshTabs()
+    newmessages.setVisibility(if (adapter.hasNewMentions)
+      View.VISIBLE else View.GONE)
   }
 
   override def onNewIntent(i: Intent) {
