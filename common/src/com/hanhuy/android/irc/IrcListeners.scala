@@ -242,10 +242,10 @@ with ServerEventListener with MessageEventListener {
           buf.append("\n%1   %2: %3, %4" formatSpans(whoisPrefix, m,
             args(2), new java.util.Date(time).toString))
         case 401 =>
-          buf.append("\n%1 %2: %3" formatSpans(whoisPrefix,
+          buf.append("%1 %2: %3" formatSpans(whoisPrefix,
             MessageAdapter.colorNick(nick), m))
         case 406 =>
-          buf.append("\n%1 %2: %3" formatSpans(whoisPrefix,
+          buf.append("%1 %2: %3" formatSpans(whoisPrefix,
             MessageAdapter.colorNick(nick), m))
         case _ =>
       }

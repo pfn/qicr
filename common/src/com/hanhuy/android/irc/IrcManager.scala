@@ -7,7 +7,7 @@ import javax.net.ssl.SSLContext
 import android.graphics.Typeface
 import android.text.{Layout, StaticLayout, TextPaint, TextUtils}
 import android.text.style.TextAppearanceSpan
-import android.util.DisplayMetrics
+import android.util.{TypedValue, DisplayMetrics}
 import android.view.WindowManager
 import com.hanhuy.android.irc.model._
 
@@ -456,7 +456,10 @@ class IrcManager extends EventBus.RefOwner {
       PendingIntent.FLAG_UPDATE_CURRENT)
     val notif = new NotificationCompat.Builder(Application.context)
       .setSmallIcon(icon)
+      .setCategory(Notification.CATEGORY_MESSAGE)
+      .setPriority(Notification.PRIORITY_HIGH)
       .setWhen(System.currentTimeMillis())
+      .setVibrate(Array(0l)) // required to make heads-up show on lollipop
       .setContentIntent(pending)
       .setContentText(text)
       .setStyle(new NotificationCompat.BigTextStyle()
@@ -665,19 +668,24 @@ class IrcManager extends EventBus.RefOwner {
         }
 
         // TODO also account for the padding on the notification and textview
+        val context = Application.context
         val tas = new TextAppearanceSpan(
-          Application.context, android.R.style.TextAppearance_Small)
+          context, android.R.style.TextAppearance_Small)
         val paint = new TextPaint
         paint.setTypeface(Typeface.create(tas.getFamily, tas.getTextStyle))
         paint.setTextSize(tas.getTextSize)
-        val d = Application.context.getResources.getDimension(
+        val d = context.getResources.getDimension(
           R.dimen.notification_panel_width)
         val metrics = new DisplayMetrics
-        Application.context.systemService[WindowManager].getDefaultDisplay.getMetrics(metrics)
+        context.systemService[WindowManager].getDefaultDisplay.getMetrics(metrics)
+        // 8px margins on notification content
+        val margin = TypedValue.applyDimension(
+          TypedValue.COMPLEX_UNIT_DIP, 16, context.getResources.getDisplayMetrics)
         // api21 has non-maxwidth notification panels on phones
-        val width = math.min(metrics.widthPixels, if (d < 0) metrics.widthPixels else d.toInt)
+        val width = math.min(metrics.widthPixels,
+          if (d < 0) metrics.widthPixels else d.toInt) - margin
 
-        val layout = new StaticLayout(msgs, paint, width,
+        val layout = new StaticLayout(msgs, paint, width.toInt,
           Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, true)
         val lines = layout.getLineCount
         val startOffset = if (lines > MAX_LINES) {
