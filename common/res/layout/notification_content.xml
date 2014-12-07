@@ -40,6 +40,7 @@
         android:maxLines="9"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:textColor="#555"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:text="@string/no_messages"/>
     <LinearLayout

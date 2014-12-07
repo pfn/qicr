@@ -34,7 +34,6 @@ import macroid.FullDsl._
 
 import scala.util.Try
 
-// TODO fix dialog dismiss on-recreate
 class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
   val manager = IrcManager.start()
 

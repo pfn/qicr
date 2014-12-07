@@ -5,7 +5,7 @@
         android:thickness="4dp"
         android:useLevel="false">
     <stroke
-            android:color="#ff555588"
+            android:color="#99cc00"
             android:width="4dp"/>
-    <solid android:color="#77333333"/>
+    <solid android:color="@color/notification_background_color"/>
 </shape>

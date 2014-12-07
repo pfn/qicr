@@ -2,4 +2,6 @@
     <drawable name="transparent1">#aaff0000</drawable>
     <drawable name="transparent2">#aa00ff00</drawable>
     <drawable name="transparent3">#aa0000ff</drawable>
+
+    <color name="notification_background_color">#77333333</color>
 </resources>

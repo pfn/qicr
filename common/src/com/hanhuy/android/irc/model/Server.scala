@@ -29,8 +29,7 @@ object Server {
     fmt format lag
   }
 }
-// TODO FIXME add equals
-class Server extends MessageAppender with Ordered[Server]{
+class Server extends MessageAppender with Ordered[Server] {
 
   import Server._
   val messages = new MessageAdapter(null)

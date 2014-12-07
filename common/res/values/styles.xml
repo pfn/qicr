@@ -17,7 +17,7 @@
         <!-- seems to break autoLink text...
         <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
         -->
-        <item name="colorAccent">#a4c639</item>
+        <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
@@ -27,7 +27,7 @@
         <item name="inputBackground">@drawable/input_background_dark</item>
     </style>
     <style name="Base.AppTheme.Light" parent="@style/Theme.AppCompat.Light">
-        <item name="colorAccent">#a4c639</item>
+        <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
@@ -57,4 +57,5 @@
     <style name="Widget.ImageButton.Light" parent="@android:style/Widget.ImageButton">
         <item name="android:background">@drawable/btn_selector_light</item>
     </style>
+    <style name="NotificationText"/>
 </resources>
