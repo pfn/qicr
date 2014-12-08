@@ -15,7 +15,7 @@ import android.app.{Activity, AlertDialog, Fragment}
 import android.support.v7.app.ActionBarActivity
 import android.content.{DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
-import android.preference.{Preference, PreferenceManager, PreferenceFragment}
+import android.preference._
 import com.hanhuy.android.common.{AndroidConversions, ServiceBus, UiBus}
 import org.acra.ACRA
 
@@ -136,6 +136,23 @@ class SettingsFragmentActivity extends ActionBarActivity with IdGeneration with 
   }
 }
 
+object SettingsFragment {
+  def setupNotificationPreference(c: Context, ps: PreferenceScreen): Unit = {
+
+    val p = ps.findPreference(Settings.NOTIFICATION_SOUND.key)
+    val notification = Settings.get(Settings.NOTIFICATION_SOUND)
+    val r = RingtoneManager.getRingtone(c, Uri.parse(notification))
+    p.setSummary(r.getTitle(c))
+    p.setOnPreferenceChangeListener(new OnPreferenceChangeListener {
+      override def onPreferenceChange(preference: Preference, newValue: scala.Any) = {
+        val r = RingtoneManager.getRingtone(c, Uri.parse(newValue.toString))
+        p.setSummary(r.getTitle(c))
+        true
+      }
+    })
+
+  }
+}
 class SettingsFragment
 extends PreferenceFragment with macroid.Contexts[Fragment] {
   import macroid.FullDsl._
@@ -145,17 +162,8 @@ extends PreferenceFragment with macroid.Contexts[Fragment] {
     super.onCreate(bundle)
     addPreferencesFromResource(R.xml.settings)
 
-    val p = getPreferenceScreen.findPreference(Settings.NOTIFICATION_SOUND.key)
-    val notification = Settings.get(Settings.NOTIFICATION_SOUND)
-    val r = RingtoneManager.getRingtone(getActivity, Uri.parse(notification))
-    p.setSummary(r.getTitle(getActivity))
-    p.setOnPreferenceChangeListener(new OnPreferenceChangeListener {
-      override def onPreferenceChange(preference: Preference, newValue: scala.Any) = {
-        val r = RingtoneManager.getRingtone(getActivity, Uri.parse(newValue.toString))
-        p.setSummary(r.getTitle(getActivity))
-        true
-      }
-    })
+    SettingsFragment.setupNotificationPreference(getActivity, getPreferenceScreen)
+
     getPreferenceScreen.findPreference(
       "debug.log").setOnPreferenceClickListener(
         new OnPreferenceClickListener {
@@ -194,5 +202,15 @@ extends PreferenceFragment with macroid.Contexts[Fragment] {
             true
           }
         })
+  }
+}
+
+class SettingsActivity extends PreferenceActivity {
+  override def onCreate(b: Bundle) {
+    super.onCreate(b)
+    SettingsFragment.setupNotificationPreference(this, getPreferenceScreen)
+    addPreferencesFromResource(R.xml.settings)
+    val p = getPreferenceScreen().findPreference("debug.log")
+    getPreferenceScreen.removePreference(p)
   }
 }
