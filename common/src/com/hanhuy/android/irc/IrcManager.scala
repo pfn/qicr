@@ -454,20 +454,24 @@ class IrcManager extends EventBus.RefOwner {
 
     val pending = PendingIntent.getActivity(Application.context, id, intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
-    val notif = new NotificationCompat.Builder(Application.context)
+    val builder = new NotificationCompat.Builder(Application.context)
       .setSmallIcon(icon)
-      .setCategory(Notification.CATEGORY_MESSAGE)
-      .setPriority(Notification.PRIORITY_HIGH)
       .setWhen(System.currentTimeMillis())
-      .setSound(Uri.parse(Settings.get(Settings.NOTIFICATION_SOUND)))
-      .setVibrate(if (Settings.get(Settings.NOTIFICATION_VIBRATE))
-        Array(0l, 100l, 100l, 100l) else Array(0l)) // required to make heads-up show on lollipop
       .setContentIntent(pending)
       .setContentText(text)
-      .setStyle(new NotificationCompat.BigTextStyle()
-      .bigText(text).setBigContentTitle(getString(R.string.notif_title)))
       .setContentTitle(getString(R.string.notif_title))
+
+    val notif = if (channel.isDefined) {
+      builder.setPriority(Notification.PRIORITY_HIGH)
+        .setCategory(Notification.CATEGORY_MESSAGE)
+        .setSound(Uri.parse(Settings.get(Settings.NOTIFICATION_SOUND)))
+        .setVibrate(if (Settings.get(Settings.NOTIFICATION_VIBRATE))
+        Array(0l, 100l, 100l, 100l) else Array(0l)) // required to make heads-up show on lollipop
+        .setStyle(new NotificationCompat.BigTextStyle()
+        .bigText(text).setBigContentTitle(getString(R.string.notif_title)))
       .build
+    } else builder.build
+
     notif.flags |= Notification.FLAG_AUTO_CANCEL
     channel foreach { c =>
       val cancel = new Intent(ACTION_CANCEL_MENTION)
