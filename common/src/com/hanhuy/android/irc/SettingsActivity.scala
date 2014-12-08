@@ -1,8 +1,10 @@
 package com.hanhuy.android.irc
 
-import android.preference.Preference.OnPreferenceClickListener
+import android.media.RingtoneManager
+import android.net.Uri
+import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceClickListener}
 import android.text.{Editable, TextWatcher}
-import android.view.{ViewGroup, LayoutInflater}
+import android.provider.{Settings => ASettings}
 import android.widget.EditText
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 import macroid._
@@ -37,6 +39,9 @@ object Settings {
 
   val IRC_LOGGING = Setting[Boolean]("irc_logging", true)
   val RUNNING_NOTIFICATION = Setting[Boolean]("notification_running_enable", true)
+  val NOTIFICATION_SOUND = Setting[String]("notification_sound",
+    ASettings.System.DEFAULT_NOTIFICATION_URI.toString)
+  val NOTIFICATION_VIBRATE = Setting[Boolean]("notification_vibrate_enable", false)
   val WIDGET_IDS = Setting[String]("internal_widget_ids", "")
   val HIDE_KEYBOARD = Setting[Boolean]("ui_hide_kbd_after_send", false)
   val IRC_DEBUG = Setting[Boolean]("irc_debug_log", false)
@@ -140,6 +145,17 @@ extends PreferenceFragment with macroid.Contexts[Fragment] {
     super.onCreate(bundle)
     addPreferencesFromResource(R.xml.settings)
 
+    val p = getPreferenceScreen.findPreference(Settings.NOTIFICATION_SOUND.key)
+    val notification = Settings.get(Settings.NOTIFICATION_SOUND)
+    val r = RingtoneManager.getRingtone(getActivity, Uri.parse(notification))
+    p.setSummary(r.getTitle(getActivity))
+    p.setOnPreferenceChangeListener(new OnPreferenceChangeListener {
+      override def onPreferenceChange(preference: Preference, newValue: scala.Any) = {
+        val r = RingtoneManager.getRingtone(getActivity, Uri.parse(newValue.toString))
+        p.setSummary(r.getTitle(getActivity))
+        true
+      }
+    })
     getPreferenceScreen.findPreference(
       "debug.log").setOnPreferenceClickListener(
         new OnPreferenceClickListener {

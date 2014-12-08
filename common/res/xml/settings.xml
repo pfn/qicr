@@ -80,6 +80,17 @@
                 android:enabled="@bool/is_v16plus"
                 android:defaultValue="true"
                 />
+        <RingtonePreference
+            android:key="notification_sound"
+            android:ringtoneType="notification"
+            android:showDefault="true"
+            android:showSilent="true"
+            android:title="Sound"
+            />
+        <CheckBoxPreference
+            android:key="notification_vibrate_enable"
+            android:title="Vibrate"
+            android:defaultValue="false"/>
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_irc">
         <EditTextPreference

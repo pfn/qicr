@@ -30,7 +30,7 @@ import com.hanhuy.android.common._
 import AndroidConversions._
 import RichLogger._
 import IrcManager._
-import android.net.{NetworkInfo, ConnectivityManager}
+import android.net.{Uri, NetworkInfo, ConnectivityManager}
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.BusEvent.{IrcManagerStop, IrcManagerStart, ChannelStatusChanged}
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
@@ -459,7 +459,9 @@ class IrcManager extends EventBus.RefOwner {
       .setCategory(Notification.CATEGORY_MESSAGE)
       .setPriority(Notification.PRIORITY_HIGH)
       .setWhen(System.currentTimeMillis())
-      .setVibrate(Array(0l)) // required to make heads-up show on lollipop
+      .setSound(Uri.parse(Settings.get(Settings.NOTIFICATION_SOUND)))
+      .setVibrate(if (Settings.get(Settings.NOTIFICATION_VIBRATE))
+        Array(0l, 100l, 100l, 100l) else Array(0l)) // required to make heads-up show on lollipop
       .setContentIntent(pending)
       .setContentText(text)
       .setStyle(new NotificationCompat.BigTextStyle()
@@ -474,6 +476,8 @@ class IrcManager extends EventBus.RefOwner {
         ACTION_CANCEL_MENTION.hashCode, cancel,
         PendingIntent.FLAG_UPDATE_CURRENT)
     }
+    if (Build.VERSION.SDK_INT >= 21)
+      notif.headsUpContentView = notif.bigContentView
     nm.notify(id, notif)
   }
 
