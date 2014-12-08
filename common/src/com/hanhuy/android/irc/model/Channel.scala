@@ -62,28 +62,27 @@ abstract class ChannelLike(val server: Server, val name: String)
     messages.clear()
   }
 
+  def addInternal(m: MessageLike): Unit = {
+    messages.add(m)
+    MessageLog.log(m, this)
+    ServiceBus.send(BusEvent.ChannelMessage(this, m))
+    UiBus.send(BusEvent.ChannelMessage(this, m))
+  }
   def add(m: MessageLike) = synchronized {
-    if (isNew(m)) {
-      val msg = m match {
-        case c: ChatMessage =>
-          lastTs = m.ts.getTime
-          if (!Config.Ignores(c.sender)) {
-            newMessages = true
-            messages.add(m)
+    if (isNew(m)) m match {
+      case c: ChatMessage =>
+        lastTs = m.ts.getTime
+        if (!Config.Ignores(c.sender)) {
+          newMessages = true
+          addInternal(m)
+          if (IrcListeners.matchesNick(server, c.message)) {
+            newMentions = true
+            ServiceBus.send(BusEvent.ChannelStatusChanged(this))
           }
-          c.message
-        case _ =>
-          messages.add(m)
-          ""
-      }
-
-      if (IrcListeners.matchesNick(server, msg)) {
-        newMentions = true
-        ServiceBus.send(BusEvent.ChannelStatusChanged(this))
-      }
-      ServiceBus.send(BusEvent.ChannelMessage(this, m))
-      UiBus.send(BusEvent.ChannelMessage(this, m))
-      MessageLog.log(m, this)
+        }
+        c.message
+      case _ =>
+        addInternal(m)
     }
   }
 
