@@ -675,7 +675,7 @@ class IrcManager extends EventBus.RefOwner {
           getString(R.string.no_messages)
         }
 
-        // TODO also account for the padding on the notification and textview
+        // TODO account for height of content text view (enable font-sizes)
         val context = Application.context
         val tas = new TextAppearanceSpan(
           context, android.R.style.TextAppearance_Small)

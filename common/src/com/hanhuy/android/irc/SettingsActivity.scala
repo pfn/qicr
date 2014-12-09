@@ -30,6 +30,10 @@ object Setting {
 }
 class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
   Setting.settings = Setting.settings + ((key, this))
+
+  override def toString = {
+    "Setting: " + key
+  }
 }
 
 object Settings {
@@ -37,6 +41,8 @@ object Settings {
   val NAVIGATION_MODE_DROPDOWN = "Drop Down"
   val NAVIGATION_MODE_DRAWER = "Drawer"
 
+  val FONT_SIZE = Setting[Int]("font_size", default = -1)
+  val FONT_NAME = Setting[String]("font_name", null)
   val IRC_LOGGING = Setting[Boolean]("irc_logging", true)
   val RUNNING_NOTIFICATION = Setting[Boolean]("notification_running_enable", true)
   val NOTIFICATION_SOUND = Setting[String]("notification_sound",
@@ -95,12 +101,13 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
       p.getString(setting.key, default)
     } else if (classOf[Boolean] == m.runtimeClass) {
       p.getBoolean(setting.key, setting.default.asInstanceOf[Boolean])
-    } else if (classOf[Float] == m.runtimeClass) {
-      p.getFloat(setting.key, setting.default.asInstanceOf[Float])
     } else if (classOf[Long] == m.runtimeClass) {
       p.getLong(setting.key, setting.default.asInstanceOf[Long])
     } else if (classOf[Int] == m.runtimeClass) {
-      p.getInt(setting.key, setting.default.asInstanceOf[Int])
+      // broken otherwise
+      return p.getInt(setting.key, setting.default.asInstanceOf[Int]).asInstanceOf[A]
+    } else if (classOf[Float] == m.runtimeClass) {
+      p.getFloat(setting.key, setting.default.asInstanceOf[Float])
     } else {
       throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
     }

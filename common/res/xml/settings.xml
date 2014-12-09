@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:qicr="http://schemas.android.com/apk/res-auto">
     <PreferenceCategory android:title="@string/pref_category_interface">
         <CheckBoxPreference
             android:key="ui_show_nick_complete"
@@ -71,6 +72,18 @@
             android:defaultValue="@string/pref_speech_rec_clearline_default"
             android:singleLine="true"
         />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Text">
+        <com.hanhuy.android.irc.FontNamePreference
+                android:key="font_name"
+                android:title="Font"
+            />
+        <com.hanhuy.android.irc.FontSizePreference
+                android:key="font_size"
+                qicr:fontNameKey="font_name"
+                android:title="Font size"
+                android:summary="default"
+                />
     </PreferenceCategory>
     <PreferenceCategory android:title="Notifications">
         <CheckBoxPreference

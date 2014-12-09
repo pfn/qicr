@@ -2,6 +2,7 @@ package com.hanhuy.android.irc.model
 
 import android.app.Activity
 import android.text.util.Linkify
+import android.util.TypedValue
 import com.hanhuy.android.irc._
 
 import com.hanhuy.android.common.{AndroidConversions, UiBus, EventBus, SpannedGenerator}
@@ -18,7 +19,6 @@ import android.widget.{AbsListView, BaseAdapter, TextView}
 
 import java.text.SimpleDateFormat
 
-import MessageAdapter._
 import android.text.style.ClickableSpan
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
@@ -35,9 +35,11 @@ trait MessageAppender {
   def clear(): Unit
 }
 
-object MessageAdapter {
-  lazy val font = Typeface.createFromAsset(
+object MessageAdapter extends EventBus.RefOwner {
+  lazy val gbfont = Typeface.createFromAsset(
     Application.context.getAssets, "DejaVuSansMono.ttf")
+  private var fontSetting = Option(Settings.get(Settings.FONT_NAME)) flatMap (
+    n => Try(Typeface.createFromFile(n)).toOption)
   val NICK_COLORS = Array(
     0xff33b5e5, 0xffaa66cc, 0xff99cc00, 0xffffbb33, 0xffff4444,
     0xff0099cc, 0xff9933cc, 0xff669900, 0xffff8800, 0xffcc0000)
@@ -180,16 +182,23 @@ object MessageAdapter {
       tweak { tv: TextView =>
         tv.setAutoLinkMask(WEB_URLS | EMAIL_ADDRESSES | MAP_ADDRESSES)
         tv.setLinksClickable(true)
-        tv.setTextAppearance(Application.context, android.R.style.TextAppearance_Small)
+        tv.setTextAppearance(ctx, android.R.style.TextAppearance_Small)
         tv.setTypeface(Typeface.MONOSPACE)
         tv.setGravity(Gravity.CENTER_VERTICAL)
       } <~ padding(left = 6 dp, right = 6 dp)
   }
+
+  UiBus += {
+    case BusEvent.PreferenceChanged(_, k) =>
+      if (k == Settings.FONT_NAME) {
+        fontSetting = Try(Typeface.createFromFile(
+          Settings.get(Settings.FONT_NAME))).toOption
+      }
+  }
 }
 
 class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.RefOwner {
-
-  // this is so ugly FIXME
+  import MessageAdapter._
 
   // TODO FIXME might activity might be None
 
@@ -218,6 +227,11 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
       notifyDataSetChanged()
     } else if (k == Settings.SHOW_TIMESTAMP) {
       MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
+      notifyDataSetChanged()
+    } else if (k == Settings.FONT_NAME) {
+      notifyDataSetChanged()
+    } else if (k == Settings.FONT_SIZE) {
+      size = Settings.get(Settings.FONT_SIZE)
       notifyDataSetChanged()
     }
   }
@@ -277,6 +291,8 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
   override def getItem(pos: Int) : MessageLike = filteredMessages(pos)
   override def getCount : Int = filteredMessages.size
 
+  private var size = Settings.get(Settings.FONT_SIZE)
+
   override def getView(pos: Int, convertView: View, container: ViewGroup) = {
     val c = if (convertView == null || convertView.getContext == context)
       convertView.asInstanceOf[TextView] else null
@@ -284,11 +300,13 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
       val v = getUi(messageLayout(_activity.get.get))
 
       if (!icsAndNewer)
-        v.setTypeface(font)
+        v.setTypeface(gbfont)
       v.setMovementMethod(LinkMovementMethod.getInstance)
       v
     }
 
+    if (size > 0) view.setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
+    fontSetting foreach view.setTypeface
     view.setText(formatText(getItem(pos)))
     view
   }

@@ -5,4 +5,7 @@
         <attr name="qicrDrawerBackground" format="color"/>
         <attr name="inputBackground" format="reference"/>
     </declare-styleable>
+    <declare-styleable name="FontSizePreference">
+        <attr name="fontNameKey" format="string|reference"/>
+    </declare-styleable>
 </resources>
