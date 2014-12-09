@@ -293,11 +293,12 @@ class WidgetProvider extends AppWidgetProvider {
       .toList.sortWith(_._1 < _._1) flatMap { case (k, v) => k :: v}
 
     val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
-    val m = Widgets.appenderForSubject(subject).get
-    val idx = all.indexOf(m)
-    val tgt = (all.size + idx + direction) % all.size
-    Widgets.setMessageView(c, intent.getIntExtra(
-      AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Widgets.toString(all(tgt)), true)
+    Widgets.appenderForSubject(subject) foreach { m =>
+      val idx = all.indexOf(m)
+      val tgt = (all.size + idx + direction) % all.size
+      Widgets.setMessageView(c, intent.getIntExtra(
+        AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Widgets.toString(all(tgt)), true)
+    }
   }
 }
 

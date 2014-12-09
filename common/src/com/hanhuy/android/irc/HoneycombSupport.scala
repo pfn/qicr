@@ -44,7 +44,8 @@ object HoneycombSupport {
   def recreate() {
 
     if (honeycombAndNewer) {
-      activity.recreate()
+      if (activity != null)
+        activity.recreate()
     } else {
       IrcManager.instance foreach (_.queueCreateActivity(activity.adapter.page))
       activity.finish()

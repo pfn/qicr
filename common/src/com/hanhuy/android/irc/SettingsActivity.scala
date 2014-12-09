@@ -215,8 +215,8 @@ extends PreferenceFragment with macroid.Contexts[Fragment] {
 class SettingsActivity extends PreferenceActivity {
   override def onCreate(b: Bundle) {
     super.onCreate(b)
-    SettingsFragment.setupNotificationPreference(this, getPreferenceScreen)
     addPreferencesFromResource(R.xml.settings)
+    SettingsFragment.setupNotificationPreference(this, getPreferenceScreen)
     val p = getPreferenceScreen().findPreference("debug.log")
     getPreferenceScreen.removePreference(p)
   }
