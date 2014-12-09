@@ -180,7 +180,7 @@ object MessageAdapter {
       tweak { tv: TextView =>
         tv.setAutoLinkMask(WEB_URLS | EMAIL_ADDRESSES | MAP_ADDRESSES)
         tv.setLinksClickable(true)
-        tv.setTextAppearance(Application.context, android.R.attr.textAppearanceSmall)
+        tv.setTextAppearance(Application.context, android.R.style.TextAppearance_Small)
         tv.setTypeface(Typeface.MONOSPACE)
         tv.setGravity(Gravity.CENTER_VERTICAL)
       } <~ padding(left = 6 dp, right = 6 dp)

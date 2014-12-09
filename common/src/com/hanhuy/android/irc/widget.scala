@@ -462,7 +462,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
         lp[FrameLayout](MATCH_PARENT, MATCH_PARENT, Gravity.FILL) <~
         tweak { tv: TextView =>
           tv.setMaxLines(1)
-          tv.setTextAppearance(this, android.R.attr.textAppearanceMedium)
+          tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
           tv.setEllipsize(TruncateAt.END)
           tv.setGravity(Gravity.CENTER)
         } <~ padding(left = 48 dp, right = 48 dp)
@@ -471,7 +471,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
       lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
       tweak { tv: TextView =>
         tv.setGravity(Gravity.CENTER)
-        tv.setTextAppearance(this, android.R.attr.textAppearanceMedium)
+        tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
       } <~ text(R.string.no_messages),
     w[ListView] <~ wire(_list) <~
       lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~ margin(top = 48 dp) <~

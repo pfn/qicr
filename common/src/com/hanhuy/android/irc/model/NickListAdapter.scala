@@ -54,7 +54,7 @@ extends BaseAdapter with EventBus.RefOwner {
   val layout = w[TextView] <~ id(android.R.id.text1) <~
     bgres(R.drawable.selector_background) <~
     lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~ tweak { tv: TextView =>
-      tv.setTextAppearance(activity(), android.R.attr.textAppearanceSmall)
+      tv.setTextAppearance(activity(), android.R.style.TextAppearance_Small)
       tv.setGravity(Gravity.CENTER_VERTICAL)
       tv.setMinHeight(36 dp)
       tv.setShadowLayer(1.2f, 0, 0, Color.parseColor("#ff333333"))
