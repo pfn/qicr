@@ -295,9 +295,11 @@ class WidgetProvider extends AppWidgetProvider {
     val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
     Widgets.appenderForSubject(subject) foreach { m =>
       val idx = all.indexOf(m)
-      val tgt = (all.size + idx + direction) % all.size
-      Widgets.setMessageView(c, intent.getIntExtra(
-        AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Widgets.toString(all(tgt)), true)
+      if (idx != -1 && all.size > 0) {
+        val tgt = (all.size + idx + direction) % all.size
+        Widgets.setMessageView(c, intent.getIntExtra(
+          AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Widgets.toString(all(tgt)), true)
+      }
     }
   }
 }
