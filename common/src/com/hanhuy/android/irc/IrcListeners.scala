@@ -184,7 +184,8 @@ with ServerEventListener with MessageEventListener {
   val CtcpPing = """(\d+)\s+(\d+)""".r
 
   def handleWhois(line: IrcPacket, start: Boolean = false) {
-    val nick = line.getArgumentsArray()(1)
+    val realNick = line.getArgumentsArray()(1)
+    val nick = realNick.toLowerCase
     if (start)
       whoisBuffer += (nick -> List(line))
     else {
@@ -193,9 +194,11 @@ with ServerEventListener with MessageEventListener {
 
         line.getNumericCommand match {
           case 318 =>
-            UiBus.run(manager.lastChannel foreach (_.add(accumulateWhois(nick))))
+            UiBus.run(manager.lastChannel foreach (
+              _.add(accumulateWhois(nick, realNick))))
           case 369 =>
-            UiBus.run(manager.lastChannel foreach (_.add(accumulateWhois(nick))))
+            UiBus.run(manager.lastChannel foreach (
+              _.add(accumulateWhois(nick, realNick))))
           case _ =>
         }
       }
@@ -204,7 +207,7 @@ with ServerEventListener with MessageEventListener {
 
   def whoisPrefix = "%1%2%3" formatSpans( textColor(0xff777777, "-"),
     textColor(0xff00ff00, "!"), textColor(0xff777777, "-"))
-  def accumulateWhois(nick: String) = {
+  def accumulateWhois(nick: String, realNick: String) = {
     val b = (new SpannableStringBuilder /: whoisBuffer(nick)) { (buf,line) =>
       val args = line.getArgumentsArray
       val m = line.getMessage
@@ -214,13 +217,13 @@ with ServerEventListener with MessageEventListener {
         case 311 =>
           val (user, host, name) = (args(2), args(3), m)
           val t = "%1 %2 [%3@%4]\n%6   name: %5" formatSpans(
-            whoisPrefix, MessageAdapter.colorNick(nick), user, host,
+            whoisPrefix, MessageAdapter.colorNick(realNick), user, host,
             bold(name), whoisPrefix)
           buf.append(t)
         case 314 =>
           val (user, host, name) = (args(2), args(3), m)
           val t = "%1 %2 was [%3@%4]\n%1   name: %5" formatSpans(
-            whoisPrefix, MessageAdapter.colorNick(nick), user, host, bold(name))
+            whoisPrefix, MessageAdapter.colorNick(realNick), user, host, bold(name))
           buf.append(t)
         case 312 =>
           val (server,tag) = (args(2), m)
@@ -243,10 +246,12 @@ with ServerEventListener with MessageEventListener {
             args(2), new java.util.Date(time).toString))
         case 401 =>
           buf.append("%1 %2: %3" formatSpans(whoisPrefix,
-            MessageAdapter.colorNick(nick), m))
+            MessageAdapter.colorNick(realNick), m))
         case 406 =>
           buf.append("%1 %2: %3" formatSpans(whoisPrefix,
-            MessageAdapter.colorNick(nick), m))
+            MessageAdapter.colorNick(realNick), m))
+        case 671 =>
+          buf.append("\n%1   %2" formatSpans(whoisPrefix, m))
         case _ =>
       }
       buf
@@ -288,6 +293,7 @@ with ServerEventListener with MessageEventListener {
           case 369 => handleWhois(line) // args[1], nick, end of whowas
           case 401 => handleWhois(line, true) // args[1], nick, whois not there
           case 406 => handleWhois(line, true) // args[1], nick, whowas not there
+          case 671 => handleWhois(line) // args[1], nick, is using a secure connection
           case 366 => return // end of names list
           case 375 => return // motd start
           case _ => ()
