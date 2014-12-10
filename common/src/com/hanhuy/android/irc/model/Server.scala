@@ -103,6 +103,7 @@ class Server extends MessageAppender with Ordered[Server] {
     valid = valid && !blank(hostname)
     valid = valid && port > 0
     valid = valid && !blank(nickname)
+    valid = valid && (!sasl || (!blank(username) && !blank(password)))
     if (valid && !blank(nickname) && blank(altnick))
       altnick = nickname + "_"
     valid

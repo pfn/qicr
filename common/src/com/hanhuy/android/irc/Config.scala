@@ -167,6 +167,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       val col_realname    = c.getColumnIndexOrThrow(FIELD_REALNAME)
       val col_autorun     = c.getColumnIndexOrThrow(FIELD_AUTORUN)
       val col_autojoin    = c.getColumnIndexOrThrow(FIELD_AUTOJOIN)
+      val col_usesasl     = c.getColumnIndexOrThrow(FIELD_USESASL)
 
       val list = Stream.continually(c.moveToNext()).takeWhile (_==true).map {
         _ =>
@@ -184,6 +185,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
         s.realname    = c.getString(col_realname)
         s.autorun     = c.getString(col_autorun)
         s.autojoin    = c.getString(col_autojoin)
+        s.sasl        = c.getInt(col_usesasl) != 0
         s
       }.force
 

@@ -16,15 +16,11 @@ import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
 import android.os.{Build, Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
-import android.widget.RemoteViews
+import android.widget.{Toast, RemoteViews}
 import android.support.v4.app.NotificationCompat
 
-import com.sorcix.sirc.IrcDebug
-import com.sorcix.sirc.IrcServer
-import com.sorcix.sirc.IrcConnection
-import com.sorcix.sirc.NickNameException
-import com.sorcix.sirc.cap.{CompoundNegotiator, ServerTimeNegotiator}
-import com.sorcix.sirc.{Channel => SircChannel}
+import com.sorcix.sirc.{Channel => SircChannel, _}
+import com.sorcix.sirc.cap.{CapNegotiator, CompoundNegotiator, ServerTimeNegotiator}
 
 import com.hanhuy.android.common._
 import AndroidConversions._
@@ -554,11 +550,26 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   def connectServerTask(server: Server) {
+    var state = server.state
     val ircserver = new IrcServer(server.hostname, server.port,
-      server.password, server.ssl)
+      if (server.sasl) null else server.password, server.ssl)
     val connection = new IrcConnection2
-    connection.setCapNegotiatorListener(
-      new CompoundNegotiator(new ServerTimeNegotiator))
+    val negotiator = new CompoundNegotiator(new ServerTimeNegotiator)
+    if (server.sasl)
+      negotiator.addListener(SaslNegotiator(server.username, server.password,
+        result => {
+          if (!result) {
+            connection.disconnect()
+            removeConnection(server)
+            state = Server.State.DISCONNECTED
+            UiBus.run {
+              Toast.makeText(Application.context,
+                s"SASL authentication for $server failed",
+                Toast.LENGTH_SHORT).show()
+            }
+          }
+      }))
+    connection.setCapNegotiatorListener(negotiator)
     connection.setCharset(Charset.forName("utf-8"))
     i("Connecting to server: " +
       (server.hostname, server.port, server.ssl))
@@ -566,7 +577,6 @@ class IrcManager extends EventBus.RefOwner {
     connection.setUsername(server.username, server.realname)
     connection.setNick(server.nickname)
 
-    var state = server.state
     serverMessage(getString(R.string.server_connecting), server)
     addConnection(server, connection)
     val sslctx = SSLManager.configureSSL(server)
@@ -581,7 +591,9 @@ class IrcManager extends EventBus.RefOwner {
       server.currentNick = server.nickname
       if (server.state == Server.State.CONNECTING) {
         connection.connect(sslctx)
-        state = Server.State.CONNECTED
+        // sasl authentication failure callback will force a disconnect
+        if (state != Server.State.DISCONNECTED)
+          state = Server.State.CONNECTED
       }
     } catch {
       case e: NickNameException =>
@@ -725,6 +737,52 @@ class IrcManager extends EventBus.RefOwner {
   }
 }
 
+case class SaslNegotiator[A](user: String, pass: String, result: Boolean => A)
+extends CapNegotiator.Listener {
+  override def onNegotiate(capNegotiator: CapNegotiator, packet: IrcPacket) = {
+    if (packet.isNumeric) {
+      packet.getNumericCommand match {
+        case 904 =>
+          result(false)
+          false // failed: no method, no auth
+        case 900 =>
+          result(true)
+          false // success: logged in
+        case 903 =>
+          result(true)
+          false // success: sasl successful
+        case _   => true
+      }
+    } else {
+      if ("AUTHENTICATE +" == packet.getRaw) {
+        val buf = ("%s\u0000%s\u0000%s" format (user, user, pass)).getBytes("utf-8")
+        import android.util.Base64
+        val auth = Base64.encodeToString(buf, 0, buf.length, 0).trim
+        capNegotiator.send("AUTHENTICATE " + auth)
+      }
+      true
+    }
+  }
+
+  override def onNegotiateList(capNegotiator: CapNegotiator,
+                               features: Array[String]) = {
+    if (features.contains("sasl")) {
+      capNegotiator.request("sasl")
+      true
+    } else false
+  }
+
+  override def onNegotiateMissing(capNegotiator: CapNegotiator,
+                                  feature: String) = "sasl" != feature
+
+  override def onNegotiateFeature(capNegotiator: CapNegotiator,
+                                  feature: String) = {
+    if ("sasl" == feature) {
+      capNegotiator.send("AUTHENTICATE PLAIN")
+    }
+    true
+  }
+}
 class IrcConnection2 extends IrcConnection {
   override def connect(sslctx: SSLContext) = {
     super.connect(sslctx)

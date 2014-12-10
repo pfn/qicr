@@ -79,7 +79,7 @@ with EventBus.RefOwner {
 
   ServiceBus += {
     case BusEvent.PreferenceChanged(_, s) =>
-      if (s == Settings.NAVIGATION_MODE.key)
+      if (s == Settings.NAVIGATION_MODE)
         navMode = Settings.get(Settings.NAVIGATION_MODE)
     case BusEvent.ChannelStatusChanged(_) =>
       UiBus.run(channels foreach refreshTabTitle)

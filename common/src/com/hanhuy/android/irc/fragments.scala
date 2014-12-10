@@ -97,6 +97,10 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
             textCapWords
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
+          w[View],
+          checkbox <~ text("SASL authentication") <~ wire(sasl)
+        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
           label <~ text("Username"),
           w[EditText] <~ inputTweaks <~ hint("required") <~ wire(username)
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
@@ -132,6 +136,7 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
   var password: EditText = _
   var autojoin: EditText = _
   var autorun: EditText = _
+  var sasl: CheckBox = _
 
   val _server: Server = new Server
   def server: Server = {
@@ -148,6 +153,7 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
     s.password    = password
     s.autojoin    = autojoin
     s.autorun     = autorun
+    s.sasl        = sasl
     _server
   }
   def server_=(s: Server) = {
@@ -157,6 +163,7 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
       server_host.setText(s.hostname)
       port.setText("" + s.port)
       ssl.setChecked(s.ssl)
+      sasl.setChecked(s.sasl)
       autoconnect.setChecked(s.autoconnect)
       nickname.setText(s.nickname)
       altnick.setText(s.altnick)
