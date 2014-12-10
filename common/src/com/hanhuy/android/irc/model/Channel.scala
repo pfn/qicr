@@ -56,6 +56,11 @@ abstract class ChannelLike(val server: Server, val name: String)
   }
   override def hashCode(): Int = name.hashCode()
   var lastTs = 0l
+  // FIXME there's a bug that lives here, local device time may be slightly
+  // slower then server-time. when reconnecting, a message that was received
+  // locally only move the isNew watermark up to the device's time. However,
+  // the copy of the message on the server may have a more recent timestamp
+  // and will end up getting re-played in duplicate
   def isNew(m: MessageLike) = lastTs < m.ts.getTime
 
   def clear(): Unit = {
