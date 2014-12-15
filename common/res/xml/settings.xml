@@ -106,6 +106,9 @@
             android:defaultValue="false"/>
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_irc">
+        <com.hanhuy.android.irc.CharsetPreference
+            android:key="irc_charset"
+            android:title="Character Encoding"/>
         <EditTextPreference
             android:key="irc_quit_message"
             android:title="@string/pref_quit_message_title"

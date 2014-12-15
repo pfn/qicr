@@ -570,7 +570,7 @@ class IrcManager extends EventBus.RefOwner {
           }
       }))
     connection.setCapNegotiatorListener(negotiator)
-    connection.setCharset(Charset.forName("utf-8"))
+    connection.setCharset(Charset.forName(Settings.get(Settings.CHARSET)))
     i("Connecting to server: " +
       (server.hostname, server.port, server.ssl))
     connection.setServer(ircserver)
@@ -755,7 +755,8 @@ extends CapNegotiator.Listener {
       }
     } else {
       if ("AUTHENTICATE +" == packet.getRaw) {
-        val buf = ("%s\u0000%s\u0000%s" format (user, user, pass)).getBytes("utf-8")
+        val buf = ("%s\u0000%s\u0000%s" format (user, user, pass)).getBytes(
+          Settings.get(Settings.CHARSET))
         import android.util.Base64
         val auth = Base64.encodeToString(buf, 0, buf.length, 0).trim
         capNegotiator.send("AUTHENTICATE " + auth)

@@ -5,6 +5,7 @@ import android.net.Uri
 import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceClickListener}
 import android.text.{Editable, TextWatcher}
 import android.provider.{Settings => ASettings}
+import android.util.AttributeSet
 import android.widget.EditText
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 import macroid._
@@ -41,6 +42,7 @@ object Settings {
   val NAVIGATION_MODE_DROPDOWN = "Drop Down"
   val NAVIGATION_MODE_DRAWER = "Drawer"
 
+  val CHARSET = Setting[String]("irc_charset", "UTF-8")
   val FONT_SIZE = Setting[Int]("font_size", default = -1)
   val FONT_NAME = Setting[String]("font_name", null)
   val IRC_LOGGING = Setting[Boolean]("irc_logging", true)
@@ -220,4 +222,23 @@ class SettingsActivity extends PreferenceActivity {
     val p = getPreferenceScreen().findPreference("debug.log")
     getPreferenceScreen.removePreference(p)
   }
+}
+
+class CharsetPreference(c: Context, attrs: AttributeSet)
+  extends ListPreference(c, attrs) {
+  import collection.JavaConversions._
+  import java.nio.charset.Charset
+  val entries = Charset.availableCharsets.keySet.toSeq.filterNot(c =>
+    c.startsWith("x-") || c.startsWith("IBM") || c.startsWith("windows")
+  ).toArray[CharSequence]
+  setEntries(entries)
+  setEntryValues(entries)
+  setValue(Settings.get(Settings.CHARSET))
+
+  override def setValue(value: String) = {
+    super.setValue(value)
+    setSummary(getEntry)
+  }
+
+  override def getSummary = getEntry
 }
