@@ -475,7 +475,7 @@ with ServerEventListener with MessageEventListener {
         }
 
         val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice, ts = message.timestamp)
-        if (matchesNick(c.server, msg) && !src.isUs)
+        if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
           manager.addChannelMention(c, pm)
 
         UiBus.run {
@@ -530,7 +530,7 @@ with ServerEventListener with MessageEventListener {
       UiBus.run {
         c.add(notice)
       }
-      if (matchesNick(c.server, msg) && !src.isUs)
+      if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
         manager.addChannelMention(c, notice)
     } else UiBus.run {
       manager.addQuery(n.connection,
@@ -567,7 +567,7 @@ with ServerEventListener with MessageEventListener {
         UiBus.run {
           c.add(action)
         }
-        if (matchesNick(c.server, msg) && !src.isUs)
+        if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
           manager.addChannelMention(c, action)
       }
     } else UiBus.run {
