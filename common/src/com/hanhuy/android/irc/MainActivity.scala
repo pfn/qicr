@@ -398,10 +398,7 @@ with Contexts[Activity] with IdGeneration {
   override def onResume() {
     super.onResume()
     val nm = systemService[NotificationManager]
-    nm.cancel(IrcManager.MENTION_ID)
-    nm.cancel(IrcManager.DISCON_ID)
-    nm.cancel(IrcManager.PRIVMSG_ID)
-    nm.cancel(IrcManager.RUNNING_ID)
+    nm.cancelAll()
     if (toggleSelectorMode) {
       val newnav = Settings.get(Settings.NAVIGATION_MODE)
       val isDropNav = HoneycombSupport.isSpinnerNavigation

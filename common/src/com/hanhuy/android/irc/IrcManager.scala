@@ -72,6 +72,7 @@ object IrcManager {
   def running = instance exists (_.running)
 }
 class IrcManager extends EventBus.RefOwner {
+  Application.context.systemService[NotificationManager].cancelAll()
   val version =
     Application.context.getPackageManager.getPackageInfo(
       Application.context.getPackageName, 0).versionName
@@ -249,9 +250,7 @@ class IrcManager extends EventBus.RefOwner {
     instance = None
     Application.context.unregisterReceiver(receiver)
     Application.context.unregisterReceiver(connReceiver)
-    nm.cancel(DISCON_ID)
-    nm.cancel(MENTION_ID)
-    nm.cancel(PRIVMSG_ID)
+    nm.cancelAll()
     ServiceBus.send(BusEvent.ExitApplication)
 
     val count = connections.keys.size
@@ -268,9 +267,7 @@ class IrcManager extends EventBus.RefOwner {
       }
       d("All disconnects completed, running callback: " + cb)
       cb.foreach { callback => UiBus.run { callback() } }
-      nm.cancel(DISCON_ID)
-      nm.cancel(MENTION_ID)
-      nm.cancel(PRIVMSG_ID)
+      nm.cancelAll()
     }
     connections.keys.foreach(disconnect(_, message, false, true))
     handlerThread.quit()
