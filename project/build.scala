@@ -15,6 +15,7 @@ object QicrBuild extends android.AutoBuild {
 
   lazy val lite = Project(id = "lite", base = file("lite")) androidBuildWith common settings(
     sourceGenerators in Compile <<= (sourceGenerators in Compile) (g => Seq(g.last)),
+    javacOptions in Compile ++= Seq("-target", "1.6", "-source", "1.6"),
     scalaVersion := "2.11.2",
     transitiveAndroidLibs in Android := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
@@ -28,6 +29,7 @@ object QicrBuild extends android.AutoBuild {
   lazy val common = Project(id = "common", base = file("common")) settings(Seq(
     scalaVersion := "2.11.2",
     scalacOptions in Compile ++= Seq("-deprecation", "-Xexperimental"),
+    javacOptions in Compile ++= Seq("-target", "1.6", "-source", "1.6"),
     javacOptions in Compile  += "-deprecation",
     unmanagedJars in Compile ~= { _ filterNot (
       _.data.getName startsWith "android-support-v4") },

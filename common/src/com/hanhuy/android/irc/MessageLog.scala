@@ -8,7 +8,7 @@ import android.app.{AlertDialog, Activity}
 import android.content.{Intent, ContentValues, Context}
 import android.database.Cursor
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
-import android.graphics.Color
+import android.graphics.{Typeface, Color}
 import android.graphics.drawable.ColorDrawable
 import android.os.{Bundle, Handler, HandlerThread}
 import android.provider.BaseColumns
@@ -19,6 +19,7 @@ import android.support.v7.app.ActionBarActivity
 import android.support.v7.widget.SearchView.{OnCloseListener, OnQueryTextListener}
 import android.text.format.DateFormat
 import android.text.method.LinkMovementMethod
+import android.util.TypedValue
 import android.view.ViewGroup.LayoutParams._
 import android.view._
 import android.view.inputmethod.InputMethodManager
@@ -36,6 +37,7 @@ import macroid.FullDsl._
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Try
 
 /**
  * @author pfnguyen
@@ -300,18 +302,20 @@ class MessageLog private(context: Context)
   }
 
   def logEntry(e: Entry) = synchronized {
-    val lastTs = e.channel.lastTs
-    if (lastTs < e.ts) {
-      val c = e.channel.copy(lastTs = e.ts)
-      channels += (c.network.id, c.name) -> c
-      val db = getWritableDatabase
-      db.beginTransaction()
-      db.update(TABLE_CHANNELS, c.values, s"${BaseColumns._ID}  = ?",
-        Array(String.valueOf(c.id)))
-      val newid = db.insertOrThrow(TABLE_LOGS, null, e.values)
-      db.setTransactionSuccessful()
-      db.endTransaction()
-      close(db)
+    if (e.message != null) { // how can message possibly be null...
+      val lastTs = e.channel.lastTs
+      if (lastTs < e.ts) {
+        val c = e.channel.copy(lastTs = e.ts)
+        channels += (c.network.id, c.name) -> c
+        val db = getWritableDatabase
+        db.beginTransaction()
+        db.update(TABLE_CHANNELS, c.values, s"${BaseColumns._ID}  = ?",
+          Array(String.valueOf(c.id)))
+        val newid = db.insertOrThrow(TABLE_LOGS, null, e.values)
+        db.setTransactionSuccessful()
+        db.endTransaction()
+        close(db)
+      }
     }
   }
 
@@ -379,9 +383,16 @@ class MessageLog private(context: Context)
 
     new CursorAdapter(Application.context, cursor, 0) with Closeable {
 
+      lazy val fontSetting = Option(Settings.get(Settings.FONT_NAME)) flatMap (
+        n => Try(Typeface.createFromFile(n)).toOption)
+      lazy val sizeSetting = Settings.get(Settings.FONT_SIZE)
+
       override def newView(context: Context, c: Cursor, v: ViewGroup) = {
         val v = getUi(MessageAdapter.messageLayout(ctx))
         v.setMovementMethod(LinkMovementMethod.getInstance)
+        if (sizeSetting > 0)
+          v.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSetting)
+        fontSetting foreach v.setTypeface
         bindView(v, ctx, c)
         v
       }
@@ -440,6 +451,8 @@ class MessageLog private(context: Context)
 object MessageLogActivity {
   val EXTRA_SERVER = "com.hanhuy.android.irc.EXTRA_SERVER_ID"
   val EXTRA_CHANNEL = "com.hanhuy.android.irc.EXTRA_CHANNEL"
+  val EXTRA_QUERY = "com.hanhuy.android.irc.EXTRA_QUERY"
+
   def createIntent(c: Channel) = {
     val intent = new Intent(Application.context, classOf[MessageLogActivity])
     intent.putExtra(EXTRA_SERVER, c.network.id)
@@ -449,7 +462,12 @@ object MessageLogActivity {
         Intent.FLAG_ACTIVITY_NO_HISTORY)
     intent
   }
-  def createIntent(c: ChannelLike) = {
+  def createIntent(c: ChannelLike, q: String): Intent = {
+    val intent = createIntent(c)
+    intent.putExtra(EXTRA_QUERY, q)
+    intent
+  }
+  def createIntent(c: ChannelLike): Intent = {
     val intent = new Intent(Application.context, classOf[MessageLogActivity])
     intent.putExtra(EXTRA_SERVER, c.server.id)
     intent.putExtra(EXTRA_CHANNEL, c.name)
@@ -518,12 +536,17 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     val bar = getSupportActionBar
     nid = intent.getLongExtra(EXTRA_SERVER, -1)
     channel = intent.getStringExtra(EXTRA_CHANNEL)
+    val query = intent.getStringExtra(EXTRA_QUERY)
     setAdapter(None)
+
     if (channel != null && MessageLog.channels.contains(nid -> channel.toLowerCase)) {
       bar.setTitle(s"logs: $channel")
       bar.setSubtitle(null)
       Future {
-        MessageLog.get(this, nid, channel)
+        if (query == null)
+          MessageLog.get(this, nid, channel)
+        else
+          MessageLog.get(this, nid, channel, query)
       } onSuccessUi { case a => setAdapter(Some(a)) }
     } else {
       Toast.makeText(this, "No logs available", Toast.LENGTH_SHORT).show()

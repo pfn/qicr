@@ -546,12 +546,19 @@ with Contexts[Activity] with IdGeneration {
               val R_id_nick_start_chat = R.id.nick_start_chat
               val R_id_nick_whois = R.id.nick_whois
               val R_id_nick_ignore = R.id.nick_ignore
+              val R_id_nick_log = R.id.channel_log
               val nick = nickList.getAdapter.getItem(pos).toString.dropWhile(n => Set(' ','@','+')(n))
               item.getItemId match {
                 case R_id_nick_whois =>
                   proc.processor.channel = manager.lastChannel
                   proc.processor.WhoisCommand.execute(Some(nick))
-                case R_id_nick_ignore => ()
+                case R_id_nick_log =>
+                  c.channel foreach { ch =>
+                    startActivity(MessageLogActivity.createIntent(ch, nick))
+                  }
+                  overridePendingTransition(
+                    R.anim.slide_in_left, R.anim.slide_out_right)
+                case R_id_nick_ignore =>
                   proc.processor.channel = manager.lastChannel
                   if (Config.Ignores(nick))
                     proc.processor.UnignoreCommand.execute(Some(nick))

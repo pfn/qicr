@@ -39,8 +39,6 @@ object Config {
   val FIELD_SOCKSUSER   = "socksuser"
   val FIELD_SOCKSPASS   = "sockspass"
   val FIELD_USESASL     = "usesasl"
-  val FIELD_SASLUSER    = "sasluser"
-  val FIELD_SASLPASS    = "saslpass"
 
   val TABLE_SERVERS_DDL =
     s"""
@@ -64,9 +62,7 @@ object Config {
        |  $FIELD_SOCKSPORT    INTEGER,
        |  $FIELD_SOCKSUSER    TEXT,
        |  $FIELD_SOCKSPASS    TEXT,
-       |  $FIELD_USESASL      INTEGER NOT NULL,
-       |  $FIELD_SASLUSER     TEXT,
-       |  $FIELD_SASLPASS     TEXT
+       |  $FIELD_USESASL      INTEGER NOT NULL
        |);
      """.stripMargin
 

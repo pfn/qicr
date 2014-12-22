@@ -359,7 +359,12 @@ case class NickClick(nick: String) extends ClickableSpan {
           val R_id_nick_start_chat = R.id.nick_start_chat
           val R_id_nick_whois = R.id.nick_whois
           val R_id_nick_ignore = R.id.nick_ignore
+          val R_id_nick_log = R.id.channel_log
           item.getItemId match {
+            case R_id_nick_log =>
+              a.startActivity(MessageLogActivity.createIntent(manager.lastChannel.get, nick))
+              a.overridePendingTransition(
+                R.anim.slide_in_left, R.anim.slide_out_right)
             case R_id_nick_whois =>
               val proc = CommandProcessor(a, null)
               proc.channel = manager.lastChannel

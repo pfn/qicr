@@ -5,6 +5,10 @@
           qicr:showAsAction="ifRoom|withText"
           android:icon="@android:drawable/ic_menu_info_details"
           android:title="@string/command_whois_1"/>
+    <item android:id="@+id/channel_log"
+          qicr:showAsAction="ifRoom"
+          android:icon="@android:drawable/ic_menu_agenda"
+          android:title="Nick Log" />
     <item android:id="@+id/nick_start_chat"
           qicr:showAsAction="ifRoom|withText"
           android:icon="@drawable/ic_menu_start_conversation"
