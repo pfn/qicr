@@ -534,7 +534,11 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
       getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
       true
     } else {
-      val r = getActivity.servers.onServerMenuItemClicked(item, server)
+      // need to look up server in case it was edited
+      val r = getActivity.servers.onServerMenuItemClicked(item, for {
+        s <- server
+        n <- Config.servers.find(_.id == s.id)
+      } yield n)
       if (r) HoneycombSupport.invalidateActionBar()
       r
     }
