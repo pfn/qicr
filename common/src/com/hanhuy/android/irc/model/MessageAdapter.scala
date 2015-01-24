@@ -114,7 +114,7 @@ object MessageAdapter extends EventBus.RefOwner {
       case Quit(n, u, m,_) => formatText(c, msg, R.string.quit_template,
         colorNick(n), u, m)
       case Kick(o, n, m,_) => formatText(c, msg, R.string.kick_template,
-        colorNick(o), colorNick(n),
+        colorNick(n), colorNick(o),
         if (m == null) "" else m)
       case CommandError(m,_)  => formatText(c, msg, -1, m)
       case ServerInfo(m,_)    => formatText(c, msg, -1, m)

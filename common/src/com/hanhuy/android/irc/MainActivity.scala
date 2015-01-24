@@ -258,6 +258,7 @@ with Contexts[Activity] with IdGeneration {
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
+    getSupportActionBar.setElevation(0)
     val view = getUi(mainLayout)
     view.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
       override def onPreDraw() = {

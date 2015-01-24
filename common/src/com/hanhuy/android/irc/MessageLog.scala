@@ -558,6 +558,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     val mode = Settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
     super.onCreate(savedInstanceState)
+    getSupportActionBar.setElevation(0)
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
       if (Settings.get(Settings.ROTATE_LOCK))
