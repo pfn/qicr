@@ -145,6 +145,7 @@ object HoneycombSupport {
       inflater.inflate(R.menu.nicklist_menu, menu)
       mode.setTitle(nick)
       val item = menu.findItem(R.id.nick_ignore)
+      item.setChecked(Config.Ignores(nick))
       item.setIcon(if (Config.Ignores(nick))
         R.drawable.ic_menu_end_conversation_on
       else
