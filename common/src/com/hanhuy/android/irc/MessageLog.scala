@@ -319,7 +319,7 @@ class MessageLog private(context: Context)
     }
   }
 
-  def delete(netId: Long, channel: String) = synchronized {
+  def delete(netId: Long, channel: String) = {
     val c = channels(netId -> channel)
 
     val db = getWritableDatabase
@@ -331,10 +331,12 @@ class MessageLog private(context: Context)
     db.endTransaction()
     db.execSQL("VACUUM")
     close(db)
-    channels -= (netId -> channel)
+    this.synchronized {
+      channels -= (netId -> channel)
+    }
   }
 
-  def deleteAll() = synchronized {
+  def deleteAll() = {
     val db = getWritableDatabase
     db.beginTransaction()
     db.delete(TABLE_LOGS, null, null)
@@ -344,8 +346,10 @@ class MessageLog private(context: Context)
     db.endTransaction()
     db.execSQL("VACUUM")
     close(db)
-    channels = Map.empty
-    networks = Map.empty
+    this.synchronized {
+      channels = Map.empty
+      networks = Map.empty
+    }
   }
 
 
@@ -603,12 +607,16 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       builder.setTitle("Delete Logs?")
       builder.setMessage("Delete all logs or messages from the current window?")
       builder.setPositiveButton("Current", () => {
-        MessageLog.delete(nid, channel)
+        async {
+          MessageLog.delete(nid, channel)
+        }
         finish()
       })
       builder.setNegativeButton("Cancel", null)
       builder.setNeutralButton("All", () => {
-        MessageLog.deleteAll()
+        async {
+          MessageLog.deleteAll()
+        }
         finish()
       })
       builder.create().show()
