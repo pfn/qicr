@@ -75,14 +75,19 @@ abstract class InputProcessor(activity: Activity) {
       val currentIME = ASettings.Secure.getString(
         activity.getContentResolver, ASettings.Secure.DEFAULT_INPUT_METHOD)
       val voiceIME = VOICE_INPUT_METHOD == currentIME
-      activity match {
-        case a: MainActivity =>
-          a.setSendVisible(s.length > 0 && (!a.imeShowing || voiceIME))
-        case _ =>
-      }
-      if (start != 0 || (count != s.length && count != 0)) {
-        completionPrefix = None
-        completionOffset = None
+      if (s.contains("\n")) {
+        handleLine(s.replace("\n", " "))
+        s match { case e: Editable => e.clear() }
+      } else {
+        activity match {
+          case a: MainActivity =>
+            a.setSendVisible(s.length > 0 && (!a.imeShowing || voiceIME))
+          case _ =>
+        }
+        if (start != 0 || (count != s.length && count != 0)) {
+          completionPrefix = None
+          completionOffset = None
+        }
       }
     }
   }
