@@ -24,7 +24,6 @@ import com.sorcix.sirc.cap.{CapNegotiator, CompoundNegotiator, ServerTimeNegotia
 
 import com.hanhuy.android.common._
 import AndroidConversions._
-import RichLogger._
 import IrcManager._
 import android.net.{Uri, NetworkInfo, ConnectivityManager}
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
@@ -38,7 +37,7 @@ import org.acra.ACRA
 import scala.util.Try
 
 object IrcManager {
-  implicit val TAG = LogcatTag("IrcManager")
+  val log = Logcat("IrcManager")
 
   // notification IDs
   val RUNNING_ID = 1
@@ -77,7 +76,7 @@ class IrcManager extends EventBus.RefOwner {
     Application.context.getPackageManager.getPackageInfo(
       Application.context.getPackageName, 0).versionName
   IrcConnection.ABOUT = getString(R.string.version, version)
-  v("Creating service")
+  log.v("Creating service")
   Widgets(Application.context) // load widgets listeners
   val ircdebug = Settings.get(Settings.IRC_DEBUG)
   if (ircdebug)
@@ -209,7 +208,7 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   def addConnection(server: Server, connection: IrcConnection) {
-    i("Registering connection: " + server + " => " + connection)
+    log.i("Registering connection: " + server + " => " + connection)
     mconnections += ((server, connection))
     m_connections += ((connection, server))
 
@@ -229,7 +228,7 @@ class IrcManager extends EventBus.RefOwner {
       Application.context.startService(
         new Intent(Application.context, classOf[LifecycleService]))
 
-      v("Launching autoconnect servers")
+      log.v("Launching autoconnect servers")
       Config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
         s.messages.maximumSize = Try(
@@ -260,12 +259,12 @@ class IrcManager extends EventBus.RefOwner {
       synchronized {
         // TODO wait for quit to actually complete?
         while (disconnectCount < count) {
-          d("Waiting for disconnect: %d/%d" format (
+          log.d("Waiting for disconnect: %d/%d" format (
             disconnectCount, count))
           wait()
         }
       }
-      d("All disconnects completed, running callback: " + cb)
+      log.d("All disconnects completed, running callback: " + cb)
       cb.foreach { callback => UiBus.run { callback() } }
       nm.cancelAll()
     }
@@ -285,7 +284,7 @@ class IrcManager extends EventBus.RefOwner {
           c.disconnect(m)
         } catch {
           case e: Exception =>
-            RichLogger.e("Disconnect failed", e)
+            log.e("Disconnect failed", e)
             c.setConnected(false)
             c.disconnect()
         }
@@ -307,7 +306,7 @@ class IrcManager extends EventBus.RefOwner {
       // do not stop context if onDisconnect unless showing
       // do not stop context if quitting, quit() will do it
       if ((!disconnected || showing) && !quitting) {
-        i("Stopping context because all connections closed")
+        log.i("Stopping context because all connections closed")
         _running = false
         lastRunning = System.currentTimeMillis
       }
@@ -315,7 +314,7 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   def connect(server: Server) {
-    v("Connecting server: %s", server)
+    log.v("Connecting server: %s", server)
     if (server.state == Server.State.CONNECTING ||
       server.state == Server.State.CONNECTED) {
       return
@@ -568,7 +567,7 @@ class IrcManager extends EventBus.RefOwner {
       }))
     connection.setCapNegotiatorListener(negotiator)
     connection.setCharset(Charset.forName(Settings.get(Settings.CHARSET)))
-    i("Connecting to server: " +
+    log.i("Connecting to server: " +
       (server.hostname, server.port, server.ssl))
     connection.setServer(ircserver)
     connection.setUsername(server.username, server.realname)
@@ -604,7 +603,7 @@ class IrcManager extends EventBus.RefOwner {
           }
         } catch {
           case e: Exception =>
-            RichLogger.w("Failed to connect, nick exception?", e)
+            log.w("Failed to connect, nick exception?", e)
             serverMessage(getString(R.string.server_nick_error), server)
             state = Server.State.DISCONNECTED
             connection.disconnect()
@@ -614,13 +613,13 @@ class IrcManager extends EventBus.RefOwner {
       case e: Exception =>
         state = Server.State.DISCONNECTED
         removeConnection(server)
-        RichLogger.e("Unable to connect", e)
+        log.e("Unable to connect", e)
         serverMessage(e.getMessage, server)
         try {
           connection.disconnect()
         } catch {
           case ex: Exception =>
-            RichLogger.e("Exception cleanup failed", ex)
+            log.e("Exception cleanup failed", ex)
             connection.setConnected(false)
             connection.disconnect()
             state = Server.State.DISCONNECTED
@@ -789,7 +788,7 @@ class IrcConnection2 extends IrcConnection {
   }
   // currently unused
   def uncaughtExceptionHandler(t: Thread, e: Throwable) {
-    RichLogger.e("Uncaught exception in IRC thread: " + t, e)
+    log.e("Uncaught exception in IRC thread: " + t, e)
     ACRA.getErrorReporter.handleSilentException(e)
     disconnect()
   }
@@ -797,8 +796,8 @@ class IrcConnection2 extends IrcConnection {
 
 object PrintStream
   extends java.io.PrintStream(new java.io.ByteArrayOutputStream) {
-  implicit val TAG = LogcatTag("sIRC")
-  override def println(line: String) = d(line)
+  val log = Logcat("sIRC")
+  override def println(line: String) = log.d(line)
   override def flush() = ()
 }
 

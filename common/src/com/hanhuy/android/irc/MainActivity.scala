@@ -20,9 +20,9 @@ import com.hanhuy.android.irc.model._
 
 import MainActivity._
 import com.hanhuy.android.common._
-import RichLogger.{w => _, _}
+import com.hanhuy.android.extensions._
+import com.hanhuy.android.conversions._
 
-import com.hanhuy.android.common._
 import com.viewpagerindicator.TabPageIndicator
 import AndroidConversions._
 import android.support.v7.app.{ActionBarDrawerToggle, ActionBarActivity}
@@ -31,7 +31,7 @@ import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
 
 import macroid._
-import macroid.FullDsl._
+import macroid.FullDsl.{log => _,_}
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -41,7 +41,7 @@ object MainActivity {
   val SERVER_MESSAGES_FRAGMENT_PREFIX = "servermessagesfrag"
   val SERVER_MESSAGES_STACK = "servermessages"
 
-  implicit val TAG = LogcatTag("MainActivity")
+  val log = Logcat("MainActivity")
 
   val REQUEST_SPEECH_RECOGNITION = 1
 
@@ -130,7 +130,7 @@ with Contexts[Activity] with IdGeneration {
         w[ImageButton] <~
           image(android.R.drawable.ic_menu_send) <~ wire(send) <~
           On.click {
-            proc.handleLine(input.getText)
+            proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
             Ui(true)
           } <~ buttonTweaks <~ hide,
@@ -145,7 +145,7 @@ with Contexts[Activity] with IdGeneration {
               startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
             } catch {
               case x: Exception =>
-                e("Unable to request speech recognition", x)
+                log.e("Unable to request speech recognition", x)
                 Toast.makeText(this, R.string.speech_unsupported,
                   Toast.LENGTH_SHORT).show()
             }
@@ -181,8 +181,6 @@ with Contexts[Activity] with IdGeneration {
   }
 
   private var manager: IrcManager = null
-  val _richactivity: RichActivity = this
-  import _richactivity._
 
   UiBus += {
     case BusEvent.IMEShowing(showing) =>
@@ -287,7 +285,7 @@ with Contexts[Activity] with IdGeneration {
       }
 
       override def onDrawerOpened(drawerView: View) {
-        val imm = systemService[InputMethodManager]
+        val imm = MainActivity.this.systemService[InputMethodManager]
         val focused = Option(getCurrentFocus)
         focused foreach { f =>
           imm.hideSoftInputFromWindow(f.getWindowToken, 0)
@@ -304,7 +302,7 @@ with Contexts[Activity] with IdGeneration {
       override def onDrawerStateChanged(p1: Int) =
         drawerToggle.onDrawerStateChanged(p1)
     })
-    channels.setOnItemClickListener { (pos: Int) =>
+    channels.onItemClick { (_,_,pos,_) =>
       pager.setCurrentItem(pos)
       drawer.closeDrawer(drawerLeft)
     }
@@ -363,7 +361,7 @@ with Contexts[Activity] with IdGeneration {
     results find { r => r == eol || r == clearLine } match {
     case Some(c) =>
       if (c == eol) {
-        proc.handleLine(input.getText)
+        proc.handleLine(input.getText.toString)
         InputProcessor.clear(input)
       } else if (c == clearLine) {
         InputProcessor.clear(input)
@@ -378,7 +376,7 @@ with Contexts[Activity] with IdGeneration {
 
           val rec = results(which).toLowerCase
           if (rec.endsWith(" " + eol) || rec == eol) {
-            val t = input.getText
+            val t = input.getText.toString
             val line = t.substring(0, t.length() - eol.length() - 1)
             proc.handleLine(line)
             InputProcessor.clear(input)
@@ -398,7 +396,7 @@ with Contexts[Activity] with IdGeneration {
 
   override def onResume() {
     super.onResume()
-    val nm = systemService[NotificationManager]
+    val nm = this.systemService[NotificationManager]
     nm.cancelAll()
     if (toggleSelectorMode) {
       val newnav = Settings.get(Settings.NAVIGATION_MODE)
@@ -537,7 +535,7 @@ with Contexts[Activity] with IdGeneration {
           getString(R.string.users_count,
             nickList.getAdapter.getCount: java.lang.Integer))
         nickList.getAdapter.registerDataSetObserver(observer)
-        nickList.setOnItemClickListener { (pos: Int) =>
+        nickList.onItemClick { (_,_,pos,_) =>
             HoneycombSupport.startNickActionMode(
               nickList.getAdapter.getItem(pos).toString) { item: MenuItem =>
               // TODO refactor this callback (see messageadapter)

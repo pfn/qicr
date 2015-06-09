@@ -5,7 +5,7 @@ import android.text.util.Linkify
 import android.util.TypedValue
 import com.hanhuy.android.irc._
 
-import com.hanhuy.android.common.{AndroidConversions, UiBus, EventBus, SpannedGenerator}
+import com.hanhuy.android.common.{AndroidConversions, UiBus, EventBus}
 import AndroidConversions._
 import SpannedGenerator._
 import MessageLike._
@@ -169,7 +169,7 @@ object MessageAdapter extends EventBus.RefOwner {
     val text = textColor(nickColor(nick), nick)
     val inMain = MainActivity.instance.isDefined
     if (nick != "***" && inMain)
-      SpannedGenerator.span(NickClick(text), text) else text
+      SpannedGenerator.span(NickClick(text.toString), text) else text
   }
   lazy implicit val actx = AppContext(Application.context)
   def messageLayout(ctx: Activity) = {

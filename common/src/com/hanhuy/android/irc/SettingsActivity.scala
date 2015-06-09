@@ -18,6 +18,7 @@ import android.content.{DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
 import android.preference._
 import com.hanhuy.android.common.{AndroidConversions, ServiceBus, UiBus}
+import com.hanhuy.android.conversions._
 import org.acra.ACRA
 
 import scala.reflect.ClassTag

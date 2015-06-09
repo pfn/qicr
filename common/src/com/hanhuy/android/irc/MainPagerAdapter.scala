@@ -31,6 +31,7 @@ import AndroidConversions._
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 
 import scala.util.Try
+import TypedResource._
 
 object MainPagerAdapter {
   val TAG = "MainPagerAdapter"
@@ -396,9 +397,9 @@ with EventBus.RefOwner {
       } else convert
       view.setTag(R.id.dropdown_view_type, t)
 
-      view.findView[TextView](android.R.id.text1).setText(makeTabTitle(pos))
+      view.findViewById(android.R.id.text1).asInstanceOf[TextView].setText(makeTabTitle(pos))
 
-      val line2 = view.findView[TextView](android.R.id.text2)
+      val line2 = view.findViewById(android.R.id.text2).asInstanceOf[TextView]
       tab.channel map { c =>
         val s = c.server
 

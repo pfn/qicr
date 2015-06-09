@@ -6,6 +6,8 @@ import android.text.TextUtils.TruncateAt
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
 import com.hanhuy.android.common._
+import com.hanhuy.android.extensions._
+import com.hanhuy.android.conversions._
 import AndroidConversions._
 
 import android.appwidget.{AppWidgetManager, AppWidgetProvider}
@@ -440,7 +442,7 @@ with RemoteViewsService.RemoteViewsFactory {
 
 // TODO refactor and cleanup, so ugly, copy/paste from MainActivity
 class WidgetChatActivity
-extends Activity with TypedActivity with Contexts[Activity] {
+extends Activity with TypedFindView with Contexts[Activity] {
   import Tweaks._
   import macroid._
   import macroid.FullDsl._
@@ -524,8 +526,6 @@ extends Activity with TypedActivity with Contexts[Activity] {
 
   import collection.JavaConversions._
   val REQUEST_SPEECH_RECOGNITION = 1
-  lazy val x: RichActivity = this
-  import x._
   def input = _input
   private var _input: EditText = _
   def speechrec = _speechrec
@@ -577,9 +577,9 @@ extends Activity with TypedActivity with Contexts[Activity] {
       UiBus.post { list.setSelection(list.getAdapter.getCount - 1) }
       proc = new SimpleInputProcessor(this, m)
       input.addTextChangedListener(proc.TextListener)
-      input.setOnEditorActionListener(proc.onEditorActionListener _)
-      nickcomplete onClick proc.nickComplete(input)
-      speechrec onClick {
+      input.onEditorAction(proc.onEditorActionListener _)
+      nickcomplete onClick0 proc.nickComplete(input)
+      speechrec onClick0 {
         val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
           RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -624,7 +624,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
     results find { r => r == eol || r == clearLine } match {
       case Some(c) =>
         if (c == eol) {
-          proc.handleLine(input.getText)
+          proc.handleLine(input.getText.toString)
           InputProcessor.clear(input)
         } else if (c == clearLine) {
           InputProcessor.clear(input)
@@ -639,7 +639,7 @@ extends Activity with TypedActivity with Contexts[Activity] {
 
             val rec = results(which).toLowerCase
             if (rec.endsWith(" " + eol) || rec == eol) {
-              val t = input.getText
+              val t = input.getText.toString
               val line = t.substring(0, t.length() - eol.length() - 1)
               proc.handleLine(line)
               InputProcessor.clear(input)

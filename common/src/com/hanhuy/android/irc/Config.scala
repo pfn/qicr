@@ -1,7 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.content.ContentValues
-import com.hanhuy.android.common.{UiBus, LogcatTag, RichLogger}
+import com.hanhuy.android.common.{Logcat, UiBus}
 import com.hanhuy.android.irc.model.BusEvent.IgnoreListChanged
 import com.hanhuy.android.irc.model.Server
 
@@ -9,12 +9,11 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
 import android.widget.Toast
-import RichLogger._
 
 import Config._
 
 object Config {
-  implicit val TAG = LogcatTag("QicrConfig")
+  val log = Logcat("QicrConfig")
   // TODO encrypt the password with pbkdf2 on primary account username + salt
   val DATABASE_VERSION = 2
   val DATABASE_NAME = "config"
@@ -134,7 +133,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     if (oldv < newv) {
       db.beginTransaction()
       Range(oldv, newv + 1) foreach { v =>
-        d("Upgrading to: " + v)
+        log.d("Upgrading to: " + v)
         UPGRADES.getOrElse(v, Seq.empty) foreach db.execSQL
       }
 
@@ -192,7 +191,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       case x: Exception =>
         Toast.makeText(Application.context,
           "Failed to open database", Toast.LENGTH_LONG).show()
-        e("Unable to open database", x)
+        log.e("Unable to open database", x)
         Seq.empty[Server]
     }
   }
@@ -213,7 +212,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       BaseColumns._ID + " = ?", Array[String]("" + server.id))
     db.close()
     if (rows != 1)
-      e("Wrong rows updated: " + rows, new StackTrace)
+      log.e("Wrong rows updated: " + rows, new StackTrace)
     _servers = server +: (_servers filterNot (_ == server))
   }
 
@@ -223,7 +222,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       BaseColumns._ID + " = ?", Array[String]("" + server.id))
     db.close()
     if (rows != 1)
-      e("Wrong rows deleted: " + rows, new StackTrace)
+      log.e("Wrong rows deleted: " + rows, new StackTrace)
     _servers = _servers filterNot (_ == server)
   }
 

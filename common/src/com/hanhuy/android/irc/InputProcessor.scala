@@ -49,7 +49,7 @@ abstract class InputProcessor(activity: Activity) {
     if (action == EditorInfo.IME_ACTION_SEND)
       false // ignored for now
     else if (action == EditorInfo.IME_NULL) {
-      val line = input.getText
+      val line = input.getText.toString
       handleLine(line)
       clear(input)
       !Settings.get(Settings.HIDE_KEYBOARD)
@@ -68,16 +68,17 @@ abstract class InputProcessor(activity: Activity) {
     override def afterTextChanged(s: Editable) = ()
     override def beforeTextChanged(s: CharSequence,
         start: Int, count: Int, after: Int) = ()
-    override def onTextChanged(s: CharSequence,
+    override def onTextChanged(cs: CharSequence,
         start: Int, before: Int, count: Int) {
 
       import android.provider.{Settings => ASettings}
+      val s = cs.toString
       val currentIME = ASettings.Secure.getString(
         activity.getContentResolver, ASettings.Secure.DEFAULT_INPUT_METHOD)
       val voiceIME = VOICE_INPUT_METHOD == currentIME
       if (s.contains("\n")) {
         handleLine(s.replace("\n", " "))
-        s match { case e: Editable => e.clear() }
+        cs match { case e: Editable => e.clear() }
       } else {
         activity match {
           case a: MainActivity =>
@@ -102,7 +103,7 @@ abstract class InputProcessor(activity: Activity) {
     }
 
     val caret = input.getSelectionStart
-    val in = input.getText
+    val in = input.getText.toString
     // completion logic:  starts off with recents first, then alphabet
     // match a prefix, lowercased
     //   (store the prefix and start index if not set)

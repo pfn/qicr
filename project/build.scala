@@ -6,7 +6,7 @@ import android.Dependencies.apklib
 
 object QicrBuild extends android.AutoBuild {
   lazy val root = Project(id = "qicr", base = file(".")) settings(Seq(
-    packageT in Compile    <<= packageT in Android in lite,
+    sbt.Keys.`package` in Compile    <<= sbt.Keys.`package` in Android in lite,
     packageRelease         <<= packageRelease in Android in lite,
     packageDebug           <<= packageDebug in Android in lite,
     run                    <<= run in Android in lite,
@@ -21,8 +21,7 @@ object QicrBuild extends android.AutoBuild {
     resolvers += Resolver.sonatypeRepo("snapshots"),
     proguardOptions in Android += "-keep class android.support.v7.widget.SearchView { <init>(...); }",
     proguardOptions in Android += "-keep class android.support.v7.internal.widget.* { <init>(...); }",
-    proguardCache in Android += ProguardCache("macroid") % "org.macroid",
-    proguardCache in Android += ProguardCache("android.support") % "com.android.support",
+    proguardCache in Android ++= "macroid" :: "android.support" :: Nil,
     proguardScala in Android := true
     )
 
@@ -37,8 +36,9 @@ object QicrBuild extends android.AutoBuild {
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += "bintray" at "http://jcenter.bintray.com",
     libraryDependencies ++= Seq(
-      "org.macroid" %% "macroid" % "2.0.0-M3",
-      "com.hanhuy" %% "android-common" % "0.3-SNAPSHOT",
+      "org.macroid" %% "macroid" % "2.0.0-M4",
+      "com.hanhuy.android" %% "scala-conversions" % "1.1",
+      "com.hanhuy" %% "android-common" % "0.7",
       "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
       "ch.acra" % "acra" % "4.5.0",
       apklib("com.viewpagerindicator" % "library" % "2.4.1"),

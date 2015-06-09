@@ -26,24 +26,25 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
 import android.widget.ExpandableListView.OnChildClickListener
 import android.widget.{CursorAdapter => _,_}
+import com.hanhuy.android.conversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
 import com.hanhuy.android.irc.model.{Channel => ModelChannel, _}
 import com.hanhuy.android.irc.model.MessageLike.{CtcpAction, Notice, Privmsg}
 import AndroidConversions._
-import RichLogger.{w => _, _}
 import macroid._
 import macroid.FullDsl._
 
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
+
+import Futures._
 
 /**
  * @author pfnguyen
  */
 object MessageLog {
-  implicit val TAG = LogcatTag("MessageLog")
+  val logcat = Logcat("MessageLog")
   val DATABASE_NAME    = "logs"
   val DATABASE_VERSION = 2
 
@@ -249,7 +250,7 @@ class MessageLog private(context: Context)
     if (prev < ver) {
       db.beginTransaction()
       Range(prev, ver + 1) foreach { v =>
-        d("Upgrading to: " + v)
+        logcat.d("Upgrading to: " + v)
         UPGRADES.getOrElse(v, Seq.empty) foreach db.execSQL
       }
 
@@ -267,7 +268,7 @@ class MessageLog private(context: Context)
   private def getChannel(channel: ChannelLike): Channel = synchronized {
     val network = networks.getOrElse(channel.server.id, {
       val net = Network(channel.server.name, channel.server.id)
-      d(s"Inserting: $net, previous existing: $networks")
+      logcat.d(s"Inserting: $net, previous existing: $networks")
       val db = getWritableDatabase
       db.insertOrThrow(TABLE_SERVERS, null, net.values)
       close(db)
@@ -351,8 +352,6 @@ class MessageLog private(context: Context)
       networks = Map.empty
     }
   }
-
-
 
   var openCount = 0
   override def getWritableDatabase = synchronized {
@@ -483,7 +482,7 @@ object MessageLogActivity {
 }
 class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
   import MessageLogActivity._
-  implicit val TAG = LogcatTag("MessageLogActivity")
+  val log = Logcat("MessageLogActivity")
   var listview: ListView = _
   var dateText: TextView = _
 
@@ -551,7 +550,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
           MessageLog.get(this, nid, channel)
         else
           MessageLog.get(this, nid, channel, query)
-      } onSuccessUi { case a => setAdapter(Some(a)) }
+      } onSuccessMain { case a => setAdapter(Some(a)) }
     } else {
       Toast.makeText(this, "No logs available", Toast.LENGTH_SHORT).show()
       finish()
@@ -793,7 +792,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
 
         Future {
           MessageLog.get(MessageLogActivity.this, nid, channel)
-        } onSuccessUi { case c => setAdapter(Some(c)) }
+        } onSuccessMain { case c => setAdapter(Some(c)) }
         false
       }
     })
@@ -810,7 +809,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
           setAdapter(None)
           Future {
             MessageLog.get(MessageLogActivity.this, nid, channel, query)
-          } onSuccessUi { case c => setAdapter(Some(c)) }
+          } onSuccessMain { case c => setAdapter(Some(c)) }
         }
         true
       }

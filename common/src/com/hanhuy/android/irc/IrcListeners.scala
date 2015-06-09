@@ -18,7 +18,7 @@ import com.sorcix.sirc.event.ServerEventListener.{Invite, Nick, Mode}
 import com.sorcix.sirc.event.{ServerEventListener, MessageEventListener}
 
 import scala.util.control.Exception._
-import com.hanhuy.android.common.{ServiceBus, UiBus, SpannedGenerator, AndroidConversions}
+import com.hanhuy.android.common.{ServiceBus, UiBus, AndroidConversions}
 import AndroidConversions._
 import SpannedGenerator._
 import IrcListeners._
@@ -68,7 +68,7 @@ object IrcListeners {
   // sometimes a null is passed in...
   def matchesNick(server: Server, msg: CharSequence) = {
     if (msg != null)
-      matchesNickIndex(server.currentNick.toLowerCase, msg.toLowerCase, 0) != -1
+      matchesNickIndex(server.currentNick.toLowerCase, msg.toString.toLowerCase, 0) != -1
     else
       false
   }

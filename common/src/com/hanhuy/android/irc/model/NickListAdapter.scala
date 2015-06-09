@@ -2,8 +2,9 @@ package com.hanhuy.android.irc.model
 
 import android.graphics.Color
 import android.text.style.StrikethroughSpan
+import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.irc._
-import com.hanhuy.android.common.{R => _, _}
+import com.hanhuy.android.common._
 import SpannedGenerator._
 
 import android.view.{Gravity, LayoutInflater, View, ViewGroup}

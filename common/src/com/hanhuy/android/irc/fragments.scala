@@ -24,6 +24,8 @@ import com.hanhuy.android.irc.model.BusEvent
 
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common.{UiBus, EventBus}
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
 
 import MainActivity._
 
@@ -141,19 +143,19 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
   val _server: Server = new Server
   def server: Server = {
     val s = _server
-    s.name        = server_name
-    s.hostname    = server_host
-    s.port        = Try(port.toInt).toOption getOrElse 6667
-    s.ssl         = ssl
-    s.autoconnect = autoconnect
-    s.nickname    = nickname
-    s.altnick     = altnick
-    s.realname    = realname
-    s.username    = username
-    s.password    = password
-    s.autojoin    = autojoin
-    s.autorun     = autorun
-    s.sasl        = sasl
+    s.name        = server_name.getText.toString
+    s.hostname    = server_host.getText.toString
+    s.port        = Try(port.getText.toString.toInt).toOption getOrElse 6667
+    s.ssl         = ssl.isChecked
+    s.autoconnect = autoconnect.isChecked
+    s.nickname    = nickname.getText.toString
+    s.altnick     = altnick.getText.toString
+    s.realname    = realname.getText.toString
+    s.username    = username.getText.toString
+    s.password    = password.getText.toString
+    s.autojoin    = autojoin.getText.toString
+    s.autorun     = autorun.getText.toString
+    s.sasl        = sasl.isChecked
     _server
   }
   def server_=(s: Server) = {
@@ -230,7 +232,7 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
     //import android.view.ContextThemeWrapper
     //val d = new AlertDialog.Builder(new ContextThemeWrapper(activity,
     //    if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark))
-    val d = new AlertDialog.Builder(activity)
+    val d: AlertDialog = new AlertDialog.Builder(activity)
       .setTitle(R.string.server_details)
       .setPositiveButton(R.string.save_server, null)
       .setNegativeButton(R.string.cancel_server, null)
@@ -239,9 +241,9 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
     if (bundle == null)
       server = _server
     // block dismiss on positive button click
-    d.setOnShowListener { () =>
+    d.onShow0 {
       val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
-      b.onClick {
+      b.onClick0 {
         val s = server
         if (s != null && s.valid) {
           if (s.id == -1)
