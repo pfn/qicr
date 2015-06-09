@@ -4,7 +4,10 @@ import sbt.Keys._
 import android.Keys._
 import android.Dependencies.apklib
 
-object QicrBuild extends android.AutoBuild {
+object QicrBuild extends Build {
+  lazy val common = project.in(file(".")).settings(android.Plugin.androidBuild: _*)
+  lazy val lite = android.Plugin.flavorOf(common, "lite")
+  /*
   lazy val root = Project(id = "qicr", base = file(".")) settings(Seq(
     sbt.Keys.`package` in Compile    <<= sbt.Keys.`package` in Android in lite,
     packageRelease         <<= packageRelease in Android in lite,
@@ -45,4 +48,5 @@ object QicrBuild extends android.AutoBuild {
       "com.android.support" % "support-v4" % "21.0.0",
       "com.android.support" % "appcompat-v7" % "21.0.0")
   ): _*)
+  */
 }

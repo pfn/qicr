@@ -5,3 +5,4 @@ bin
 target/
 .history
 project/project/
+lite-target/
