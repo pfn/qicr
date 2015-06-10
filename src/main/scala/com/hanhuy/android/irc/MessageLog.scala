@@ -31,7 +31,6 @@ import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
 import com.hanhuy.android.irc.model.{Channel => ModelChannel, _}
 import com.hanhuy.android.irc.model.MessageLike.{CtcpAction, Notice, Privmsg}
-import AndroidConversions._
 import macroid._
 import macroid.FullDsl._
 
@@ -606,14 +605,14 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       builder.setTitle("Delete Logs?")
       builder.setMessage("Delete all logs or messages from the current window?")
       builder.setPositiveButton("Current", () => {
-        async {
+        Future {
           MessageLog.delete(nid, channel)
         }
         finish()
       })
       builder.setNegativeButton("Cancel", null)
       builder.setNeutralButton("All", () => {
-        async {
+        Future {
           MessageLog.deleteAll()
         }
         finish()

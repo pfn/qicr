@@ -20,7 +20,7 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 libraryDependencies ++= Seq(
   "org.macroid" %% "macroid" % "2.0.0-M4",
   "com.hanhuy.android" %% "scala-conversions" % "1.1",
-  "com.hanhuy" %% "android-common" % "0.7",
+  "com.hanhuy.android" %% "scala-common" % "1.0-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
   "ch.acra" % "acra" % "4.5.0",
   apklib("com.viewpagerindicator" % "library" % "2.4.1"),
@@ -38,3 +38,5 @@ proguardCache in Android ++= "macroid" :: "android.support" :: Nil
 extraResDirectories in (lite,Android) += baseDirectory.value / "src" / "lite" / "res"
 
 packageName in (lite,Android) := "com.hanhuy.android.irc.lite"
+
+run <<= run in (lite,Android)

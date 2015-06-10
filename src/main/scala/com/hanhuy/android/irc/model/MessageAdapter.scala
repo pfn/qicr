@@ -5,8 +5,7 @@ import android.text.util.Linkify
 import android.util.TypedValue
 import com.hanhuy.android.irc._
 
-import com.hanhuy.android.common.{AndroidConversions, UiBus, EventBus}
-import AndroidConversions._
+import com.hanhuy.android.common._
 import SpannedGenerator._
 import MessageLike._
 

@@ -12,7 +12,7 @@ import android.text.style.MetricAffectingSpan
 import android.util.{TypedValue, AttributeSet}
 import android.view.{View, Gravity, ViewGroup}
 import android.widget._
-import com.hanhuy.android.common.AndroidConversions
+import com.hanhuy.android.common._
 import macroid.contrib.Layouts.RuleRelativeLayout
 import macroid.contrib.Layouts.RuleRelativeLayout.Rule
 
@@ -206,7 +206,6 @@ class TypefaceSpan(typeface: Typeface) extends MetricAffectingSpan {
 
 class FontNamePreference(c: Context, attrs: AttributeSet)
 extends ListPreference(c, attrs) {
-  import AndroidConversions._
   import SpannedGenerator._
   val (names, paths) = FontManager.fontsByName.toList.sortBy(_._1).unzip
 

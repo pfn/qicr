@@ -17,7 +17,7 @@ import android.support.v7.app.ActionBarActivity
 import android.content.{DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
 import android.preference._
-import com.hanhuy.android.common.{AndroidConversions, ServiceBus, UiBus}
+import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 import org.acra.ACRA
 
@@ -71,7 +71,7 @@ object Settings {
   val SHOW_JOIN_PART_QUIT = Setting[Boolean]("irc_show_join_part_quit", false)
   val SHOW_SPEECH_REC = Setting[Boolean]("ui_show_speech_rec", true)
   val SHOW_NICK_COMPLETE = Setting[Boolean]("ui_show_nick_complete",
-    AndroidConversions.honeycombAndNewer)
+    honeycombAndNewer)
   val DAYNIGHT_MODE = Setting[Boolean]("ui_daynight_mode", false)
 
 
@@ -166,7 +166,6 @@ object SettingsFragment {
 class SettingsFragment
 extends PreferenceFragment with macroid.Contexts[Fragment] {
   import macroid.FullDsl._
-  import AndroidConversions._
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)

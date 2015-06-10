@@ -11,8 +11,7 @@ import android.support.v7.view.ActionMode
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.view.View
 
-import com.hanhuy.android.common.AndroidConversions
-import AndroidConversions._
+import com.hanhuy.android.common._
 import android.support.v4.view.MenuItemCompat
 import android.support.v7.app.ActionBar.OnNavigationListener
 

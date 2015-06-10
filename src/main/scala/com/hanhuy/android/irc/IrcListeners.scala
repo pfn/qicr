@@ -18,8 +18,7 @@ import com.sorcix.sirc.event.ServerEventListener.{Invite, Nick, Mode}
 import com.sorcix.sirc.event.{ServerEventListener, MessageEventListener}
 
 import scala.util.control.Exception._
-import com.hanhuy.android.common.{ServiceBus, UiBus, AndroidConversions}
-import AndroidConversions._
+import com.hanhuy.android.common._
 import SpannedGenerator._
 import IrcListeners._
 import scala.annotation.tailrec
@@ -315,9 +314,7 @@ with ServerEventListener with MessageEventListener {
                   UiBus.send(BusEvent.ServerChanged(server))
                 }
                 // TODO make interval into a pref?
-                manager.handler.delayed(30000) {
-                  manager.ping(c, server)
-                }
+                manager.handler.postDelayed(() => manager.ping(c, server), 30000)
               }
             }
           case _ => ()

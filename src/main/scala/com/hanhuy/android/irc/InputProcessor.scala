@@ -17,15 +17,16 @@ import com.sorcix.sirc.IrcConnection
 
 import scala.collection.JavaConversions._
 
-import com.hanhuy.android.common.AndroidConversions
-import AndroidConversions._
+import com.hanhuy.android.common._
 import android.app.Activity
 import com.hanhuy.android.irc.model.MessageLike.CommandError
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
-import scala.Some
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
 import com.hanhuy.android.irc.model.MessageLike.CtcpRequest
 import com.hanhuy.android.irc.model.Query
+
+import scala.concurrent.Future
+import Futures._
 
 trait Command {
   def execute(args: Option[String])
@@ -515,7 +516,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   object NickCommand extends Command {
     override def execute(args: Option[String]) {
       args map { newnick =>
-        withConnection (conn => async { conn.setNick(newnick) })
+        withConnection (conn => Future { conn.setNick(newnick) })
       } getOrElse addCommandError(R.string.usage_nick)
     }
   }

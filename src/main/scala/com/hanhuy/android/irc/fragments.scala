@@ -22,8 +22,7 @@ import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.MessageAdapter
 import com.hanhuy.android.irc.model.BusEvent
 
-import com.hanhuy.android.common.AndroidConversions._
-import com.hanhuy.android.common.{UiBus, EventBus}
+import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 

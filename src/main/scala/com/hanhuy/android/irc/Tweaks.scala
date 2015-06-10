@@ -10,7 +10,7 @@ import android.view.View.MeasureSpec
 import android.view.inputmethod.EditorInfo
 import android.view._
 import android.widget._
-import com.hanhuy.android.common.{SystemService, AndroidConversions}
+import com.hanhuy.android.common._
 
 import macroid._
 import macroid.FullDsl._
@@ -61,7 +61,6 @@ object Tweaks {
   def tweak[A <: View,B](f: A => B) = Tweak[A](a => f(a))
 
   def sw(w: Int)(implicit ctx: AppContext) = {
-    import AndroidConversions._
     val p = new Point
     val d = ctx.get.systemService[WindowManager].getDefaultDisplay
     if (Build.VERSION.SDK_INT >= 17) {

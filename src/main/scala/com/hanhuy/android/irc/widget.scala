@@ -8,7 +8,6 @@ import android.widget.AbsListView.OnScrollListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
-import AndroidConversions._
 
 import android.appwidget.{AppWidgetManager, AppWidgetProvider}
 import android.widget._

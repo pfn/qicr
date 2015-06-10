@@ -27,7 +27,6 @@ import java.util.Collections
 
 import MainPagerAdapter._
 import com.hanhuy.android.common._
-import AndroidConversions._
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 
 import scala.util.Try

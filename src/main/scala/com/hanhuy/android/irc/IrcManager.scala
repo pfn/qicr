@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import java.lang.Thread.UncaughtExceptionHandler
 import java.nio.charset.Charset
 import java.util.Date
 import javax.net.ssl.SSLContext
@@ -23,9 +24,9 @@ import com.sorcix.sirc.{Channel => SircChannel, _}
 import com.sorcix.sirc.cap.{CapNegotiator, CompoundNegotiator, ServerTimeNegotiator}
 
 import com.hanhuy.android.common._
-import AndroidConversions._
+import Futures._
 import IrcManager._
-import android.net.{Uri, NetworkInfo, ConnectivityManager}
+import android.net.{Uri, ConnectivityManager}
 import com.hanhuy.android.irc.model.MessageLike.Privmsg
 import com.hanhuy.android.irc.model.BusEvent.{IrcManagerStop, IrcManagerStart, ChannelStatusChanged}
 import com.hanhuy.android.irc.model.MessageLike.CtcpAction
@@ -34,6 +35,7 @@ import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.BusEvent
 import org.acra.ACRA
 
+import scala.concurrent.Future
 import scala.util.Try
 
 object IrcManager {
@@ -255,7 +257,7 @@ class IrcManager extends EventBus.RefOwner {
     val count = connections.keys.size
     _running = false
     disconnectCount = 0
-    async {
+    Future {
       synchronized {
         // TODO wait for quit to actually complete?
         while (disconnectCount < count) {
@@ -276,7 +278,7 @@ class IrcManager extends EventBus.RefOwner {
   def disconnect(server: Server, message: Option[String] = None,
                  disconnected: Boolean = false, quitting: Boolean = false) {
     connections.get(server).foreach { c =>
-      async {
+      Future {
         try {
           val m = message getOrElse {
             Settings.get(Settings.QUIT_MESSAGE)
@@ -321,7 +323,7 @@ class IrcManager extends EventBus.RefOwner {
     }
 
     server.state = Server.State.CONNECTING
-    async(connectServerTask(server))
+    Future(connectServerTask(server))
     _running = true
   }
 
@@ -784,7 +786,10 @@ class IrcConnection2 extends IrcConnection {
   override def connect(sslctx: SSLContext) = {
     super.connect(sslctx)
     val thread = getOutput: Thread
-    thread.setUncaughtExceptionHandler(uncaughtExceptionHandler _)
+    thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler {
+      override def uncaughtException(thread: Thread, throwable: Throwable) =
+        uncaughtExceptionHandler _
+    })
   }
   // currently unused
   def uncaughtExceptionHandler(t: Thread, e: Throwable) {

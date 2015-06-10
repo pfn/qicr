@@ -5,8 +5,7 @@ import com.hanhuy.android.irc.{Config, MessageLog, IrcManager, IrcListeners}
 import MessageLike._
 import scala.annotation.tailrec
 import android.util.Log
-import com.hanhuy.android.common.{AndroidConversions, UiBus, ServiceBus}
-import AndroidConversions._
+import com.hanhuy.android.common._
 
 object Channel {
   trait State

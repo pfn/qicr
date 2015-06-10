@@ -2,7 +2,7 @@ package com.hanhuy.android.irc.model
 
 import android.graphics.Color
 import android.text.style.StrikethroughSpan
-import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
 import com.hanhuy.android.irc._
 import com.hanhuy.android.common._
 import SpannedGenerator._
@@ -15,7 +15,6 @@ import scala.collection.JavaConversions._
 import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.irc.model.BusEvent.{IgnoreListChanged, NickListChanged}
 import scala.ref.WeakReference
-import AndroidConversions._
 
 object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[

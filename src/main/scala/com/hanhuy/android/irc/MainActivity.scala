@@ -24,7 +24,6 @@ import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
 
 import com.viewpagerindicator.TabPageIndicator
-import AndroidConversions._
 import android.support.v7.app.{ActionBarDrawerToggle, ActionBarActivity}
 import android.support.v4.widget.DrawerLayout
 import android.database.DataSetObserver
