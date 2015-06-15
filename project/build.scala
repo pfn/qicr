@@ -5,8 +5,8 @@ import android.Keys._
 import android.Dependencies.apklib
 
 object QicrBuild extends Build {
-  lazy val common = project.in(file(".")).settings(android.Plugin.androidBuild: _*)
-  lazy val lite = android.Plugin.flavorOf(common, "lite")
+  lazy val zcommon = project.in(file(".")).settings(android.Plugin.androidBuild: _*)
+  lazy val lite = android.Plugin.flavorOf(zcommon, "lite")
   /*
   lazy val root = Project(id = "qicr", base = file(".")) settings(Seq(
     sbt.Keys.`package` in Compile    <<= sbt.Keys.`package` in Android in lite,
