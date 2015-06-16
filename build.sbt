@@ -35,8 +35,8 @@ proguardOptions in Android += "-keep class android.support.v7.internal.widget.* 
 
 proguardCache in Android ++= "macroid" :: "android.support" :: Nil
 
-extraResDirectories in (lite,Android) += baseDirectory.value / "src" / "lite" / "res"
+extraResDirectories in Android += baseDirectory.value / "src" / "lite" / "res"
 
-packageName in (lite,Android) := "com.hanhuy.android.irc.lite"
+packageName in Android := "com.hanhuy.android.irc.lite"
 
-run <<= run in (lite,Android)
+run <<= run in Android
