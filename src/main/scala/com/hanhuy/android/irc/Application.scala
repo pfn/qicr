@@ -6,8 +6,7 @@ import org.acra.annotation.ReportsCrashes
 /**
  * @author pfnguyen
  */
-@ReportsCrashes(formKey = "",
-  formUri = "http://hanhuy-acra.appspot.com/api/crashreport")
+@ReportsCrashes(formUri = "http://hanhuy-acra.appspot.com/api/crashreport")
 class Application extends android.app.Application {
   Application._instance = this
 

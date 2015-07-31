@@ -2,7 +2,7 @@ package com.hanhuy.android.irc
 
 import android.app.Service
 import android.content.Intent
-import com.hanhuy.android.common.{ServiceBus, EventBus}
+import com.hanhuy.android.common.{Logcat, ServiceBus, EventBus}
 import com.hanhuy.android.irc.model.BusEvent.{ExitApplication, MainActivityStop, MainActivityStart}
 
 /**
@@ -35,4 +35,14 @@ class LifecycleService extends Service with EventBus.RefOwner {
 
   override def onStartCommand(i: Intent, flags: Int, id: Int): Int =
     Service.START_NOT_STICKY
+
+  override def onLowMemory() = {
+    Logcat("LifecycleService").w("Low memory condition detected")
+    super.onLowMemory()
+  }
+
+  override def onTrimMemory(level: Int) = {
+    Logcat("LifecycleService").w("Trim memory requested, level: " + level)
+    super.onTrimMemory(level)
+  }
 }

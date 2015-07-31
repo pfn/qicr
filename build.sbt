@@ -19,13 +19,14 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
   "org.macroid" %% "macroid" % "2.0.0-M4",
-  "com.hanhuy.android" %% "scala-conversions" % "1.1",
-  "com.hanhuy.android" %% "scala-common" % "1.0-SNAPSHOT",
+  "com.hanhuy.android" %% "scala-conversions" % "1.4",
+  "com.hanhuy.android" %% "scala-common" % "1.1-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
-  "ch.acra" % "acra" % "4.5.0",
+  "ch.acra" % "acra" % "4.6.2",
   apklib("com.viewpagerindicator" % "library" % "2.4.1"),
-  "com.android.support" % "support-v4" % "21.0.0",
-  "com.android.support" % "appcompat-v7" % "21.0.0")
+  "com.android.support" % "design" % "22.2.1",
+  "com.android.support" % "support-v4" % "22.2.1",
+  "com.android.support" % "appcompat-v7" % "22.2.1")
 
 javacOptions in Compile ++= Seq("-target", "1.6", "-source", "1.6")
 

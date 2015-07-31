@@ -200,12 +200,12 @@ object Tweaks {
   }
 
   def checkbox(implicit ctx: ActivityContext) = if (Build.VERSION.SDK_INT >= 21)
-    w[CheckBox] else w[android.support.v7.internal.widget.TintCheckBox]
+    w[CheckBox] else w[android.support.v7.widget.AppCompatCheckBox]
   def checkedText(implicit ctx: ActivityContext) =
     if (Build.VERSION.SDK_INT >= 21)
       w[CheckedTextView]
     else
-      w[android.support.v7.internal.widget.TintCheckedTextView]
+      w[android.support.v7.widget.AppCompatCheckedTextView]
 }
 
 class SquareImageButton(c: Context) extends ImageButton(c) {
