@@ -69,8 +69,8 @@ with EventBus.RefOwner {
   def currentTab = tabs(page)
 
   pager.setAdapter(this)
-  tabindicators.setViewPager(pager)
-  tabindicators.setOnPageChangeListener(this)
+  if (navMode == Settings.NAVIGATION_MODE_TABS)
+    tabindicators.setupWithViewPager(pager)
   lazy val fm = activity.getSupportFragmentManager
   lazy val pager = activity.pager
   lazy val nm = activity.systemService[NotificationManager]
@@ -155,8 +155,6 @@ with EventBus.RefOwner {
   }
 
   val refreshTabRunnable: Runnable = () => {
-    if (navMode == Settings.NAVIGATION_MODE_TABS)
-      tabindicators.notifyDataSetChanged()
     DropDownAdapter.notifyDataSetChanged()
     DropDownNavAdapter.notifyDataSetChanged()
   }
@@ -423,8 +421,6 @@ with EventBus.RefOwner {
 
   override def getPageTitle(position: Int) = makeTabTitle(position)
 
-  val tabNotify: Runnable = () => tabindicators.notifyDataSetChanged()
-
   lazy val hasCallbacksMethod = {
     // private API present in android 4.1.1+
     Try(classOf[android.os.Handler].getDeclaredMethod(
@@ -439,8 +435,8 @@ with EventBus.RefOwner {
     }
   }
   override def notifyDataSetChanged() {
-    if (navMode == Settings.NAVIGATION_MODE_TABS && !hasCallbacks(tabNotify))
-      UiBus.handler.postDelayed(tabNotify, 100)
+    if (navMode == Settings.NAVIGATION_MODE_TABS)
+      tabindicators.setTabsFromPagerAdapter(this)
     super.notifyDataSetChanged()
   }
 }

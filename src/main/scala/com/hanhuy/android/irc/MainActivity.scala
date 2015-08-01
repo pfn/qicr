@@ -5,6 +5,7 @@ import android.content.{Context, Intent, DialogInterface}
 import android.graphics.Rect
 import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
+import android.support.design.widget.TabLayout
 import android.support.v4.view.ViewPager
 import android.view.View.MeasureSpec
 import android.view.ViewTreeObserver.OnPreDrawListener
@@ -23,7 +24,6 @@ import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
 
-import com.viewpagerindicator.TabPageIndicator
 import android.support.v7.app.{ActionBarDrawerToggle, ActionBarActivity}
 import android.support.v4.widget.DrawerLayout
 import android.database.DataSetObserver
@@ -98,9 +98,12 @@ with Contexts[Activity] with IdGeneration {
   import RuleRelativeLayout.Rule
   lazy val mainLayout = l[KitKatDrawerLayout](
     l[RuleRelativeLayout](
-      w[TabPageIndicator] <~ wire(_tabs) <~ id(Id.tabs) <~
+      w[FixedTabLayout] <~ wire(_tabs) <~ id(Id.tabs) <~
         lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
-          Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)) <~ kitkatPaddingTop,
+          Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)) <~ kitkatPaddingTop <~
+        tweak { t: TabLayout =>
+          t.setTabMode(TabLayout.MODE_SCROLLABLE)
+        },
       // id must be set or else fragment manager complains
       w[ViewPager] <~ wire(_pager) <~ id(Id.pager) <~ lp[RuleRelativeLayout](
         MATCH_PARENT, MATCH_PARENT,
@@ -197,16 +200,13 @@ with Contexts[Activity] with IdGeneration {
           case Settings.SHOW_SPEECH_REC =>
             showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
           case Settings.NAVIGATION_MODE =>
-            // flag recreate onResume
-            toggleSelectorMode = true
+            UiBus.post { HoneycombSupport.recreate() }
         }
       }
     }
   }
   private var showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
   private var showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
-
-  private var toggleSelectorMode = false
 
   lazy val drawerToggle = new ActionBarDrawerToggle(this,
     drawer, R.string.app_name, R.string.app_name)
@@ -215,7 +215,7 @@ with Contexts[Activity] with IdGeneration {
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
   }
   def tabs = _tabs
-  private var _tabs: TabPageIndicator = _
+  private var _tabs: TabLayout = _
   def drawer = kitkatDrawerLayout
   def drawerLeft = _drawerLeft
   private var _drawerLeft: View = _
@@ -397,28 +397,6 @@ with Contexts[Activity] with IdGeneration {
     super.onResume()
     val nm = this.systemService[NotificationManager]
     nm.cancelAll()
-    if (toggleSelectorMode) {
-      val newnav = Settings.get(Settings.NAVIGATION_MODE)
-      val isDropNav = HoneycombSupport.isSpinnerNavigation
-      if ((isDropNav && newnav != Settings.NAVIGATION_MODE_DROPDOWN) ||
-          (!isDropNav && newnav == Settings.NAVIGATION_MODE_DROPDOWN)) {
-        UiBus.post { HoneycombSupport.recreate() }
-      } else {
-        newnav match {
-          case Settings.NAVIGATION_MODE_TABS =>
-            tabs.setVisibility(View.VISIBLE)
-            drawer.setDrawerLockMode(
-              DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerLeft)
-            getSupportActionBar.setIcon(R.drawable.ic_appicon)
-            getSupportActionBar.setDisplayHomeAsUpEnabled(false)
-          case Settings.NAVIGATION_MODE_DRAWER =>
-            tabs.setVisibility(View.GONE)
-            drawer.setDrawerLockMode(
-              DrawerLayout.LOCK_MODE_UNLOCKED, drawerLeft)
-        }
-      }
-    }
-
 
     def refreshTabs() {
       adapter.refreshTabs()
@@ -700,3 +678,19 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
     }
   }
 }
+class FixedTabLayout(c: Context) extends TabLayout(c) {
+  override def setupWithViewPager(viewPager: ViewPager) {
+    val adapter = viewPager.getAdapter
+    if (adapter == null) {
+      throw new IllegalArgumentException("ViewPager does not have a PagerAdapter set")
+    } else {
+      this.setTabsFromPagerAdapter(adapter)
+      viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(this))
+      this.setOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(viewPager))
+      if (getSelectedTabPosition != viewPager.getCurrentItem && adapter.getCount != 0) {
+        this.getTabAt(viewPager.getCurrentItem).select()
+      }
+    }
+  }
+}
+

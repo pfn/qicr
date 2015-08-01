@@ -23,7 +23,6 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-common" % "1.1-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
   "ch.acra" % "acra" % "4.6.2",
-  apklib("com.viewpagerindicator" % "library" % "2.4.1"),
   "com.android.support" % "design" % "22.2.1",
   "com.android.support" % "support-v4" % "22.2.1",
   "com.android.support" % "appcompat-v7" % "22.2.1")
