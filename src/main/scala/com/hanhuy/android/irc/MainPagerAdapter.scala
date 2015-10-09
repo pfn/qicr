@@ -72,7 +72,11 @@ with EventBus.RefOwner {
   if (navMode == Settings.NAVIGATION_MODE_TABS)
     tabindicators.setupWithViewPager(pager)
   lazy val fm = activity.getSupportFragmentManager
-  lazy val pager = activity.pager
+  lazy val pager = {
+    val p = activity.pager
+    p.addOnPageChangeListener(this)
+    p
+  }
   lazy val nm = activity.systemService[NotificationManager]
 
   var page = 0

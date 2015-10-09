@@ -14,6 +14,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget._
 
 import android.support.v4.app.FragmentManager
+import com.android.debug.hv.ViewServer
 import macroid.contrib.Layouts.RuleRelativeLayout
 import scala.collection.JavaConversions._
 
@@ -325,6 +326,7 @@ with Contexts[Activity] with IdGeneration {
     setRequestedOrientation(
       if (Settings.get(Settings.ROTATE_LOCK))
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
+    ViewServer.get(this).addWindow(this)
   }
 
   override def onPostCreate(savedInstanceState: Bundle) {
@@ -431,6 +433,7 @@ with Contexts[Activity] with IdGeneration {
     refreshTabs()
     newmessages.setVisibility(if (adapter.hasNewMentions)
       View.VISIBLE else View.GONE)
+    ViewServer.get(this).setFocusedWindow(this)
   }
 
   override def onNewIntent(i: Intent) {
@@ -460,6 +463,7 @@ with Contexts[Activity] with IdGeneration {
       _.unregisterDataSetObserver(observer)
     }
     ServiceBus.send(BusEvent.MainActivityDestroy)
+    ViewServer.get(this).removeWindow(this)
   }
 
   def pageChanged(idx: Int) {

@@ -1,4 +1,6 @@
-platformTarget in Android := "android-22"
+val supportSdkVersion = "23.0.1"
+
+platformTarget in Android := "android-23"
 
 scalaVersion in Global := "2.11.6"
 
@@ -22,10 +24,11 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % "1.4",
   "com.hanhuy.android" %% "scala-common" % "1.1-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
-  "ch.acra" % "acra" % "4.6.2",
-  "com.android.support" % "design" % "22.2.1",
-  "com.android.support" % "support-v4" % "22.2.1",
-  "com.android.support" % "appcompat-v7" % "22.2.1")
+  "ch.acra" % "acra" % "4.7.0-RC.1",
+  "com.hanhuy.android" % "viewserver" % "1.0.3",
+  "com.android.support" % "design" % supportSdkVersion,
+  "com.android.support" % "support-v4" % supportSdkVersion,
+  "com.android.support" % "appcompat-v7" % supportSdkVersion)
 
 javacOptions in Compile ++= Seq("-target", "1.6", "-source", "1.6")
 
@@ -37,6 +40,8 @@ proguardCache in Android ++= "macroid" :: "android.support" :: Nil
 
 extraResDirectories in Android += baseDirectory.value / "src" / "lite" / "res"
 
-packageName in Android := "com.hanhuy.android.irc.lite"
+applicationId in Android := "com.hanhuy.android.irc.lite"
 
 run <<= run in Android
+
+protifySettings
