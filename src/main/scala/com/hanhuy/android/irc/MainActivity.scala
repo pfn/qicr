@@ -25,7 +25,7 @@ import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
 
-import android.support.v7.app.{ActionBarDrawerToggle, ActionBarActivity}
+import android.support.v7.app.{AppCompatActivity, ActionBarDrawerToggle}
 import android.support.v4.widget.DrawerLayout
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
@@ -67,7 +67,7 @@ object MainActivity {
 
   var instance = Option.empty[MainActivity]
 }
-class MainActivity extends ActionBarActivity with EventBus.RefOwner
+class MainActivity extends AppCompatActivity with EventBus.RefOwner
 with Contexts[Activity] with IdGeneration {
   import Tweaks._
   import ViewGroup.LayoutParams._
@@ -335,8 +335,6 @@ with Contexts[Activity] with IdGeneration {
     getSupportActionBar.setDisplayShowHomeEnabled(true)
     if (nav == Settings.NAVIGATION_MODE_DRAWER) {
       getSupportActionBar.setDisplayHomeAsUpEnabled(true)
-    } else {
-      getSupportActionBar.setIcon(R.drawable.ic_appicon)
     }
     drawerToggle.syncState()
     drawerToggle.setDrawerIndicatorEnabled(true)

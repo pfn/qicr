@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.annotation.TargetApi
 import android.graphics.{Point, Color}
 import android.graphics.drawable.ColorDrawable
 import android.text.TextUtils.TruncateAt
@@ -70,6 +71,7 @@ object Widgets extends EventBus.RefOwner {
   def ids_= (ids: Array[Int]) = Settings.set(
     Settings.WIDGET_IDS, ids mkString ",")
 
+  @TargetApi(14)
   def setMessageView(c: Context, id: Int, subject: String,
                      partial: Boolean = false) {
     assignMessageView(id, subject)
@@ -118,6 +120,7 @@ object Widgets extends EventBus.RefOwner {
     views.setRemoteAdapter(R.id.message_list, service)
 
     val awm = AppWidgetManager.getInstance(c)
+
     if (partial) {
       views.setScrollPosition(R.id.message_list, 1000)
       awm.partiallyUpdateAppWidget(id, views)
@@ -140,6 +143,7 @@ object Widgets extends EventBus.RefOwner {
     }
   }
 
+  @TargetApi(14)
   def setStatusView(context: Context, id: Int) {
     unassignMessageView(id)
     val views = new RemoteViews(context.getPackageName, R.layout.widget_content)
@@ -194,6 +198,7 @@ object Widgets extends EventBus.RefOwner {
     case s: Server      => s.name + IrcManager.EXTRA_SPLITTER
   }
 
+  @TargetApi(14)
   def updateMessageWidget(m: MessageAppender) = synchronized {
     val subject = toString(m)
     messageViews.toList filter { case (id, subj) => subject == subj } map {
@@ -209,12 +214,14 @@ object Widgets extends EventBus.RefOwner {
     handler.postDelayed(updateStatusRunnable, 250)
   }
 
-  private val updateStatusRunnable: Runnable = () => {
+  @TargetApi(14)
+  def updateStatus(): Unit = {
     val awm = AppWidgetManager.getInstance(Application.context)
     ids filterNot messageViews.keySet foreach {
       awm.notifyAppWidgetViewDataChanged(_, R.id.status_list)
     }
   }
+  private val updateStatusRunnable: Runnable = updateStatus _
 
   def appenderForSubject(subject: String) = {
     IrcManager.instance flatMap { manager =>
@@ -251,6 +258,7 @@ class WidgetProvider extends AppWidgetProvider {
     Widgets(context).ids = Array.empty[Int]
   }
 
+  @TargetApi(14)
   override def onReceive(c: Context, intent: Intent) {
     super.onReceive(c, intent)
     intent.getAction match {
@@ -305,6 +313,7 @@ class WidgetProvider extends AppWidgetProvider {
   }
 }
 
+@TargetApi(14)
 class WidgetMessageService extends RemoteViewsService {
 
   def onGetViewFactory(intent: Intent): RemoteViewsFactory = {
@@ -324,6 +333,7 @@ class WidgetMessageService extends RemoteViewsService {
   }
 }
 
+@TargetApi(14)
 class WidgetStatusService extends RemoteViewsService {
   def onGetViewFactory(intent: Intent) = {
     IrcManager.instance map { _ => new WidgetStatusViewsFactory } getOrElse {
@@ -334,6 +344,7 @@ class WidgetStatusService extends RemoteViewsService {
   }
 }
 
+@TargetApi(14)
 class WidgetEmptyViewsFactory extends BroadcastReceiver
 with RemoteViewsService.RemoteViewsFactory {
   def onDestroy() {}
@@ -348,6 +359,7 @@ with RemoteViewsService.RemoteViewsFactory {
   def getCount = 0
 }
 
+@TargetApi(14)
 class WidgetStatusViewsFactory extends BroadcastReceiver
 with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
   val manager = IrcManager.instance.get
@@ -404,6 +416,7 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
   def onReceive(c: Context, intent: Intent) {}
 }
 
+@TargetApi(14)
 class WidgetMessageViewsFactory(m: MessageAppender) extends BroadcastReceiver
 with RemoteViewsService.RemoteViewsFactory {
   val (channel,messages) = m match {
@@ -440,6 +453,7 @@ with RemoteViewsService.RemoteViewsFactory {
 }
 
 // TODO refactor and cleanup, so ugly, copy/paste from MainActivity
+@TargetApi(14)
 class WidgetChatActivity
 extends Activity with TypedFindView with Contexts[Activity] {
   import Tweaks._

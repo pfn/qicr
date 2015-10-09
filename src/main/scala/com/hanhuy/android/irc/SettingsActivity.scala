@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.annotation.TargetApi
 import android.media.RingtoneManager
 import android.net.Uri
 import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceClickListener}
@@ -13,7 +14,7 @@ import macroid.FullDsl._
 import Tweaks._
 
 import android.app.{Activity, AlertDialog, Fragment}
-import android.support.v7.app.ActionBarActivity
+import android.support.v7.app.{AppCompatActivity, ActionBarActivity}
 import android.content.{DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
 import android.preference._
@@ -131,7 +132,8 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
 
 // android3.0+
 // now actionbaractivity for material on <5.0
-class SettingsFragmentActivity extends ActionBarActivity with IdGeneration with Contexts[Activity] {
+@TargetApi(11)
+class SettingsFragmentActivity extends AppCompatActivity with IdGeneration with Contexts[Activity] {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     val content = new android.widget.FrameLayout(this)
@@ -163,6 +165,7 @@ object SettingsFragment {
 
   }
 }
+@TargetApi(11)
 class SettingsFragment
 extends PreferenceFragment with macroid.Contexts[Fragment] {
   import macroid.FullDsl._
