@@ -19,6 +19,7 @@
         -->
         <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
+        <item name="qicrHistoryIcon">@drawable/ic_history_white_24dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
         <item name="qicrDrawerBackground">#cc222222</item>
@@ -27,6 +28,7 @@
     <style name="Base.AppTheme.Light" parent="@style/Theme.AppCompat.Light">
         <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
+        <item name="qicrHistoryIcon">@drawable/ic_history_black_24dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
         <item name="qicrDrawerBackground">#e0dddddd</item>
