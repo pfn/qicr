@@ -123,7 +123,7 @@ abstract class InputProcessor(activity: Activity) {
     //   fell off the end? revert to prefix/start over
     val prefix = completionPrefix getOrElse {
       val start = input.getSelectionStart
-      val beginning = in.lastIndexOf(" ", start - 1)
+      val beginning = math.max(in.lastIndexOf(" ", start - 1), in.lastIndexOf("@", start - 1))
       val p = in.substring(if (beginning == -1) 0 else (beginning + 1), start)
       completionPrefix = Some(p)
       completionOffset = Some(start - p.length())
