@@ -75,6 +75,8 @@ with Contexts[Activity] with IdGeneration {
   private[this] var requestRecreate = false
   var inputHeight = Option.empty[Int]
 
+  lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
+
   lazy val inputBackground = {
     val themeAttrs = getTheme.obtainStyledAttributes(R.styleable.AppTheme)
     val c = themeAttrs.getDrawable(R.styleable.AppTheme_inputBackground)
@@ -113,12 +115,14 @@ with Contexts[Activity] with IdGeneration {
         Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
       l[LinearLayout](
         w[ImageButton] <~
-          image(R.drawable.ic_btn_search) <~ On.click {
+          image(if (daynight) R.drawable.ic_person_pin_black_24dp else R.drawable.ic_person_pin_white_24dp) <~
+            On.click {
           proc.nickComplete(input)
           Ui(true)
         } <~ hide <~ wire(nickcomplete) <~ buttonTweaks,
         w[ImageButton] <~
-          image(R.drawable.ic_btn_search_go) <~ hide <~ On.click {
+          image(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) <~
+          hide <~ On.click {
           adapter.goToNewMessages()
           Ui(true)
         } <~ wire(newmessages) <~ buttonTweaks,
@@ -132,14 +136,16 @@ with Contexts[Activity] with IdGeneration {
             e.addTextChangedListener(proc.TextListener)
           },
         w[ImageButton] <~
-          image(android.R.drawable.ic_menu_send) <~ wire(send) <~
+          image(if (daynight) R.drawable.ic_send_black_24dp else R.drawable.ic_send_white_24dp) <~
+          wire(send) <~
           On.click {
             proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
             Ui(true)
           } <~ buttonTweaks <~ hide,
         w[ImageButton] <~
-          image(android.R.drawable.ic_btn_speak_now) <~ wire(speechrec) <~
+          image(if (daynight) R.drawable.ic_mic_black_24dp else R.drawable.ic_mic_white_24dp) <~
+           wire(speechrec) <~
           On.click {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
