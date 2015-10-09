@@ -47,7 +47,7 @@ object MainActivity {
 
   if (gingerbreadAndNewer) GingerbreadSupport.init()
 
-  implicit def toMainActivity(a: Activity) = a.asInstanceOf[MainActivity]
+  implicit def toMainActivity(a: Activity): MainActivity = a.asInstanceOf[MainActivity]
 
   def getFragmentTag(c: Option[MessageAppender]) = {
     c match {
@@ -72,6 +72,7 @@ with Contexts[Activity] with IdGeneration {
   import Tweaks._
   import ViewGroup.LayoutParams._
 
+  private[this] var requestRecreate = false
   var inputHeight = Option.empty[Int]
 
   lazy val inputBackground = {
@@ -190,20 +191,14 @@ with Contexts[Activity] with IdGeneration {
       if (showing) send.setVisibility(View.GONE)
       else if (input.getText.length > 0) send.setVisibility(View.VISIBLE)
       _imeShowing = showing
-    case BusEvent.PreferenceChanged(_, key) =>
-    List(Settings.SHOW_NICK_COMPLETE,
-      Settings.SHOW_SPEECH_REC,
-      Settings.NAVIGATION_MODE) foreach { r =>
-      if (r == key) {
-        r match {
-          case Settings.SHOW_NICK_COMPLETE =>
-            showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
-          case Settings.SHOW_SPEECH_REC =>
-            showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
-          case Settings.NAVIGATION_MODE =>
-            UiBus.post { HoneycombSupport.recreate() }
-        }
-      }
+    case BusEvent.PreferenceChanged(_, key) => key match {
+      case Settings.SHOW_NICK_COMPLETE =>
+        showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
+      case Settings.SHOW_SPEECH_REC =>
+        showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
+      case Settings.NAVIGATION_MODE =>
+        requestRecreate = true
+      case _ =>
     }
   }
   private var showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
@@ -432,6 +427,8 @@ with Contexts[Activity] with IdGeneration {
     newmessages.setVisibility(if (adapter.hasNewMentions)
       View.VISIBLE else View.GONE)
     ViewServer.get(this).setFocusedWindow(this)
+
+    if (requestRecreate) _recreate()
   }
 
   override def onNewIntent(i: Intent) {
