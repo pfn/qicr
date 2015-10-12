@@ -165,6 +165,8 @@ with EventBus.RefOwner {
   def refreshTabTitle(pos: Int) {
     if (!hasCallbacks(refreshTabRunnable))
       UiBus.handler.postDelayed(refreshTabRunnable, 100)
+    if (navMode == Settings.NAVIGATION_MODE_TABS)
+      tabindicators.getTabAt(pos).getCustomView.asInstanceOf[TextView].setText(makeTabTitle(pos))
   }
 
   def makeTabTitle(pos: Int) = {
@@ -439,8 +441,14 @@ with EventBus.RefOwner {
     }
   }
   override def notifyDataSetChanged() {
-    if (navMode == Settings.NAVIGATION_MODE_TABS)
+    if (navMode == Settings.NAVIGATION_MODE_TABS) {
       tabindicators.setTabsFromPagerAdapter(this)
+      (0 until tabindicators.getTabCount) foreach { i =>
+        val tv = new TextView(activity)
+        tv.setText(makeTabTitle(i))
+        tabindicators.getTabAt(i).setCustomView(tv)
+      }
+    }
     super.notifyDataSetChanged()
   }
 }

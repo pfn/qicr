@@ -36,7 +36,11 @@ proguardOptions in Android += "-keep class android.support.v7.widget.SearchView 
 
 proguardOptions in Android += "-keep class android.support.v7.internal.widget.* { <init>(...); }"
 
+proguardOptions in Android += "-keep class scala.runtime.BoxesRunTime { *; }" // for debugging
+
 proguardCache in Android ++= "macroid" :: "android.support" :: Nil
+
+useProguardInDebug in Android := false
 
 extraResDirectories in Android += baseDirectory.value / "src" / "lite" / "res"
 

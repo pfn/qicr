@@ -102,7 +102,7 @@ with Contexts[Activity] with IdGeneration {
   import RuleRelativeLayout.Rule
   lazy val mainLayout = l[KitKatDrawerLayout](
     l[RuleRelativeLayout](
-      w[FixedTabLayout] <~ wire(_tabs) <~ id(Id.tabs) <~
+      w[TabLayout] <~ wire(_tabs) <~ id(Id.tabs) <~
         lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
           Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)) <~ kitkatPaddingTop <~
         tweak { t: TabLayout =>
@@ -419,6 +419,7 @@ with Contexts[Activity] with IdGeneration {
         }
       } else if (i != null && i.hasExtra(IrcManager.EXTRA_PAGE)) {
         val page = i.getIntExtra(IrcManager.EXTRA_PAGE, 0)
+        i.removeExtra(IrcManager.EXTRA_PAGE)
         //tabhost.setCurrentTab(page)
         pager.setCurrentItem(page)
       } else if (page != -1) {
@@ -680,21 +681,6 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
       super.onMeasure(mw, MeasureSpec.makeMeasureSpec(h - change, s))
     } else {
       super.onMeasure(mw, mh)
-    }
-  }
-}
-class FixedTabLayout(c: Context) extends TabLayout(c) {
-  override def setupWithViewPager(viewPager: ViewPager) {
-    val adapter = viewPager.getAdapter
-    if (adapter == null) {
-      throw new IllegalArgumentException("ViewPager does not have a PagerAdapter set")
-    } else {
-      this.setTabsFromPagerAdapter(adapter)
-      viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(this))
-      this.setOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(viewPager))
-      if (getSelectedTabPosition != viewPager.getCurrentItem && adapter.getCount != 0) {
-        this.getTabAt(viewPager.getCurrentItem).select()
-      }
     }
   }
 }

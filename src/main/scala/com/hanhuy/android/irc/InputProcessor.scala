@@ -169,7 +169,7 @@ abstract class InputProcessor(activity: Activity) {
     }
 
     val replacement = candidate map { nick =>
-      nick + (if (offset == 0) suffix else "")
+      nick + (if (offset <= 1) suffix else "")
     } getOrElse prefix
     // replace offset to cursor with replacement
     // move cursor to end of replacement

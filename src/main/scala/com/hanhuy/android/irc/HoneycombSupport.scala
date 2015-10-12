@@ -102,12 +102,13 @@ object HoneycombSupport {
           MenuItemCompat.setShowAsAction(menu.findItem(i),
             MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         )
+      setServerConnectionAction(menu)
       true
     }
 
     override def onDestroyActionMode(mode: ActionMode) = ()
 
-    override def onPrepareActionMode(mode: ActionMode, menu: Menu) = {
+    def setServerConnectionAction(menu: Menu): Unit = {
       _server.get map { s =>
         val connected = s.state match {
           case Server.State.INITIAL      => false
@@ -118,6 +119,9 @@ object HoneycombSupport {
         menu.findItem(R.id.server_connect).setVisible(!connected)
         menu.findItem(R.id.server_disconnect).setVisible(connected)
       }
+    }
+    override def onPrepareActionMode(mode: ActionMode, menu: Menu) = {
+      setServerConnectionAction(menu)
       true
     }
   }
