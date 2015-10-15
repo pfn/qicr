@@ -7,7 +7,7 @@
           android:title="@string/command_whois_1"/>
     <item android:id="@+id/channel_log"
           qicr:showAsAction="ifRoom"
-          android:icon="@android:drawable/ic_menu_agenda"
+          android:icon="?qicrHistoryIcon"
           android:title="Nick Log" />
     <item android:id="@+id/nick_start_chat"
           qicr:showAsAction="ifRoom|withText"

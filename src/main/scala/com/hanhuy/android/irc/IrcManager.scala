@@ -344,6 +344,10 @@ class IrcManager extends EventBus.RefOwner {
     UiBus.send(BusEvent.StartQuery(query))
   }
 
+  def addQuery(q: Query): Unit = {
+    queries += (((q.server, q.name), q))
+    mchannels += ((q,null))
+  }
   def addQuery(c: IrcConnection, _nick: String, msg: String,
                sending: Boolean = false, action: Boolean = false,
                notice: Boolean = false, ts: Date = new Date) {
@@ -521,7 +525,7 @@ class IrcManager extends EventBus.RefOwner {
       val idx = chans.size + (lastChannel.map { c =>
         chans.indexOf(c)
       } getOrElse 0)
-      val tgt = if (chans.size == 0) 0 else intent.getAction match {
+      val tgt = if (chans.isEmpty) 0 else intent.getAction match {
         case ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
         case ACTION_PREV_CHANNEL => (idx - 1) % chans.size
         case ACTION_CANCEL_MENTION =>

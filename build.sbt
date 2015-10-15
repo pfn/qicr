@@ -22,6 +22,7 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 libraryDependencies ++= Seq(
   "org.macroid" %% "macroid" % "2.0.0-M4",
   "com.hanhuy.android" %% "scala-conversions" % "1.4",
+  "com.hanhuy.android" %% "scala-conversions-design" % "1.4",
   "com.hanhuy.android" %% "scala-common" % "1.1-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
   "ch.acra" % "acra" % "4.7.0-RC.1",

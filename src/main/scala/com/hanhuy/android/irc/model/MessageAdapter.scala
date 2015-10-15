@@ -39,9 +39,11 @@ object MessageAdapter extends EventBus.RefOwner {
     Application.context.getAssets, "DejaVuSansMono.ttf")
   private var fontSetting = Option(Settings.get(Settings.FONT_NAME)) flatMap (
     n => Try(Typeface.createFromFile(n)).toOption)
-  val NICK_COLORS = Array(
-    0xff33b5e5, 0xffaa66cc, 0xff99cc00, 0xffffbb33, 0xffff4444,
-    0xff0099cc, 0xff9933cc, 0xff669900, 0xffff8800, 0xffcc0000)
+  val NICK_COLORS: Array[Int] = Array(
+    0xfff44336, 0xffe91e63, 0xff9c27b0, 0xff7E57C2, 0xff5c6bc0, 0xff2196f3,
+    0xff03a9f4, 0xff00bcd4, 0xff009688, 0xff4caf50, 0xff8bc34a, 0xffcddc39,
+    0xffffeb3b, 0xffffc107, 0xffff9800, 0xffff5722, 0xff8d6e63, 0xff607d8b
+  )
 
   val TAG = "MessageAdapter"
   val DEFAULT_MAXIMUM_SIZE = 256
@@ -139,7 +141,7 @@ object MessageAdapter extends EventBus.RefOwner {
     }
   }
 
-  def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % 10)
+  def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % NICK_COLORS.length)
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
       msg: String, modes: (Boolean,Boolean) = (false, false))(
       implicit channel: ChannelLike) = {

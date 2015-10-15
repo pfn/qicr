@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.support.design.widget.TabLayout.{Tab, OnTabSelectedListener}
 import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ServerComparator
@@ -93,7 +94,9 @@ with EventBus.RefOwner {
   case BusEvent.ChannelMessage(c, m)    => refreshTabTitle(c)
   case BusEvent.ChannelAdded(c)         => addChannel(c)
   case BusEvent.PrivateMessage(q, m)    => addChannel(q)
-  case BusEvent.StartQuery(q)           => pager.setCurrentItem(addChannel(q))
+  case BusEvent.StartQuery(q)           =>
+    manager.addQuery(q)
+    pager.setCurrentItem(addChannel(q))
   }
 
   def refreshTabs() {
@@ -110,14 +113,14 @@ with EventBus.RefOwner {
     server.state match {
     case Server.State.DISCONNECTED =>
       // iterate channels and flag them as disconnected
-      (0 until channels.size) foreach { i =>
+      channels.indices foreach { i =>
         if (channels(i).server == server) {
           tabs(i + channelBase).flags |= TabInfo.FLAG_DISCONNECTED
           refreshTabTitle(i + channelBase)
         }
       }
     case Server.State.CONNECTED =>
-      (0 until channels.size) foreach { i =>
+      channels.indices foreach { i =>
         if (channels(i).server == server) {
           tabs(i + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
           refreshTabTitle(i + channelBase)
@@ -165,8 +168,10 @@ with EventBus.RefOwner {
   def refreshTabTitle(pos: Int) {
     if (!hasCallbacks(refreshTabRunnable))
       UiBus.handler.postDelayed(refreshTabRunnable, 100)
-    if (navMode == Settings.NAVIGATION_MODE_TABS)
-      tabindicators.getTabAt(pos).getCustomView.asInstanceOf[TextView].setText(makeTabTitle(pos))
+    if (navMode == Settings.NAVIGATION_MODE_TABS) {
+      if (tabindicators.getTabCount > pos)
+        Option(tabindicators.getTabAt(pos).getCustomView.asInstanceOf[TextView]).foreach (_.setText(makeTabTitle(pos)))
+    }
   }
 
   def makeTabTitle(pos: Int) = {
@@ -174,9 +179,9 @@ with EventBus.RefOwner {
     var title: CharSequence = t.title
 
     if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
-      title = SpannedGenerator.textColor(0xffff0000, title)
+      title = SpannedGenerator.textColor(0xffec407a, title)
     else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0)
-      title = SpannedGenerator.textColor(0xff007f7f, title)
+      title = SpannedGenerator.textColor(0xff26a69a, title)
 
     if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
       title = "(%1)" formatSpans title
@@ -441,6 +446,7 @@ with EventBus.RefOwner {
     }
   }
   override def notifyDataSetChanged() {
+    super.notifyDataSetChanged()
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
       tabindicators.setTabsFromPagerAdapter(this)
       (0 until tabindicators.getTabCount) foreach { i =>
@@ -449,6 +455,5 @@ with EventBus.RefOwner {
         tabindicators.getTabAt(i).setCustomView(tv)
       }
     }
-    super.notifyDataSetChanged()
   }
 }
