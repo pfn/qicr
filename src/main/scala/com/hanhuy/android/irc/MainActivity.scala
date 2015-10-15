@@ -196,10 +196,17 @@ with Contexts[Activity] with IdGeneration {
   private var manager: IrcManager = null
   private var currentPopup = Option.empty[PopupWindow]
 
+  def supportIsDestroyed: Boolean = {
+    if (Build.VERSION.SDK_INT >= 17)
+      isDestroyed
+    else {
+      destroyed
+    }
+  }
 
   UiBus += {
     case BusEvent.LinkClickEvent(url) =>
-      if (!isDestroyed) { // reference holding badness causes this to fail otherwise
+      if (!supportIsDestroyed) { // reference holding badness causes this to fail otherwise
         val p = new DisplayMetrics
         getWindow.getWindowManager.getDefaultDisplay.getMetrics(p)
         val popup = new PopupWindow(this)
@@ -556,7 +563,9 @@ with Contexts[Activity] with IdGeneration {
     HoneycombSupport.close()
   }
 
+  private[this] var destroyed = false
   override def onDestroy() {
+    destroyed = true
     super.onDestroy()
     // unregister, or else we have a memory leak on observer -> this
     Option(nickList.getAdapter) foreach {
