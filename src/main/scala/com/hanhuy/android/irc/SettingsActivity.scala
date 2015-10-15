@@ -91,10 +91,11 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
     p.registerOnSharedPreferenceChangeListener(this)
 
     override def onSharedPreferenceChanged(p: SharedPreferences, key: String) {
-        val Setting(s) = key
+      Setting.unapply(key) foreach { s =>
         val e = BusEvent.PreferenceChanged(this, s)
         UiBus.send(e) // already on main thread
         ServiceBus.send(e)
+      }
     }
 
   def get[A](setting: Setting[A])(implicit m: ClassTag[A]): A = {

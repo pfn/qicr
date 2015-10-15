@@ -8,18 +8,19 @@ import com.hanhuy.android.irc._
 import com.hanhuy.android.common._
 import SpannedGenerator._
 import MessageLike._
+import com.hanhuy.android.irc.model.BusEvent.LinkClickEvent
 
 import scala.ref.WeakReference
 
 import android.graphics.Typeface
 import android.view.{Gravity, LayoutInflater, View, ViewGroup}
 import android.content.Context
-import android.widget.{AbsListView, BaseAdapter, TextView}
+import android.widget.{Toast, AbsListView, BaseAdapter, TextView}
 
 import java.text.SimpleDateFormat
 
-import android.text.style.ClickableSpan
-import android.text.TextPaint
+import android.text.style.{URLSpan, ClickableSpan}
+import android.text.{SpannableString, Spanned, Spannable, TextPaint}
 import android.text.method.LinkMovementMethod
 
 import scala.reflect.ClassTag
@@ -175,12 +176,10 @@ object MessageAdapter extends EventBus.RefOwner {
   lazy implicit val actx = AppContext(Application.context)
   def messageLayout(ctx: Activity) = {
     implicit val c = ActivityContext(ctx)
-    import Linkify._
     import ViewGroup.LayoutParams._
     w[TextView] <~ id(android.R.id.text1) <~
       lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~
       tweak { tv: TextView =>
-        tv.setAutoLinkMask(WEB_URLS | EMAIL_ADDRESSES | MAP_ADDRESSES)
         tv.setLinksClickable(true)
         tv.setTextAppearance(ctx, android.R.style.TextAppearance_Small)
         tv.setTypeface(Typeface.MONOSPACE)
@@ -309,7 +308,27 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     if (size > 0) view.setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
     fontSetting foreach view.setTypeface
 
-    view.setText(formatText(getItem(pos)))
+    val spanned = formatText(getItem(pos)) match {
+      case s: Spannable => s
+      case s => new SpannableString(s)
+    }
+    Linkify.addLinks(spanned,
+      Linkify.WEB_URLS | Linkify.EMAIL_ADDRESSES | Linkify.MAP_ADDRESSES)
+    val links = spanned.getSpans(0, spanned.length - 1, classOf[URLSpan])
+    links foreach { u =>
+      val url = u.getURL
+      if (url.startsWith("http")) {
+        val start = spanned.getSpanStart(u)
+        val end = spanned.getSpanEnd(u)
+        import com.hanhuy.android.conversions._
+        val clickSpan: ClickableSpan = () => {
+          UiBus.send(LinkClickEvent(url))
+        }
+        spanned.removeSpan(u)
+        spanned.setSpan(clickSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+      }
+    }
+    view.setText(spanned)
     view
   }
 

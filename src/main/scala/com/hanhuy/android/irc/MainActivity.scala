@@ -7,10 +7,12 @@ import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.design.widget.TabLayout
 import android.support.v4.view.ViewPager
+import android.util.DisplayMetrics
 import android.view.View.MeasureSpec
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
 import android.view.inputmethod.InputMethodManager
+import android.webkit.{WebChromeClient, WebViewClient, WebView}
 import android.widget._
 
 import android.support.v4.app.FragmentManager
@@ -100,7 +102,7 @@ with Contexts[Activity] with IdGeneration {
   lazy val drawerWidth = sw(600 dp) ? (288 dp) | (192 dp)
 
   import RuleRelativeLayout.Rule
-  lazy val mainLayout = l[KitKatDrawerLayout](
+  lazy val mainLayout = getUi(l[KitKatDrawerLayout](
     l[RuleRelativeLayout](
       w[TabLayout] <~ wire(_tabs) <~ id(Id.tabs) <~
         lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
@@ -180,6 +182,7 @@ with Contexts[Activity] with IdGeneration {
       bg(drawerBackground)
   ) <~ wire(kitkatDrawerLayout) <~
     lp[FrameLayout](MATCH_PARENT, MATCH_PARENT)
+  )
 
 
   lazy val listTweaks = tweak { l: ListView =>
@@ -191,8 +194,95 @@ with Contexts[Activity] with IdGeneration {
   }
 
   private var manager: IrcManager = null
+  private var currentPopup = Option.empty[PopupWindow]
+
 
   UiBus += {
+    case BusEvent.LinkClickEvent(url) =>
+      if (!isDestroyed) { // reference holding badness causes this to fail otherwise
+        val p = new DisplayMetrics
+        getWindow.getWindowManager.getDefaultDisplay.getMetrics(p)
+        val popup = new PopupWindow(this)
+        val web = new WebView(this)
+        val title = new TextView(this)
+        val icon = new ImageView(this)
+        val progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal)
+        progress.setIndeterminate(false)
+        progress.setProgress(0)
+        progress.setMax(100)
+        val popupLayout = getUi(
+          l[RuleRelativeLayout](
+            Ui(icon) <~ bg(0xff26a69a) <~ padding(left = 8 dp) <~
+             image(if (daynight) R.drawable.ic_open_in_browser_black_18dp else R.drawable.ic_open_in_browser_white_18dp) <~
+              imageScale(ImageView.ScaleType.CENTER_INSIDE) <~ id(Id.icon) <~
+               lp[RuleRelativeLayout](WRAP_CONTENT, 36 dp,
+                Rule(RelativeLayout.ALIGN_PARENT_TOP, 1),
+                 Rule(RelativeLayout.ALIGN_PARENT_LEFT, 1)),
+            Ui(title) <~ text(url) <~ id(Id.title) <~ textGravity(Gravity.LEFT | Gravity.CENTER) <~
+            bg(0xff26A69A) <~ padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) <~
+             singleLine <~
+             lp[RuleRelativeLayout](MATCH_PARENT, 36 dp,
+              Rule(RelativeLayout.ALIGN_PARENT_TOP, 1),
+               Rule(RelativeLayout.ALIGN_PARENT_RIGHT, 1),
+                Rule(RelativeLayout.RIGHT_OF, Id.icon)),
+            Ui(web) <~ lp[RuleRelativeLayout](MATCH_PARENT, MATCH_PARENT,
+             Rule(RelativeLayout.BELOW, Id.title), Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
+             Ui(progress) <~ lp[RuleRelativeLayout](MATCH_PARENT, 8 dp, Rule(RelativeLayout.BELOW, Id.title))
+          )
+        )
+        def launchLink(): Unit = {
+          val uri = android.net.Uri.parse(web.getUrl)
+          val intent = new Intent(Intent.ACTION_VIEW, uri)
+          intent.putExtra(android.provider.Browser.EXTRA_APPLICATION_ID, getPackageName)
+          try {
+            startActivity(intent)
+          } catch {
+            case e: android.content.ActivityNotFoundException =>
+              Toast.makeText(this,
+                "Activity was not found for intent, " + intent, Toast.LENGTH_SHORT).show()
+          }
+
+          popup.dismiss()
+        }
+        icon onClick0 launchLink()
+        title onClick0 launchLink()
+        val settings = web.getSettings
+        settings.setJavaScriptCanOpenWindowsAutomatically(false)
+        settings.setJavaScriptEnabled(true)
+        val chrome = new WebChromeClient {
+          override def onProgressChanged(view: WebView, newProgress: Int) = {
+            progress.setProgress(newProgress)
+            if (newProgress == 100) {
+              UiBus.handler.postDelayed(() => {
+                progress.setVisibility(View.GONE)
+              }, 500)
+            } else {
+              progress.setVisibility(View.VISIBLE)
+            }
+          }
+          override def onReceivedTitle(view: WebView, t: String) =
+            title.setText(t)
+        }
+        val client = new WebViewClient {
+          override def shouldOverrideUrlLoading(view: WebView, url: String) =
+            !url.startsWith("http") && super.shouldOverrideUrlLoading(view, url)
+        }
+        web.onLongClick0(true) // disable text selection popups => causes crash
+        web.setWebChromeClient(chrome)
+        web.setWebViewClient(client)
+        web.loadUrl(url)
+        popup.setContentView(popupLayout)
+        popup.setWidth(p.widthPixels - (sw(600 dp) ? (128 dp) | (64 dp)))
+        popup.setHeight(p.heightPixels - (192 dp))
+        popup.setOutsideTouchable(true)
+        popup.setTouchable(true)
+        popup.showAtLocation(mainLayout, Gravity.CENTER, 0, 0)
+        currentPopup = Some(popup)
+        popup.onDismiss {
+          web.destroy()
+          currentPopup = None
+        }
+      }
     case BusEvent.IMEShowing(showing) =>
       if (showing) send.setVisibility(View.GONE)
       else if (input.getText.length > 0) send.setVisibility(View.VISIBLE)
@@ -207,6 +297,15 @@ with Contexts[Activity] with IdGeneration {
       case _ =>
     }
   }
+
+  override def onBackPressed() = {
+    currentPopup match {
+      case Some(popup) => popup.dismiss()
+      case None => super.onBackPressed()
+    }
+    currentPopup = None
+  }
+
   private var showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
   private var showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
 
@@ -258,18 +357,17 @@ with Contexts[Activity] with IdGeneration {
 
     super.onCreate(bundle)
     getSupportActionBar.setElevation(0)
-    val view = getUi(mainLayout)
-    view.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
+    mainLayout.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
       override def onPreDraw() = {
         if (buttonLayout.getMeasuredHeight > 0) {
-          view.getViewTreeObserver.removeOnPreDrawListener(this)
+          mainLayout.getViewTreeObserver.removeOnPreDrawListener(this)
           val lp = buttonLayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
           inputHeight = Some(buttonLayout.getMeasuredHeight + lp.topMargin)
           true
         } else false
       }
     })
-    setContentView(view)
+    setContentView(mainLayout)
 
     if (bundle != null)
       page = bundle.getInt("page")

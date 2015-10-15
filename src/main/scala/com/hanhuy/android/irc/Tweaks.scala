@@ -60,6 +60,10 @@ object Tweaks {
 
   def tweak[A <: View,B](f: A => B) = Tweak[A](a => f(a))
 
+  def imageScale(scaleType: ImageView.ScaleType) = Tweak[ImageView](_.setScaleType(scaleType))
+  def textGravity(gravity: Int) = Tweak[TextView](_.setGravity(gravity))
+  def singleLine = Tweak[TextView](_.setSingleLine(true))
+
   def sw(w: Int)(implicit ctx: AppContext) = {
     val p = new Point
     val d = ctx.get.systemService[WindowManager].getDefaultDisplay
