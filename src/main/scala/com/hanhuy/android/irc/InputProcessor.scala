@@ -168,12 +168,12 @@ abstract class InputProcessor(activity: Activity) {
       } else None
     }
 
-    val replacement = candidate map { nick =>
-      nick + (if (offset <= 1) suffix else "")
-    } getOrElse prefix
+    val replacement = candidate.fold(prefix: CharSequence) { nick =>
+      "%1%2" formatSpans(MessageAdapter.colorNick(nick), if (offset <= 1) suffix else "")
+    }
     // replace offset to cursor with replacement
     // move cursor to end of replacement
-    val out = in.substring(0, offset) + replacement + in.substring(caret)
+    val out = "%1%2%3" formatSpans(in.substring(0, offset), replacement, in.substring(caret))
     input.setText(out)
     input.setSelection(offset + replacement.length())
   }
