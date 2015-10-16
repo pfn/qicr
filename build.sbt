@@ -1,4 +1,4 @@
-val supportSdkVersion = "23.0.1"
+val supportSdkVersion = "23.1.0"
 
 platformTarget in Android := "android-23"
 

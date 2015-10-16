@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.support.design.widget.TabLayout
 import android.support.design.widget.TabLayout.{Tab, OnTabSelectedListener}
 import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.irc.model.Server
@@ -275,6 +276,9 @@ with EventBus.RefOwner {
     case _: ServerMessagesFragment => 1
     }
     tabs = insert(tabs, pos + base, info)
+    if (navMode == Settings.NAVIGATION_MODE_TABS) {
+      tabindicators.addTab(new TabLayout.Tab(title), pos)
+    }
     if (tabs.size > 1) {
       notifyDataSetChanged()
     }
