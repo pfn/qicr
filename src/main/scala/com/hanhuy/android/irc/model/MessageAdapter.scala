@@ -19,7 +19,7 @@ import android.widget.{Toast, AbsListView, BaseAdapter, TextView}
 
 import java.text.SimpleDateFormat
 
-import android.text.style.{URLSpan, ClickableSpan}
+import android.text.style.{ForegroundColorSpan, URLSpan, ClickableSpan}
 import android.text.{SpannableString, Spanned, Spannable, TextPaint}
 import android.text.method.LinkMovementMethod
 
@@ -42,8 +42,8 @@ object MessageAdapter extends EventBus.RefOwner {
     n => Try(Typeface.createFromFile(n)).toOption)
   val NICK_COLORS: Array[Int] = Array(
     0xfff44336, 0xffe91e63, 0xff9c27b0, 0xff7E57C2, 0xff5c6bc0, 0xff2196f3,
-    0xff03a9f4, 0xff00bcd4, 0xff009688, 0xff4caf50, 0xff8bc34a, 0xffcddc39,
-    0xffffeb3b, 0xffffc107, 0xffff9800, 0xffff5722, 0xff8d6e63, 0xff607d8b
+    0xff03a9f4, 0xff00bcd4, 0xff009688, 0xff4caf50, 0xff8bc34a, 0xffAFB42B,
+    0xffF9A825, 0xffffc107, 0xffff9800, 0xffff5722, 0xff8d6e63, 0xff607d8b
   )
 
   val TAG = "MessageAdapter"
@@ -52,7 +52,7 @@ object MessageAdapter extends EventBus.RefOwner {
   private lazy val sdf = new SimpleDateFormat("HH:mm ")
 
   def formatText(c: Context, msg: MessageLike)
-      (implicit channel: ChannelLike = null): CharSequence = {
+      (implicit channel: ChannelLike = null, nicks: Set[String] = Set.empty): CharSequence = {
     val ch = Option(channel)
     msg match {
       case Whois(text,_) => text
@@ -145,7 +145,7 @@ object MessageAdapter extends EventBus.RefOwner {
   def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % NICK_COLORS.length)
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
       msg: String, modes: (Boolean,Boolean) = (false, false))(
-      implicit channel: ChannelLike) = {
+      implicit channel: ChannelLike, currentNicks: Set[String]) = {
     val server = Option(channel) map (_.server)
     val (op, voice) = modes
 
@@ -157,15 +157,33 @@ object MessageAdapter extends EventBus.RefOwner {
       else
         formatText(c, m, res, textColor(0xffcc0000, src), msg)
     } else if (server exists (_.currentNick equalsIgnoreCase src)) {
-      formatText(c, m, res, "%1%2" formatSpans (prefix, bold(src)), msg)
+      formatText(c, m, res, "%1%2" formatSpans (prefix, bold(src)), highlightNicks(msg))
     } else if (server exists (s => IrcListeners.matchesNick(s, msg) &&
         !s.currentNick.equalsIgnoreCase(src))) {
       formatText(c, m, res, "%1%2" formatSpans(prefix,
         bold(italics(colorNick(src)))), bold(msg))
-    } else
+    } else {
       formatText(c, m, res,
-        "%1%2" formatSpans(prefix, colorNick(src)), msg)
+        "%1%2" formatSpans(prefix, colorNick(src)), highlightNicks(msg))
+    }
   }
+
+  def highlightNicks(msg: String)(implicit currentNicks: Set[String] = Set.empty) = {
+    val message = new SpannableString(msg)
+    val words = WORD_REGEX.findAllMatchIn(message).map(m => (m.matched, m.start, m.end))
+    if (currentNicks.nonEmpty) {
+      words foreach { case (w, i0, i1) =>
+        if (currentNicks(w)) {
+          val color = nickColor(w)
+          val span = new ForegroundColorSpan(color)
+          message.setSpan(span, i0, i1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+      }
+    }
+    message
+  }
+
+  val WORD_REGEX = "\\w+".r
 
   def colorNick(nick: String): CharSequence = {
     val text = textColor(nickColor(nick), nick)
@@ -265,10 +283,21 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
   protected[model] def add(item: MessageLike) {
     messages += item
     filterCache = None
+    nickCache = None
     if (_activity != null && isMainThread)
       _activity.get foreach { _ => notifyDataSetChanged() }
   }
 
+  private[this] var nickCache = Option.empty[Set[String]]
+  implicit def currentNicks = {
+    nickCache getOrElse {
+      val nicks = filteredMessages.collect {
+        case Privmsg(sender, _, _, _, _) => sender
+      }.toSet
+      nickCache = Some(nicks)
+      nicks
+    }
+  }
   def filteredMessages = {
     if (showJoinPartQuit)
       messages
@@ -334,6 +363,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
 
   override def notifyDataSetChanged() {
     filterCache = None
+    nickCache = None
     super.notifyDataSetChanged()
   }
 
