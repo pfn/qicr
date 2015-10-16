@@ -41,6 +41,10 @@ proguardOptions in Android += "-keep class scala.runtime.BoxesRunTime { *; }" //
 
 proguardCache in Android ++= "macroid" :: "android.support" :: Nil
 
+proguardScala := true
+
+useProguard := true
+
 useProguardInDebug in Android := false
 
 extraResDirectories in Android += baseDirectory.value / "src" / "lite" / "res"
@@ -48,5 +52,7 @@ extraResDirectories in Android += baseDirectory.value / "src" / "lite" / "res"
 applicationId in Android := "com.hanhuy.android.irc.lite"
 
 run <<= run in Android
+
+dexMaxHeap := "3g"
 
 protifySettings
