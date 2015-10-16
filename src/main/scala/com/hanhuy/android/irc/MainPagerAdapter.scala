@@ -16,8 +16,7 @@ import android.app.NotificationManager
 import android.util.Log
 import android.view.{View, ViewGroup}
 import android.view.LayoutInflater
-import android.widget.TextView
-import android.widget.BaseAdapter
+import android.widget.{FrameLayout, TextView, BaseAdapter}
 
 import android.support.v4.view.{ViewPager, PagerAdapter}
 import android.support.v4.app.Fragment
@@ -73,6 +72,8 @@ with EventBus.RefOwner {
   pager.setAdapter(this)
   if (navMode == Settings.NAVIGATION_MODE_TABS)
     tabindicators.setupWithViewPager(pager)
+  pager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabindicators))
+  tabindicators.setOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(pager));
   lazy val fm = activity.getSupportFragmentManager
   lazy val pager = {
     val p = activity.pager
@@ -277,7 +278,7 @@ with EventBus.RefOwner {
     }
     tabs = insert(tabs, pos + base, info)
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
-      tabindicators.addTab(new TabLayout.Tab(title), pos)
+      tabindicators.addTab(tabindicators.newTab.setCustomView(makeTabTextView(pos)), pos)
     }
     if (tabs.size > 1) {
       notifyDataSetChanged()
@@ -450,14 +451,20 @@ with EventBus.RefOwner {
     }
   }
   override def notifyDataSetChanged() {
-    super.notifyDataSetChanged()
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
-      tabindicators.setTabsFromPagerAdapter(this)
-      (0 until tabindicators.getTabCount) foreach { i =>
-        val tv = new TextView(activity)
-        tv.setText(makeTabTitle(i))
-        tabindicators.getTabAt(i).setCustomView(tv)
+      (0 until (tabs.size - tabindicators.getTabCount)) foreach { _ =>
+        tabindicators.addTab(tabindicators.newTab.setCustomView(makeTabTextView(0)))
       }
     }
+    super.notifyDataSetChanged()
+    refreshTabs()
+  }
+
+  def makeTabTextView(pos: Int) = {
+    val tv = new TextView(activity)
+    tv.setLayoutParams(new FrameLayout.LayoutParams(
+      ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    tv.setText(makeTabTitle(pos))
+    tv
   }
 }
