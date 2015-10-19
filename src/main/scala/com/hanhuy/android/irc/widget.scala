@@ -433,7 +433,7 @@ with RemoteViewsService.RemoteViewsFactory {
       R.layout.widget_message_item)
     if (pos < items.size)
       views.setTextViewText(android.R.id.text1,
-        MessageAdapter.formatText(Application.context, items(pos))(channel))
+        MessageAdapter.formatText(Application.context, items(pos))(channel, messages.currentNicks))
     views
   }
 

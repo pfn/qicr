@@ -72,8 +72,8 @@ with EventBus.RefOwner {
   pager.setAdapter(this)
   if (navMode == Settings.NAVIGATION_MODE_TABS) {
     tabindicators.setupWithViewPager(pager)
-  pager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabindicators))
-  tabindicators.setOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(pager));
+    pager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabindicators))
+    tabindicators.setOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(pager))
   }
   lazy val fm = activity.getSupportFragmentManager
   lazy val pager = {

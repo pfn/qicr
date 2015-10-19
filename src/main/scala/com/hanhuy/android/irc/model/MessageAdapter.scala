@@ -174,16 +174,19 @@ object MessageAdapter extends EventBus.RefOwner {
     if (currentNicks.nonEmpty) {
       words foreach { case (w, i0, i1) =>
         if (currentNicks(w)) {
-          val color = nickColor(w)
-          val span = new ForegroundColorSpan(color)
-          message.setSpan(span, i0, i1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+          message.setSpan(new ForegroundColorSpan(nickColor(w)),
+            i0, i1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+          message.setSpan(NickClick(w), i0, i1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
       }
     }
     message
   }
 
-  val WORD_REGEX = "\\w+".r
+  val LETTER = "a-zA-Z"
+  val SPECIAL = """\[\]\\`_^\{\}\|"""
+  val DIGIT = "0-9"
+  val WORD_REGEX = s"[$LETTER$SPECIAL][$LETTER$DIGIT$SPECIAL-]*".r
 
   def colorNick(nick: String): CharSequence = {
     val text = textColor(nickColor(nick), nick)
