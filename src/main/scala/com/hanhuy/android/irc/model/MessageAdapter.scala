@@ -13,9 +13,9 @@ import com.hanhuy.android.irc.model.BusEvent.LinkClickEvent
 import scala.ref.WeakReference
 
 import android.graphics.Typeface
-import android.view.{Gravity, LayoutInflater, View, ViewGroup}
+import android.view.{Gravity, View, ViewGroup}
 import android.content.Context
-import android.widget.{Toast, AbsListView, BaseAdapter, TextView}
+import android.widget.{AbsListView, BaseAdapter, TextView}
 
 import java.text.SimpleDateFormat
 
@@ -135,12 +135,6 @@ object MessageAdapter extends EventBus.RefOwner {
   }
 
   private def getString(c: Context, res: Int) = c.getString(res)
-  private def getString(c: Context, res: Int, args: String*) = {
-    res match {
-    case -1 => args(0)
-    case _ => c.getString(res, args: _*)
-    }
-  }
 
   def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % NICK_COLORS.length)
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
@@ -194,7 +188,7 @@ object MessageAdapter extends EventBus.RefOwner {
     if (nick != "***" && inMain)
       SpannedGenerator.span(NickClick(text.toString), text) else text
   }
-  lazy implicit val actx = AppContext(Application.context)
+  @inline implicit def actx = AppContext(Application.context)
   def messageLayout(ctx: Activity) = {
     implicit val c = ActivityContext(ctx)
     import ViewGroup.LayoutParams._

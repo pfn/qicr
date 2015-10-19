@@ -72,12 +72,11 @@ object IrcListeners {
       false
   }
 
-  class EnhancedUser(u: User) {
-    def address = u.getUserName + "@" + u.getHostName
+  implicit class EnhancedUser(val u: User) extends AnyVal {
+    @inline def address = u.getUserName + "@" + u.getHostName
   }
 
-  implicit def toEnhancedUser(u: User) = new EnhancedUser(u)
-  implicit def toQicrChannel(c: ChannelLike) = c.asInstanceOf[QicrChannel]
+  @inline implicit def toQicrChannel(c: ChannelLike): QicrChannel = c.asInstanceOf[QicrChannel]
 }
 class IrcListeners(manager: IrcManager) extends AdvancedListener
 with ServerListener with ModeListener

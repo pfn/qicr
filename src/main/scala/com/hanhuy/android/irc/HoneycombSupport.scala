@@ -62,7 +62,7 @@ object HoneycombSupport {
     activity.getSupportActionBar.setSubtitle(s)
   }
 
-  implicit def toOnNavigationListener(f: (Int, Long) => Boolean):
+  @inline implicit def toOnNavigationListener(f: (Int, Long) => Boolean):
   ActionBar.OnNavigationListener = new OnNavigationListener {
     override def onNavigationItemSelected(p1: Int, p2: Long) = f(p1, p2)
   }

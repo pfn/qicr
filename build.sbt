@@ -2,7 +2,7 @@ val supportSdkVersion = "23.1.0"
 
 platformTarget in Android := "android-23"
 
-scalaVersion in Global := "2.11.6"
+scalaVersion in Global := "2.11.7"
 
 scalacOptions in Compile ++= Seq("-deprecation", "-Xexperimental")
 
@@ -21,8 +21,8 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
   "org.macroid" %% "macroid" % "2.0.0-M4",
-  "com.hanhuy.android" %% "scala-conversions" % "1.4",
-  "com.hanhuy.android" %% "scala-conversions-design" % "1.4",
+  "com.hanhuy.android" %% "scala-conversions" % "1.6-SNAPSHOT",
+  "com.hanhuy.android" %% "scala-conversions-design" % "1.6-SNAPSHOT",
   "com.hanhuy.android" %% "scala-common" % "1.1-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-SNAPSHOT",
   "ch.acra" % "acra" % "4.7.0-RC.1",

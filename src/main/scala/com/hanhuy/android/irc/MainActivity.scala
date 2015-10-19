@@ -49,7 +49,7 @@ object MainActivity {
 
   if (gingerbreadAndNewer) GingerbreadSupport.init()
 
-  implicit def toMainActivity(a: Activity): MainActivity = a.asInstanceOf[MainActivity]
+  @inline implicit def toMainActivity(a: Activity): MainActivity = a.asInstanceOf[MainActivity]
 
   def getFragmentTag(c: Option[MessageAppender]) = {
     c match {
