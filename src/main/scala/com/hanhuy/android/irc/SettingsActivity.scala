@@ -155,14 +155,16 @@ object SettingsFragment {
     val p = ps.findPreference(Settings.NOTIFICATION_SOUND.key)
     val notification = Settings.get(Settings.NOTIFICATION_SOUND)
     val r = RingtoneManager.getRingtone(c, Uri.parse(notification))
-    p.setSummary(r.getTitle(c))
-    p.setOnPreferenceChangeListener(new OnPreferenceChangeListener {
-      override def onPreferenceChange(preference: Preference, newValue: scala.Any) = {
-        val r = RingtoneManager.getRingtone(c, Uri.parse(newValue.toString))
-        p.setSummary(r.getTitle(c))
-        true
-      }
-    })
+    Option(p) foreach { pref =>
+      pref.setSummary(Option(r).fold("")(_.getTitle(c)))
+      pref.setOnPreferenceChangeListener(new OnPreferenceChangeListener {
+        override def onPreferenceChange(preference: Preference, newValue: scala.Any) = {
+          val r = RingtoneManager.getRingtone(c, Uri.parse(newValue.toString))
+          pref.setSummary(Option(r).fold("")(_.getTitle(c)))
+          true
+        }
+      })
+    }
 
   }
 }
