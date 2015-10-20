@@ -584,7 +584,6 @@ class IrcManager extends EventBus.RefOwner {
     val sslctx = SSLManager.configureSSL(server)
     val listener = new IrcListeners(this)
     connection.setAdvancedListener(listener)
-    connection.addServerListener(listener)
     connection.addModeListener(listener)
     connection.addServerEventListener(listener)
     connection.addMessageEventListener(listener)

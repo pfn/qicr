@@ -79,8 +79,7 @@ object IrcListeners {
   @inline implicit def toQicrChannel(c: ChannelLike): QicrChannel = c.asInstanceOf[QicrChannel]
 }
 class IrcListeners(manager: IrcManager) extends AdvancedListener
-with ServerListener with ModeListener
-with ServerEventListener with MessageEventListener {
+with ModeListener with ServerEventListener with MessageEventListener {
   // ServerListener
   // TODO send BusEvents instead
   override def onConnect(c: IrcConnection) {
@@ -122,38 +121,12 @@ with ServerEventListener with MessageEventListener {
 //    Log.w(TAG, "Connection dropped: " + c, new StackTrace)
     manager._connections.get(c) foreach manager.serverDisconnected
   }
-  override def onInvite(c: IrcConnection, src: User, user: User,
-                        channel: Channel) { }
 
-  override def onJoin(c: IrcConnection, channel: Channel, user: User) {
-  }
-
-  override def onKick(c: IrcConnection, channel: Channel,
-      user: User, op: User, msg: String) {
-  }
-
-  override def onPart(c: IrcConnection, channel: Channel,
-      user: User, msg: String) {
-  }
-
-  override def onTopic(c: IrcConnection, channel: Channel,
-      src: User, topic: String) {
-  }
-
-  override def onMode(c: IrcConnection, channel: Channel,
-      src: User, mode: String) = () // TODO
-
-  override def onMotd(c: IrcConnection, motd: String) {
-    manager._connections.get(c) foreach { server =>
+  override def onMotd(motd: ServerEventListener.Motd) {
+    manager._connections.get(motd.connection) foreach { server =>
       // sIRC sends motd as one big blob of lines, split before adding
-      UiBus.run { motd.split("\r?\n") foreach { m => server.add(Motd(m)) } }
+      UiBus.run { motd.motd.split("\r?\n") foreach { m => server.add(Motd(m)) } }
     }
-  }
-
-  override def onNick(c: IrcConnection, oldnick: User, newnick: User) {
-  }
-
-  override def onQuit(c: IrcConnection, user: User, msg: String) {
   }
 
     // ModeListener
