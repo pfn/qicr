@@ -117,7 +117,7 @@ with SeekBar.OnSeekBarChangeListener {
   // hopefully this is always true
   implicit val actContext = ActivityContext(c.asInstanceOf[Activity])
 
-  var summary: TextView = _
+  lazy val summary = new TextView(c)
   var defaultSize: Int = _
 
   val a = c.obtainStyledAttributes(attrs, R.styleable.FontSizePreference)
@@ -146,7 +146,7 @@ with SeekBar.OnSeekBarChangeListener {
           tv.setGravity(Gravity.CENTER)
           tv.setHorizontalFadingEdgeEnabled(true)
         } <~ lp[RelativeLayout](WRAP_CONTENT, 26 sp),
-        w[TextView] <~ id(android.R.id.summary) <~ wire(summary) <~
+        summary <~ id(android.R.id.summary) <~
           tweak { tv: TextView =>
             tv.setGravity(Gravity.CENTER)
             tv.setTextAppearance(c, android.R.style.TextAppearance_Small)

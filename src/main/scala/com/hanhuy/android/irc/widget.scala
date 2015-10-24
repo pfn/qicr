@@ -476,7 +476,7 @@ extends Activity with TypedFindView with Contexts[Activity] {
           Ui(true)
         } <~
         lp[FrameLayout](WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER | Gravity.LEFT),
-      w[TextView] <~ wire(_title) <~
+      titleview <~
         lp[FrameLayout](MATCH_PARENT, MATCH_PARENT, Gravity.FILL) <~
         tweak { tv: TextView =>
           tv.setMaxLines(1)
@@ -491,7 +491,7 @@ extends Activity with TypedFindView with Contexts[Activity] {
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
       } <~ text(R.string.no_messages),
-    w[ListView] <~ wire(_list) <~
+    list <~
       lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~ margin(top = 48 dp) <~
       tweak { l: ListView =>
         l.setSelector(R.drawable.message_selector)
@@ -517,13 +517,13 @@ extends Activity with TypedFindView with Contexts[Activity] {
         })
       } <~ padding(bottom = 48 dp),
     l[LinearLayout](
-      w[ImageButton] <~ wire(_nickcomplete) <~ buttonTweaks <~
+      nickcomplete <~ buttonTweaks <~
         image(R.drawable.ic_btn_search),
-      w[EditText] <~ wire(_input) <~ inputTweaks <~
+      input <~ inputTweaks <~
         hint(R.string.input_placeholder) <~
         lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~ margin(all = 4 dp) <~
         padding(left = 8 dp, right = 8 dp),
-      w[ImageButton] <~ wire(_speechrec) <~ buttonTweaks <~
+      speechrec <~ buttonTweaks <~
         image(android.R.drawable.ic_btn_speak_now)
     ) <~ horizontal <~ lp[FrameLayout](MATCH_PARENT, 48 dp, Gravity.BOTTOM)
   ) <~ tweak { v: View =>
@@ -539,16 +539,11 @@ extends Activity with TypedFindView with Contexts[Activity] {
 
   import collection.JavaConversions._
   val REQUEST_SPEECH_RECOGNITION = 1
-  def input = _input
-  private var _input: EditText = _
-  def speechrec = _speechrec
-  private var _speechrec: View = _
-  def nickcomplete = _nickcomplete
-  private var _nickcomplete: View = _
-  private var _title: TextView = _
-  def titleview = _title
-  def list = _list
-  private var _list: ListView = _
+  lazy val input = new EditText(this)
+  lazy val speechrec = new ImageButton(this)
+  lazy val nickcomplete = new ImageButton(this)
+  lazy val titleview = new TextView(this)
+  lazy val list = new ListView(this)
   private var proc: InputProcessor = _
 
   private def withAppender[A](f: MessageAppender => A): Option[A] = {

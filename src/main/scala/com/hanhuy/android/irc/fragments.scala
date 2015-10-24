@@ -62,62 +62,57 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
         header <~ text("Connection Info"),
         l[TableRow](
           label <~ text("Name"),
-          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(server_name) <~
-            textCapWords
+          server_name <~ inputTweaks <~ hint("required") <~ textCapWords
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           label <~ text("Server address"),
-          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(server_host) <~
-            textUri
+          server_host <~ inputTweaks <~ hint("required") <~ textUri
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           label <~ text("Port"),
-          w[EditText] <~ inputTweaks <~ hint("Default: 6667") <~ wire(port) <~
-            number
+          port <~ inputTweaks <~ hint("Default: 6667") <~ number
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          checkbox <~ text("Enable Autoconnect") <~ wire(autoconnect)
+          autoconnect <~ text("Enable Autoconnect")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          checkbox <~ text("Enable SSL") <~ wire(ssl)
+          ssl <~ text("Enable SSL")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         header <~ text("User Info"),
         l[TableRow](
           label <~ text("Nickname"),
-          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(nickname)
+          nickname <~ inputTweaks <~ hint("required")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           label <~ text("Alt. nick"),
-          w[EditText] <~ inputTweaks <~ hint("Default: <Nickname>_") <~ wire(altnick)
+          altnick <~ inputTweaks <~ hint("Default: <Nickname>_")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           label <~ text("Real name"),
-          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(realname) <~
-            textCapWords
+          realname <~ inputTweaks <~ hint("required") <~ textCapWords
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          checkbox <~ text("SASL authentication") <~ wire(sasl)
+          sasl <~ text("SASL authentication")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           label <~ text("Username"),
-          w[EditText] <~ inputTweaks <~ hint("required") <~ wire(username)
+          username <~ inputTweaks <~ hint("required")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           label <~ text("Password"),
-          w[EditText] <~ inputTweaks <~ hint("optional") <~ wire(password) <~
-            textPassword
+          password <~ inputTweaks <~ hint("optional") <~ textPassword
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         header <~ text("Session Options"),
         l[TableRow](
           label <~ text("Auto join"),
-          w[EditText] <~ inputTweaks <~ hint("#chan1 key;#chan2") <~ wire(autojoin)
+          autojoin <~ inputTweaks <~ hint("#chan1 key;#chan2")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           label <~ text("Auto run"),
-          w[EditText] <~ inputTweaks <~ hint("m pfn hi there;") <~ wire(autorun)
+          autorun <~ inputTweaks <~ hint("m pfn hi there;")
         ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
       ) <~ lp[ScrollView](MATCH_PARENT, MATCH_PARENT) <~ margin(all = 8 dp) <~
         tweak { t: TableLayout => t.setColumnStretchable(1, true) }
@@ -125,19 +120,19 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
       (tablet ? kitkatPadding))
   }
 
-  var server_name: EditText = _
-  var server_host: EditText = _
-  var port: EditText = _
-  var ssl: CheckBox = _
-  var autoconnect: CheckBox = _
-  var nickname: EditText = _
-  var altnick: EditText = _
-  var realname: EditText = _
-  var username: EditText = _
-  var password: EditText = _
-  var autojoin: EditText = _
-  var autorun: EditText = _
-  var sasl: CheckBox = _
+  lazy val server_name = new EditText(getActivity)
+  lazy val server_host = new EditText(getActivity)
+  lazy val port = new EditText(getActivity)
+  lazy val ssl = checkbox
+  lazy val autoconnect = checkbox
+  lazy val nickname = new EditText(getActivity)
+  lazy val altnick = new EditText(getActivity)
+  lazy val realname = new EditText(getActivity)
+  lazy val username = new EditText(getActivity)
+  lazy val password = new EditText(getActivity)
+  lazy val autojoin = new EditText(getActivity)
+  lazy val autorun = new EditText(getActivity)
+  lazy val sasl = checkbox
 
   val _server: Server = new Server
   def server: Server = {
@@ -269,13 +264,13 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
   def adapter: Option[MessageAdapter]
 
   var lookupId: String = ""
-  var listView = slot[ListView]
+  lazy val listView = new ListView(getActivity)
 
   def tag: String
 
-  def layout = w[ListView] <~ id(android.R.id.list) <~ llMatchParent <~
+  def layout = listView <~ id(android.R.id.list) <~ llMatchParent <~
     kitkatPadding(getActivity.tabs.getVisibility == View.GONE) <~
-    wire(listView) <~ tweak { l: ListView =>
+    tweak { l: ListView =>
       l.setDrawSelectorOnTop(true)
       l.setDivider(new ColorDrawable(Color.BLACK))
       l.setDividerHeight(0)
@@ -309,7 +304,7 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
     if (bundle != null)
       lookupId = bundle.getString("channel.key")
 
-    if (!adapter.isDefined) {
+    if (adapter.isEmpty) {
       manager.queueCreateActivity(0)
       if (!getActivity.isFinishing)
         getActivity.finish()
@@ -331,9 +326,8 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 
   def scrollToEnd() {
     for {
-      l <- listView
       a <- adapter
-    } l.setSelection(a.getCount - 1)
+    } listView.setSelection(a.getCount - 1)
   }
 
   override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) = {
@@ -344,10 +338,7 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
       h <- a.inputHeight
     } yield h
 
-    inputHeight map { h =>
-      val p = v.getPaddingBottom + h
-      v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight, p)
-    } getOrElse {
+    inputHeight.fold {
       v.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
         override def onPreDraw() = {
           inputHeight exists { h =>
@@ -359,6 +350,9 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
           }
         }
       })
+    }{ h =>
+      val p = v.getPaddingBottom + h
+      v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight, p)
     }
     v
   }
@@ -711,7 +705,7 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
   }
 
   def changeListener(server: Server) {
-    _server map { s =>
+    _server foreach { s =>
       val a = getActivity
       if (s == server && s.state == Server.State.CONNECTED && a != null)
         a.input.setVisibility(View.VISIBLE)
@@ -762,25 +756,25 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
       }
         true
       case R_id_server_connect =>
-        server map manager.connect getOrElse {
+        server.fold{
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
-        }
+        }(manager.connect)
         true
       case R_id_server_disconnect =>
-        server map { manager.disconnect(_) } getOrElse {
+        server.fold {
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
-        }
+        }(manager.disconnect(_))
         true
       case R_id_server_options =>
         addServerSetupFragment(server)
         true
       case R_id_server_messages =>
-        server map getActivity.adapter.addServer getOrElse {
+        server.fold {
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
-        }
+        }(getActivity.adapter.addServer)
         true
       case _ => false
     }
@@ -844,7 +838,7 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
           tv.setGravity(Gravity.CENTER_VERTICAL)
           tv.setTextAppearance(context, android.R.style.TextAppearance_Large)
         } <~ id(Id.server_item_text),
-      checkedText <~ lp[LinearLayout](96 dp, 64 dp) <~ padding(right = 6 dp) <~
+      Ui(checkedText) <~ lp[LinearLayout](96 dp, 64 dp) <~ padding(right = 6 dp) <~
         tweak { tv: CheckedTextView =>
           tv.setGravity(Gravity.CENTER_VERTICAL)
           tv.setTextAppearance(context, android.R.style.TextAppearance_Small)

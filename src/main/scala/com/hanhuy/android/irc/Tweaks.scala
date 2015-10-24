@@ -21,8 +21,18 @@ import scala.reflect.ClassTag
  * @author pfnguyen
  */
 object Tweaks {
-  implicit val wm = SystemService[WindowManager](Context.WINDOW_SERVICE)
   import ViewGroup.LayoutParams._
+
+  @inline implicit def viewAsUi[A <: View](view: => A): Ui[A] = Ui(view)
+
+  implicit class ViewGroupWithApply[A <: ViewGroup](val vg: A) extends AnyVal {
+    def apply(ch: Ui[View]*): Ui[A] = {
+      Ui.sequence(ch:_*).map { c =>
+        c foreach vg.addView
+        vg
+      }
+    }
+  }
 
   lazy val llMatchParent = lp[LinearLayout](MATCH_PARENT, MATCH_PARENT, 0)
   lazy val llMatchWidth = lp[LinearLayout](MATCH_PARENT, WRAP_CONTENT, 0)
@@ -204,12 +214,15 @@ object Tweaks {
   }
 
   def checkbox(implicit ctx: ActivityContext) = if (Build.VERSION.SDK_INT >= 21)
-    w[CheckBox] else w[android.support.v7.widget.AppCompatCheckBox]
-  def checkedText(implicit ctx: ActivityContext) =
+    new CheckBox(ctx.get) else new android.support.v7.widget.AppCompatCheckBox(ctx.get)
+
+  // if used in an adapterview (like it is for servers fragment) must be wrapped
+  // in Ui() explicitly for call-by-name handling
+  def checkedText(implicit ctx: ActivityContext): CheckedTextView =
     if (Build.VERSION.SDK_INT >= 21)
-      w[CheckedTextView]
+      new CheckedTextView(ctx.get)
     else
-      w[android.support.v7.widget.AppCompatCheckedTextView]
+      new android.support.v7.widget.AppCompatCheckedTextView(ctx.get)
 }
 
 class SquareImageButton(c: Context) extends ImageButton(c) {

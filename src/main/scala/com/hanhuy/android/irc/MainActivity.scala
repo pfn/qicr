@@ -96,39 +96,38 @@ with Contexts[Activity] with IdGeneration {
   def imeShowing = _imeShowing
   private var _imeShowing = false
 
-  private var kitkatDrawerLayout: KitKatDrawerLayout = _
-  private var nickcomplete: ImageButton = _
+  lazy val nickcomplete = new ImageButton(this)
 
   lazy val drawerWidth = sw(600 dp) ? (288 dp) | (192 dp)
 
   import RuleRelativeLayout.Rule
-  lazy val mainLayout = getUi(l[KitKatDrawerLayout](
+  lazy val mainLayout = getUi(drawer(
     l[RuleRelativeLayout](
-      w[TabLayout] <~ wire(_tabs) <~ id(Id.tabs) <~
+      tabs <~ id(Id.tabs) <~
         lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
           Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)) <~ kitkatPaddingTop <~
         tweak { t: TabLayout =>
           t.setTabMode(TabLayout.MODE_SCROLLABLE)
         },
       // id must be set or else fragment manager complains
-      w[ViewPager] <~ wire(_pager) <~ id(Id.pager) <~ lp[RuleRelativeLayout](
+      pager <~ id(Id.pager) <~ lp[RuleRelativeLayout](
         MATCH_PARENT, MATCH_PARENT,
         Rule(RelativeLayout.BELOW, Id.tabs),
         Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
-      l[LinearLayout](
-        w[ImageButton] <~
+      buttonLayout(
+        nickcomplete <~
           image(if (daynight) R.drawable.ic_person_pin_black_24dp else R.drawable.ic_person_pin_white_24dp) <~
             On.click {
           proc.nickComplete(input)
           Ui(true)
-        } <~ hide <~ wire(nickcomplete) <~ buttonTweaks,
-        w[ImageButton] <~
+        } <~ hide <~ buttonTweaks,
+        newmessages <~
           image(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) <~
           hide <~ On.click {
           adapter.goToNewMessages()
           Ui(true)
-        } <~ wire(newmessages) <~ buttonTweaks,
-        w[EditText] <~ wire(_input) <~
+        } <~ buttonTweaks,
+        input <~
           lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~
           hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
           padding(left = 8 dp, right = 8 dp) <~ margin(all = 4 dp) <~
@@ -137,17 +136,15 @@ with Contexts[Activity] with IdGeneration {
             e.setOnKeyListener(proc.onKeyListener _)
             e.addTextChangedListener(proc.TextListener)
           },
-        w[ImageButton] <~
+        send <~
           image(if (daynight) R.drawable.ic_send_black_24dp else R.drawable.ic_send_white_24dp) <~
-          wire(send) <~
           On.click {
             proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
             Ui(true)
           } <~ buttonTweaks <~ hide,
-        w[ImageButton] <~
+        speechrec <~
           image(if (daynight) R.drawable.ic_mic_black_24dp else R.drawable.ic_mic_white_24dp) <~
-           wire(speechrec) <~
           On.click {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -165,22 +162,21 @@ with Contexts[Activity] with IdGeneration {
           } <~ buttonTweaks
       ) <~ horizontal <~
         lp[RuleRelativeLayout](MATCH_PARENT, 48 dp,
-          Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)) <~ kitkatInputMargin <~
-          wire(buttonLayout)
+          Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)) <~ kitkatInputMargin
     ) <~ llMatchParent,
-    l[LinearLayout](
-      w[ListView] <~ wire(_channels) <~ llMatchParent <~ listTweaks <~ kitkatPadding
-    ) <~ wire(_drawerLeft) <~
+    drawerLeft(
+      channels <~ llMatchParent <~ listTweaks <~ kitkatPadding
+    ) <~
       lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.LEFT) <~
       bg(drawerBackground),
-    l[LinearLayout](
-      w[TextView] <~ wire(_userCount) <~ llMatchWidth <~
+    drawerRight(
+      userCount <~ llMatchWidth <~
         margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin)) <~ kitkatPaddingTop,
-      w[ListView] <~ wire(_nickList) <~ llMatchParent <~ listTweaks <~ kitkatPaddingBottom
-    ) <~ wire(_drawerRight) <~ vertical <~
+      nickList <~ llMatchParent <~ listTweaks <~ kitkatPaddingBottom
+    ) <~ vertical <~
       lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.RIGHT) <~
       bg(drawerBackground)
-  ) <~ wire(kitkatDrawerLayout) <~
+  ) <~
     lp[FrameLayout](MATCH_PARENT, MATCH_PARENT)
   )
 
@@ -322,35 +318,27 @@ with Contexts[Activity] with IdGeneration {
     val f = getSupportFragmentManager.findFragmentByTag(SERVERS_FRAGMENT)
     if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
   }
-  def tabs = _tabs
-  private var _tabs: TabLayout = _
-  def drawer = kitkatDrawerLayout
-  def drawerLeft = _drawerLeft
-  private var _drawerLeft: View = _
-  def nickList = _nickList
-  private var _nickList: ListView = _
-  def userCount = _userCount
-  private var _userCount: TextView = _
-  def drawerRight = _drawerRight
-  private var _drawerRight: View = _
-  def channels = _channels
-  private var _channels: ListView = _
-  def pager = _pager
-  private var _pager: ViewPager = _
+  lazy val tabs = new TabLayout(this)
+  lazy val drawer = new KitKatDrawerLayout(this)
+  lazy val drawerLeft = new LinearLayout(this)
+  lazy val nickList = new ListView(this)
+  lazy val userCount = new TextView(this)
+  lazy val drawerRight = new LinearLayout(this)
+  lazy val channels = new ListView(this)
+  lazy val pager = new ViewPager(this)
   lazy val adapter = new MainPagerAdapter(this)
 
-  var newmessages: ImageButton = _
+  lazy val newmessages = new ImageButton(this)
 
   def setSendVisible(b: Boolean) =
     send.setVisibility(if (b) View.VISIBLE else View.GONE)
 
-  private var send: ImageButton = _
-  private var speechrec: ImageButton = _
-  private var buttonLayout: View = _
+  lazy val send = new ImageButton(this)
+  lazy val speechrec = new ImageButton(this)
+  lazy val buttonLayout = new LinearLayout(this)
 
   lazy val proc = new MainInputProcessor(this)
-  def input = _input
-  private var _input: EditText = _
+  lazy val input = new EditText(this)
   private var page = -1 // used for restoring tab selection on recreate
 
   override def onCreate(bundle: Bundle) {

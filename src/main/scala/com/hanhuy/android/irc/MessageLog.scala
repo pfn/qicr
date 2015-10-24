@@ -482,7 +482,7 @@ object MessageLogActivity {
 class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
   import MessageLogActivity._
   val log = Logcat("MessageLogActivity")
-  var listview: ListView = _
+  lazy val listview = new ListView(this)
   var dateText: TextView = _
 
   lazy val layout = l[FrameLayout](
@@ -492,7 +492,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
       } <~ text(R.string.no_messages) <~ kitkatPadding,
-    w[ListView] <~ wire(listview) <~
+    listview <~
       lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~
       tweak { l: ListView =>
         l.setSelector(R.drawable.message_selector)
@@ -505,11 +505,11 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
         l.setFastScrollEnabled(true)
       } <~ kitkatPadding,
-      w[ProgressBar] <~ wire(progressbar) <~
+      progressbar <~
         lp[FrameLayout](128 dp, 128 dp, Gravity.CENTER)
   )
 
-  var progressbar: ProgressBar = _
+  lazy val progressbar = new ProgressBar(this)
   var adapter = Option.empty[LogAdapter]
   var nid = -1l
   var channel = ""
@@ -694,34 +694,34 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
 
       true
     case Menu_log_info =>
-      var databaseSize: TextView = null
-      var channelLines: TextView = null
-      var channelName: TextView = null
-      var channelEnd: TextView = null
-      var channelStart: TextView = null
+      lazy val databaseSize = new TextView(this)
+      lazy val channelLines = new TextView(this)
+      lazy val channelName = new TextView(this)
+      lazy val channelEnd = new TextView(this)
+      lazy val channelStart = new TextView(this)
 
       val infoLayout = getUi(
         l[TableLayout](
           l[TableRow](
             w[TextView] <~ label <~ text("Log Name"),
-            w[TextView] <~ label <~ wire(channelName)
+            channelName <~ label
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
             w[TextView] <~ label <~ text("Start"),
-            w[TextView] <~ wire(channelStart)
+            channelStart
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
             w[TextView] <~ label <~ text("End"),
-            w[TextView] <~ wire(channelEnd)
+            channelEnd
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
             w[TextView] <~ label <~ text("Line Count"),
-            w[TextView] <~ label <~ wire(channelLines)
+            channelLines <~ label
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
           w[View] <~ lp[TableLayout](MATCH_PARENT, 16 dp),
           l[TableRow](
             w[TextView] <~ label <~ text("All Logs"),
-            w[TextView] <~ label <~ wire(databaseSize)
+            databaseSize <~ label
           ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
         ) <~ padding(all = 12 dp) <~
           tweak { v: View => v.setClickable(true) }
