@@ -137,6 +137,8 @@ with SeekBar.OnSeekBarChangeListener {
       n <- Option(getSharedPreferences.getString(k, null))
       t  = Typeface.createFromFile(n)
     } yield t
+    // hackery because summary is singleton
+    Option(summary.getParent).foreach { case p: ViewGroup => p.removeView(summary) }
     getUi(
       l[RelativeLayout](
         w[TextView] <~ id(android.R.id.title) <~ tweak { tv: TextView =>
@@ -146,7 +148,7 @@ with SeekBar.OnSeekBarChangeListener {
           tv.setGravity(Gravity.CENTER)
           tv.setHorizontalFadingEdgeEnabled(true)
         } <~ lp[RelativeLayout](WRAP_CONTENT, 26 sp),
-        summary <~ id(android.R.id.summary) <~
+        w[TextView] <~ id(android.R.id.summary) <~
           tweak { tv: TextView =>
             tv.setGravity(Gravity.CENTER)
             tv.setTextAppearance(c, android.R.style.TextAppearance_Small)
