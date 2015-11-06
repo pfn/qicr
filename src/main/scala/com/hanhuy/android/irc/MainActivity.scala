@@ -17,7 +17,6 @@ import android.widget._
 
 import android.support.v4.app.FragmentManager
 import com.android.debug.hv.ViewServer
-import macroid.contrib.Layouts.RuleRelativeLayout
 import scala.collection.JavaConversions._
 
 import com.hanhuy.android.irc.model._
@@ -32,8 +31,8 @@ import android.support.v4.widget.DrawerLayout
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
 
-import macroid._
-import macroid.FullDsl.{log => _,_}
+import iota._
+import Tweaks._
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -69,9 +68,7 @@ object MainActivity {
 
   var instance = Option.empty[MainActivity]
 }
-class MainActivity extends AppCompatActivity with EventBus.RefOwner
-with Contexts[Activity] with IdGeneration {
-  import Tweaks._
+class MainActivity extends AppCompatActivity with EventBus.RefOwner {
   import ViewGroup.LayoutParams._
 
   private[this] var requestRecreate = false
@@ -98,54 +95,50 @@ with Contexts[Activity] with IdGeneration {
 
   lazy val nickcomplete = new ImageButton(this)
 
-  lazy val drawerWidth = sw(600 dp) ? (288 dp) | (192 dp)
+  lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
-  import RuleRelativeLayout.Rule
-  lazy val mainLayout = getUi(drawer(
-    l[RuleRelativeLayout](
-      tabs <~ id(Id.tabs) <~
-        lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
-          Rule(RelativeLayout.ALIGN_PARENT_TOP, 1)) <~ kitkatPaddingTop <~
-        tweak { t: TabLayout =>
-          t.setTabMode(TabLayout.MODE_SCROLLABLE)
-        },
+  lazy val mainLayout = (IO(drawer)(
+    l[RelativeLayout](
+      IO(tabs) >>= id(Id.tabs) >>=
+        lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
+          p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
+        } >>= kitkatPaddingTop >>=
+        kestrel { t => t.setTabMode(TabLayout.MODE_SCROLLABLE) },
       // id must be set or else fragment manager complains
-      pager <~ id(Id.pager) <~ lp[RuleRelativeLayout](
-        MATCH_PARENT, MATCH_PARENT,
-        Rule(RelativeLayout.BELOW, Id.tabs),
-        Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
-      buttonLayout(
-        nickcomplete <~
-          image(if (daynight) R.drawable.ic_person_pin_black_24dp else R.drawable.ic_person_pin_white_24dp) <~
-            On.click {
-          proc.nickComplete(input)
-          Ui(true)
-        } <~ hide <~ buttonTweaks,
-        newmessages <~
-          image(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) <~
-          hide <~ On.click {
-          adapter.goToNewMessages()
-          Ui(true)
-        } <~ buttonTweaks,
-        input <~
-          lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~
-          hint(R.string.input_placeholder) <~ inputTweaks <~ hidden <~
-          padding(left = 8 dp, right = 8 dp) <~ margin(all = 4 dp) <~
-          bg(inputBackground) <~ tweak { e: EditText =>
+      IO(pager) >>= id(Id.pager) >>= lpK(MATCH_PARENT, MATCH_PARENT) {
+        (p: RelativeLayout.LayoutParams) =>
+          p.addRule(RelativeLayout.BELOW, Id.tabs)
+          p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
+      },
+      IO(buttonLayout)(
+        IO(nickcomplete) >>=
+          imageResource(if (daynight) R.drawable.ic_person_pin_black_24dp else R.drawable.ic_person_pin_white_24dp) >>=
+            hook0.onClick(IO { proc.nickComplete(input) }) >>= gone >>= buttonTweaks,
+        IO(newmessages) >>=
+          imageResource(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) >>=
+          gone >>= hook0.onClick {
+          IO {
+            adapter.goToNewMessages()
+          }
+        } >>= buttonTweaks,
+        IO(input)>>=
+          lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4.dp)) >>=
+          hint(R.string.input_placeholder) >>= inputTweaks >>= invisible >>=
+          padding(left = 8 dp, right = 8 dp) >>=
+          backgroundDrawable(inputBackground) >>= kestrel { e =>
             e.setOnEditorActionListener(proc.onEditorActionListener _)
             e.setOnKeyListener(proc.onKeyListener _)
             e.addTextChangedListener(proc.TextListener)
           },
-        send <~
-          image(if (daynight) R.drawable.ic_send_black_24dp else R.drawable.ic_send_white_24dp) <~
-          On.click {
+        IO(send) >>=
+          imageResource(if (daynight) R.drawable.ic_send_black_24dp else R.drawable.ic_send_white_24dp) >>=
+          hook0.onClick(IO {
             proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
-            Ui(true)
-          } <~ buttonTweaks <~ hide,
-        speechrec <~
-          image(if (daynight) R.drawable.ic_mic_black_24dp else R.drawable.ic_mic_white_24dp) <~
-          On.click {
+          }) >>= buttonTweaks >>= gone,
+        IO(speechrec) >>=
+          imageResource(if (daynight) R.drawable.ic_mic_black_24dp else R.drawable.ic_mic_white_24dp) >>=
+          hook0.onClick(IO {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
             RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -158,35 +151,33 @@ with Contexts[Activity] with IdGeneration {
                 Toast.makeText(this, R.string.speech_unsupported,
                   Toast.LENGTH_SHORT).show()
             }
-            Ui(true)
-          } <~ buttonTweaks
-      ) <~ horizontal <~
-        lp[RuleRelativeLayout](MATCH_PARENT, 48 dp,
-          Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)) <~ kitkatInputMargin
-    ) <~ llMatchParent,
-    drawerLeft(
-      channels <~ llMatchParent <~ listTweaks <~ kitkatPadding
-    ) <~
-      lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.LEFT) <~
-      bg(drawerBackground),
-    drawerRight(
-      userCount <~ llMatchWidth <~
-        margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin)) <~ kitkatPaddingTop,
-      nickList <~ llMatchParent <~ listTweaks <~ kitkatPaddingBottom
-    ) <~ vertical <~
-      lp[DrawerLayout](drawerWidth, MATCH_PARENT, Gravity.RIGHT) <~
-      bg(drawerBackground)
-  ) <~
-    lp[FrameLayout](MATCH_PARENT, MATCH_PARENT)
-  )
+          }) >>= buttonTweaks
+      ) >>= horizontal >>=
+        lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
+          p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
+        } >>= kitkatInputMargin
+    ) >>= lp(MATCH_PARENT, MATCH_PARENT),
+    IO(drawerLeft)(
+      IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
+    ) >>=
+      lp(drawerWidth, MATCH_PARENT, Gravity.LEFT) >>=
+      backgroundColor(drawerBackground),
+    IO(drawerRight)(
+      IO(userCount) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(
+        margins(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))) >>= kitkatPaddingTop,
+      IO(nickList) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPaddingBottom
+    ) >>= vertical >>=
+      lp(drawerWidth, MATCH_PARENT, Gravity.RIGHT) >>=
+      backgroundColor(drawerBackground)
+  ) >>= kestrel { v => v.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)) }).perform()
 
 
-  lazy val listTweaks = tweak { l: ListView =>
+  def listTweaks[V <: ListView]: Kestrel[V] = kestrel { l =>
     l.setCacheColorHint(drawerBackground)
     l.setFastScrollEnabled(true)
     l.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE)
     l.setPadding(12 dp, 12 dp, 12 dp, 12 dp)
-    newerThan(19) ? l.setClipToPadding(false)
+    if(v(19)) l.setClipToPadding(false)
   }
 
   private var manager: IrcManager = null
@@ -213,26 +204,30 @@ with Contexts[Activity] with IdGeneration {
         progress.setIndeterminate(false)
         progress.setProgress(0)
         progress.setMax(100)
-        val popupLayout = getUi(
-          l[RuleRelativeLayout](
-            Ui(icon) <~ bg(0xff26a69a) <~ padding(left = 8 dp) <~
-             image(if (daynight) R.drawable.ic_open_in_browser_black_18dp else R.drawable.ic_open_in_browser_white_18dp) <~
-              imageScale(ImageView.ScaleType.CENTER_INSIDE) <~ id(Id.icon) <~
-               lp[RuleRelativeLayout](WRAP_CONTENT, 36 dp,
-                Rule(RelativeLayout.ALIGN_PARENT_TOP, 1),
-                 Rule(RelativeLayout.ALIGN_PARENT_LEFT, 1)),
-            Ui(title) <~ text(url) <~ id(Id.title) <~ textGravity(Gravity.LEFT | Gravity.CENTER) <~
-            bg(0xff26A69A) <~ padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) <~
-             singleLine <~
-             lp[RuleRelativeLayout](MATCH_PARENT, 36 dp,
-              Rule(RelativeLayout.ALIGN_PARENT_TOP, 1),
-               Rule(RelativeLayout.ALIGN_PARENT_RIGHT, 1),
-                Rule(RelativeLayout.RIGHT_OF, Id.icon)),
-            Ui(web) <~ lp[RuleRelativeLayout](MATCH_PARENT, MATCH_PARENT,
-             Rule(RelativeLayout.BELOW, Id.title), Rule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)),
-             Ui(progress) <~ lp[RuleRelativeLayout](MATCH_PARENT, 8 dp, Rule(RelativeLayout.BELOW, Id.title))
-          )
-        )
+        val popupLayout = l[RelativeLayout](
+          IO(icon) >>= backgroundColor(0xff26a69a) >>= padding(left = 8 dp) >>=
+            imageResource(if (daynight) R.drawable.ic_open_in_browser_black_18dp else R.drawable.ic_open_in_browser_white_18dp) >>=
+            imageScale(ImageView.ScaleType.CENTER_INSIDE) >>= id(Id.icon) >>=
+            lpK(WRAP_CONTENT, 36 dp) {(p: RelativeLayout.LayoutParams) =>
+              p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
+              p.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 1)
+            },
+          IO(title) >>= text(url) >>= id(Id.title) >>= textGravity(Gravity.LEFT | Gravity.CENTER) >>=
+            backgroundColor(0xff26A69A) >>= padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) >>=
+            singleLine >>=
+            lpK(MATCH_PARENT, 36 dp) { (p: RelativeLayout.LayoutParams) =>
+              p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
+              p.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 1)
+              p.addRule(RelativeLayout.RIGHT_OF, Id.icon)
+            },
+          IO(web) >>= lpK(MATCH_PARENT, MATCH_PARENT) { (p: RelativeLayout.LayoutParams) =>
+            p.addRule(RelativeLayout.BELOW, Id.title)
+            p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
+          },
+          IO(progress) >>= lpK(MATCH_PARENT, 8 dp) { (p: RelativeLayout.LayoutParams) =>
+            p.addRule(RelativeLayout.BELOW, Id.title)
+          }
+        ).perform()
         def launchLink(): Unit = {
           val uri = android.net.Uri.parse(web.getUrl)
           val intent = new Intent(Intent.ACTION_VIEW, uri)
@@ -275,7 +270,7 @@ with Contexts[Activity] with IdGeneration {
         web.setWebViewClient(client)
         web.loadUrl(url)
         popup.setContentView(popupLayout)
-        popup.setWidth(p.widthPixels - (sw(600 dp) ? (128 dp) | (64 dp)))
+        popup.setWidth(p.widthPixels - (if (sw(600 dp)) 128.dp else 64.dp))
         popup.setHeight(p.heightPixels - (192 dp))
         popup.setOutsideTouchable(true)
         popup.setTouchable(true)
@@ -596,8 +591,9 @@ with Contexts[Activity] with IdGeneration {
       case _: QueryFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
-        runUi(nickcomplete <~ hide,
-          speechrec <~ (if (showSpeechRec) show else hide))
+        (IO(nickcomplete) >>= gone).perform()
+
+        (IO(speechrec) >>= condK(showSpeechRec ? visible | gone)).perform()
       case c: ChannelFragment =>
 
         drawer.setDrawerLockMode(
@@ -649,17 +645,20 @@ with Contexts[Activity] with IdGeneration {
             ()
         }
 
-        runUi(nickcomplete <~ (if (showNickComplete) show else hide),
-          speechrec <~ (if (showSpeechRec) show else hide))
+        (IO(nickcomplete) >>= condK(showNickComplete ? visible | gone)).perform()
+        (IO(speechrec) >>= condK(showSpeechRec ? visible | gone)).perform()
       case _: ServerMessagesFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         input.setVisibility(View.VISIBLE)
-        runUi(nickcomplete <~ hide, speechrec <~ hide)
+        (IO(nickcomplete) >>= gone).perform()
+        (IO(speechrec) >>= gone).perform()
       case _ =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
-        runUi(nickcomplete <~ hide, speechrec <~ hide)
+        (IO(nickcomplete) >>= gone).perform()
+
+        (IO(speechrec) >>= gone).perform()
     }
     channels.setItemChecked(idx, true)
   }
@@ -779,4 +778,18 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
     }
   }
 }
+import language.dynamics
+object Id extends Dynamic {
+  private var ids = Map.empty[String, Int]
+  private var counter = 1000
 
+  private val lock = new Object
+
+  def selectDynamic(tag: String) = lock synchronized {
+    ids.getOrElse(tag, {
+      counter += 1
+      ids += tag → counter
+      counter
+    })
+  }
+}

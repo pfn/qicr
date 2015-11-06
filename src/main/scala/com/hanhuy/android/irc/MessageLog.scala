@@ -31,8 +31,7 @@ import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
 import com.hanhuy.android.irc.model.{Channel => ModelChannel, _}
 import com.hanhuy.android.irc.model.MessageLike.{CtcpAction, Notice, Privmsg}
-import macroid._
-import macroid.FullDsl._
+import iota._
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -390,7 +389,7 @@ class MessageLog private(context: Context)
       lazy val sizeSetting = Settings.get(Settings.FONT_SIZE)
 
       override def newView(context: Context, c: Cursor, v: ViewGroup) = {
-        val v = getUi(MessageAdapter.messageLayout(ctx))
+        val v = MessageAdapter.messageLayout(ctx).perform()
         v.setMovementMethod(LinkMovementMethod.getInstance)
         if (sizeSetting > 0)
           v.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSetting)
@@ -479,22 +478,22 @@ object MessageLogActivity {
     intent
   }
 }
-class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
+class MessageLogActivity extends ActionBarActivity {
   import MessageLogActivity._
   val log = Logcat("MessageLogActivity")
   lazy val listview = new ListView(this)
   var dateText: TextView = _
 
   lazy val layout = l[FrameLayout](
-    w[TextView] <~ hide <~
-      lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
-      tweak { tv: TextView =>
+    w[TextView] >>= gone >>=
+      lpK(WRAP_CONTENT, 0)(margins(all = 12 dp)) >>=
+      kestrel { tv =>
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
-      } <~ text(R.string.no_messages) <~ kitkatPadding,
-    listview <~
-      lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~
-      tweak { l: ListView =>
+      } >>= text(R.string.no_messages) >>= kitkatPadding,
+    IO(listview) >>=
+      lp(MATCH_PARENT, MATCH_PARENT) >>=
+      kestrel { l =>
         l.setSelector(R.drawable.message_selector)
         l.setDrawSelectorOnTop(true)
         l.setDivider(new ColorDrawable(Color.BLACK))
@@ -504,9 +503,9 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
         l.setClipToPadding(false)
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
         l.setFastScrollEnabled(true)
-      } <~ kitkatPadding,
-      progressbar <~
-        lp[FrameLayout](128 dp, 128 dp, Gravity.CENTER)
+      } >>= kitkatPadding,
+      IO(progressbar) >>=
+        lp(128 dp, 128 dp, Gravity.CENTER)
   )
 
   lazy val progressbar = new ProgressBar(this)
@@ -569,7 +568,7 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     val bar = getSupportActionBar
     bar.setDisplayHomeAsUpEnabled(true)
     bar.setDisplayShowHomeEnabled(true)
-    setContentView(getUi(layout))
+    setContentView(layout.perform())
 
     onNewIntent(getIntent)
     listview.setOnScrollListener(new OnScrollListener {
@@ -591,10 +590,10 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
     })
   }
 
-  lazy val label = lp2(WRAP_CONTENT, WRAP_CONTENT) { lp: TableRow.LayoutParams =>
-    lp.rightMargin = 12 dp
-  } + tweak { v: TextView =>
-    v.setTextAppearance(this, android.R.style.TextAppearance_Medium) }
+  lazy val label = c[TableRow](lpK(WRAP_CONTENT, WRAP_CONTENT)(margins(right = 12.dp)) >=>
+    kestrel { v: TextView =>
+      v.setTextAppearance(this, android.R.style.TextAppearance_Medium)
+    })
 
   val Menu_log_others = R.id.menu_log_others
   val Menu_log_info = R.id.menu_log_info
@@ -620,9 +619,9 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       builder.create().show()
       true
     case Menu_log_others =>
-      val othersLayout = getUi(
-        w[ExpandableListView] <~ padding(all = 12 dp)
-      )
+      val othersLayout = (
+        w[ExpandableListView] >>= padding(all = 12 dp)
+      ).perform()
 
       val popup = new PopupWindow(othersLayout, 300 dp, 300 dp, true)
       val networks = MessageLog.networks.values.toList.sortBy(_.name)
@@ -700,32 +699,32 @@ class MessageLogActivity extends ActionBarActivity with Contexts[Activity] {
       lazy val channelEnd = new TextView(this)
       lazy val channelStart = new TextView(this)
 
-      val infoLayout = getUi(
+      val infoLayout = (
         l[TableLayout](
           l[TableRow](
-            w[TextView] <~ label <~ text("Log Name"),
-            channelName <~ label
-          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+            w[TextView] >>= label >>= text("Log Name"),
+            IO(channelName) >>= label
+          ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
-            w[TextView] <~ label <~ text("Start"),
-            channelStart
-          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+            w[TextView] >>= label >>= text("Start"),
+            IO(channelStart)
+          ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
-            w[TextView] <~ label <~ text("End"),
-            channelEnd
-          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+            w[TextView] >>= label >>= text("End"),
+            IO(channelEnd)
+          ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
-            w[TextView] <~ label <~ text("Line Count"),
-            channelLines <~ label
-          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
-          w[View] <~ lp[TableLayout](MATCH_PARENT, 16 dp),
+            w[TextView] >>= label >>= text("Line Count"),
+            IO(channelLines) >>= label
+          ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+          w[View] >>= lp(MATCH_PARENT, 16 dp),
           l[TableRow](
-            w[TextView] <~ label <~ text("All Logs"),
-            databaseSize <~ label
-          ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
-        ) <~ padding(all = 12 dp) <~
-          tweak { v: View => v.setClickable(true) }
-      )
+            w[TextView] >>= label >>= text("All Logs"),
+            IO(databaseSize) >>= label
+          ) >>= lp(MATCH_PARENT, WRAP_CONTENT)
+        ) >>= padding(all = 12 dp) >>=
+          kestrel { v: TableLayout => v.setClickable(true) }
+      ).perform()
 
 
       adapter foreach { a =>

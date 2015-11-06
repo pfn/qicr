@@ -15,6 +15,7 @@ import scala.collection.JavaConversions._
 import com.sorcix.sirc.{Channel => SircChannel}
 import com.hanhuy.android.irc.model.BusEvent.{IgnoreListChanged, NickListChanged}
 import scala.ref.WeakReference
+import iota._
 
 object NickListAdapter {
   val adapters = new collection.mutable.WeakHashMap[
@@ -38,27 +39,24 @@ case class NickAndMode(mode: Char, nick: String)
 
 // must reference activity for resources
 class NickListAdapter(activity: WeakReference[MainActivity], channel: Channel)
-extends BaseAdapter with EventBus.RefOwner {
+extends BaseAdapter with EventBus.RefOwner with WithContext {
   import ViewGroup.LayoutParams._
   import Tweaks._
-  import macroid._
-  import macroid.FullDsl._
   val manager = IrcManager.start()
   var c: SircChannel = _
   manager.channels.get(channel).foreach(c = _)
   notifyDataSetChanged()
 
-  implicit val ctx = ActivityContext(activity())
-  implicit val app = AppContext(Application.context)
+  override def getContext = activity()
 
-  val layout = w[TextView] <~ id(android.R.id.text1) <~
-    bgres(R.drawable.selector_background) <~
-    lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~ tweak { tv: TextView =>
+  val layout = iota.std.Views.c[AbsListView](w[TextView] >>= id(android.R.id.text1) >>=
+    backgroundResource(R.drawable.selector_background) >>=
+    lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel { tv: TextView =>
       tv.setTextAppearance(activity(), android.R.style.TextAppearance_Small)
       tv.setGravity(Gravity.CENTER_VERTICAL)
       tv.setMinHeight(36 dp)
       tv.setShadowLayer(1.2f, 0, 0, Color.parseColor("#ff333333"))
-    } <~ padding(left = 6 dp)
+    } >>= padding(left = 6 dp))
 
   var nicks: List[android.text.Spanned] = _
   override def notifyDataSetChanged() {
@@ -91,7 +89,7 @@ extends BaseAdapter with EventBus.RefOwner {
   override def getCount : Int = if (nicks != null) nicks.size else 0
   override def getView(pos: Int, convertView: View, container: ViewGroup) = {
     val c = convertView.asInstanceOf[TextView]
-    val view = if (c != null) c else getUi(layout)
+    val view = if (c != null) c else layout.perform()
 
     view.setText(getItem(pos))
     view

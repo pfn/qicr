@@ -13,8 +13,7 @@ import android.util.{TypedValue, AttributeSet}
 import android.view.{View, Gravity, ViewGroup}
 import android.widget._
 import com.hanhuy.android.common._
-import macroid.contrib.Layouts.RuleRelativeLayout
-import macroid.contrib.Layouts.RuleRelativeLayout.Rule
+import iota._
 
 import scala.util.Try
 
@@ -107,15 +106,10 @@ object FontManager {
 }
 class FontSizePreference(c: Context, attrs: AttributeSet)
 extends Preference(c, attrs)
-with SeekBar.OnSeekBarChangeListener {
+with SeekBar.OnSeekBarChangeListener with WithContext {
+  override def getContext = c
   import android.view.ViewGroup.LayoutParams._
   import com.hanhuy.android.irc.Tweaks._
-  import macroid.FullDsl._
-  import macroid._
-
-  implicit val appContext = AppContext(Application.context)
-  // hopefully this is always true
-  implicit val actContext = ActivityContext(c.asInstanceOf[Activity])
 
   lazy val summary = new TextView(c)
   var defaultSize: Int = _
@@ -139,17 +133,17 @@ with SeekBar.OnSeekBarChangeListener {
     } yield t
     // hackery because summary is singleton
     Option(summary.getParent).foreach { case p: ViewGroup => p.removeView(summary) }
-    getUi(
+    (
       l[RelativeLayout](
-        w[TextView] <~ id(android.R.id.title) <~ tweak { tv: TextView =>
+        w[TextView] >>= id(android.R.id.title) >>= kestrel { tv =>
           tv.setSingleLine(true)
           tv.setTextAppearance(c, android.R.style.TextAppearance_Medium)
           tv.setEllipsize(TextUtils.TruncateAt.MARQUEE)
           tv.setGravity(Gravity.CENTER)
           tv.setHorizontalFadingEdgeEnabled(true)
-        } <~ lp[RelativeLayout](WRAP_CONTENT, 26 sp),
-        w[TextView] <~ id(android.R.id.summary) <~
-          tweak { tv: TextView =>
+        } >>= lp(WRAP_CONTENT, 26 sp),
+        w[TextView] >>= id(android.R.id.summary) >>=
+          kestrel { tv =>
             tv.setGravity(Gravity.CENTER)
             tv.setTextAppearance(c, android.R.style.TextAppearance_Small)
             defaultSize = (tv.getTextSize /
@@ -157,20 +151,22 @@ with SeekBar.OnSeekBarChangeListener {
             typeface foreach tv.setTypeface
             tv.setMaxLines(4)
             tv.setIncludeFontPadding(false)
-          } <~ lp[RuleRelativeLayout](WRAP_CONTENT, 26 sp,
-          Rule(RelativeLayout.RIGHT_OF, android.R.id.title)) <~
-          margin(left = 8 dp),
-        w[SeekBar] <~ tweak { sb: SeekBar =>
+          } >>= lpK(WRAP_CONTENT, 26 sp) { (p: RelativeLayout.LayoutParams) =>
+            p.addRule(RelativeLayout.RIGHT_OF, android.R.id.title)
+            margins(left = 8 dp)(p)
+          },
+        w[SeekBar] >>= kestrel { sb =>
           sb.setMax(20)
           sb.setProgress(math.max(0, getPersistedInt(defaultSize) - 4))
           sb.setOnSeekBarChangeListener(this)
-        } <~
-          lp[RuleRelativeLayout](MATCH_PARENT, WRAP_CONTENT,
-            Rule(RelativeLayout.BELOW, android.R.id.title),
-            Rule(RelativeLayout.ALIGN_PARENT_LEFT, 1),
-            Rule(RelativeLayout.ALIGN_PARENT_RIGHT, 1))
-      ) <~ padding(left = 16 dp, right = 8 dp, top = 6 dp, bottom = 6 dp)
-    )
+        } >>=
+          lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
+            p.addRule(RelativeLayout.BELOW, android.R.id.title)
+            p.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 1)
+            p.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 1)
+          }
+      ) >>= padding(left = 16 dp, right = 8 dp, top = 6 dp, bottom = 6 dp)
+    ).perform()
   }
 
   override def onStartTrackingTouch(seekBar: SeekBar) = ()

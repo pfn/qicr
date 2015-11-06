@@ -29,12 +29,11 @@ import com.hanhuy.android.extensions._
 import MainActivity._
 
 import Tweaks._
-import macroid._
-import macroid.FullDsl._
 
 import scala.util.Try
+import iota._
 
-class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
+class ServerSetupFragment extends DialogFragment {
   val manager = IrcManager.start()
 
   // hack to store text
@@ -44,80 +43,79 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
   def header = {
     new TextView(getActivity, null, android.R.attr.listSeparatorTextViewStyle)
   }
-  def label = w[TextView] <~
-    lp2(WRAP_CONTENT, WRAP_CONTENT) { lp: TableRow.LayoutParams =>
-      lp.rightMargin = 12 dp
-    }
+  def label = c[TableRow](w[TextView] >>=
+    lpK(WRAP_CONTENT, WRAP_CONTENT)(margins(right = 12.dp)))
 
-  lazy val inputTweaks = tweak { e: EditText =>
+  def inputTweaks: Kestrel[EditText] = c[TableRow](kestrel { e: EditText =>
     e.setSingleLine(true)
     e.setId(idholder)
     idholder = idholder + 1
-  } + lp[TableRow](0, WRAP_CONTENT, 1)
+  } >=> lp(0, WRAP_CONTENT, 1))
+
   var layoutInit = false
   lazy val layout = {
     layoutInit = true
-    getUi(l[ScrollView](
+    c[ViewGroup](l[ScrollView](
       l[TableLayout](
-        header <~ text("Connection Info"),
+        IO(header) >>= text("Connection Info"),
         l[TableRow](
-          label <~ text("Name"),
-          server_name <~ inputTweaks <~ hint("required") <~ textCapWords
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          label >>= text("Name"),
+          IO(server_name) >>= inputTweaks >>= hint("required") >>= textCapWords
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          label <~ text("Server address"),
-          server_host <~ inputTweaks <~ hint("required") <~ textUri
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          label >>= text("Server address"),
+          IO(server_host) >>= inputTweaks >>= hint("required") >>= textUri
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          label <~ text("Port"),
-          port <~ inputTweaks <~ hint("Default: 6667") <~ number
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
-        l[TableRow](
-          w[View],
-          autoconnect <~ text("Enable Autoconnect")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          label >>= text("Port"),
+          IO(port) >>= inputTweaks >>= hint("Default: 6667") >>= number
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          ssl <~ text("Enable SSL")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
-        header <~ text("User Info"),
-        l[TableRow](
-          label <~ text("Nickname"),
-          nickname <~ inputTweaks <~ hint("required")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
-        l[TableRow](
-          label <~ text("Alt. nick"),
-          altnick <~ inputTweaks <~ hint("Default: <Nickname>_")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
-        l[TableRow](
-          label <~ text("Real name"),
-          realname <~ inputTweaks <~ hint("required") <~ textCapWords
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          IO(autoconnect) >>= text("Enable Autoconnect")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
           w[View],
-          sasl <~ text("SASL authentication")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          IO(ssl) >>= text("Enable SSL")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        IO(header) >>= text("User Info"),
         l[TableRow](
-          label <~ text("Username"),
-          username <~ inputTweaks <~ hint("required")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          label>>= text("Nickname"),
+          IO(nickname) >>= inputTweaks >>= hint("required")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          label <~ text("Password"),
-          password <~ inputTweaks <~ hint("optional") <~ textPassword
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
-        header <~ text("Session Options"),
+          label >>= text("Alt. nick"),
+          IO(altnick) >>= inputTweaks >>= hint("Default: <Nickname>_")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          label <~ text("Auto join"),
-          autojoin <~ inputTweaks <~ hint("#chan1 key;#chan2")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT),
+          label >>= text("Real name"),
+          IO(realname) >>= inputTweaks >>= hint("required") >>= textCapWords
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
-          label <~ text("Auto run"),
-          autorun <~ inputTweaks <~ hint("m pfn hi there;")
-        ) <~ lp[TableLayout](MATCH_PARENT, WRAP_CONTENT)
-      ) <~ lp[ScrollView](MATCH_PARENT, MATCH_PARENT) <~ margin(all = 8 dp) <~
-        tweak { t: TableLayout => t.setColumnStretchable(1, true) }
-    ) <~ lp[LinearLayout](MATCH_PARENT, MATCH_PARENT, 1.0f) <~
-      (tablet ? kitkatPadding))
+          w[View],
+          IO(sasl) >>= text("SASL authentication")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= text("Username"),
+          IO(username) >>= inputTweaks >>= hint("required")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= text("Password"),
+          IO(password) >>= inputTweaks >>= hint("optional") >>= textPassword
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        IO(header) >>= text("Session Options"),
+        l[TableRow](
+          label >>= text("Auto join"),
+          IO(autojoin) >>= inputTweaks >>= hint("#chan1 key;#chan2")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= text("Auto run"),
+          IO(autorun) >>= inputTweaks >>= hint("m pfn hi there;")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT)
+      ) >>= lpK(MATCH_PARENT, MATCH_PARENT)(margins(all = 8 dp)) >>=
+        kestrel { t => t.setColumnStretchable(1, true) }
+    ) >>= lp(MATCH_PARENT, MATCH_PARENT) >>=
+      condK(tablet ? kitkatPadding)).perform()
   }
 
   lazy val server_name = new EditText(getActivity)
@@ -259,7 +257,7 @@ class ServerSetupFragment extends DialogFragment with Contexts[Fragment] {
 }
 
 abstract class MessagesFragment
-extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
+extends Fragment with EventBus.RefOwner {
 
   def adapter: Option[MessageAdapter]
 
@@ -268,16 +266,17 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 
   def tag: String
 
-  def layout = listView <~ id(android.R.id.list) <~ llMatchParent <~
-    kitkatPadding(getActivity.tabs.getVisibility == View.GONE) <~
-    tweak { l: ListView =>
+  import ViewGroup.LayoutParams._
+  def layout = c[FrameLayout](IO(listView) >>= id(android.R.id.list) >>= lp(MATCH_PARENT, MATCH_PARENT) >>=
+    kitkatPadding(getActivity.tabs.getVisibility == View.GONE) >>=
+    kestrel { l =>
       l.setDrawSelectorOnTop(true)
       l.setDivider(new ColorDrawable(Color.BLACK))
       l.setDividerHeight(0)
       l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
       l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
       l.setSelector(R.drawable.message_selector)
-      newerThan(19) ? l.setClipToPadding(false)
+      if (v(19)) l.setClipToPadding(false)
       l.setDrawSelectorOnTop(true)
       if (!getActivity.isFinishing)
         l.setAdapter(adapter.get)
@@ -295,7 +294,7 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 
         override def onScroll(p1: AbsListView, p2: Int, p3: Int, p4: Int) {}
       })
-    }
+    })
 
   val manager = IrcManager.start()
 
@@ -332,7 +331,7 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 
   override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) = {
     adapter foreach (_.context = getActivity)
-    val v = getUi(layout): View
+    val v = layout.perform()
     def inputHeight = for {
       a <- MainActivity.instance
       h <- a.inputHeight
@@ -360,7 +359,7 @@ extends Fragment with EventBus.RefOwner with Contexts[Fragment] {
 }
 
 class ChannelFragment(_channel: Option[Channel])
-  extends MessagesFragment with EventBus.RefOwner with Contexts[Fragment] {
+  extends MessagesFragment with EventBus.RefOwner {
 
   def this() = this(None)
 
@@ -541,7 +540,7 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
 }
 
 class ServersFragment extends ListFragment
-with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
+with EventBus.RefOwner {
   val manager = IrcManager.start()
   var adapter: ServersAdapter = _
   var _server: Option[Server] = None // currently selected server
@@ -550,21 +549,20 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
   import ViewGroup.LayoutParams._
   lazy val layout = l[LinearLayout](
     l[LinearLayout](
-      w[TextView] <~ text(R.string.server_none) <~ llMatchWidth <~
-        margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin)),
-      w[Button] <~ id(R.id.add_server) <~ text(R.string.add_server) <~
-        On.click {
+      w[TextView] >>= text(R.string.server_none) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(
+        margins(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))),
+      w[Button] >>= id(R.id.add_server) >>= text(R.string.add_server) >>=
+        hook0.onClick(IO {
           getActivity.servers.addServerSetupFragment()
-          Ui(true)
-        } <~ llMatchWidth <~
-        margin(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))
-    ) <~ id(android.R.id.empty) <~ vertical <~ lp[LinearLayout](0, MATCH_PARENT, 1) <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE),
-    w[ListView] <~ id(android.R.id.list) <~ tweak { l: ListView =>
+        }) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(margins(
+        all = getResources.getDimensionPixelSize(R.dimen.standard_margin)))
+    ) >>= id(android.R.id.empty) >>= vertical >>= lp(0, MATCH_PARENT, 1) >>= kitkatPadding(getActivity.tabs.getVisibility == View.GONE),
+    w[ListView] >>= id(android.R.id.list) >>= kestrel { l =>
       l.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE)
       l.setDrawSelectorOnTop(false)
-      newerThan(19) ? l.setClipToPadding(false)
-    } <~ lp[LinearLayout](0, MATCH_PARENT, 1) <~ kitkatPadding(getActivity.tabs.getVisibility == View.GONE)
-  ) <~ id(Id.servers_container) <~ horizontal
+      if (v(19)) l.setClipToPadding(false)
+    } >>= lp(0, MATCH_PARENT, 1) >>= kitkatPadding(getActivity.tabs.getVisibility == View.GONE)
+  ) >>= id(Id.servers_container) >>= horizontal
 
   UiBus += {
     case e: BusEvent.ServerAdded   => addListener(e.server)
@@ -596,7 +594,7 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
 
   override def onCreateView(inflater: LayoutInflater,
       container: ViewGroup, bundle: Bundle) = {
-    val v = getUi(layout)
+    val v = layout.perform()
     v
   }
 
@@ -808,7 +806,8 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
 
     menu.findItem(R.id.add_server).setVisible(!found)
   }
-  class ServersAdapter(context: Activity) extends BaseAdapter with IdGeneration {
+  class ServersAdapter(context: Activity) extends BaseAdapter with WithContext {
+    override def getContext = context
     val manager = IrcManager.start()
 
     override def getCount = manager.getServers.size
@@ -817,29 +816,27 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
 
     override def getItem(x: Int) = manager.getServers(x)
 
-    def progressBar = Ui(new ProgressBar(
+    def progressBar = IO(new ProgressBar(
       context, null, R.attr.qicrProgressSpinnerStyle))
-    val layout = l[LinearLayout](
+//    val layout = w[LinearLayout]
+    val layout = c[AbsListView](l[LinearLayout](
       l[FrameLayout](
-        progressBar <~ id(Id.server_item_progress) <~
-          lp[FrameLayout](WRAP_CONTENT dp, WRAP_CONTENT dp, Gravity.CENTER) <~
-          padding(left = 6 dp, right = 6 dp) <~ tweak { p: ProgressBar =>
-            p.setIndeterminate(true)
-          } <~ hide,
-        w[ImageView] <~ lp[FrameLayout](64 dp, 64 dp, Gravity.CENTER) <~
-          image(android.R.drawable.presence_offline) <~
-          tweak { v: ImageView =>
-            v.setScaleType(ImageView.ScaleType.CENTER_INSIDE)
-          } <~ padding(left = 6 dp, right = 6 dp) <~
+        progressBar >>= id(Id.server_item_progress) >>=
+          lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER) >>=
+          padding(left = 6 dp, right = 6 dp) >>= kestrel { p: ProgressBar =>
+          p.setIndeterminate(true) } >>= gone,
+        w[ImageView] >>= lp(64 dp, 64 dp, Gravity.CENTER) >>=
+          imageResource(android.R.drawable.presence_offline) >>=
+          imageScale(ImageView.ScaleType.CENTER_INSIDE) >>= padding(left = 6 dp, right = 6 dp) >>=
           id(Id.server_item_status)
-      ) <~ tweak { v: FrameLayout => v.setMeasureAllChildren(true) },
-      w[TextView] <~ lp[LinearLayout](0, 64 dp, 1) <~
-        padding(left = 6 dp, right = 6 dp) <~ tweak { tv: TextView =>
+      ) >>= kestrel { v: FrameLayout => v.setMeasureAllChildren(true) },
+      w[TextView] >>= lp(0, 64 dp, 1) >>=
+        padding(left = 6 dp, right = 6 dp) >>= kestrel { tv =>
           tv.setGravity(Gravity.CENTER_VERTICAL)
           tv.setTextAppearance(context, android.R.style.TextAppearance_Large)
-        } <~ id(Id.server_item_text),
-      Ui(checkedText) <~ lp[LinearLayout](96 dp, 64 dp) <~ padding(right = 6 dp) <~
-        tweak { tv: CheckedTextView =>
+        } >>= id(Id.server_item_text),
+      IO(checkedText) >>= lp(96 dp, 64 dp) >>= padding(right = 6 dp) >>=
+        kestrel { tv =>
           tv.setGravity(Gravity.CENTER_VERTICAL)
           tv.setTextAppearance(context, android.R.style.TextAppearance_Small)
 
@@ -847,9 +844,9 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
           getActivity.getTheme.resolveAttribute(
             android.R.attr.listChoiceIndicatorSingle, vals, true)
           tv.setCheckMarkDrawable(vals.resourceId)
-        } <~ id(Id.server_checked_text)
-    ) <~ tweak { l: LinearLayout => l.setGravity(Gravity.CENTER_VERTICAL) } <~
-      lp[AbsListView](MATCH_PARENT, WRAP_CONTENT)
+        } >>= id(Id.server_checked_text)
+    ) >>= kestrel { _.setGravity(Gravity.CENTER_VERTICAL) } >>=
+      lp(MATCH_PARENT, WRAP_CONTENT))
 
     override def getView(pos: Int, convertView: View, parent: ViewGroup) = {
       import Server.State._
@@ -859,25 +856,25 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
       val v = if (convertView != null)
         convertView.asInstanceOf[ViewGroup]
       else
-        getUi(layout)
+        layout.perform()
 
       val checked = list.getCheckedItemPosition
-      val img = v.find[ImageView](Id.server_item_status)
+      val img = v.findViewById(Id.server_item_status).asInstanceOf[ImageView]
 
-      getUi(v.find[TextView](Id.server_item_text) <~ text(server.name))
-      getUi(v.find[View](Id.server_item_progress) <~ (
-        if (server.state == Server.State.CONNECTING) show
-        else hide))
+      (IO(v.findViewById(Id.server_item_text).asInstanceOf[TextView]) >>= text(server.name)).perform()
+      (IO(v.findViewById(Id.server_item_progress)) >>= condK(
+        (server.state == Server.State.CONNECTING) ? visible
+        | gone)).perform()
 
-      getUi(img <~ image(server.state match {
+      (IO(img) >>= imageResource(server.state match {
         case INITIAL      => android.R.drawable.presence_offline
         case DISCONNECTED => android.R.drawable.presence_busy
         case CONNECTED    => android.R.drawable.presence_online
         case CONNECTING   => android.R.drawable.presence_away
-      }) <~ (if (server.state != Server.State.CONNECTING) show else hide))
+      }) >>= condK((server.state != Server.State.CONNECTING) ? visible | gone)).perform()
 
-      val t = v.find[CheckedTextView](Id.server_checked_text)
-      getUi(t <~ tweak { tv: CheckedTextView =>
+      val t = IO(v.findViewById(Id.server_checked_text).asInstanceOf[CheckedTextView])
+      (t >>= kestrel { tv =>
         tv.setChecked(pos == checked)
         val lag = if (server.state == CONNECTED) {
           val l = server.currentPing flatMap { p =>
@@ -887,7 +884,7 @@ with EventBus.RefOwner with Contexts[Fragment] with IdGeneration {
           Server.intervalString(l)
         } else ""
         tv.setText(lag)
-      })
+      }).perform()
       v
     }
   }

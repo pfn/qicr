@@ -7,10 +7,8 @@ import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceCl
 import android.text.{Editable, TextWatcher}
 import android.provider.{Settings => ASettings}
 import android.util.AttributeSet
-import android.widget.EditText
+import android.widget.{Toast, EditText}
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
-import macroid._
-import macroid.FullDsl._
 import Tweaks._
 
 import android.app.{Activity, AlertDialog, Fragment}
@@ -21,6 +19,7 @@ import android.preference._
 import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 import org.acra.ACRA
+import iota._
 
 import scala.reflect.ClassTag
 
@@ -134,12 +133,12 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
 // android3.0+
 // now actionbaractivity for material on <5.0
 @TargetApi(11)
-class SettingsFragmentActivity extends AppCompatActivity with IdGeneration with Contexts[Activity] {
+class SettingsFragmentActivity extends AppCompatActivity {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     val content = new android.widget.FrameLayout(this)
     content.setId(Id.content)
-    setContentView(getUi(content <~ kitkatPadding))
+    setContentView((IO(content) >>= kitkatPadding).perform())
     val f = getFragmentManager.findFragmentByTag("settings fragment")
     if (f == null) {
       val tx = getFragmentManager.beginTransaction()
@@ -170,8 +169,7 @@ object SettingsFragment {
 }
 @TargetApi(11)
 class SettingsFragment
-extends PreferenceFragment with macroid.Contexts[Fragment] {
-  import macroid.FullDsl._
+extends PreferenceFragment {
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
@@ -189,7 +187,7 @@ extends PreferenceFragment with macroid.Contexts[Fragment] {
             val edit = new EditText(getActivity)
             b.setView(edit)
             b.setPositiveButton("Send", { () =>
-              getUi(toast("Debug log sent") <~ fry)
+              Toast.makeText(getActivity, "Debug log sent", Toast.LENGTH_SHORT).show()
               val e = new Exception("User submitted log: " + edit.getText)
               e.setStackTrace(Array(new StackTraceElement(
                 Build.BRAND, Build.MODEL, Build.PRODUCT,

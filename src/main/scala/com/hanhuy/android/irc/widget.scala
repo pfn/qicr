@@ -20,7 +20,7 @@ import android.widget.RemoteViewsService.RemoteViewsFactory
 import android.os.{Handler, Bundle}
 import android.speech.RecognizerIntent
 import com.hanhuy.android.irc.model.BusEvent._
-import macroid.Contexts
+import iota._
 
 object Widgets extends EventBus.RefOwner {
   val ACTION_LAUNCH = "com.hanhuy.android.irc.action.LAUNCH"
@@ -455,45 +455,42 @@ with RemoteViewsService.RemoteViewsFactory {
 // TODO refactor and cleanup, so ugly, copy/paste from MainActivity
 @TargetApi(14)
 class WidgetChatActivity
-extends Activity with TypedFindView with Contexts[Activity] {
+extends Activity with TypedFindView {
   import Tweaks._
-  import macroid._
-  import macroid.FullDsl._
   import ViewGroup.LayoutParams._
 
-  lazy val windowWidth = sw(600 dp) ? (480 dp) | (320 dp)
+  lazy val windowWidth = if (sw(600 dp)) 480.dp else 320.dp
 
   lazy val layout = l[FrameLayout](
     l[FrameLayout](
-      w[ImageView] <~
-        image(R.drawable.ic_appicon) <~
-        On.click {
+      w[ImageView] >>=
+        imageResource(R.drawable.ic_appicon) >>=
+        hook0.onClick(IO {
           val launchIntent = new Intent(this, classOf[MainActivity])
           launchIntent.putExtra(IrcManager.EXTRA_SUBJECT,
             getIntent.getStringExtra(IrcManager.EXTRA_SUBJECT))
           startActivity(launchIntent)
           finish()
-          Ui(true)
-        } <~
-        lp[FrameLayout](WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER | Gravity.LEFT),
-      titleview <~
-        lp[FrameLayout](MATCH_PARENT, MATCH_PARENT, Gravity.FILL) <~
-        tweak { tv: TextView =>
+        }) >>=
+        lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER | Gravity.LEFT),
+      IO(titleview) >>=
+        lp(MATCH_PARENT, MATCH_PARENT, Gravity.FILL) >>=
+        kestrel { tv =>
           tv.setMaxLines(1)
           tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
           tv.setEllipsize(TruncateAt.END)
           tv.setGravity(Gravity.CENTER)
-        } <~ padding(left = 48 dp, right = 48 dp)
-    ) <~ lp[LinearLayout](MATCH_PARENT, 48 dp) <~ bg("#77555555"),
-    w[TextView] <~ /* FIXME id(android.R.id.empty) <~ */ hide <~
-      lp[LinearLayout](WRAP_CONTENT, 0, 1.0f) <~ margin(all = 12 dp) <~
-      tweak { tv: TextView =>
+        } >>= padding(left = 48 dp, right = 48 dp)
+    ) >>= lp(MATCH_PARENT, 48 dp) >>= backgroundColor("#77555555"),
+    w[TextView] >>= /* FIXME id(android.R.id.empty) <~ */ gone >>=
+      lpK(WRAP_CONTENT, 0)(margins(all = 12 dp)) >>=
+      kestrel { tv =>
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
-      } <~ text(R.string.no_messages),
-    list <~
-      lp[FrameLayout](MATCH_PARENT, MATCH_PARENT) <~ margin(top = 48 dp) <~
-      tweak { l: ListView =>
+      } >>= text(R.string.no_messages),
+    IO(list) >>=
+      lpK(MATCH_PARENT, MATCH_PARENT)(margins(top = 48 dp)) >>=
+      kestrel { l =>
         l.setSelector(R.drawable.message_selector)
         l.setDrawSelectorOnTop(true)
         l.setDivider(new ColorDrawable(Color.BLACK))
@@ -515,18 +512,18 @@ extends Activity with TypedFindView with Contexts[Activity] {
 
           override def onScroll(p1: AbsListView, p2: Int, p3: Int, p4: Int) {}
         })
-      } <~ padding(bottom = 48 dp),
+      } >>= padding(bottom = 48 dp),
     l[LinearLayout](
-      nickcomplete <~ buttonTweaks <~
-        image(R.drawable.ic_btn_search),
-      input <~ inputTweaks <~
-        hint(R.string.input_placeholder) <~
-        lp[LinearLayout](0, MATCH_PARENT, 1.0f) <~ margin(all = 4 dp) <~
+      IO(nickcomplete) >>= buttonTweaks >>=
+        imageResource(R.drawable.ic_btn_search),
+      IO(input) >>= inputTweaks >>=
+        hint(R.string.input_placeholder) >>=
+        lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4 dp)) >>=
         padding(left = 8 dp, right = 8 dp),
-      speechrec <~ buttonTweaks <~
-        image(android.R.drawable.ic_btn_speak_now)
-    ) <~ horizontal <~ lp[FrameLayout](MATCH_PARENT, 48 dp, Gravity.BOTTOM)
-  ) <~ tweak { v: View =>
+      IO(speechrec) >>= buttonTweaks >>=
+        imageResource(android.R.drawable.ic_btn_speak_now)
+    ) >>= horizontal >>= lp(MATCH_PARENT, 48 dp, Gravity.BOTTOM)
+  ) >>= kestrel { v: FrameLayout =>
     val p = new Point
     getWindow.getWindowManager.getDefaultDisplay.getSize(p)
     // p.y - 192.dp is the real desired height...
@@ -567,7 +564,7 @@ extends Activity with TypedFindView with Contexts[Activity] {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    val v = getUi(layout)
+    val v = layout.perform()
     setContentView(v, v.getLayoutParams)
 
     withAppender { m =>

@@ -27,8 +27,7 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 import Tweaks._
-import macroid._
-import macroid.FullDsl._
+import iota._
 
 trait MessageAppender {
   def add(m: MessageLike): Unit
@@ -188,18 +187,16 @@ object MessageAdapter extends EventBus.RefOwner {
     if (nick != "***" && inMain)
       SpannedGenerator.span(NickClick(text.toString), text) else text
   }
-  @inline implicit def actx = AppContext(Application.context)
-  def messageLayout(ctx: Activity) = {
-    implicit val c = ActivityContext(ctx)
+  def messageLayout(implicit ctx: Activity) = {
     import ViewGroup.LayoutParams._
-    w[TextView] <~ id(android.R.id.text1) <~
-      lp[AbsListView](MATCH_PARENT, WRAP_CONTENT) <~
-      tweak { tv: TextView =>
+    c[AbsListView](w[TextView] >>= id(android.R.id.text1) >>=
+      lp(MATCH_PARENT, WRAP_CONTENT) >>=
+      kestrel { tv =>
         tv.setLinksClickable(true)
         tv.setTextAppearance(ctx, android.R.style.TextAppearance_Small)
         tv.setTypeface(Typeface.MONOSPACE)
         tv.setGravity(Gravity.CENTER_VERTICAL)
-      } <~ padding(left = 6 dp, right = 6 dp)
+      } >>= padding(left = 6 dp, right = 6 dp))
   }
 
   UiBus += {
@@ -322,7 +319,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     val c = if (convertView == null || convertView.getContext == context)
       convertView.asInstanceOf[TextView] else null
     val view = if (c != null) c else {
-      val v = getUi(messageLayout(_activity.get.get))
+      val v = messageLayout(_activity.get.get).perform()
 
       if (!icsAndNewer)
         v.setTypeface(gbfont)
