@@ -778,18 +778,3 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
     }
   }
 }
-import language.dynamics
-object Id extends Dynamic {
-  private var ids = Map.empty[String, Int]
-  private var counter = 1000
-
-  private val lock = new Object
-
-  def selectDynamic(tag: String) = lock synchronized {
-    ids.getOrElse(tag, {
-      counter += 1
-      ids += tag → counter
-      counter
-    })
-  }
-}

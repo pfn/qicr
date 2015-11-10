@@ -806,8 +806,7 @@ with EventBus.RefOwner {
 
     menu.findItem(R.id.add_server).setVisible(!found)
   }
-  class ServersAdapter(context: Activity) extends BaseAdapter with WithContext {
-    override def getContext = context
+  class ServersAdapter(override val context: Activity) extends BaseAdapter with HasContext {
     val manager = IrcManager.start()
 
     override def getCount = manager.getServers.size
@@ -859,10 +858,10 @@ with EventBus.RefOwner {
         layout.perform()
 
       val checked = list.getCheckedItemPosition
-      val img = v.findViewById(Id.server_item_status).asInstanceOf[ImageView]
+      val img = v.findView(Id.server_item_status)
 
-      (IO(v.findViewById(Id.server_item_text).asInstanceOf[TextView]) >>= text(server.name)).perform()
-      (IO(v.findViewById(Id.server_item_progress)) >>= condK(
+      (IO(v.findView(Id.server_item_text)) >>= text(server.name)).perform()
+      (IO(v.findView(Id.server_item_progress)) >>= condK(
         (server.state == Server.State.CONNECTING) ? visible
         | gone)).perform()
 
@@ -873,7 +872,7 @@ with EventBus.RefOwner {
         case CONNECTING   => android.R.drawable.presence_away
       }) >>= condK((server.state != Server.State.CONNECTING) ? visible | gone)).perform()
 
-      val t = IO(v.findViewById(Id.server_checked_text).asInstanceOf[CheckedTextView])
+      val t = IO(v.findView(Id.server_checked_text) : CheckedTextView)
       (t >>= kestrel { tv =>
         tv.setChecked(pos == checked)
         val lag = if (server.state == CONNECTED) {

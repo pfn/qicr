@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % "1.6",
   "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
   "com.hanhuy.android" %% "scala-common" % "1.1",
-  "com.hanhuy.android" %% "iota" % "0.1",
+  "com.hanhuy.android" %% "iota" % "0.3",
   "com.hanhuy" % "sirc" % "1.1.6-pfn.1",
   "ch.acra" % "acra" % "4.7.0-RC.1",
   "com.hanhuy.android" % "viewserver" % "1.0.3",

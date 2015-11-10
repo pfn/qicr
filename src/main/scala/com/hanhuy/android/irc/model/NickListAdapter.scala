@@ -39,7 +39,7 @@ case class NickAndMode(mode: Char, nick: String)
 
 // must reference activity for resources
 class NickListAdapter(activity: WeakReference[MainActivity], channel: Channel)
-extends BaseAdapter with EventBus.RefOwner with WithContext {
+extends BaseAdapter with EventBus.RefOwner with HasContext {
   import ViewGroup.LayoutParams._
   import Tweaks._
   val manager = IrcManager.start()
@@ -47,7 +47,7 @@ extends BaseAdapter with EventBus.RefOwner with WithContext {
   manager.channels.get(channel).foreach(c = _)
   notifyDataSetChanged()
 
-  override def getContext = activity()
+  override def context = activity()
 
   val layout = iota.std.Views.c[AbsListView](w[TextView] >>= id(android.R.id.text1) >>=
     backgroundResource(R.drawable.selector_background) >>=

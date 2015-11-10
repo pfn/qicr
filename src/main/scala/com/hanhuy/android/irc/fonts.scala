@@ -3,7 +3,6 @@ package com.hanhuy.android.irc
 import java.io._
 import java.nio.ByteBuffer
 
-import android.app.Activity
 import android.content.Context
 import android.graphics.{Paint, Typeface}
 import android.preference.{ListPreference, Preference}
@@ -106,8 +105,8 @@ object FontManager {
 }
 class FontSizePreference(c: Context, attrs: AttributeSet)
 extends Preference(c, attrs)
-with SeekBar.OnSeekBarChangeListener with WithContext {
-  override def getContext = c
+with SeekBar.OnSeekBarChangeListener with HasContext {
+  override def context = c
   import android.view.ViewGroup.LayoutParams._
   import com.hanhuy.android.irc.Tweaks._
 
@@ -135,7 +134,7 @@ with SeekBar.OnSeekBarChangeListener with WithContext {
     Option(summary.getParent).foreach { case p: ViewGroup => p.removeView(summary) }
     (
       l[RelativeLayout](
-        w[TextView] >>= id(android.R.id.title) >>= kestrel { tv =>
+        w[TextView] >>= id(android.R.id.title) >>= kestrel { tv: TextView =>
           tv.setSingleLine(true)
           tv.setTextAppearance(c, android.R.style.TextAppearance_Medium)
           tv.setEllipsize(TextUtils.TruncateAt.MARQUEE)
