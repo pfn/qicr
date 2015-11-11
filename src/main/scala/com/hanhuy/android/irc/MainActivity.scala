@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.app.{NotificationManager, Activity, AlertDialog}
+import android.content.res.TypedArray
 import android.content.{Context, Intent, DialogInterface}
 import android.graphics.Rect
 import android.os.{Build, Bundle}
@@ -76,19 +77,11 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
 
-  lazy val inputBackground = {
-    val themeAttrs = getTheme.obtainStyledAttributes(R.styleable.AppTheme)
-    val c = themeAttrs.getDrawable(R.styleable.AppTheme_inputBackground)
-    themeAttrs.recycle()
-    c
-  }
+  lazy val drawerBackground =
+    themeAttrs(R.styleable.AppTheme, _.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0))
+  lazy val inputBackground =
+    themeAttrs(R.styleable.AppTheme, _.getDrawable(R.styleable.AppTheme_inputBackground))
 
-  lazy val drawerBackground = {
-    val themeAttrs = getTheme.obtainStyledAttributes(R.styleable.AppTheme)
-    val c = themeAttrs.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0)
-    themeAttrs.recycle()
-    c
-  }
 
   def imeShowing = _imeShowing
   private var _imeShowing = false

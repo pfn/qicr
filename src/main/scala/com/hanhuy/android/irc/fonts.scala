@@ -105,17 +105,17 @@ object FontManager {
 }
 class FontSizePreference(c: Context, attrs: AttributeSet)
 extends Preference(c, attrs)
-with SeekBar.OnSeekBarChangeListener with HasContext {
+with SeekBar.OnSeekBarChangeListener with HasContext with HasActivity {
   override def context = c
+  override def activity = c.asInstanceOf[android.app.Activity]
   import android.view.ViewGroup.LayoutParams._
   import com.hanhuy.android.irc.Tweaks._
 
   lazy val summary = new TextView(c)
   var defaultSize: Int = _
 
-  val a = c.obtainStyledAttributes(attrs, R.styleable.FontSizePreference)
-  val fontNameKey = a.getString(R.styleable.FontSizePreference_fontNameKey)
-  a.recycle()
+  val fontNameKey = themeAttrs(R.styleable.FontSizePreference,
+    _.getString(R.styleable.FontSizePreference_fontNameKey))
 
   override def onBindView(view: View) = {
     super.onBindView(view)

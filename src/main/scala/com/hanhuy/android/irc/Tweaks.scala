@@ -1,6 +1,8 @@
 package com.hanhuy.android.irc
 
+import android.app.Activity
 import android.content.Context
+import android.content.res.TypedArray
 import android.graphics.{Point, Color}
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -107,6 +109,13 @@ object Tweaks {
       new CheckedTextView(ctx)
     else
       new android.support.v7.widget.AppCompatCheckedTextView(ctx)
+
+  def themeAttrs[A](theme: Array[Int], f: TypedArray => A)(implicit activity: Activity): A = {
+    val themeAttrs = activity.getTheme.obtainStyledAttributes(R.styleable.AppTheme)
+    val c = f(themeAttrs)
+    themeAttrs.recycle()
+    c
+  }
 }
 class SquareImageButton(c: Context) extends ImageButton(c) {
   override def onMeasure(mw: Int, mh: Int) = {
