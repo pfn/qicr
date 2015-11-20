@@ -515,13 +515,13 @@ extends Activity with TypedFindView {
       } >>= padding(bottom = 48 dp),
     l[LinearLayout](
       IO(nickcomplete) >>= buttonTweaks >>=
-        imageResource(R.drawable.ic_btn_search),
+        imageResource(R.drawable.ic_person_pin_white_24dp),
       IO(input) >>= inputTweaks >>=
         hint(R.string.input_placeholder) >>=
         lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4 dp)) >>=
         padding(left = 8 dp, right = 8 dp),
       IO(speechrec) >>= buttonTweaks >>=
-        imageResource(android.R.drawable.ic_btn_speak_now)
+        imageResource(R.drawable.ic_mic_white_24dp)
     ) >>= horizontal >>= lp(MATCH_PARENT, 48 dp, Gravity.BOTTOM)
   ) >>= kestrel { v: FrameLayout =>
     val p = new Point
