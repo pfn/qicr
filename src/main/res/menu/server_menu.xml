@@ -8,12 +8,12 @@
         android:icon="?qicrReconnectIcon"
         android:title="@string/server_connect"/>
     <item android:id="@+id/server_disconnect"
-        android:icon="@drawable/ic_menu_stop"
+        android:icon="?qicrStopIcon"
         android:title="@string/server_disconnect"/>
     <item android:id="@+id/server_options"
-        android:icon="@android:drawable/ic_menu_edit"
+        android:icon="?qicrEditIcon"
         android:title="@string/server_options"/>
     <item android:id="@+id/server_delete"
-        android:icon="@android:drawable/ic_menu_delete"
+        android:icon="?qicrDeleteIcon"
         android:title="@string/server_delete"/>
 </menu>

@@ -4,6 +4,15 @@
     <attr name="qicrHistoryIcon" format="reference"/>
     <attr name="qicrReconnectIcon" format="reference"/>
     <attr name="qicrInfoIcon" format="reference"/>
+    <attr name="qicrCloseIcon" format="reference"/>
+    <attr name="qicrEditIcon" format="reference"/>
+    <attr name="qicrDeleteIcon" format="reference"/>
+    <attr name="qicrSaveIcon" format="reference"/>
+    <attr name="qicrSettingsIcon" format="reference"/>
+    <attr name="qicrPeopleIcon" format="reference"/>
+    <attr name="qicrStopIcon" format="reference"/>
+    <attr name="qicrCopyIcon" format="reference"/>
+    <attr name="qicrLockRotationIcon" format="reference"/>
     <attr name="qicrAddServerIcon" format="reference"/>
     <declare-styleable name="AppTheme">
         <attr name="qicrDrawerBackground" format="color"/>

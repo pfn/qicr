@@ -14,12 +14,12 @@
         android:orderInCategory="2"
         android:title="@string/server_connect"/>
     <item android:id="@+id/server_disconnect"
-        android:icon="@drawable/ic_menu_stop"
+        android:icon="?qicrStopIcon"
         android:menuCategory="container"
         android:orderInCategory="3"
         android:title="@string/server_disconnect"/>
     <item android:id="@+id/server_options"
-        android:icon="@android:drawable/ic_menu_edit"
+        android:icon="?qicrEditIcon"
         android:menuCategory="container"
         android:orderInCategory="4"
         android:title="@string/server_options"/>

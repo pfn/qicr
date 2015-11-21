@@ -50,7 +50,7 @@
         android:layout_height="48dp">
         <ImageView
                 android:id="@+id/go_prev"
-                android:src="@android:drawable/ic_media_previous"
+                android:src="@drawable/ic_navigate_before_white_24dp"
                 android:layout_width="96dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
@@ -70,7 +70,7 @@
                 android:layout_weight="1"/>
         <ImageView
                 android:id="@+id/go_next"
-                android:src="@android:drawable/ic_media_next"
+                android:src="@drawable/ic_navigate_next_white_24dp"
                 android:layout_width="96dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"

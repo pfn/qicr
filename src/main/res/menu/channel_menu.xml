@@ -3,7 +3,7 @@
         xmlns:qicr="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/nicklist"
           qicr:showAsAction="never"
-          android:icon="@drawable/ic_menu_friendslist"
+          android:icon="?qicrPeopleIcon"
           android:menuCategory="container"
           android:orderInCategory="1"
           android:title="Nick List"
