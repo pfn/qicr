@@ -9,7 +9,7 @@
           android:title="Message Log"
             />
     <item android:id="@+id/query_close"
-        android:icon="@drawable/ic_menu_end_conversation"
+        android:icon="?qicrChatEndIcon"
         qicr:showAsAction="ifRoom|withText"
         android:menuCategory="container"
         android:orderInCategory="2"

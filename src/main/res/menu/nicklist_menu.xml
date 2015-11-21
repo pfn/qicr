@@ -11,12 +11,12 @@
           android:title="Nick Log" />
     <item android:id="@+id/nick_start_chat"
           qicr:showAsAction="ifRoom|withText"
-          android:icon="@drawable/ic_menu_start_conversation"
+          android:icon="?qicrChatStartIcon"
           android:title="@string/nick_start_chat"/>
     <item android:id="@+id/nick_ignore"
           qicr:showAsAction="ifRoom|withText"
           android:checkable="true"
           android:checked="true"
-          android:icon="@drawable/ic_menu_end_conversation"
+          android:icon="?qicrChatEndIcon"
           android:title="@string/ignore"/>
 </menu>

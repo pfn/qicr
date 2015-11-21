@@ -2,5 +2,5 @@
 
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
   <item android:drawable="@drawable/action_bg_checked"/>
-  <item android:drawable="@drawable/ic_menu_end_conversation"/>
+  <item android:drawable="?qicrChatEndIcon"/>
 </layer-list>

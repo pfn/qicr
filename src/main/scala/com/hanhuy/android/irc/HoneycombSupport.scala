@@ -151,8 +151,12 @@ object HoneycombSupport {
       item.setChecked(Config.Ignores(nick))
       item.setIcon(if (Config.Ignores(nick))
         R.drawable.ic_menu_end_conversation_on
-      else
-        R.drawable.ic_menu_end_conversation)
+        else {
+          if (activity.daynight)
+            R.drawable.ic_chat_bubble_outline_black_24dp
+          else
+            R.drawable.ic_chat_bubble_outline_white_24dp
+      })
       true
     }
 

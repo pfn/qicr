@@ -32,6 +32,8 @@
         <item name="qicrLockRotationIcon">@drawable/ic_screen_lock_rotation_white_24dp</item>
         <item name="qicrStopIcon">@drawable/ic_cancel_white_24dp</item>
         <item name="qicrThemeIcon">@drawable/ic_chrome_reader_mode_white_24dp</item>
+        <item name="qicrChatStartIcon">@drawable/ic_chat_white_24dp</item>
+        <item name="qicrChatEndIcon">@drawable/ic_chat_bubble_outline_white_24dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
         <item name="qicrDrawerBackground">#cc222222</item>
@@ -53,6 +55,8 @@
         <item name="qicrLockRotationIcon">@drawable/ic_screen_lock_rotation_white_24dp</item>
         <item name="qicrStopIcon">@drawable/ic_cancel_black_24dp</item>
         <item name="qicrThemeIcon">@drawable/ic_chrome_reader_mode_black_24dp</item>
+        <item name="qicrChatStartIcon">@drawable/ic_chat_black_24dp</item>
+        <item name="qicrChatEndIcon">@drawable/ic_chat_bubble_outline_black_24dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
         <item name="qicrDrawerBackground">#e0dddddd</item>

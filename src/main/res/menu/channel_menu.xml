@@ -17,7 +17,7 @@
           />
     <item android:id="@+id/channel_close"
         qicr:showAsAction="never"
-        android:icon="@drawable/ic_menu_end_conversation"
+        android:icon="?qicrChatEndIcon"
         android:menuCategory="container"
         android:orderInCategory="3"
         android:title="@string/channel_close"/>

@@ -2,7 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:qicr="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/server_close"
-        android:icon="@drawable/ic_menu_end_conversation"
+        android:icon="?qicrChatEndIcon"
         android:title="@string/server_close"
         qicr:showAsAction="ifRoom|withText"
         android:menuCategory="container"
