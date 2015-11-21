@@ -3,6 +3,7 @@
     <attr name="qicrProgressSpinnerStyle" format="reference"/>
     <attr name="qicrHistoryIcon" format="reference"/>
     <attr name="qicrReconnectIcon" format="reference"/>
+    <attr name="qicrInfoIcon" format="reference"/>
     <attr name="qicrAddServerIcon" format="reference"/>
     <declare-styleable name="AppTheme">
         <attr name="qicrDrawerBackground" format="color"/>

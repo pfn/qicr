@@ -15,7 +15,7 @@
           qicr:showAsAction="never"
           android:orderInCategory="40"
           android:title="Info"
-          android:icon="@android:drawable/ic_menu_info_details"
+          android:icon="?qicrInfoIcon"
           />
     <item android:id="@+id/menu_log_others"
           android:menuCategory="container"
