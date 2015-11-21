@@ -839,8 +839,8 @@ with EventBus.RefOwner {
           tv.setGravity(Gravity.CENTER_VERTICAL)
           tv.setTextAppearance(context, android.R.style.TextAppearance_Small)
 
-          resolveAttr(android.R.attr.listChoiceIndicatorSingle,
-            v => tv.setCheckMarkDrawable(v.resourceId))
+          tv.setCheckMarkDrawable(
+            resolveAttr(android.R.attr.listChoiceIndicatorSingle, _.resourceId))
         } >>= id(Id.server_checked_text)
     ) >>= kestrel { _.setGravity(Gravity.CENTER_VERTICAL) } >>=
       lp(MATCH_PARENT, WRAP_CONTENT))
