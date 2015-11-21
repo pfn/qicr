@@ -6,16 +6,16 @@ import scala.ref.WeakReference
 
 import android.os.StrictMode
 
+import com.hanhuy.android.common._
 import android.support.v7.app.ActionBar
 import android.support.v7.view.ActionMode
 import android.view.{Menu, MenuItem, MenuInflater}
 import android.view.View
 
-import com.hanhuy.android.common._
 import android.support.v4.view.MenuItemCompat
-import android.support.v7.app.ActionBar.OnNavigationListener
+import iota.std.Contexts._
 
-object HoneycombSupport {
+object HoneycombSupport extends iota.HasActivity {
   val TAG = "HoneycombSupport"
   var activity: MainActivity = _
   var _server: WeakReference[Server] = _
@@ -63,7 +63,7 @@ object HoneycombSupport {
   }
 
   @inline implicit def toOnNavigationListener(f: (Int, Long) => Boolean):
-  ActionBar.OnNavigationListener = new OnNavigationListener {
+  ActionBar.OnNavigationListener = new ActionBar.OnNavigationListener {
     override def onNavigationItemSelected(p1: Int, p2: Long) = f(p1, p2)
   }
 
@@ -144,19 +144,15 @@ object HoneycombSupport {
     }
 
     override def onCreateActionMode(mode: ActionMode, menu: Menu) = {
+      implicit val act = activity
       val inflater = new MenuInflater(activity)
       inflater.inflate(R.menu.nicklist_menu, menu)
       mode.setTitle(nick)
       val item = menu.findItem(R.id.nick_ignore)
       item.setChecked(Config.Ignores(nick))
       item.setIcon(if (Config.Ignores(nick))
-        R.drawable.ic_menu_end_conversation_on
-        else {
-          if (activity.daynight)
-            R.drawable.ic_chat_bubble_outline_black_24dp
-          else
-            R.drawable.ic_chat_bubble_outline_white_24dp
-      })
+        R.drawable.ic_menu_end_conversation_on else
+        Tweaks.resolveAttr(R.attr.qicrChatEndIcon, _.resourceId))
       true
     }
 

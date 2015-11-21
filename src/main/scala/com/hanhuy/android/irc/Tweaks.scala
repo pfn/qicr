@@ -53,14 +53,8 @@ object Tweaks {
       "status_bar_height", "dimen", "android")
     if (id != 0) ctx.getResources.getDimensionPixelSize(id) else 0
   }
-  def actionBarHeight(implicit ctx: Context) = {
-    val tv = new TypedValue
-    val r = ctx.getTheme.resolveAttribute(R.attr.actionBarSize, tv, true)
-    if (r) {
-      TypedValue.complexToDimensionPixelSize(
-        tv.data, ctx.getResources.getDisplayMetrics)
-    } else 0
-  }
+  def actionBarHeight(implicit ctx: Context) = resolveAttr(R.attr.actionBarSize,
+    tv => TypedValue.complexToDimensionPixelSize(tv.data, ctx.getResources.getDisplayMetrics))
 
   def kitkatPadding[V <: View](implicit ctx: Context): Kestrel[V] =
     condK(v(19) ? padding(
@@ -110,6 +104,13 @@ object Tweaks {
     else
       new android.support.v7.widget.AppCompatCheckedTextView(ctx)
 
+  def resolveAttr[A](attr: Int, f: TypedValue => A)(implicit ctx: Context) = {
+    val tv = new TypedValue
+    val r = ctx.getTheme.resolveAttribute(attr, tv, true)
+    if (r) {
+      f(tv)
+    } else throw new IllegalStateException("attribute not found: " + attr)
+  }
   def themeAttrs[A](theme: Array[Int], f: TypedArray => A)(implicit activity: Activity): A = {
     val themeAttrs = activity.getTheme.obtainStyledAttributes(R.styleable.AppTheme)
     val c = f(themeAttrs)
