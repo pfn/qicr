@@ -5,7 +5,7 @@
         android:title="@string/server_messages"
         />
     <item android:id="@+id/server_connect"
-        android:icon="@drawable/ic_menu_refresh"
+        android:icon="?qicrReconnectIcon"
         android:title="@string/server_connect"/>
     <item android:id="@+id/server_disconnect"
         android:icon="@drawable/ic_menu_stop"
