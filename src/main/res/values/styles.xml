@@ -31,7 +31,7 @@
         <item name="qicrPeopleIcon">@drawable/ic_people_white_24dp</item>
         <item name="qicrLockRotationIcon">@drawable/ic_screen_lock_rotation_white_24dp</item>
         <item name="qicrStopIcon">@drawable/ic_cancel_white_24dp</item>
-        <item name="qicrCopyIcon">@drawable/ic_content_copy_white_24dp</item>
+        <item name="qicrThemeIcon">@drawable/ic_chrome_reader_mode_white_24dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
         <item name="qicrDrawerBackground">#cc222222</item>
@@ -52,7 +52,7 @@
         <item name="qicrPeopleIcon">@drawable/ic_people_black_24dp</item>
         <item name="qicrLockRotationIcon">@drawable/ic_screen_lock_rotation_white_24dp</item>
         <item name="qicrStopIcon">@drawable/ic_cancel_black_24dp</item>
-        <item name="qicrCopyIcon">@drawable/ic_content_copy_black_24dp</item>
+        <item name="qicrThemeIcon">@drawable/ic_chrome_reader_mode_black_24dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
         <item name="qicrDrawerBackground">#e0dddddd</item>

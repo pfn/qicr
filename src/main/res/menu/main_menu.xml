@@ -2,7 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:qicr="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/toggle_theme"
-        android:icon="?qicrCopyIcon"
+        android:icon="?qicrThemeIcon"
         qicr:showAsAction="never"
         android:menuCategory="container"
         android:orderInCategory="96"

@@ -11,7 +11,7 @@
     <attr name="qicrSettingsIcon" format="reference"/>
     <attr name="qicrPeopleIcon" format="reference"/>
     <attr name="qicrStopIcon" format="reference"/>
-    <attr name="qicrCopyIcon" format="reference"/>
+    <attr name="qicrThemeIcon" format="reference"/>
     <attr name="qicrLockRotationIcon" format="reference"/>
     <attr name="qicrAddServerIcon" format="reference"/>
     <declare-styleable name="AppTheme">
