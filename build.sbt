@@ -39,13 +39,13 @@ proguardOptions in Android += "-keep class android.support.v7.internal.widget.* 
 
 proguardOptions in Android += "-keep class scala.runtime.BoxesRunTime { *; }" // for debugging
 
+proguardOptions in Android += "-dontwarn iota.**"
+
 proguardCache in Android ++= "macroid" :: "android.support" :: Nil
 
 proguardScala := true
 
 useProguard := true
-
-useProguardInDebug in Android := false
 
 extraResDirectories in Android += baseDirectory.value / "src" / "lite" / "res"
 
@@ -55,4 +55,7 @@ run <<= run in Android
 
 dexMaxHeap := "3g"
 
-protifySettings
+flavors += (("no-protify", Seq(
+  apkSigningConfig := Some(android.DebugSigningConfig()),
+  apkbuildDebug := { val d = apkbuildDebug.value; d(false); d }
+)))

@@ -262,12 +262,13 @@ extends Fragment with EventBus.RefOwner {
   def adapter: Option[MessageAdapter]
 
   var lookupId: String = ""
-  lazy val listView = new ListView(getActivity)
+
+  private[this] var listView: ListView = _
 
   def tag: String
 
   import ViewGroup.LayoutParams._
-  def layout = c[FrameLayout](IO(listView) >>= id(android.R.id.list) >>= lp(MATCH_PARENT, MATCH_PARENT) >>=
+  def layout = c[FrameLayout](w[ListView] >>= id(android.R.id.list) >>= lp(MATCH_PARENT, MATCH_PARENT) >>=
     kitkatPadding(getActivity.tabs.getVisibility == View.GONE) >>=
     kestrel { l =>
       l.setDrawSelectorOnTop(true)
@@ -332,6 +333,7 @@ extends Fragment with EventBus.RefOwner {
   override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) = {
     adapter foreach (_.context = getActivity)
     val v = layout.perform()
+    listView = v
     def inputHeight = for {
       a <- MainActivity.instance
       h <- a.inputHeight
