@@ -59,3 +59,12 @@ flavors += (("no-protify", Seq(
   apkSigningConfig := Some(android.DebugSigningConfig()),
   apkbuildDebug := { val d = apkbuildDebug.value; d(false); d }
 )))
+
+// delete vectordrawables because they break moto display
+collectResources := {
+  val (assets,res) = collectResources.value
+  IO.delete(res / "drawable-anydpi-v21")
+  (assets,res)
+}
+
+protifySettings
