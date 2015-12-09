@@ -325,9 +325,10 @@ extends Fragment with EventBus.RefOwner {
   }
 
   def scrollToEnd() {
-    for {
-      a <- adapter
-    } listView.setSelection(a.getCount - 1)
+    if (listView != null)
+      for {
+        a <- adapter
+      } listView.setSelection(a.getCount - 1)
   }
 
   override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) = {

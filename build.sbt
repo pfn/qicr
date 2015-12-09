@@ -1,6 +1,8 @@
-val supportSdkVersion = "23.1.0"
+import android.dsl._
 
-platformTarget in Android := "android-23"
+val supportSdkVersion = "23.1.1"
+
+platformTarget := "android-23"
 
 scalaVersion in Global := "2.11.7"
 
@@ -12,12 +14,6 @@ javacOptions in Compile  += "-deprecation"
 
 unmanagedJars in Compile ~= { _ filterNot (
   _.data.getName startsWith "android-support-v4") }
-
-resolvers += Resolver.sonatypeRepo("snapshots")
-
-resolvers += "bintray" at "http://jcenter.bintray.com"
-
-resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % "1.6",
@@ -31,25 +27,16 @@ libraryDependencies ++= Seq(
   "com.android.support" % "support-v4" % supportSdkVersion,
   "com.android.support" % "appcompat-v7" % supportSdkVersion)
 
-javacOptions in Compile ++= Seq("-target", "1.6", "-source", "1.6")
+proguardOptions ++=
+  "-keep class android.support.v7.widget.SearchView { <init>(...); }" ::
+  "-keep class android.support.v7.internal.widget.* { <init>(...); }" ::
+  "-keep class scala.runtime.BoxesRunTime { *; }" :: // for debugging
+  "-dontwarn iota.**" ::
+  Nil
 
-proguardOptions in Android += "-keep class android.support.v7.widget.SearchView { <init>(...); }"
+applicationId := "com.hanhuy.android.irc.lite"
 
-proguardOptions in Android += "-keep class android.support.v7.internal.widget.* { <init>(...); }"
-
-proguardOptions in Android += "-keep class scala.runtime.BoxesRunTime { *; }" // for debugging
-
-proguardOptions in Android += "-dontwarn iota.**"
-
-proguardCache in Android ++= "macroid" :: "android.support" :: Nil
-
-proguardScala := true
-
-useProguard := true
-
-extraResDirectories in Android += baseDirectory.value / "src" / "lite" / "res"
-
-applicationId in Android := "com.hanhuy.android.irc.lite"
+resValue("string", "app_name", "qicr lite")
 
 run <<= run in Android
 
