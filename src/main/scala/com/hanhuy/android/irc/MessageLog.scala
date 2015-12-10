@@ -15,7 +15,7 @@ import android.provider.BaseColumns
 import MessageLog._
 import android.support.v4.view.MenuItemCompat
 import android.support.v4.widget.CursorAdapter
-import android.support.v7.app.ActionBarActivity
+import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.SearchView.{OnCloseListener, OnQueryTextListener}
 import android.text.format.DateFormat
 import android.text.method.LinkMovementMethod
@@ -26,6 +26,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
 import android.widget.ExpandableListView.OnChildClickListener
 import android.widget.{CursorAdapter => _,_}
+import android.support.v7.widget.Toolbar
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
@@ -478,12 +479,13 @@ object MessageLogActivity {
     intent
   }
 }
-class MessageLogActivity extends ActionBarActivity {
+class MessageLogActivity extends AppCompatActivity {
   import MessageLogActivity._
   val log = Logcat("MessageLogActivity")
   lazy val listview = new ListView(this)
   var dateText: TextView = _
 
+  lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
   lazy val layout = l[FrameLayout](
     w[TextView] >>= gone >>=
       lpK(WRAP_CONTENT, 0)(margins(all = 12 dp)) >>=
@@ -504,8 +506,9 @@ class MessageLogActivity extends ActionBarActivity {
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
         l.setFastScrollEnabled(true)
       } >>= kitkatPadding,
-      IO(progressbar) >>=
-        lp(128 dp, 128 dp, Gravity.CENTER)
+    IO(progressbar) >>=
+      lp(128 dp, 128 dp, Gravity.CENTER),
+    newToolbar(daynight)
   )
 
   lazy val progressbar = new ProgressBar(this)
@@ -559,16 +562,15 @@ class MessageLogActivity extends ActionBarActivity {
     val mode = Settings.get(Settings.DAYNIGHT_MODE)
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
     super.onCreate(savedInstanceState)
-    getSupportActionBar.setElevation(0)
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
       if (Settings.get(Settings.ROTATE_LOCK))
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
 
-    val bar = getSupportActionBar
-    bar.setDisplayHomeAsUpEnabled(true)
-    bar.setDisplayShowHomeEnabled(true)
     setContentView(layout.perform())
+    val toolbar: Toolbar = findView(Id.toolbar)
+    setSupportActionBar(toolbar)
+    toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_mtrl_am_alpha)
 
     onNewIntent(getIntent)
     listview.setOnScrollListener(new OnScrollListener {
@@ -581,7 +583,7 @@ class MessageLogActivity extends ActionBarActivity {
           adapter foreach { a =>
             if (fst < a.getCount) {
               val t = a.getItem(fst)
-              bar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+              toolbar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
             }
           }
         }

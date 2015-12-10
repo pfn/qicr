@@ -58,33 +58,11 @@ object HoneycombSupport extends iota.HasActivity {
       activity.startSupportActionMode(ServerActionModeSetup))
   }
 
+  def setTitle(s: String) = if (activity != null) {
+    activity.getSupportActionBar.setTitle(s)
+  }
   def setSubtitle(s: String) = if (activity != null) {
     activity.getSupportActionBar.setSubtitle(s)
-  }
-
-  @inline implicit def toOnNavigationListener(f: (Int, Long) => Boolean):
-  ActionBar.OnNavigationListener = new ActionBar.OnNavigationListener {
-    override def onNavigationItemSelected(p1: Int, p2: Long) = f(p1, p2)
-  }
-
-  def setupSpinnerNavigation(a: MainPagerAdapter) {
-    val bar = activity.getSupportActionBar
-    a.tabindicators.setVisibility(View.GONE)
-    bar.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST)
-    bar.setDisplayOptions(0, ActionBar.DISPLAY_SHOW_TITLE)
-    bar.setListNavigationCallbacks(
-      a.DropDownNavAdapter, a.actionBarNavigationListener _)
-  }
-
-  def isSpinnerNavigation =
-    activity.getSupportActionBar.getNavigationMode ==
-      ActionBar.NAVIGATION_MODE_LIST
-
-  def setSelectedNavigationItem(pos: Int) {
-    if (activity == null) return
-    val bar = activity.getSupportActionBar
-    if (bar.getNavigationItemCount > pos)
-      activity.getSupportActionBar.setSelectedNavigationItem(pos)
   }
 
   object ServerActionModeSetup extends ActionMode.Callback {

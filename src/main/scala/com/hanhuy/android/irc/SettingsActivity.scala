@@ -40,7 +40,6 @@ class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
 
 object Settings {
   val NAVIGATION_MODE_TABS = "Tabs"
-  val NAVIGATION_MODE_DROPDOWN = "Drop Down"
   val NAVIGATION_MODE_DRAWER = "Drawer"
 
   val CHARSET = Setting[String]("irc_charset", "UTF-8")
@@ -233,7 +232,7 @@ class CharsetPreference(c: Context, attrs: AttributeSet)
   import collection.JavaConversions._
   import java.nio.charset.Charset
   val entries = Charset.availableCharsets.keySet.toSeq.filterNot(c =>
-    c.startsWith("x-") || c.startsWith("IBM") || c.startsWith("windows")
+    c.startsWith("x-")
   ).toArray[CharSequence]
   setEntries(entries)
   setEntryValues(entries)

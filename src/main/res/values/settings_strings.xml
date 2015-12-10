@@ -70,13 +70,11 @@
 
     <string-array name="selector_options">
         <item>Tabs</item>
-        <item>Drop Down</item>
         <item>Drawer</item>
     </string-array>
     <!-- do not localize this -->
     <string-array name="selector_option_values">
         <item>Tabs</item>
-        <item>Drop Down</item>
         <item>Drawer</item>
     </string-array>
     <!-- default here because it's true on honeycomb -v11 and newer -->

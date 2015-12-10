@@ -54,4 +54,6 @@ collectResources := {
   (assets,res)
 }
 
+useProguardInDebug := false
+
 protifySettings

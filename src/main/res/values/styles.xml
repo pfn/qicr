@@ -13,7 +13,7 @@
         <item name="android:textColor">@color/tab_indicator_text</item>
     </style>
 
-    <style name="Base.AppTheme.Dark" parent="@style/Theme.AppCompat">
+    <style name="Base.AppTheme.Dark" parent="@style/Theme.AppCompat.NoActionBar">
         <!-- seems to break autoLink text...
         <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
         -->
@@ -37,9 +37,11 @@
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
         <item name="qicrDrawerBackground">#cc222222</item>
+        <item name="windowActionModeOverlay">true</item>
         <item name="inputBackground">@drawable/input_background_dark</item>
     </style>
-    <style name="Base.AppTheme.Light" parent="@style/Theme.AppCompat.Light">
+    <style name="Base.AppTheme.Light" parent="@style/Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
         <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
         <item name="qicrHistoryIcon">@drawable/ic_history_black_24dp</item>

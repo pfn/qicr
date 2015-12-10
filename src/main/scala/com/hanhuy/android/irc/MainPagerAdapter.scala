@@ -166,7 +166,6 @@ with EventBus.RefOwner {
 
   val refreshTabRunnable: Runnable = () => {
     DropDownAdapter.notifyDataSetChanged()
-    DropDownNavAdapter.notifyDataSetChanged()
   }
   def refreshTabTitle(pos: Int) {
     if (!hasCallbacks(refreshTabRunnable))
@@ -225,13 +224,12 @@ with EventBus.RefOwner {
     activity.newmessages.setVisibility(
       if (hasNewMentions) View.VISIBLE else View.GONE)
 
-    HoneycombSupport.setSelectedNavigationItem(pos)
-    HoneycombSupport.setSubtitle(t.channel map { _.server } orElse
+    HoneycombSupport.setSubtitle(t.channel.map(_.server).orElse(t.server).map(
+      s => Server.intervalString(s.currentLag)).orNull)
+    HoneycombSupport.setTitle(t.channel map { _.server } orElse
       t.server map { s =>
-        val chan = if (Settings.get(Settings.NAVIGATION_MODE) ==
-          Settings.NAVIGATION_MODE_DRAWER) " " + t.title else ""
-        " - %s%s: %s" format(s.name, chan, Server.intervalString(s.currentLag))
-      } orNull)
+        "%s / %s" format(t.title, s.name)
+      } getOrElse activity.getString(R.string.app_name))
 
     refreshTabTitle(pos)
     val imm = activity.systemService[InputMethodManager]
@@ -380,9 +378,6 @@ with EventBus.RefOwner {
   }
 
   object DropDownAdapter extends BaseDropDownAdapter
-  object DropDownNavAdapter extends BaseDropDownAdapter {
-    override def getViewTypeCount = 1
-  }
 
   class BaseDropDownAdapter extends BaseAdapter {
     lazy val inflater = activity.systemService[LayoutInflater]

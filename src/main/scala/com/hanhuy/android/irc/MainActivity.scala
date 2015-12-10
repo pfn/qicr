@@ -1,7 +1,6 @@
 package com.hanhuy.android.irc
 
 import android.app.{NotificationManager, Activity, AlertDialog}
-import android.content.res.TypedArray
 import android.content.{Context, Intent, DialogInterface}
 import android.graphics.Rect
 import android.os.{Build, Bundle}
@@ -28,6 +27,7 @@ import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
 
 import android.support.v7.app.{AppCompatActivity, ActionBarDrawerToggle}
+import android.support.v7.widget.Toolbar
 import android.support.v4.widget.DrawerLayout
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
@@ -148,7 +148,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       ) >>= horizontal >>=
         lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
-        } >>= kitkatInputMargin
+        } >>= kitkatInputMargin,
+      newToolbar(daynight)
     ) >>= lp(MATCH_PARENT, MATCH_PARENT),
     IO(drawerLeft)(
       IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
@@ -339,7 +340,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
-    getSupportActionBar.setElevation(0)
     mainLayout.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
       override def onPreDraw() = {
         if (buttonLayout.getMeasuredHeight > 0) {
@@ -351,6 +351,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       }
     })
     setContentView(mainLayout)
+    setSupportActionBar(findView(Id.toolbar))
 
     if (bundle != null)
       page = bundle.getInt("page")
@@ -391,14 +392,10 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     channels.setAdapter(adapter.DropDownAdapter)
 
     Settings.get(Settings.NAVIGATION_MODE) match {
-      case Settings.NAVIGATION_MODE_DROPDOWN =>
-        HoneycombSupport.setupSpinnerNavigation(adapter)
-        drawer.setDrawerLockMode(
-          DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerLeft)
       case Settings.NAVIGATION_MODE_TABS =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerLeft)
-      case Settings.NAVIGATION_MODE_DRAWER =>
+      case Settings.NAVIGATION_MODE_DRAWER | _ =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_UNLOCKED, drawerLeft)
         tabs.setVisibility(View.GONE)
