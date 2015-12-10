@@ -90,7 +90,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
-  lazy val mainLayout = (IO(drawer)(
+  lazy val mainLayout = c[FrameLayout](IO(drawer)(
     l[RelativeLayout](
       IO(tabs) >>= id(Id.tabs) >>=
         lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
@@ -149,7 +149,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
         lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
         } >>= kitkatInputMargin,
-      newToolbar(daynight)
+      newToolbar(daynight) >>=
+        lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)
     ) >>= lp(MATCH_PARENT, MATCH_PARENT),
     IO(drawerLeft)(
       IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
@@ -163,7 +164,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     ) >>= vertical >>=
       lp(drawerWidth, MATCH_PARENT, Gravity.RIGHT) >>=
       backgroundColor(drawerBackground)
-  ) >>= kestrel { v => v.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)) }).perform()
+  ) >>= lp(MATCH_PARENT, MATCH_PARENT)).perform()
 
 
   def listTweaks[V <: ListView]: Kestrel[V] = kestrel { l =>

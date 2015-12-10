@@ -64,6 +64,8 @@ object Tweaks {
   def kitkatPaddingBottom[V <: View](implicit ctx: Context): Kestrel[V] =
     condK(((tablet || portrait) && v(19)) ? padding(bottom = navBarHeight))
 
+  def kitkatStatusMargin[V <: View](implicit c: Context) =
+    margins(top = if (v(19)) statusBarHeight else 0)
   def kitkatStatusPadding[V <: View](implicit c: Context): Kestrel[V] =
     condK(v(19) ? padding(top = statusBarHeight))
   def kitkatPaddingTop[V <: View](implicit c: Context): Kestrel[V] =
@@ -93,17 +95,13 @@ object Tweaks {
     e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
   }
   def newToolbar(daynight: Boolean)(implicit ctx: Context) = {
-    import ViewGroup.LayoutParams._
-    c[ViewGroup](
-      IO(new Toolbar(new ContextThemeWrapper(
-        ctx, R.style.ThemeOverlay_AppCompat_ActionBar))) >>= id(Id.toolbar) >>=
-        lpK(MATCH_PARENT, WRAP_CONTENT)(margins(top = if (v(19)) statusBarHeight else 0)) >>=
-        kestrel { t =>
-          t.setPopupTheme(if (daynight) R.style.ThemeOverlay_AppCompat_Light else
-            R.style.ThemeOverlay_AppCompat_Dark)
-          t.setBackgroundColor(resolveAttr(R.attr.colorPrimary, _.data))
-        }
-    )
+    IO(new Toolbar(new ContextThemeWrapper(
+      ctx, R.style.ThemeOverlay_AppCompat_ActionBar))) >>= id(Id.toolbar) >>=
+      kestrel { t =>
+        t.setPopupTheme(if (daynight) R.style.ThemeOverlay_AppCompat_Light else
+          R.style.ThemeOverlay_AppCompat_Dark)
+        t.setBackgroundColor(resolveAttr(R.attr.colorPrimary, _.data))
+      }
   }
   def checkbox(implicit ctx: Context) = if (Build.VERSION.SDK_INT >= 21)
     new CheckBox(ctx) else new android.support.v7.widget.AppCompatCheckBox(ctx)
