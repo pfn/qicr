@@ -1,14 +1,16 @@
 package com.hanhuy.android.irc
 
+import android.annotation.TargetApi
 import android.app.{NotificationManager, Activity, AlertDialog}
 import android.content.{Context, Intent, DialogInterface}
 import android.graphics.Rect
 import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.design.widget.TabLayout
-import android.support.v4.view.ViewPager
+import android.support.v4.view.{ViewCompat, MotionEventCompat, ViewPager}
 import android.util.DisplayMetrics
 import android.view.View.MeasureSpec
+import android.view.ViewGroup.MarginLayoutParams
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
 import android.view.inputmethod.InputMethodManager
@@ -27,8 +29,7 @@ import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
 
 import android.support.v7.app.{AppCompatActivity, ActionBarDrawerToggle}
-import android.support.v7.widget.Toolbar
-import android.support.v4.widget.DrawerLayout
+import android.support.v4.widget.{ViewDragHelper, DrawerLayout}
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
 
@@ -91,7 +92,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
-    l[RelativeLayout](
+    l[QicrRelativeLayout](
       IO(tabs) >>= id(Id.tabs) >>=
         lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
@@ -114,7 +115,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
             adapter.goToNewMessages()
           }
         } >>= buttonTweaks,
-        IO(input)>>=
+        IO(input) >>=
           lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4.dp)) >>=
           hint(R.string.input_placeholder) >>= inputTweaks >>= invisible >>=
           padding(left = 8 dp, right = 8 dp) >>=
@@ -145,13 +146,24 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
                   Toast.LENGTH_SHORT).show()
             }
           }) >>= buttonTweaks
-      ) >>= horizontal >>=
+      ) >>= horizontal >>= id(Id.buttonlayout) >>=
         lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
         } >>= kitkatInputMargin,
-      newToolbar(daynight) >>=
-        lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)
-    ) >>= lp(MATCH_PARENT, MATCH_PARENT),
+      w[View] >>= id(Id.topdrawer) >>=
+        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, 72.dp),
+      w[View] >>= id(Id.bottomdrawer) >>=
+        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, 72.dp),
+      w[ImageView] >>= imageResource(
+        if (daynight) R.drawable.ic_keyboard_arrow_up_black_24dp else R.drawable.ic_keyboard_arrow_up_white_24dp) >>=
+        imageScale(ImageView.ScaleType.CENTER) >>=
+        lpK(48.dp, 48.dp) { (p: RelativeLayout.LayoutParams) =>
+          p.addRule(RelativeLayout.ALIGN_TOP, Id.buttonlayout)
+          p.addRule(RelativeLayout.CENTER_HORIZONTAL, 1)
+          margins(top = -24.dp)(p)
+        } >>= id(Id.uparrow) >>= hook0.onClick(IO { findViewById(Id.qicrdrawers).asInstanceOf[QicrRelativeLayout].toggleBottomDrawer() }),
+      newToolbar(daynight) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)
+    ) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= id(Id.qicrdrawers),
     IO(drawerLeft)(
       IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
     ) >>=
@@ -329,6 +341,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   lazy val proc = new MainInputProcessor(this)
   lazy val input = new EditText(this)
+  lazy val uparrow = findView(Id.uparrow)
   private var page = -1 // used for restoring tab selection on recreate
 
   override def onCreate(bundle: Bundle) {
@@ -551,6 +564,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   def pageChanged(idx: Int) {
     input.setVisibility(if (idx == 0) View.INVISIBLE else View.VISIBLE)
+    uparrow.setVisibility(if (idx == 0) View.INVISIBLE else View.VISIBLE)
 
     val m = getSupportFragmentManager
     if ((0 until m.getBackStackEntryCount) exists { i =>
@@ -767,5 +781,112 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
     } else {
       super.onMeasure(mw, mh)
     }
+  }
+}
+
+class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity) with HasActivity {
+  lazy val vdh = ViewDragHelper.create(this, 1.0f, VdhCallback)
+  lazy val toolbar = findViewById(Id.toolbar)
+  lazy val input = findViewById(Id.uparrow)
+  lazy val topdrawer = findViewById(Id.topdrawer)
+  lazy val bottomdrawer = findViewById(Id.bottomdrawer)
+
+  object VdhCallback extends ViewDragHelper.Callback {
+    override def tryCaptureView(child: View, pointerId: Int) = child == toolbar || child == input
+
+    @TargetApi(11)
+    override def onViewPositionChanged(changedView: View, left: Int, top: Int, dx: Int, dy: Int) = {
+      if (changedView == toolbar) {
+        topdrawer.layout(0, toolbarStart, getWidth, top)
+        if (v(11))
+          topdrawer.setAlpha(math.max(toolbarDragOffset(top), 0.1f))
+      } else if (changedView == input) {
+        val bottom = kitkatBottomPadding(activity)
+        bottomdrawer.layout(0, (getHeight - bottom) - (inputStart - top), getWidth, getHeight - bottom)
+        if (v(11))
+          bottomdrawer.setAlpha(math.max(inputDragOffset(top), 0.1f))
+      }
+    }
+
+    override def onViewReleased(releasedChild: View, xvel: Float, yvel: Float) = {
+      val newtop: (Int => Float, Int, Int) => Int = (offset, end, start) =>
+        if (offset(releasedChild.getTop) > 0.5f) end else start
+
+      val stuffs = if (releasedChild == toolbar)
+        Some((toolbarDragOffset _, toolbarDragRange, toolbarStart))
+      else if (releasedChild == input)
+        Some((inputDragOffset _, inputDragRange, inputStart))
+      else None
+
+      stuffs.foreach { args =>
+        val r = vdh.settleCapturedViewAt(releasedChild.getLeft,
+          newtop.tupled(args))
+        if (r) ViewCompat.postInvalidateOnAnimation(QicrRelativeLayout.this)
+      }
+    }
+
+
+    override def clampViewPositionHorizontal(child: View, left: Int, dx: Int) = child.getLeft
+
+    override def clampViewPositionVertical(child: View, top: Int, dy: Int) = {
+      if (child == toolbar)
+        math.min(math.max(top, toolbarStart), toolbarDragRange)
+      else if (child == input)
+        math.min(math.max(top, inputDragRange), inputStart)
+      else top
+    }
+
+    override def getViewVerticalDragRange(child: View) =
+      if (child == toolbar) toolbarDragRange
+      else if (child == input) inputDragRange
+      else 0
+  }
+
+  def toolbarDragOffset(top: Int) = top / toolbarDragRange.toFloat
+  def inputDragOffset(top: Int) = (inputStart - top) / inputDragRange.toFloat
+  lazy val toolbarDragRange = (getHeight - kitkatBottomPadding - toolbar.getHeight) / 2
+  lazy val inputDragRange = (getHeight - kitkatBottomPadding - input.getHeight) / 2
+  lazy val inputStart = input.getTop
+  lazy val toolbarStart = toolbar.getTop
+
+  override def computeScroll() = {
+    if (vdh.continueSettling(true))
+      ViewCompat.postInvalidateOnAnimation(this)
+  }
+
+  override def onInterceptTouchEvent(ev: MotionEvent) = {
+    val action = MotionEventCompat.getActionMasked(ev)
+
+    if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
+      vdh.cancel()
+      false
+    } else
+      vdh.shouldInterceptTouchEvent(ev)
+  }
+
+  def smoothSlideTo(slideOffset: Float) = {
+    val y = (toolbarStart + slideOffset * toolbarDragRange).toInt
+
+    if (vdh.smoothSlideViewTo(toolbar, toolbar.getLeft, y)) {
+      ViewCompat.postInvalidateOnAnimation(this)
+      true
+    } else false
+  }
+
+  def toggleBottomDrawer() = {
+    val offset = inputDragOffset(input.getTop)
+    if (vdh.smoothSlideViewTo(input, input.getLeft, if (offset > 0.5) inputStart else inputDragRange))
+      ViewCompat.postInvalidateOnAnimation(this)
+  }
+
+  override def onTouchEvent(ev: MotionEvent) = {
+    vdh.processTouchEvent(ev)
+    true
+  }
+
+  override def onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) = {
+    super.onLayout(changed, l, t, r, b)
+    topdrawer.layout(0, -topdrawer.getMeasuredHeight, r, 0)
+    bottomdrawer.layout(0, getHeight, r, getHeight + bottomdrawer.getMeasuredHeight)
   }
 }

@@ -797,17 +797,19 @@ with EventBus.RefOwner {
 
   override def onPrepareOptionsMenu(menu: Menu) {
     val activity = getActivity
-    val m = activity.getSupportFragmentManager
+    if (activity != null) {
+      val m = activity.getSupportFragmentManager
 
-    var page = 0
-    if (activity.adapter != null)
-      page = activity.adapter.page
+      var page = 0
+      if (activity.adapter != null)
+        page = activity.adapter.page
 
-    val found = page == 0 && ((0 until m.getBackStackEntryCount) exists {
-      i => m.getBackStackEntryAt(i).getName == SERVER_SETUP_STACK
-    })
+      val found = page == 0 && ((0 until m.getBackStackEntryCount) exists {
+        i => m.getBackStackEntryAt(i).getName == SERVER_SETUP_STACK
+      })
 
-    menu.findItem(R.id.add_server).setVisible(!found)
+      menu.findItem(R.id.add_server).setVisible(!found)
+    }
   }
   class ServersAdapter(override val context: Activity) extends BaseAdapter with HasContext {
     val manager = IrcManager.start()
