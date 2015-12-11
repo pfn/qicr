@@ -10,7 +10,6 @@ import android.support.design.widget.TabLayout
 import android.support.v4.view.{ViewCompat, MotionEventCompat, ViewPager}
 import android.util.DisplayMetrics
 import android.view.View.MeasureSpec
-import android.view.ViewGroup.MarginLayoutParams
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
 import android.view.inputmethod.InputMethodManager
@@ -91,6 +90,12 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
+  val alphabet = Array(
+    "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel",
+    "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa",
+    "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whisky",
+    "X-ray", "Yankee", "Zulu"
+  )
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
     l[QicrRelativeLayout](
       IO(tabs) >>= id(Id.tabs) >>=
@@ -150,10 +155,22 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
         lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
         } >>= kitkatInputMargin,
-      w[View] >>= id(Id.topdrawer) >>=
-        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, 72.dp),
-      w[View] >>= id(Id.bottomdrawer) >>=
-        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, 72.dp),
+      l[FrameLayout](
+        w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
+          val adapter = new ArrayAdapter(this,
+            android.R.layout.simple_list_item_1, alphabet)
+          l.setAdapter(adapter)
+        }
+      ) >>= id(Id.topdrawer) >>=
+        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
+      l[FrameLayout](
+        w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
+          val adapter = new ArrayAdapter(this,
+            android.R.layout.simple_list_item_1, alphabet.reverse)
+          l.setAdapter(adapter)
+        }
+      ) >>= id(Id.bottomdrawer) >>=
+        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       w[ImageView] >>= imageResource(
         if (daynight) R.drawable.ic_keyboard_arrow_up_black_24dp else R.drawable.ic_keyboard_arrow_up_white_24dp) >>=
         imageScale(ImageView.ScaleType.CENTER) >>=
@@ -797,12 +814,16 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
     @TargetApi(11)
     override def onViewPositionChanged(changedView: View, left: Int, top: Int, dx: Int, dy: Int) = {
       if (changedView == toolbar) {
+        closeDrawer(input)
         topdrawer.layout(0, toolbarStart, getWidth, top)
         if (v(11))
           topdrawer.setAlpha(math.max(toolbarDragOffset(top), 0.1f))
       } else if (changedView == input) {
+        closeDrawer(toolbar)
         val bottom = kitkatBottomPadding(activity)
-        bottomdrawer.layout(0, (getHeight - bottom) - (inputStart - top), getWidth, getHeight - bottom)
+        val t = (getHeight - bottom) - (inputStart - top)
+        val b = getHeight - bottom
+        bottomdrawer.layout(0, t, getWidth, b)
         if (v(11))
           bottomdrawer.setAlpha(math.max(inputDragOffset(top), 0.1f))
       }
@@ -812,19 +833,18 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
       val newtop: (Int => Float, Int, Int) => Int = (offset, end, start) =>
         if (offset(releasedChild.getTop) > 0.5f) end else start
 
-      val stuffs = if (releasedChild == toolbar)
+      val info = if (releasedChild == toolbar)
         Some((toolbarDragOffset _, toolbarDragRange, toolbarStart))
       else if (releasedChild == input)
         Some((inputDragOffset _, inputDragRange, inputStart))
       else None
 
-      stuffs.foreach { args =>
+      info.foreach { args =>
         val r = vdh.settleCapturedViewAt(releasedChild.getLeft,
           newtop.tupled(args))
         if (r) ViewCompat.postInvalidateOnAnimation(QicrRelativeLayout.this)
       }
     }
-
 
     override def clampViewPositionHorizontal(child: View, left: Int, dx: Int) = child.getLeft
 
@@ -842,10 +862,10 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
       else 0
   }
 
-  def toolbarDragOffset(top: Int) = top / toolbarDragRange.toFloat
-  def inputDragOffset(top: Int) = (inputStart - top) / inputDragRange.toFloat
-  lazy val toolbarDragRange = (getHeight - kitkatBottomPadding - toolbar.getHeight) / 2
-  lazy val inputDragRange = (getHeight - kitkatBottomPadding - input.getHeight) / 2
+  @inline def toolbarDragOffset(top: Int) = top / toolbarDragRange.toFloat
+  @inline def inputDragOffset(top: Int) = (inputStart - top) / inputDragRange.toFloat
+  @inline def toolbarDragRange = (getHeight - kitkatBottomPadding - toolbar.getHeight) / 2
+  @inline def inputDragRange = (getHeight - kitkatBottomPadding - input.getHeight) / 2
   lazy val inputStart = input.getTop
   lazy val toolbarStart = toolbar.getTop
 
@@ -859,9 +879,25 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
 
     if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
       vdh.cancel()
-      false
+      if (!isViewUnder(topdrawer, ev) && !isViewUnder(bottomdrawer, ev) &&
+        !isViewUnder(toolbar, ev) && !isViewUnder(input, ev))
+        closeDrawers()
+      else false
     } else
       vdh.shouldInterceptTouchEvent(ev)
+  }
+
+  def isViewUnder(view: View, ev: MotionEvent) = {
+    val x = ev.getX.toInt
+    val y = ev.getY.toInt
+    val viewLocation = Array.ofDim[Int](2)
+    view.getLocationOnScreen(viewLocation)
+    val parentLocation = Array.ofDim[Int](2)
+    getLocationOnScreen(parentLocation)
+    val screenX = parentLocation(0) + x
+    val screenY = parentLocation(1) + y
+    screenX >= viewLocation(0) && screenX < viewLocation(0) + view.getWidth &&
+      screenY >= viewLocation(1) && screenY < viewLocation(1) + view.getHeight
   }
 
   def smoothSlideTo(slideOffset: Float) = {
@@ -873,6 +909,25 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
     } else false
   }
 
+  // specifically use | not ||
+  def closeDrawers() = closeDrawer(input) | closeDrawer(toolbar)
+
+  def closeDrawer(view: View) = {
+    val info = if (view == toolbar) {
+      Some((toolbarDragOffset _, toolbarStart))
+    } else if (view == input) {
+      Some((inputDragOffset _, inputStart))
+    } else None
+
+    info.fold(false) { case (offset, start) =>
+      // account for minor fuzz with 0.1f
+      if (offset(view.getTop) > 0.1f) {
+        if (vdh.smoothSlideViewTo(view, view.getLeft, start))
+          ViewCompat.postInvalidateOnAnimation(this)
+        true
+      } else false
+    }
+  }
   def toggleBottomDrawer() = {
     val offset = inputDragOffset(input.getTop)
     if (vdh.smoothSlideViewTo(input, input.getLeft, if (offset > 0.5) inputStart else inputDragRange))
@@ -885,8 +940,34 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
   }
 
   override def onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) = {
+    val toolbarCurrent = toolbar.getTop
+    val inputCurrent = input.getTop
+    val toolbarLayout = (toolbar.getLeft, toolbar.getTop, toolbar.getRight, toolbar.getBottom)
+    val inputLayout = (input.getLeft, input.getTop, input.getRight, input.getBottom)
+    val layoutToolbar = (toolbar.layout _).tupled
+    val layoutInput = (input.layout _).tupled
+
     super.onLayout(changed, l, t, r, b)
-    topdrawer.layout(0, -topdrawer.getMeasuredHeight, r, 0)
-    bottomdrawer.layout(0, getHeight, r, getHeight + bottomdrawer.getMeasuredHeight)
+
+    if (toolbarCurrent != 0) layoutToolbar(toolbarLayout)
+    if (inputCurrent != 0) layoutInput(inputLayout)
+    topdrawer.layout(0, toolbarStart, getWidth, toolbarCurrent)
+    val bottom = kitkatBottomPadding(activity)
+    val tp = (getHeight - bottom) - (inputStart - inputCurrent)
+    val bt = getHeight - bottom
+    bottomdrawer.layout(0, tp, getWidth, bt)
+
+    topdrawer.measure(measureSpec._1,
+      MeasureSpec.makeMeasureSpec(
+        toolbarDragRange - kitkatStatusTopPadding, MeasureSpec.AT_MOST))
+    bottomdrawer.measure(measureSpec._1,
+      MeasureSpec.makeMeasureSpec(
+        inputDragRange - kitkatStatusTopPadding, MeasureSpec.AT_MOST))
+  }
+
+  var measureSpec = (0,0)
+  override def onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) = {
+    measureSpec = (widthMeasureSpec,heightMeasureSpec)
+    super.onMeasure(widthMeasureSpec, heightMeasureSpec)
   }
 }
