@@ -94,12 +94,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
-  val alphabet = Array(
-    "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel",
-    "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa",
-    "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whisky",
-    "X-ray", "Yankee", "Zulu"
-  )
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
     IO(qicrdrawers)(
       IO(tabs) >>= id(Id.tabs) >>=
@@ -162,22 +156,21 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
         } >>= kitkatInputMargin,
       l[FrameLayout](
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
-          val adapter = new ArrayAdapter(this,
-            android.R.layout.simple_list_item_1, alphabet)
-          l.setAdapter(adapter)
           l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
+          l.setDivider(new ColorDrawable(Color.TRANSPARENT))
+          l.setDividerHeight(0)
+          l.setAdapter(NotificationCenter)
+          l.onItemClick { (_, _, pos, _) =>
+            qicrdrawers.closeDrawer(uparrow)
+          }
         }
-      ) >>= id(Id.topdrawer) >>=
+      ) >>= id(Id.topdrawer) >>= kestrel { _.setClickable(true) } >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       l[FrameLayout](
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
           l.setDivider(new ColorDrawable(Color.TRANSPARENT))
           l.setDividerHeight(0)
-          val adapter = new ArrayAdapter(this,
-            android.R.layout.simple_list_item_1, alphabet.reverse)
           l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
-          l.setDividerHeight(0)
-          l.setAdapter(adapter)
           l.setAdapter(HistoryAdapter)
           l.onItemClick { (_, _, pos, _) =>
             HistoryAdapter.getItem(pos).foreach(input.setText)

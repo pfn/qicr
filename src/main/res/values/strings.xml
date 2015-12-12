@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="no_history">No input history</string>
+    <string name="no_notifications">No notifications</string>
     <string name="ignore">Ignore</string>
     <string name="open">Open</string>
     <string name="prev">Prev</string>

@@ -1,13 +1,36 @@
 package com.hanhuy.android.irc
 
-import android.view.{Gravity, ViewGroup, View}
+import android.view.{LayoutInflater, Gravity, ViewGroup, View}
 import android.widget.{AbsListView, TextView, BaseAdapter}
+import com.hanhuy.android.irc.model.RingBuffer
 
 /**
   * @author pfnguyen
   */
-object NotificationCenter {
+object NotificationCenter extends TrayAdapter[NotificationMessage[_]] {
+  private val notifications = RingBuffer[NotificationMessage[_]](256)
 
+  override def itemId(position: Int) = notifications(position).hashCode
+
+  override def size = notifications.size
+
+  override def emptyItem = R.string.no_notifications
+
+  override def onGetView(position: Int, convertView: View, parent: ViewGroup) = {
+    if (convertView != null) {
+      val tv = convertView.asInstanceOf[TextView]
+      tv.setText(notifications(position).message)
+      tv
+    } else {
+      val view = LayoutInflater.from(parent.getContext).inflate(
+        android.R.layout.simple_list_item_1, parent, false)
+      view.asInstanceOf[TextView].setText(notifications(position).message)
+      view
+    }
+  }
+
+  override def getItem(position: Int): Option[NotificationMessage[_]] =
+    if (size == 0) None else Option(notifications(position))
 }
 
 case class NotificationMessage[A](message: CharSequence, important: Boolean, action: Option[() => A] = None) {
@@ -23,7 +46,7 @@ abstract class TrayAdapter[A] extends BaseAdapter {
       implicit val context = parent.getContext
       if (convertView == null) {
         c[AbsListView](w[TextView] >>= text(emptyItem) >>= textGravity(Gravity.CENTER) >>=
-          lp(MATCH_PARENT, 128.dp)).perform()
+          hook0.onClick(IO(())) >>= lp(MATCH_PARENT, 128.dp)).perform()
       } else convertView
     } else {
       onGetView(position, convertView, parent)
