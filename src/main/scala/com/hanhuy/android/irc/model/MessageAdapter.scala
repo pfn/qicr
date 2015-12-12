@@ -367,7 +367,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
 }
 
 case class RingBuffer[A: ClassTag](capacity: Int) extends IndexedSeq[A] {
-  private val buffer = Array.fill[A](capacity)(null.asInstanceOf[A])
+  private val buffer = Array.ofDim[A](capacity)
   private var _length = 0
   private var pos = 0
   def length = _length

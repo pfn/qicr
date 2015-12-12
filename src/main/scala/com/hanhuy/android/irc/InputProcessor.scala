@@ -6,10 +6,9 @@ import com.hanhuy.android.irc.model.MessageLike._
 import android.content.Context
 import android.text.TextWatcher
 import android.text.Editable
-import android.view.View
-import android.view.KeyEvent
+import android.view.{LayoutInflater, ViewGroup, View, KeyEvent}
 import android.view.inputmethod.EditorInfo
-import android.widget.EditText
+import android.widget.{TextView, EditText}
 import android.text.method.TextKeyListener
 import android.util.Log
 
@@ -17,6 +16,7 @@ import com.sorcix.sirc.IrcConnection
 
 import scala.collection.JavaConversions._
 
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 import android.app.Activity
 import com.hanhuy.android.irc.model.MessageLike.CommandError
@@ -36,6 +36,37 @@ object InputProcessor {
   val VOICE_INPUT_METHOD = "com.google.android.googlequicksearchbox/" +
     "com.google.android.voicesearch.ime.VoiceInputMethodService"
 }
+object HistoryAdapter extends TrayAdapter[String] {
+  private val history = RingBuffer[String](128)
+
+  def +=(line: String) = {
+    history += line
+    notifyDataSetChanged()
+  }
+
+  override def size = history.size
+
+  override def emptyItem = R.string.no_history
+
+  override def onGetView(position: Int, convertView: View, parent: ViewGroup) = {
+    if (convertView != null) {
+      val tv = convertView.asInstanceOf[TextView]
+      tv.setText(history(position))
+      tv
+    } else {
+      val view = LayoutInflater.from(parent.getContext).inflate(
+        android.R.layout.simple_list_item_1, parent, false)
+      view.asInstanceOf[TextView].setText(history(position))
+      view
+    }
+  }
+
+  override def itemId(position: Int) = history(position).hashCode
+
+  override def getItem(position: Int): Option[String] =
+    if (size == 0) None else Option(history(position))
+}
+
 abstract class InputProcessor(activity: Activity) {
   val manager = IrcManager.start()
   import InputProcessor._
@@ -63,6 +94,9 @@ abstract class InputProcessor(activity: Activity) {
       case (s, c) => processor.server = s; processor.channel = c
     }
     processor.executeLine(line)
+    if (line.trim.nonEmpty) {
+      HistoryAdapter += line
+    }
   }
 
   object TextListener extends TextWatcher {
@@ -213,7 +247,7 @@ extends InputProcessor(activity) {
       var pageTarget = -1
 
       k match {
-        case KeyEvent.KEYCODE_TAB => {
+        case KeyEvent.KEYCODE_TAB =>
           if (ctrlOn && shiftOn) { // move backward in tabs
           val count = activity.adapter.getCount()
             val current = activity.pager.getCurrentItem
@@ -227,7 +261,6 @@ extends InputProcessor(activity) {
           } else { // tab completion
           }
           return true
-        }
         case KeyEvent.KEYCODE_1 => pageTarget =  1
         case KeyEvent.KEYCODE_2 => pageTarget =  2
         case KeyEvent.KEYCODE_3 => pageTarget =  3

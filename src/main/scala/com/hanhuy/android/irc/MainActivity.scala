@@ -3,7 +3,8 @@ package com.hanhuy.android.irc
 import android.annotation.TargetApi
 import android.app.{NotificationManager, Activity, AlertDialog}
 import android.content.{Context, Intent, DialogInterface}
-import android.graphics.Rect
+import android.graphics.{Color, Rect}
+import android.graphics.drawable.ColorDrawable
 import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.design.widget.TabLayout
@@ -34,6 +35,8 @@ import com.hanhuy.android.irc.model.BusEvent
 
 import iota._
 import Tweaks._
+
+import scala.concurrent.Future
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -87,6 +90,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
   private var _imeShowing = false
 
   lazy val nickcomplete = new ImageButton(this)
+  lazy val qicrdrawers = new QicrRelativeLayout(this)
 
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
@@ -97,7 +101,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     "X-ray", "Yankee", "Zulu"
   )
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
-    l[QicrRelativeLayout](
+    IO(qicrdrawers)(
       IO(tabs) >>= id(Id.tabs) >>=
         lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
@@ -117,7 +121,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
           imageResource(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) >>=
           gone >>= hook0.onClick {
           IO {
-            adapter.goToNewMessages()
+            qicrdrawers.openDrawer(toolbar)
+            newmessages.setVisibility(View.GONE)
           }
         } >>= buttonTweaks,
         IO(input) >>=
@@ -160,16 +165,26 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
           val adapter = new ArrayAdapter(this,
             android.R.layout.simple_list_item_1, alphabet)
           l.setAdapter(adapter)
+          l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
         }
       ) >>= id(Id.topdrawer) >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       l[FrameLayout](
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
+          l.setDivider(new ColorDrawable(Color.TRANSPARENT))
+          l.setDividerHeight(0)
           val adapter = new ArrayAdapter(this,
             android.R.layout.simple_list_item_1, alphabet.reverse)
+          l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
+          l.setDividerHeight(0)
           l.setAdapter(adapter)
+          l.setAdapter(HistoryAdapter)
+          l.onItemClick { (_, _, pos, _) =>
+            HistoryAdapter.getItem(pos).foreach(input.setText)
+            qicrdrawers.closeDrawer(uparrow)
+          }
         }
-      ) >>= id(Id.bottomdrawer) >>=
+      ) >>= id(Id.bottomdrawer) >>= kestrel { _.setClickable(true) } >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       w[ImageView] >>= imageResource(
         if (daynight) R.drawable.ic_keyboard_arrow_up_black_24dp else R.drawable.ic_keyboard_arrow_up_white_24dp) >>=
@@ -178,7 +193,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
           p.addRule(RelativeLayout.ALIGN_TOP, Id.buttonlayout)
           p.addRule(RelativeLayout.CENTER_HORIZONTAL, 1)
           margins(top = -24.dp)(p)
-        } >>= id(Id.uparrow) >>= hook0.onClick(IO { findViewById(Id.qicrdrawers).asInstanceOf[QicrRelativeLayout].toggleBottomDrawer() }),
+        } >>= id(Id.uparrow) >>= hook0.onClick(IO { qicrdrawers.toggleBottomDrawer() }),
       newToolbar(daynight) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)
     ) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= id(Id.qicrdrawers),
     IO(drawerLeft)(
@@ -195,6 +210,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       backgroundColor(drawerBackground)
   ) >>= lp(MATCH_PARENT, MATCH_PARENT)).perform()
 
+  lazy val toolbar = findView(Id.toolbar)
 
   def listTweaks[V <: ListView]: Kestrel[V] = kestrel { l =>
     l.setCacheColorHint(drawerBackground)
@@ -830,13 +846,13 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
     }
 
     override def onViewReleased(releasedChild: View, xvel: Float, yvel: Float) = {
-      val newtop: (Int => Float, Int, Int) => Int = (offset, end, start) =>
-        if (offset(releasedChild.getTop) > 0.5f) end else start
+      val newtop: (Boolean => Boolean, Int => Float, Int, Int) => Int = (fling, offset, end, start) =>
+        if (fling(offset(releasedChild.getTop) > 0.5f)) end else start
 
       val info = if (releasedChild == toolbar)
-        Some((toolbarDragOffset _, toolbarDragRange, toolbarStart))
+        Some((yvel > 0 ||  yvel == 0 && (_: Boolean), toolbarDragOffset _, toolbarDragRange, toolbarStart))
       else if (releasedChild == input)
-        Some((inputDragOffset _, inputDragRange, inputStart))
+        Some((yvel < 0 || yvel == 0 && (_: Boolean), inputDragOffset _, inputDragRange, inputStart))
       else None
 
       info.foreach { args =>
@@ -879,38 +895,39 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
 
     if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
       vdh.cancel()
-      if (!isViewUnder(topdrawer, ev) && !isViewUnder(bottomdrawer, ev) &&
-        !isViewUnder(toolbar, ev) && !isViewUnder(input, ev))
+      val r = new Rect
+      if (!isViewUnder(topdrawer, r, ev) && !isViewUnder(bottomdrawer, r, ev) &&
+        !isViewUnder(toolbar, r, ev) && !isViewUnder(input, r, ev))
         closeDrawers()
       else false
     } else
       vdh.shouldInterceptTouchEvent(ev)
   }
 
-  def isViewUnder(view: View, ev: MotionEvent) = {
-    val x = ev.getX.toInt
-    val y = ev.getY.toInt
-    val viewLocation = Array.ofDim[Int](2)
-    view.getLocationOnScreen(viewLocation)
-    val parentLocation = Array.ofDim[Int](2)
-    getLocationOnScreen(parentLocation)
-    val screenX = parentLocation(0) + x
-    val screenY = parentLocation(1) + y
-    screenX >= viewLocation(0) && screenX < viewLocation(0) + view.getWidth &&
-      screenY >= viewLocation(1) && screenY < viewLocation(1) + view.getHeight
-  }
-
-  def smoothSlideTo(slideOffset: Float) = {
-    val y = (toolbarStart + slideOffset * toolbarDragRange).toInt
-
-    if (vdh.smoothSlideViewTo(toolbar, toolbar.getLeft, y)) {
-      ViewCompat.postInvalidateOnAnimation(this)
-      true
-    } else false
+  def isViewUnder(view: View, r: Rect, ev: MotionEvent) = {
+    view.getHitRect(r)
+    r.contains(ev.getX.toInt, ev.getY.toInt)
   }
 
   // specifically use | not ||
   def closeDrawers() = closeDrawer(input) | closeDrawer(toolbar)
+
+  def openDrawer(view: View) = {
+    val info = if (view == toolbar) {
+      Some((toolbarDragOffset _, toolbarDragRange))
+    } else if (view == input) {
+      Some((inputDragOffset _, inputDragRange))
+    } else None
+
+    info.fold(false) { case (offset, end) =>
+      // account for minor fuzz with 0.1f
+      if (offset(view.getTop) < 0.9f) {
+        if (vdh.smoothSlideViewTo(view, view.getLeft, end))
+          ViewCompat.postInvalidateOnAnimation(this)
+        true
+      } else false
+    }
+  }
 
   def closeDrawer(view: View) = {
     val info = if (view == toolbar) {
@@ -951,18 +968,22 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
 
     if (toolbarCurrent != 0) layoutToolbar(toolbarLayout)
     if (inputCurrent != 0) layoutInput(inputLayout)
+
+    val topdrawerHeight = toolbarDragRange - kitkatStatusTopPadding
+    val bottomdrawerHeight = inputDragRange - kitkatStatusTopPadding
+    topdrawer.getLayoutParams.height = topdrawerHeight
+    topdrawer.measure(measureSpec._1,
+      MeasureSpec.makeMeasureSpec(topdrawerHeight, MeasureSpec.AT_MOST))
+    bottomdrawer.getLayoutParams.height = bottomdrawerHeight
+    bottomdrawer.measure(measureSpec._1,
+      MeasureSpec.makeMeasureSpec(bottomdrawerHeight, MeasureSpec.AT_MOST))
+
     topdrawer.layout(0, toolbarStart, getWidth, toolbarCurrent)
     val bottom = kitkatBottomPadding(activity)
     val tp = (getHeight - bottom) - (inputStart - inputCurrent)
     val bt = getHeight - bottom
     bottomdrawer.layout(0, tp, getWidth, bt)
 
-    topdrawer.measure(measureSpec._1,
-      MeasureSpec.makeMeasureSpec(
-        toolbarDragRange - kitkatStatusTopPadding, MeasureSpec.AT_MOST))
-    bottomdrawer.measure(measureSpec._1,
-      MeasureSpec.makeMeasureSpec(
-        inputDragRange - kitkatStatusTopPadding, MeasureSpec.AT_MOST))
   }
 
   var measureSpec = (0,0)
