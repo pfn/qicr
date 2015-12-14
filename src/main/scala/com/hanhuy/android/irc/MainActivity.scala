@@ -110,15 +110,13 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       IO(buttonLayout)(
         IO(nickcomplete) >>=
           imageResource(if (daynight) R.drawable.ic_person_pin_black_24dp else R.drawable.ic_person_pin_white_24dp) >>=
-            hook0.onClick(IO { proc.nickComplete(input) }) >>= gone >>= buttonTweaks,
+            hook0.click(IO { proc.nickComplete(input) }) >>= gone >>= buttonTweaks,
         IO(newmessages) >>=
           imageResource(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) >>=
-          gone >>= hook0.onClick {
-          IO {
-            qicrdrawers.openDrawer(toolbar)
-            newmessages.setVisibility(View.GONE)
-          }
-        } >>= buttonTweaks,
+          gone >>= hook0.click(IO {
+          qicrdrawers.openDrawer(toolbar)
+          newmessages.setVisibility(View.GONE)
+        }) >>= buttonTweaks,
         IO(input) >>=
           lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4.dp)) >>=
           hint(R.string.input_placeholder) >>= inputTweaks >>= invisible >>=
@@ -913,8 +911,7 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
     } else None
 
     info.fold(false) { case (offset, end) =>
-      // account for minor fuzz with 0.1f
-      if (offset(view.getTop) < 0.9f) {
+      if (offset(view.getTop) < 0.5f) {
         if (vdh.smoothSlideViewTo(view, view.getLeft, end))
           ViewCompat.postInvalidateOnAnimation(this)
         true
@@ -930,8 +927,7 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
     } else None
 
     info.fold(false) { case (offset, start) =>
-      // account for minor fuzz with 0.1f
-      if (offset(view.getTop) > 0.1f) {
+      if (offset(view.getTop) > 0.5f) {
         if (vdh.smoothSlideViewTo(view, view.getLeft, start))
           ViewCompat.postInvalidateOnAnimation(this)
         true
