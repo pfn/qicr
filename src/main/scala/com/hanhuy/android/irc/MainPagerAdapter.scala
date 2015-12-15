@@ -150,8 +150,6 @@ with EventBus.RefOwner {
       t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
       return
     }
-    if (c.newMentions)
-      activity.newmessages.setVisibility(View.VISIBLE)
 
     if (c.newMessages)
       t.flags |= TabInfo.FLAG_NEW_MESSAGES
@@ -220,9 +218,6 @@ with EventBus.RefOwner {
       ServiceBus.send(ChannelStatusChanged(c))
     })
     manager.lastChannel = t.channel
-
-    activity.newmessages.setVisibility(
-      if (hasNewMentions) View.VISIBLE else View.GONE)
 
     HoneycombSupport.setSubtitle(t.channel.map(_.server).orElse(t.server).map(
       s => Server.intervalString(s.currentLag)).orNull)

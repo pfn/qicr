@@ -27,11 +27,8 @@ import com.hanhuy.android.common._
 import Futures._
 import IrcManager._
 import android.net.{Uri, ConnectivityManager}
-import com.hanhuy.android.irc.model.MessageLike.Privmsg
+import com.hanhuy.android.irc.model.MessageLike.{Query => _, _}
 import com.hanhuy.android.irc.model.BusEvent.{IrcManagerStop, IrcManagerStart, ChannelStatusChanged}
-import com.hanhuy.android.irc.model.MessageLike.CtcpAction
-import com.hanhuy.android.irc.model.MessageLike.ServerInfo
-import com.hanhuy.android.irc.model.MessageLike.Notice
 import com.hanhuy.android.irc.model.BusEvent
 import org.acra.ACRA
 
@@ -371,6 +368,13 @@ class IrcManager extends EventBus.RefOwner {
         ServiceBus.send(BusEvent.PrivateMessage(query, m))
 
         query.add(m)
+        val fmt = m match {
+          case CtcpAction(_, _, _) => R.string.action_template
+          case Notice(_, _, _) => R.string.notice_template
+          case _ => R.string.message_template
+        }
+        val msg2 = Application.context.getString(fmt) formatSpans(MessageAdapter.colorNick(nick), msg)
+        NotificationCenter += UserMessageNotification(m.ts, server.name, nick, msg2, () => ())
         if (!showing)
           showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
             m.toString, Some(query))
@@ -436,6 +440,19 @@ class IrcManager extends EventBus.RefOwner {
 
   // TODO decouple
   def addChannelMention(c: ChannelLike, m: MessageLike) {
+    val fmt = m match {
+      case CtcpAction(_, _, _) => R.string.action_template
+      case Notice(_, _, _) => R.string.notice_template
+      case _ => R.string.message_template
+    }
+    val (sender, message) = m match {
+      case msg: ChatMessage => (msg.sender, msg.message)
+    }
+    val msg = Application.context.getString(fmt) formatSpans(MessageAdapter.colorNick(sender), message)
+    c match {
+      case c: model.Channel =>
+        NotificationCenter += ChannelMessageNotification(m.ts, c.server.name, c.name, sender, msg, () => ())
+    }
     if (!showing && c.isNew(m))
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
         getString(R.string.notif_mention_template, c.name, m.toString), Some(c))

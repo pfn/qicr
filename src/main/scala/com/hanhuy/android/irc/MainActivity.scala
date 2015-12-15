@@ -115,7 +115,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
           imageResource(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) >>=
           gone >>= hook0.click(IO {
           qicrdrawers.openDrawer(toolbar)
-          newmessages.setVisibility(View.GONE)
         }) >>= buttonTweaks,
         IO(input) >>=
           lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4.dp)) >>=
@@ -155,11 +154,12 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       l[FrameLayout](
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
           l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
-          l.setDivider(new ColorDrawable(Color.TRANSPARENT))
-          l.setDividerHeight(0)
+//          l.setDivider(new ColorDrawable(Color.TRANSPARENT))
+//          l.setDividerHeight(0)
           l.setAdapter(NotificationCenter)
           l.onItemClick { (_, _, pos, _) =>
-            qicrdrawers.closeDrawer(uparrow)
+            NotificationCenter.getItem(pos) foreach { _.markRead() }
+//            qicrdrawers.closeDrawer(toolbar)
           }
         }
       ) >>= id(Id.topdrawer) >>= kestrel { _.setClickable(true) } >>=
@@ -547,7 +547,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     }
 
     refreshTabs()
-    newmessages.setVisibility(if (adapter.hasNewMentions)
+    newmessages.setVisibility(if (NotificationCenter.hasImportantNotifications)
       View.VISIBLE else View.GONE)
     ViewServer.get(this).setFocusedWindow(this)
 
@@ -886,18 +886,15 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
 
     if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
       vdh.cancel()
+      val x = ev.getX.toInt
+      val y = ev.getY.toInt
       val r = new Rect
-      if (!isViewUnder(topdrawer, r, ev) && !isViewUnder(bottomdrawer, r, ev) &&
-        !isViewUnder(toolbar, r, ev) && !isViewUnder(input, r, ev))
+      if (!vdh.isViewUnder(topdrawer, x, y) && !vdh.isViewUnder(bottomdrawer, x, y) &&
+        !vdh.isViewUnder(toolbar, x, y) && !vdh.isViewUnder(input, x, y))
         closeDrawers()
       else false
     } else
       vdh.shouldInterceptTouchEvent(ev)
-  }
-
-  def isViewUnder(view: View, r: Rect, ev: MotionEvent) = {
-    view.getHitRect(r)
-    r.contains(ev.getX.toInt, ev.getY.toInt)
   }
 
   // specifically use | not ||

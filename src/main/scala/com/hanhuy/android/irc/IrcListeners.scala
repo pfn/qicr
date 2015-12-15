@@ -83,43 +83,52 @@ with ModeListener with ServerEventListener with MessageEventListener {
   // ServerListener
   // TODO send BusEvents instead
   override def onConnect(c: IrcConnection) {
-    manager._connections.get(c) map { server =>
-      UiBus.run {
-        // ugh, need to do it here so that the auto commands can run
-        server.state = Server.State.CONNECTED
-        server.add(ServerInfo(manager.getString(R.string.server_connected)))
-      }
-      if (server.autorun != null || server.autojoin != null) {
-        val proc = CommandProcessor(Application.context, null)
-        proc.server = Some(server)
-        if (server.autorun != null) {
-          server.autorun.split(";") foreach { cmd =>
-            if (cmd.trim().length() > 0) {
-              var command = cmd.trim()
-              if (command.charAt(0) != '/')
-                command = "/" + command
-              UiBus.run { proc.executeLine(command) }
+    manager._connections.get(c) match {
+      case Some(server) =>
+        UiBus.run {
+          // ugh, need to do it here so that the auto commands can run
+          server.state = Server.State.CONNECTED
+          server.add(ServerInfo(manager.getString(R.string.server_connected)))
+        }
+        if (server.autorun != null || server.autojoin != null) {
+          val proc = CommandProcessor(Application.context, null)
+          proc.server = Some(server)
+          if (server.autorun != null) {
+            server.autorun.split(";") foreach { cmd =>
+              if (cmd.trim().length() > 0) {
+                var command = cmd.trim()
+                if (command.charAt(0) != '/')
+                  command = "/" + command
+                UiBus.run { proc.executeLine(command) }
+              }
+            }
+          }
+          if (server.autojoin != null) {
+            val join = manager.getString(R.string.command_join_1)
+            val channels = server.autojoin.split(";")
+            channels foreach { c =>
+              if (c.trim().length() > 0)
+                UiBus.run {
+                  proc.executeCommand(join, Some(c.trim()))
+                }
             }
           }
         }
-        if (server.autojoin != null) {
-          val join = manager.getString(R.string.command_join_1)
-          val channels = server.autojoin.split(";")
-          channels foreach { c =>
-            if (c.trim().length() > 0)
-              UiBus.run {
-                proc.executeCommand(join, Some(c.trim()))
-              }
-          }
+        UiBus.run {
+          NotificationCenter += ServerNotification(R.drawable.ic_add_circle_black_24dp, server.name, "Connected")
         }
-      }
-    } getOrElse {
-      Log.w(TAG, s"server not found in onConnect?! $c", new StackTrace)
+      case None =>
+        Log.w(TAG, s"server not found in onConnect?! $c", new StackTrace)
     }
   }
   override def onDisconnect(c: IrcConnection) {
 //    Log.w(TAG, "Connection dropped: " + c, new StackTrace)
-    manager._connections.get(c) foreach manager.serverDisconnected
+    manager._connections.get(c) foreach { s =>
+      manager.serverDisconnected(s)
+      UiBus.run {
+        NotificationCenter += ServerNotification(R.drawable.ic_add_circle_black_24dp, s.name, "Disconnected")
+      }
+    }
   }
 
   override def onMotd(motd: ServerEventListener.Motd) {
@@ -502,8 +511,10 @@ with ModeListener with ServerEventListener with MessageEventListener {
       if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
         manager.addChannelMention(c, notice)
     } else UiBus.run {
-      manager.addQuery(n.connection,
-        src.getNick, msg, notice = true, ts = n.timestamp)
+      NotificationCenter += NotifyNotification(
+        n.timestamp, manager._connections(n.connection).name, src.getNick, s"-${MessageAdapter.colorNick(src.getNick)}- $msg")
+//      manager.addQuery(n.connection,
+//        src.getNick, msg, notice = true, ts = n.timestamp)
     }
   }
 
