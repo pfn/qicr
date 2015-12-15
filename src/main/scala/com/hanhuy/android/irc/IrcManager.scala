@@ -374,7 +374,7 @@ class IrcManager extends EventBus.RefOwner {
           case _ => R.string.message_template
         }
         val msg2 = Application.context.getString(fmt) formatSpans(MessageAdapter.colorNick(nick), msg)
-        NotificationCenter += UserMessageNotification(m.ts, server.name, nick, msg2, () => ())
+        NotificationCenter += UserMessageNotification(m.ts, server.name, nick, msg2)
         if (!showing)
           showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
             m.toString, Some(query))
@@ -451,7 +451,7 @@ class IrcManager extends EventBus.RefOwner {
     val msg = Application.context.getString(fmt) formatSpans(MessageAdapter.colorNick(sender), message)
     c match {
       case c: model.Channel =>
-        NotificationCenter += ChannelMessageNotification(m.ts, c.server.name, c.name, sender, msg, () => ())
+        NotificationCenter += ChannelMessageNotification(m.ts, c.server.name, c.name, sender, msg)
     }
     if (!showing && c.isNew(m))
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,

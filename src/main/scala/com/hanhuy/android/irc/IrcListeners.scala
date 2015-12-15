@@ -115,7 +115,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
           }
         }
         UiBus.run {
-          NotificationCenter += ServerNotification(R.drawable.ic_add_circle_black_24dp, server.name, "Connected")
+          NotificationCenter += ServerNotification(R.drawable.ic_wifi_black_24dp, server.name, "Connected")
         }
       case None =>
         Log.w(TAG, s"server not found in onConnect?! $c", new StackTrace)
@@ -126,7 +126,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
     manager._connections.get(c) foreach { s =>
       manager.serverDisconnected(s)
       UiBus.run {
-        NotificationCenter += ServerNotification(R.drawable.ic_add_circle_black_24dp, s.name, "Disconnected")
+        NotificationCenter += ServerNotification(R.drawable.ic_error_black_24dp, s.name, "Disconnected")
       }
     }
   }

@@ -158,8 +158,21 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 //          l.setDividerHeight(0)
           l.setAdapter(NotificationCenter)
           l.onItemClick { (_, _, pos, _) =>
-            NotificationCenter.getItem(pos) foreach { _.markRead() }
-//            qicrdrawers.closeDrawer(toolbar)
+            def onActiveNotification[A](action: MainPagerAdapter => A): Unit = {
+              NotificationCenter.markAllRead ()
+              newmessages.setVisibility (View.GONE)
+              qicrdrawers.closeDrawer (toolbar)
+              action(adapter)
+            }
+            NotificationCenter.getItem(pos) foreach { n =>
+              n match {
+                case n@UserMessageNotification(_,_,_,_) =>
+                  onActiveNotification(n.action)
+                case n@ChannelMessageNotification(_,_,_,_,_) =>
+                  onActiveNotification(n.action)
+                case _ =>
+              }
+            }
           }
         }
       ) >>= id(Id.topdrawer) >>= kestrel { _.setClickable(true) } >>=
@@ -325,6 +338,10 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
         requestRecreate = true
       case _ =>
     }
+    case BusEvent.NewNotification =>
+      newmessages.setVisibility(View.VISIBLE)
+    case BusEvent.ReadNotification =>
+      newmessages.setVisibility(View.GONE)
   }
 
   override def onBackPressed() = {

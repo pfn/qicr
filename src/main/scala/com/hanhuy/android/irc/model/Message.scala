@@ -86,4 +86,6 @@ object BusEvent {
   case class PrivateMessage(query: Query, msg: MessageLike) extends BusEvent
   case class IMEShowing(showing: Boolean) extends BusEvent
   case class LinkClickEvent(url: String) extends BusEvent
+  case object NewNotification extends BusEvent
+  case object ReadNotification extends BusEvent
 }

@@ -26,7 +26,7 @@ object Tweaks {
   lazy val hasSystemNav = {
     val res = Application.context.getResources
     val id = res.getIdentifier("config_showNavigationBar", "bool", "android")
-    if (id != 0) res.getBoolean(id) else false
+    Build.HARDWARE == "goldfish" || (if (id != 0) res.getBoolean(id) else false)
   }
   def navBarWidth(implicit ctx: Context) = {
     val id = ctx.getResources.getIdentifier(

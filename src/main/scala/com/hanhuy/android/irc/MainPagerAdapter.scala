@@ -212,6 +212,7 @@ with EventBus.RefOwner {
         case _: Channel => IrcManager.MENTION_ID
         case _: Query   => IrcManager.PRIVMSG_ID
         })
+        NotificationCenter.markRead(c.name, c.server.name)
       }
       c.newMessages = false
       c.newMentions = false

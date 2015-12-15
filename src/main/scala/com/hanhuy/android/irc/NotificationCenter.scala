@@ -5,18 +5,22 @@ import java.util.Date
 
 import android.content.Context
 import android.support.v4.graphics.drawable.DrawableCompat
-import android.view.{LayoutInflater, Gravity, ViewGroup, View}
+import android.view.{Gravity, ViewGroup, View}
 import android.widget._
 import com.hanhuy.android.common.UiBus
-import com.hanhuy.android.irc.model.RingBuffer
+import com.hanhuy.android.irc.model.{BusEvent, RingBuffer}
 
 import iota._
+import Tweaks._
 
 /**
   * @author pfnguyen
   */
 object NotificationCenter extends TrayAdapter[NotificationMessage] {
-  private val notifications = RingBuffer[NotificationMessage](256)
+  private[this] val notifications = RingBuffer[NotificationMessage](256)
+  private[this] var newest = 0l
+
+  lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
 
   override def itemId(position: Int) = notifications(position).hashCode
 
@@ -29,14 +33,22 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
   import RelativeLayout._
   def notificationLayout(implicit c: Context) = l[RelativeLayout](
     w[ImageView] >>= id(Id.notif_icon) >>=
-      imageResource(R.drawable.ic_add_circle_white_24dp) >>=
       imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
       lpK(24.dp, 24.dp) { (p: LP) =>
         p.addRule(ALIGN_PARENT_LEFT, 1)
         p.addRule(BELOW, Id.channel_server)
         margins(all = 8.dp)(p)
-    } >>= kestrel { iv =>
-      DrawableCompat.setTint(iv.getDrawable, 0xffccaaff)
+    },
+    w[ImageView] >>= id(Id.notif_arrow) >>=
+      imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
+      imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
+      lpK(24.dp, 24.dp) { (p: LP) =>
+        p.addRule(ALIGN_PARENT_RIGHT, 1)
+        p.addRule(BELOW, Id.timestamp)
+        margins(all = 8.dp)(p)
+      } >>= gone >>= kestrel { iv =>
+      if (daynight)
+        DrawableCompat.setTint(iv.getDrawable.mutate(), 0xff000000)
     },
     w[TextView] >>= id(Id.channel_server) >>=
       text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
@@ -54,29 +66,41 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
       p.addRule(ALIGN_TOP, Id.notif_icon)
       p.alignWithParent = true
       p.addRule(RIGHT_OF, Id.notif_icon)
-      p.addRule(ALIGN_PARENT_RIGHT, 1)
+      p.addRule(LEFT_OF, Id.notif_arrow)
     } >>= textGravity(Gravity.CENTER_VERTICAL)
   ) >>= padding(all = 8.dp)
 
   override def onGetView(position: Int, convertView: View, parent: ViewGroup) = {
-    val view = if (convertView != null) {
-      convertView.asInstanceOf[ViewGroup]
-    } else {
-      notificationLayout(parent.getContext).perform()
+    implicit val ctx = parent.getContext
+    val view = convertView match {
+      case vg: ViewGroup => vg
+      case _ => notificationLayout.perform()
     }
     getItem(position) foreach { n =>
       view.findView(Id.text).setText(n.message)
+      val arrow = view.findView(Id.notif_arrow)
+      val icon: ImageView = view.findView(Id.notif_icon)
+      icon.setImageResource(n.icon)
       val sdf = new SimpleDateFormat("h:mma")
       view.findView(Id.timestamp).setText(sdf.format(n.ts).toLowerCase)
       val cs = view.findView(Id.channel_server)
+      if (n.isNew && n.important) {
+        DrawableCompat.setTint(DrawableCompat.wrap(icon.getDrawable.mutate()), 0xff26a69a)
+      } else {
+        DrawableCompat.setTint(DrawableCompat.wrap(icon.getDrawable.mutate()), if (daynight) 0xff000000 else 0xffffffff)
+      }
       n match {
         case NotifyNotification(ts, server, sender, msg) =>
           cs.setText(server)
-        case UserMessageNotification(ts, server, sender, msg, action) =>
+          arrow.setVisibility(View.GONE)
+        case UserMessageNotification(ts, server, sender, msg) =>
+          arrow.setVisibility(View.VISIBLE)
           cs.setText(server)
-        case ChannelMessageNotification(ts, server, chan, sender, msg, action) =>
+        case ChannelMessageNotification(ts, server, chan, sender, msg) =>
+          arrow.setVisibility(View.VISIBLE)
           cs.setText(s"$chan / $server")
-        case ServerNotification(icon, server, msg) =>
+        case ServerNotification(ic, server, msg) =>
+          arrow.setVisibility(View.GONE)
           cs.setText(server)
       }
     }
@@ -89,8 +113,42 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
   def hasImportantNotifications = notifications.exists(n => n.isNew && n.important)
 
   def +=(msg: NotificationMessage) = {
-    notifications += msg
-    UiBus.run(notifyDataSetChanged())
+    val msgtime = msg.ts.getTime
+    if (msgtime > newest) {
+      notifications += msg
+      UiBus.run {
+        if (msg.important) {
+          UiBus.send(BusEvent.NewNotification)
+        }
+        notifyDataSetChanged()
+      }
+    }
+
+    newest = math.max(newest, msg match {
+      case _: ChannelMessageNotification[_] =>
+        msgtime
+      case _: UserMessageNotification[_] =>
+        msgtime
+      case _ => 0
+    })
+  }
+
+  def markAllRead(): Unit = {
+    notifications foreach { _.markRead() }
+    notifyDataSetChanged()
+  }
+
+  def markRead(channel: String, server: String): Unit = {
+    notifications collect {
+      case n@ChannelMessageNotification(_,s,c,_,_) =>
+        if (server == s && channel == c)
+          n.markRead()
+      case n@UserMessageNotification(_,s,c,_) =>
+        if (server == s && channel == c)
+          n.markRead()
+    }
+    if (!hasImportantNotifications)
+      UiBus.send(BusEvent.ReadNotification)
   }
 }
 
@@ -117,27 +175,27 @@ case class NotifyNotification(ts: Date,
                               sender: String,
                               message: CharSequence) extends NotificationMessage {
   val important = false
-  val icon = 0
+  val icon = R.drawable.ic_info_outline_black_24dp
 }
 
 case class ChannelMessageNotification[A](ts: Date,
                                          server: String,
                                          channel: String,
                                          nick: String,
-                                         message: CharSequence,
-                                         action: () => A)
+                                         message: CharSequence)
 extends NotificationMessage {
+  def action(adapter: MainPagerAdapter) = adapter.selectTab(channel, server)
   val important = true
-  val icon = 0
+  val icon = R.drawable.ic_message_black_24dp
 }
 
 case class UserMessageNotification[A](ts: Date,
                                       server: String,
                                       nick: String,
-                                      message: CharSequence,
-                                      action: () => A)
+                                      message: CharSequence)
   extends NotificationMessage {
-  val icon = 0
+  def action(adapter: MainPagerAdapter) = adapter.selectTab(nick, server)
+  val icon = R.drawable.ic_chat_black_24dp
   val important = true
 }
 
