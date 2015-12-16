@@ -696,7 +696,7 @@ class IrcManager extends EventBus.RefOwner {
 
       if (Build.VERSION.SDK_INT >= 16 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
         val title = c.name
-        val msgs = if (c.messages.filteredMessages.size > 0) {
+        val msgs = if (c.messages.filteredMessages.nonEmpty) {
           TextUtils.concat(
             c.messages.filteredMessages.takeRight(MAX_LINES).map { m =>
               MessageAdapter.formatText(Application.context, m)(c)

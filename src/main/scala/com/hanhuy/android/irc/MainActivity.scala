@@ -214,7 +214,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       backgroundColor(drawerBackground)
   ) >>= lp(MATCH_PARENT, MATCH_PARENT)).perform()
 
-  lazy val toolbar = findView(Id.toolbar)
+  lazy val toolbar = findViewById(Id.toolbar)
 
   def listTweaks[V <: ListView]: Kestrel[V] = kestrel { l =>
     l.setCacheColorHint(drawerBackground)
@@ -382,7 +382,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   lazy val proc = new MainInputProcessor(this)
   lazy val input = new EditText(this)
-  lazy val uparrow = findView(Id.uparrow)
+  lazy val uparrow = findViewById(Id.uparrow)
   private var page = -1 // used for restoring tab selection on recreate
 
   override def onCreate(bundle: Bundle) {

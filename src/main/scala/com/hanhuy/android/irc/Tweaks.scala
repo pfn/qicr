@@ -54,12 +54,12 @@ object Tweaks {
     condK(v(19) ? padding(
       top    = statusBarHeight + actionBarHeight,
       bottom = if (tablet | portrait) navBarHeight else 0,
-      right  = if (phone & landscape) navBarWidth else 0))
+      right  = if (phone & landscape) navBarWidth else 0) | padding(top = actionBarHeight))
   def kitkatPadding[V <: View](padTop: Boolean)(implicit ctx: Context): Kestrel[V] =
     condK(v(19) ? padding(
       top    = if (padTop) statusBarHeight + actionBarHeight else 0,
       bottom = if (tablet || portrait) navBarHeight else 0,
-      right  = if (phone && landscape) navBarWidth else 0))
+      right  = if (phone && landscape) navBarWidth else 0) | padding(top = if (padTop) actionBarHeight else 0))
 
   def kitkatPaddingBottom[V <: View](implicit ctx: Context): Kestrel[V] =
     padding(bottom = kitkatBottomPadding)
@@ -75,7 +75,7 @@ object Tweaks {
   def kitkatStatusPadding[V <: View](implicit c: Context): Kestrel[V] =
     condK(v(19) ? padding(top = statusBarHeight))
   def kitkatPaddingTop[V <: View](implicit c: Context): Kestrel[V] =
-    condK(v(19) ? padding(top = statusBarHeight + actionBarHeight))
+    padding(top = actionBarHeight + (if (v(19)) statusBarHeight else 0))
 
   def kitkatInputMargin[A <: View](implicit ctx: Context): Kestrel[A] = kestrel { a =>
     val lp = a.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
