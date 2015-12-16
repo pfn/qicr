@@ -406,6 +406,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       }
     })
     setContentView(mainLayout)
+    ViewCompat.setElevation(toolbar, 4.dp)
     setSupportActionBar(findView(Id.toolbar))
 
     if (bundle != null)
