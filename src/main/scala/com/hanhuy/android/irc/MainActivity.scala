@@ -338,10 +338,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
         requestRecreate = true
       case _ =>
     }
-    case BusEvent.NewNotification =>
-      newmessages.setVisibility(View.VISIBLE)
-    case BusEvent.ReadNotification =>
-      newmessages.setVisibility(View.GONE)
+    case BusEvent.NewNotification => newmessages.setVisibility(View.VISIBLE)
+    case BusEvent.ReadNotification => newmessages.setVisibility(View.GONE)
   }
 
   override def onBackPressed() = {

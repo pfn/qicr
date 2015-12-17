@@ -449,6 +449,7 @@ with EventBus.RefOwner {
       }
     }
     super.notifyDataSetChanged()
+    DropDownAdapter.notifyDataSetChanged()
     refreshTabs()
   }
 

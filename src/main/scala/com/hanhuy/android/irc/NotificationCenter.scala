@@ -49,6 +49,8 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
       } >>= gone >>= kestrel { iv =>
       if (daynight)
         DrawableCompat.setTint(iv.getDrawable.mutate(), 0xff000000)
+      else
+        DrawableCompat.setTint(iv.getDrawable.mutate(), 0xffffffff)
     },
     w[TextView] >>= id(Id.channel_server) >>=
       text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>

@@ -333,7 +333,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
 
     val spanned = formatText(getItem(pos)) match {
       case s: Spannable => s
-      case s => new SpannableString(s)
+      case s => new SpannableString(if (s == null) "" else s)
     }
     Linkify.addLinks(spanned,
       Linkify.WEB_URLS | Linkify.EMAIL_ADDRESSES | Linkify.MAP_ADDRESSES)
