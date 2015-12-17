@@ -149,6 +149,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
         if (server == s && channel == c)
           n.markRead()
     }
+    notifyDataSetChanged()
     if (!hasImportantNotifications)
       UiBus.send(BusEvent.ReadNotification)
   }
