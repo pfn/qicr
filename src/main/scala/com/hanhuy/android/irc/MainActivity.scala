@@ -198,8 +198,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
           p.addRule(RelativeLayout.CENTER_HORIZONTAL, 1)
           margins(top = -24.dp)(p)
         } >>= id(Id.uparrow) >>= hook0.onClick(IO { qicrdrawers.toggleBottomDrawer() }),
-      newToolbar(daynight) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)
-    ) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= id(Id.qicrdrawers),
+      newToolbar(daynight) >>= lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
+    ) >>= lp(MATCH_PARENT, actionBarHeight) >>= id(Id.qicrdrawers),
     IO(drawerLeft)(
       IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
     ) >>=

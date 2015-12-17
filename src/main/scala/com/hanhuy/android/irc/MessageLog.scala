@@ -509,7 +509,7 @@ class MessageLogActivity extends AppCompatActivity {
     IO(progressbar) >>=
       lp(128 dp, 128 dp, Gravity.CENTER),
     newToolbar(daynight) >>=
-      lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)
+      lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
   )
 
   lazy val progressbar = new ProgressBar(this)
