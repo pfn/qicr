@@ -1,9 +1,10 @@
 package com.hanhuy.android.irc
 
+import android.support.v7.app.AlertDialog
 import com.hanhuy.android.irc.model._
 import com.hanhuy.android.irc.model.MessageLike._
 
-import android.content.Context
+import android.content.{DialogInterface, Context}
 import android.text.TextWatcher
 import android.text.Editable
 import android.view.{LayoutInflater, ViewGroup, View, KeyEvent}
@@ -16,7 +17,8 @@ import com.sorcix.sirc.IrcConnection
 
 import scala.collection.JavaConversions._
 
-import com.hanhuy.android.extensions._
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.appcompat.extensions._
 import com.hanhuy.android.common._
 import android.app.Activity
 import com.hanhuy.android.irc.model.MessageLike.CommandError
@@ -233,6 +235,7 @@ extends InputProcessor(activity) {
 
   def currentState = activity.adapter.getItem(activity.adapter.page) match {
     case s: ServersFragment => (s._server, None)
+    case s: ServerMessagesFragment => (s.server, None)
     case c: ChannelFragment => (Some(c.channel.get.server), Some(c.channel.get))
     case q: QueryFragment => (Some(q.query.get.server), Some(q.query.get))
     case _ => (None, None)
@@ -436,7 +439,64 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   }
 
   object PartCommand extends Command {
-    override def execute(args: Option[String]) = TODO
+    override def execute(args: Option[String]): Unit = {
+      channel match {
+        case Some(c: Channel) =>
+          if (c.server.state != Server.State.CONNECTED)
+            addCommandError(R.string.error_server_disconnected)
+          else if (c.state != Channel.State.JOINED)
+            addCommandError(R.string.error_channel_disconnected)
+          else {
+
+            // TODO refactor with stuff in fragments
+            val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
+            def removeChannel() {
+              if (channel != null && c.state == Channel.State.JOINED) {
+                manager.channels.get(c) foreach {
+                  _.part()
+                }
+              }
+              manager.remove(c)
+              activity.adapter.removeTab(activity.adapter.getItemPosition(this))
+            }
+            if (c.state == Channel.State.JOINED && prompt) {
+              val builder = new AlertDialog.Builder(activity)
+              builder.setTitle(R.string.channel_close_confirm_title)
+              builder.setMessage(getString(R.string.channel_close_confirm))
+              builder.setPositiveButton(R.string.yes, () => {
+                removeChannel()
+                c.state = Channel.State.PARTED
+              })
+              builder.setNegativeButton(R.string.no, null)
+              builder.create().show()
+            } else {
+              removeChannel()
+            }
+          }
+        case Some(qu: Query) =>
+          if (qu.server.state != Server.State.CONNECTED)
+            addCommandError(R.string.error_server_disconnected)
+          else {
+            val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
+            def removeQuery() {
+              manager.remove(qu)
+              activity.adapter.removeTab(activity.adapter.getItemPosition(this))
+            }
+            if (prompt) {
+              val builder = new AlertDialog.Builder(activity)
+              builder.setTitle(R.string.query_close_confirm_title)
+              builder.setMessage(getString(R.string.query_close_confirm))
+              builder.setPositiveButton(R.string.yes, removeQuery _)
+              builder.setNegativeButton(R.string.no, null)
+              builder.create().show()
+            } else
+              removeQuery()
+          }
+        case Some(_) =>
+          addCommandError("Not currently on a channel or query, cannot leave")
+        case _ => addCommandError(R.string.error_no_channel)
+      }
+    }
   }
 
   object QuitCommand extends Command {

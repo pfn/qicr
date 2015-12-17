@@ -17,6 +17,7 @@ unmanagedJars in Compile ~= { _ filterNot (
 
 libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % "1.6",
+  "com.hanhuy.android" %% "scala-conversions-appcompat" % "1.6",
   "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
   "com.hanhuy.android" %% "scala-common" % "1.1",
   "com.hanhuy.android" %% "iota" % "0.7",

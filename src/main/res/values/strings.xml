@@ -175,9 +175,11 @@
       /h /help\n
       /ignore\n
       /j /join\n
+      /leave\n
       /m /msg\n
       /nick\n
       /notice\n
+        /part\n
       /ping\n
       /raw\n
       /quit\n
@@ -194,11 +196,9 @@
       /ignore\n
       /j /join\n
       /k /kick\n
-      /leave\n
       /m /msg\n
       /nick\n
       /notice\n
-      /part\n
       /ping\n
       /raw\n
       /quit\n
