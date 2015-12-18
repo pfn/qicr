@@ -174,7 +174,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
               }
             }
           }
-        }
+        } >>= kitkatPaddingRight
       ) >>= id(Id.topdrawer) >>= kestrel { _.setClickable(true) } >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       l[FrameLayout](
@@ -187,7 +187,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
             HistoryAdapter.getItem(pos).foreach(input.setText)
             qicrdrawers.closeDrawer(uparrow)
           }
-        }
+        } >>= kitkatPaddingRight
       ) >>= id(Id.bottomdrawer) >>= kestrel { _.setClickable(true) } >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       w[ImageView] >>= imageResource(
