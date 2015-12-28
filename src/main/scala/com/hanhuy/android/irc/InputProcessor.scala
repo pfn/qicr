@@ -8,7 +8,7 @@ import android.content.{DialogInterface, Context}
 import android.text.TextWatcher
 import android.text.Editable
 import android.view.{LayoutInflater, ViewGroup, View, KeyEvent}
-import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.{InputMethodManager, EditorInfo}
 import android.widget.{TextView, EditText}
 import android.text.method.TextKeyListener
 import android.util.Log
@@ -86,7 +86,12 @@ abstract class InputProcessor(activity: Activity) {
       val line = input.getText.toString
       handleLine(line)
       clear(input)
-      !Settings.get(Settings.HIDE_KEYBOARD)
+      val hideKeyboard = Settings.get(Settings.HIDE_KEYBOARD)
+      if (hideKeyboard) {
+        activity.systemService[InputMethodManager].hideSoftInputFromWindow(
+          activity.getWindow.getDecorView.getWindowToken, 0)
+      }
+      !hideKeyboard
     } else
       false
   }

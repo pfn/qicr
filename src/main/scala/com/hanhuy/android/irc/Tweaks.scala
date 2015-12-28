@@ -130,7 +130,7 @@ object Tweaks {
     } else throw new IllegalStateException("attribute not found: " + attr)
   }
   def themeAttrs[A](theme: Array[Int], f: TypedArray => A)(implicit activity: Activity): A = {
-    val themeAttrs = activity.getTheme.obtainStyledAttributes(R.styleable.AppTheme)
+    val themeAttrs = activity.getTheme.obtainStyledAttributes(theme)
     val c = f(themeAttrs)
     themeAttrs.recycle()
     c
