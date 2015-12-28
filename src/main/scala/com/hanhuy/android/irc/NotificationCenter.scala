@@ -117,8 +117,8 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
   def +=(msg: NotificationMessage) = {
     val msgtime = msg.ts.getTime
     if (msgtime > newest) {
-      notifications += msg
       UiBus.run {
+        notifications += msg
         if (msg.important) {
           UiBus.send(BusEvent.NewNotification)
         }

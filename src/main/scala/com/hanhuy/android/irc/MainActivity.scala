@@ -154,8 +154,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       l[FrameLayout](
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
           l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
-//          l.setDivider(new ColorDrawable(Color.TRANSPARENT))
-//          l.setDividerHeight(0)
           l.setAdapter(NotificationCenter)
           l.onItemClick { (_, _, pos, _) =>
             def onActiveNotification[A](action: MainPagerAdapter => A): Unit = {
