@@ -17,7 +17,7 @@ import Tweaks._
   * @author pfnguyen
   */
 object NotificationCenter extends TrayAdapter[NotificationMessage] {
-  private[this] val notifications = RingBuffer[NotificationMessage](256)
+  private[this] val notifications = RingBuffer[NotificationMessage](64)
   private[this] var newest = 0l
 
   lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
