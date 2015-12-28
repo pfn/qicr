@@ -842,6 +842,8 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
       } else if (changedView == input) {
         closeDrawer(toolbar)
         val bottom = kitkatBottomPadding(activity)
+        // uh, why is this a magic number, is it because dragOffset doesn't reach 1.0?
+        input.setRotation(inputDragOffset(top) * 194)
         val t = (getHeight - bottom) - (inputStart - top)
         val b = getHeight - bottom
         bottomdrawer.layout(0, t, getWidth, b)
