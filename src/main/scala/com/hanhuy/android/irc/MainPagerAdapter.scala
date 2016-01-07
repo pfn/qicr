@@ -207,11 +207,11 @@ with EventBus.RefOwner {
     t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
     t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
     t.channel.foreach(c => {
+      NotificationCenter.markRead(c.name, c.server.name)
       if (c.newMentions) {
-        NotificationCenter.markRead(c.name, c.server.name)
         nm.cancel(c match {
-        case _: Channel => IrcManager.MENTION_ID
-        case _: Query   => IrcManager.PRIVMSG_ID
+          case _: Channel => IrcManager.MENTION_ID
+          case _: Query   => IrcManager.PRIVMSG_ID
         })
       }
       c.newMessages = false
