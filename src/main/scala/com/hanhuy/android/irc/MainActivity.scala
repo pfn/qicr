@@ -271,7 +271,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
           }
         ).perform()
         def launchLink(): Unit = {
-          val uri = android.net.Uri.parse(web.getUrl)
+          val u = Option(web.getUrl) getOrElse url
+          val uri = android.net.Uri.parse(u)
           val intent = new Intent(Intent.ACTION_VIEW, uri)
           intent.putExtra(android.provider.Browser.EXTRA_APPLICATION_ID, getPackageName)
           try {
