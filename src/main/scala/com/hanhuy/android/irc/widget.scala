@@ -72,8 +72,8 @@ object Widgets extends EventBus.RefOwner {
     Settings.WIDGET_IDS, ids mkString ",")
 
   @TargetApi(14)
-  def setMessageView(c: Context, id: Int, subject: String,
-                     partial: Boolean = false) {
+  def setMessageView(c: Context, id: Int, s: Option[String],
+                     partial: Boolean = false) = s foreach { subject =>
     assignMessageView(id, subject)
     val views = new RemoteViews(c.getPackageName, R.layout.widget_content)
 
@@ -284,7 +284,7 @@ class WidgetProvider extends AppWidgetProvider {
       case Widgets.ACTION_STATUS_CLICK =>
         Widgets.setMessageView(c, intent.getIntExtra(
           AppWidgetManager.EXTRA_APPWIDGET_ID, 0),
-          intent.getStringExtra(IrcManager.EXTRA_SUBJECT))
+          Option(intent.getStringExtra(IrcManager.EXTRA_SUBJECT)))
       case Widgets.ACTION_BACK =>
         Widgets.setStatusView(c,
           intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
@@ -307,7 +307,7 @@ class WidgetProvider extends AppWidgetProvider {
       if (idx != -1 && all.size > 0) {
         val tgt = (all.size + idx + direction) % all.size
         Widgets.setMessageView(c, intent.getIntExtra(
-          AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Widgets.toString(all(tgt)), true)
+          AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Option(Widgets.toString(all(tgt))), true)
       }
     }
   }

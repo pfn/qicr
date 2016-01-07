@@ -511,10 +511,9 @@ with ModeListener with ServerEventListener with MessageEventListener {
       if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
         manager.addChannelMention(c, notice)
     } else UiBus.run {
+      val sn = manager._connections.get(n.connection).map(_.name).getOrElse(n.connection.getServer.getAddress)
       NotificationCenter += NotifyNotification(
-        n.timestamp, manager._connections(n.connection).name, src.getNick, s"-${MessageAdapter.colorNick(src.getNick)}- $msg")
-//      manager.addQuery(n.connection,
-//        src.getNick, msg, notice = true, ts = n.timestamp)
+        n.timestamp, sn, src.getNick, s"-${MessageAdapter.colorNick(src.getNick)}- $msg")
     }
   }
 

@@ -107,8 +107,10 @@ object HoneycombSupport extends iota.HasActivity {
   def startNickActionMode(nick: String)(f: (MenuItem => Unit)) {
     NickListActionModeSetup.callback = f
     NickListActionModeSetup.nick = nick.dropWhile(n => Set(' ','@','+')(n))
-    _actionmode = new WeakReference(
-      activity.startSupportActionMode(NickListActionModeSetup))
+    if (activity != null) {
+      _actionmode = new WeakReference(
+        activity.startSupportActionMode(NickListActionModeSetup))
+    }
   }
 
   object NickListActionModeSetup extends ActionMode.Callback {

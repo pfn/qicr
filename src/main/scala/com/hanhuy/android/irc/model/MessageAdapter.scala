@@ -230,9 +230,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     // only register once to prevent memory leak
   UiBus += { case BusEvent.PreferenceChanged(s, k) =>
     if (k == Settings.MESSAGE_LINES) {
-      val max = Try(s.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
-        DEFAULT_MAXIMUM_SIZE
-      maximumSize = max
+      maximumSize = Settings.maximumMessageLines
     } else if (k == Settings.SHOW_JOIN_PART_QUIT) {
       showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
       notifyDataSetChanged()
@@ -256,9 +254,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
         // It'd be nice to register a ServiceBus listener, but no way
         // to clean up when this adapter goes away?
         // add it to UiBus here maybe?
-        maximumSize = Try(
-          Settings.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
-            Settings.MESSAGE_LINES.default.toInt
+        maximumSize = Settings.maximumMessageLines
         showJoinPartQuit = Settings.get(Settings.SHOW_JOIN_PART_QUIT)
         MessageAdapter.showTimestamp = Settings.get(Settings.SHOW_TIMESTAMP)
       }

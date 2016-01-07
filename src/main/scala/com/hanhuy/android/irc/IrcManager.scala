@@ -230,9 +230,7 @@ class IrcManager extends EventBus.RefOwner {
       log.v("Launching autoconnect servers")
       Config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
-        s.messages.maximumSize = Try(
-          Settings.get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
-          MessageAdapter.DEFAULT_MAXIMUM_SIZE
+        s.messages.maximumSize = Settings.maximumMessageLines
       }
       ServiceBus.send(IrcManagerStart)
     }
@@ -572,7 +570,7 @@ class IrcManager extends EventBus.RefOwner {
     var state = server.state
     val ircserver = new IrcServer(server.hostname, server.port,
       if (server.sasl) null else server.password, server.ssl)
-    val connection = new IrcConnection2
+    val connection = IrcConnection2(server.name)
     val negotiator = new CompoundNegotiator(new ServerTimeNegotiator)
     if (server.sasl)
       negotiator.addListener(SaslNegotiator(server.username, server.password,
@@ -802,7 +800,7 @@ extends CapNegotiator.Listener {
     true
   }
 }
-class IrcConnection2 extends IrcConnection {
+case class IrcConnection2(name: String) extends IrcConnection {
   override def connect(sslctx: SSLContext) = {
     super.connect(sslctx)
     val thread = getOutput: Thread

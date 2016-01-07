@@ -22,6 +22,7 @@ import org.acra.ACRA
 import iota._
 
 import scala.reflect.ClassTag
+import scala.util.Try
 
 object Setting {
   private var settings = Map.empty[String,Setting[_]]
@@ -81,6 +82,10 @@ object Settings {
   def set[A](setting: Setting[A], value: A)(implicit m: ClassTag[A]): Unit = {
     instance.set(setting, value)
   }
+
+  def maximumMessageLines = math.max(MessageAdapter.DEFAULT_MAXIMUM_SIZE, Try(
+      get(Settings.MESSAGE_LINES).toInt).toOption getOrElse
+      MessageAdapter.DEFAULT_MAXIMUM_SIZE)
 }
 
 class Settings private()

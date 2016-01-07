@@ -514,16 +514,17 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
     }
   }
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-    if (server == null) return // presumably on a tablet?
     inflater.inflate(R.menu.server_messages_menu, menu)
-    val connected = server.get.state match {
-      case Server.State.INITIAL      => false
-      case Server.State.DISCONNECTED => false
-      case _                         => true
-    }
+    server.foreach { s =>
+      val connected = s.state match {
+        case Server.State.INITIAL => false
+        case Server.State.DISCONNECTED => false
+        case _ => true
+      }
 
-    menu.findItem(R.id.server_connect).setVisible(!connected)
-    menu.findItem(R.id.server_disconnect).setVisible(connected)
+      menu.findItem(R.id.server_connect).setVisible(!connected)
+      menu.findItem(R.id.server_disconnect).setVisible(connected)
+    }
   }
 
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
