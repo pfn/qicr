@@ -175,7 +175,7 @@ abstract class InputProcessor(activity: Activity) {
     val offset = completionOffset.get
     val lowerp  = prefix.toLowerCase
 
-    if (in.length() < offset || !in.substring(
+    if (in.length() < offset || offset > caret || !in.substring(
         offset).toLowerCase.startsWith(lowerp)) {
       completionPrefix = None
       completionOffset = None
