@@ -15,6 +15,7 @@ import android.util.Log
 
 import com.sorcix.sirc.IrcConnection
 
+import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 
 import com.hanhuy.android.conversions._
@@ -137,7 +138,8 @@ abstract class InputProcessor(activity: Activity) {
 
   var completionPrefix: Option[String] = None
   var completionOffset: Option[Int]    = None
-  def nickComplete(input: EditText) {
+  @tailrec
+  final def nickComplete(input: EditText) {
     val (_, channel) = currentState
     val c = channel match {
       case Some(c: Channel) => c
@@ -165,7 +167,7 @@ abstract class InputProcessor(activity: Activity) {
     val prefix = completionPrefix getOrElse {
       val start = input.getSelectionStart
       val beginning = math.max(in.lastIndexOf(" ", start - 1), in.lastIndexOf("@", start - 1))
-      val p = in.substring(if (beginning == -1) 0 else (beginning + 1), start)
+      val p = in.substring(if (beginning == -1) 0 else beginning + 1, start)
       completionPrefix = Some(p)
       completionOffset = Some(start - p.length())
       p
@@ -179,44 +181,45 @@ abstract class InputProcessor(activity: Activity) {
         offset).toLowerCase.startsWith(lowerp)) {
       completionPrefix = None
       completionOffset = None
-      return nickComplete(input)
-    }
-    var current = in.substring(offset, caret)
-    if (current.endsWith(suffix))
-      current = current.substring(0, current.length() - suffix.length())
-    current = current.toLowerCase
-
-    val ch = manager.channels(c)
-    val users = ch.getUsers.map {
-      u => ( u.getNick.toLowerCase, u.getNick )
-    }.toMap
-
-    val recent = c.messages.messages.reverse.collect {
-      case ChatMessage(s, m) => s.toLowerCase
-    }.distinct.toList
-    val names = (recent ++ users.keys.toList.sorted.filterNot(
-      recent.toSet)) filterNot { n => n == "***" || n == c.server.currentNick }
-
-    def goodCandidate(x: String) = x.startsWith(lowerp) && users.contains(x)
-    val candidate: Option[String] = if (current == lowerp) {
-      val i = names.indexWhere(goodCandidate)
-      if (i != -1) Some(users(names(i))) else None
+      nickComplete(input)
     } else {
-      val i = names.indexWhere(_.equals(current))
-      if (i != -1 && i < names.size - 1) {
-        val n = names.indexWhere(goodCandidate, i + 1)
-        if (n != -1) Some(users(names(n))) else None
-      } else None
-    }
+      val selected = in.substring(offset, caret)
+      val current = (if (selected.endsWith(suffix))
+        selected.substring(0, selected.length() - suffix.length())
+      else selected).toLowerCase
 
-    val replacement = candidate.fold(prefix: CharSequence) { nick =>
-      "%1%2" formatSpans(MessageAdapter.colorNick(nick), if (offset <= 1) suffix else "")
+      val ch = manager.channels(c)
+      val users = ch.getUsers.map {
+        u => (u.getNick.toLowerCase, u.getNick)
+      }.toMap
+
+      val recent = c.messages.messages.reverse.collect {
+        case ChatMessage(s, m) => s.toLowerCase
+      }.distinct.toList
+      val names = (recent ++ users.keys.toList.sorted.filterNot(
+        recent.toSet)) filterNot { n => n == "***" || n == c.server.currentNick }
+
+      def goodCandidate(x: String) = x.startsWith(lowerp) && users.contains(x)
+      val candidate: Option[String] = if (current == lowerp) {
+        val i = names.indexWhere(goodCandidate)
+        if (i != -1) Some(users(names(i))) else None
+      } else {
+        val i = names.indexWhere(_.equals(current))
+        if (i != -1 && i < names.size - 1) {
+          val n = names.indexWhere(goodCandidate, i + 1)
+          if (n != -1) Some(users(names(n))) else None
+        } else None
+      }
+
+      val replacement = candidate.fold(prefix: CharSequence) { nick =>
+        "%1%2" formatSpans(MessageAdapter.colorNick(nick), if (offset <= 1) suffix else "")
+      }
+      // replace offset to cursor with replacement
+      // move cursor to end of replacement
+      val out = "%1%2%3" formatSpans(in.substring(0, offset), replacement, in.substring(caret))
+      input.setText(out)
+      input.setSelection(offset + replacement.length())
     }
-    // replace offset to cursor with replacement
-    // move cursor to end of replacement
-    val out = "%1%2%3" formatSpans(in.substring(0, offset), replacement, in.substring(caret))
-    input.setText(out)
-    input.setSelection(offset + replacement.length())
   }
 }
 
@@ -352,11 +355,9 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   def addCommandError(error: Int): Unit = addCommandError(getString(error))
 
   def addCommandError(error: String) {
-    channel map { _.add _ } orElse (server map { _.add _}) map {
-      _(CommandError(error))
-    } getOrElse {
-      Log.w(TAG, "Unable to addCommandError, no server or channel: " + error)
-    }
+    (channel.map(_.add _) orElse server.map(_.add _)).fold (
+      Log.w(TAG, "Unable to addCommandError, no server or channel: " + error): Any
+    )(_(CommandError(error)))
   }
 
   def sendMessage(line: Option[String], action: Boolean = false) {

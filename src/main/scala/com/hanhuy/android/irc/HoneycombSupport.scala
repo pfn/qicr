@@ -7,31 +7,28 @@ import scala.ref.WeakReference
 import android.os.StrictMode
 
 import com.hanhuy.android.common._
-import android.support.v7.app.ActionBar
 import android.support.v7.view.ActionMode
 import android.view.{Menu, MenuItem, MenuInflater}
-import android.view.View
 
 import android.support.v4.view.MenuItemCompat
-import iota.std.Contexts._
 
-object HoneycombSupport extends iota.HasActivity {
+object HoneycombSupport {
   val TAG = "HoneycombSupport"
-  var activity: MainActivity = _
-  var _server: WeakReference[Server] = _
-  var _actionmode: WeakReference[ActionMode] = _
-  var menuItemListener: (MenuItem, Option[Server]) => Boolean = _
+  var activity = Option.empty[MainActivity]
+  var _server: WeakReference[Server] = WeakReference(null)
+  var _actionmode: WeakReference[ActionMode] = WeakReference(null)
+  var menuItemListener = Option.empty[(MenuItem, Option[Server]) => Boolean]
 
-  def init(main: MainActivity) = activity = main
+  def init(main: MainActivity) = activity = Option(main)
 
   def close() {
-    menuItemListener = null
+    menuItemListener = None
     activity = null
   }
 
   def invalidateActionBar() {
     if (activity != null)
-      activity.supportInvalidateOptionsMenu()
+      activity.foreach(_.supportInvalidateOptionsMenu())
   }
 
   def stopActionMode() {
@@ -44,44 +41,46 @@ object HoneycombSupport extends iota.HasActivity {
 
     if (honeycombAndNewer) {
       if (activity != null)
-        activity.recreate()
+        activity.foreach(_.recreate())
     } else {
-      IrcManager.instance foreach (_.queueCreateActivity(activity.adapter.page))
-      activity.finish()
+      IrcManager.instance foreach (_.queueCreateActivity(activity.fold(0)(_.adapter.page)))
+      activity.foreach(_.finish())
     }
   }
 
   def startActionMode(server: Server) {
     _server = new WeakReference(server)
     if (activity == null) return
-    _actionmode = new WeakReference(
-      activity.startSupportActionMode(ServerActionModeSetup))
+    _actionmode = activity.fold(null: WeakReference[ActionMode])(a => new WeakReference(
+      a.startSupportActionMode(ServerActionModeSetup)))
   }
 
   def setTitle(s: String) = if (activity != null) {
-    activity.getSupportActionBar.setTitle(s)
+    activity.foreach(_.getSupportActionBar.setTitle(s))
   }
   def setSubtitle(s: String) = if (activity != null) {
-    activity.getSupportActionBar.setSubtitle(s)
+    activity.foreach(_.getSupportActionBar.setSubtitle(s))
   }
 
   object ServerActionModeSetup extends ActionMode.Callback {
     override def onActionItemClicked(mode: ActionMode, item: MenuItem) = {
       mode.finish()
-      menuItemListener(item, _server.get)
+      menuItemListener.fold(false)(_(item, _server.get))
     }
 
     override def onCreateActionMode(mode: ActionMode, menu: Menu) = {
-      val inflater = new MenuInflater(activity)
-      inflater.inflate(R.menu.server_menu, menu)
-      List(R.id.server_connect,
-        R.id.server_disconnect,
-        R.id.server_options).foreach(i =>
+      activity.fold(false) { a =>
+        val inflater = new MenuInflater(a)
+        inflater.inflate(R.menu.server_menu, menu)
+        List(R.id.server_connect,
+          R.id.server_disconnect,
+          R.id.server_options).foreach(i =>
           MenuItemCompat.setShowAsAction(menu.findItem(i),
             MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         )
-      setServerConnectionAction(menu)
-      true
+        setServerConnectionAction(menu)
+        true
+      }
     }
 
     override def onDestroyActionMode(mode: ActionMode) = ()
@@ -108,8 +107,8 @@ object HoneycombSupport extends iota.HasActivity {
     NickListActionModeSetup.callback = f
     NickListActionModeSetup.nick = nick.dropWhile(n => Set(' ','@','+')(n))
     if (activity != null) {
-      _actionmode = new WeakReference(
-        activity.startSupportActionMode(NickListActionModeSetup))
+      _actionmode = activity.fold(null: WeakReference[ActionMode])(a => new WeakReference(
+        a.startSupportActionMode(NickListActionModeSetup)))
     }
   }
 
@@ -124,16 +123,19 @@ object HoneycombSupport extends iota.HasActivity {
     }
 
     override def onCreateActionMode(mode: ActionMode, menu: Menu) = {
-      implicit val act = activity
-      val inflater = new MenuInflater(activity)
-      inflater.inflate(R.menu.nicklist_menu, menu)
-      mode.setTitle(nick)
-      val item = menu.findItem(R.id.nick_ignore)
-      item.setChecked(Config.Ignores(nick))
-      item.setIcon(if (Config.Ignores(nick))
-        R.drawable.ic_menu_end_conversation_on else
-        Tweaks.resolveAttr(R.attr.qicrChatEndIcon, _.resourceId))
-      true
+      activity.fold(false) { a =>
+        implicit val act = a
+        val inflater = new MenuInflater(a)
+        inflater.inflate(R.menu.nicklist_menu, menu)
+        mode.setTitle(nick)
+        val item = menu.findItem(R.id.nick_ignore)
+        item.setChecked(Config.Ignores(nick))
+        item.setIcon(if (Config.Ignores(nick))
+          R.drawable.ic_menu_end_conversation_on
+        else
+          Tweaks.resolveAttr(R.attr.qicrChatEndIcon, _.resourceId))
+        true
+      }
     }
 
     override def onDestroyActionMode(mode: ActionMode) = ()

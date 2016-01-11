@@ -593,7 +593,7 @@ with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
-    HoneycombSupport.menuItemListener = onServerMenuItemClicked
+    HoneycombSupport.menuItemListener = Option(onServerMenuItemClicked)
   }
 
   override def onCreateView(inflater: LayoutInflater,
