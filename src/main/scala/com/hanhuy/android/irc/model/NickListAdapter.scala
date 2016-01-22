@@ -75,7 +75,7 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
         case (_,_) => a.nick.compareToIgnoreCase(b.nick) < 0
       }
     }.map { n =>
-      val colored = textColor(MessageAdapter.nickColor(n.nick), n.nick)
+      val colored = SpannedGenerator.textColor(MessageAdapter.nickColor(n.nick), n.nick)
       val s = if (Config.Ignores(n.nick))
         span(new StrikethroughSpan, colored) else colored
 

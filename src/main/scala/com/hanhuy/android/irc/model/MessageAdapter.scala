@@ -26,8 +26,7 @@ import android.text.method.LinkMovementMethod
 import scala.reflect.ClassTag
 import scala.util.Try
 
-import Tweaks._
-import iota._
+import iota.{textColor => _, _}
 
 trait MessageAppender {
   def add(m: MessageLike): Unit

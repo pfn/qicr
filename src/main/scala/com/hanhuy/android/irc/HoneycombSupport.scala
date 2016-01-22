@@ -133,7 +133,7 @@ object HoneycombSupport {
         item.setIcon(if (Config.Ignores(nick))
           R.drawable.ic_menu_end_conversation_on
         else
-          Tweaks.resolveAttr(R.attr.qicrChatEndIcon, _.resourceId))
+          iota.resolveAttr(R.attr.qicrChatEndIcon, _.resourceId))
         true
       }
     }

@@ -121,20 +121,6 @@ object Tweaks {
       new CheckedTextView(ctx)
     else
       new android.support.v7.widget.AppCompatCheckedTextView(ctx)
-
-  def resolveAttr[A](attr: Int, f: TypedValue => A)(implicit ctx: Context) = {
-    val tv = new TypedValue
-    val r = ctx.getTheme.resolveAttribute(attr, tv, true)
-    if (r) {
-      f(tv)
-    } else throw new IllegalStateException("attribute not found: " + attr)
-  }
-  def themeAttrs[A](theme: Array[Int], f: TypedArray => A)(implicit activity: Activity): A = {
-    val themeAttrs = activity.getTheme.obtainStyledAttributes(theme)
-    val c = f(themeAttrs)
-    themeAttrs.recycle()
-    c
-  }
 }
 class SquareImageButton(c: Context) extends ImageButton(c) {
   override def onMeasure(mw: Int, mh: Int) = {
