@@ -485,7 +485,6 @@ class MessageLogActivity extends AppCompatActivity {
   lazy val listview = new ListView(this)
   var dateText: TextView = _
 
-  lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
   lazy val layout = l[FrameLayout](
     w[TextView] >>= gone >>=
       lpK(WRAP_CONTENT, 0)(margins(all = 12 dp)) >>=
@@ -508,7 +507,7 @@ class MessageLogActivity extends AppCompatActivity {
       } >>= kitkatPadding,
     IO(progressbar) >>=
       lp(128 dp, 128 dp, Gravity.CENTER),
-    newToolbar(daynight) >>=
+    newToolbar >>=
       lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
   )
 
@@ -560,8 +559,7 @@ class MessageLogActivity extends AppCompatActivity {
   }
 
   override def onCreate(savedInstanceState: Bundle) = {
-    val mode = Settings.get(Settings.DAYNIGHT_MODE)
-    setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
+    setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.AppTheme_Light else R.style.AppTheme_Dark)
     super.onCreate(savedInstanceState)
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(

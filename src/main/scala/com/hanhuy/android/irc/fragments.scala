@@ -695,9 +695,8 @@ with EventBus.RefOwner {
 //      tx.addToBackStack(SERVER_SETUP_STACK)
 //      tx.commit() // can't commit a show
 //    } else {
-      val m = Settings.get(Settings.DAYNIGHT_MODE)
       fragment.setStyle(DialogFragment.STYLE_NO_TITLE,
-        if (m) R.style.AppTheme_Light else R.style.AppTheme_Dark)
+        resolveAttr(R.attr.qicrCurrentTheme, _.resourceId))
       fragment.show(tx, SERVER_SETUP_FRAGMENT)
 //    }
 

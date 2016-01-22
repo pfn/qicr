@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <attr name="qicrNotificationIconTint" format="color"/>
+    <attr name="qicrToolbarPopupTheme" format="reference"/>
+    <attr name="qicrCurrentTheme" format="reference"/>
+    <attr name="qicrBrowserOpenIcon" format="reference"/>
+    <attr name="qicrInputHistoryIcon" format="reference"/>
+    <attr name="qicrSpeechRecIcon" format="reference"/>
+    <attr name="qicrSendIcon" format="reference"/>
+    <attr name="qicrNewMessageIcon" format="reference"/>
+    <attr name="qicrNickCompleteIcon" format="reference"/>
     <attr name="qicrProgressSpinnerStyle" format="reference"/>
     <attr name="qicrHistoryIcon" format="reference"/>
     <attr name="qicrReconnectIcon" format="reference"/>

@@ -78,8 +78,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
   private[this] var requestRecreate = false
   var inputHeight = Option.empty[Int]
 
-  lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
-
   lazy val drawerBackground =
     themeAttrs(R.styleable.AppTheme, _.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0))
   lazy val inputBackground =
@@ -109,10 +107,10 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       },
       IO(buttonLayout)(
         IO(nickcomplete) >>=
-          imageResource(if (daynight) R.drawable.ic_person_pin_black_24dp else R.drawable.ic_person_pin_white_24dp) >>=
+          imageResource(resolveAttr(R.attr.qicrNickCompleteIcon, _.resourceId)) >>=
             hook0.click(IO { proc.nickComplete(input) }) >>= gone >>= buttonTweaks,
         IO(newmessages) >>=
-          imageResource(if (daynight) R.drawable.ic_message_black_24dp else R.drawable.ic_message_white_24dp) >>=
+          imageResource(resolveAttr(R.attr.qicrNewMessageIcon, _.resourceId)) >>=
           gone >>= hook0.click(IO {
           qicrdrawers.openDrawer(toolbar)
         }) >>= buttonTweaks,
@@ -126,13 +124,13 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
             e.addTextChangedListener(proc.TextListener)
           },
         IO(send) >>=
-          imageResource(if (daynight) R.drawable.ic_send_black_24dp else R.drawable.ic_send_white_24dp) >>=
+          imageResource(resolveAttr(R.attr.qicrSendIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
           }) >>= buttonTweaks >>= gone,
         IO(speechrec) >>=
-          imageResource(if (daynight) R.drawable.ic_mic_black_24dp else R.drawable.ic_mic_white_24dp) >>=
+          imageResource(resolveAttr(R.attr.qicrSpeechRecIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -189,14 +187,14 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       ) >>= id(Id.bottomdrawer) >>= kestrel { _.setClickable(true) } >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       w[ImageView] >>= imageResource(
-        if (daynight) R.drawable.ic_keyboard_arrow_up_black_24dp else R.drawable.ic_keyboard_arrow_up_white_24dp) >>=
+        resolveAttr(R.attr.qicrInputHistoryIcon, _.resourceId)) >>=
         imageScale(ImageView.ScaleType.CENTER) >>=
         lpK(48.dp, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_TOP, Id.buttonlayout)
           p.addRule(RelativeLayout.CENTER_HORIZONTAL, 1)
           margins(top = -24.dp)(p)
         } >>= id(Id.uparrow) >>= hook0.onClick(IO { qicrdrawers.toggleBottomDrawer() }),
-      newToolbar(daynight) >>= lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
+      newToolbar >>= lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
     ) >>= lp(MATCH_PARENT, actionBarHeight) >>= id(Id.qicrdrawers),
     IO(drawerLeft)(
       IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
@@ -248,7 +246,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
         progress.setMax(100)
         val popupLayout = l[RelativeLayout](
           IO(icon) >>= backgroundColor(0xff26a69a) >>= padding(left = 8 dp) >>=
-            imageResource(if (daynight) R.drawable.ic_open_in_browser_black_18dp else R.drawable.ic_open_in_browser_white_18dp) >>=
+            imageResource(resolveAttr(R.attr.qicrBrowserOpenIcon, _.resourceId)) >>=
             imageScale(ImageView.ScaleType.CENTER_INSIDE) >>= id(Id.icon) >>=
             lpK(WRAP_CONTENT, 36 dp) {(p: RelativeLayout.LayoutParams) =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
@@ -388,8 +386,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     getWindow.setSoftInputMode(
       WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
     manager = IrcManager.start()
-    val mode = Settings.get(Settings.DAYNIGHT_MODE)
-    setTheme(if (mode) R.style.AppTheme_Light else R.style.AppTheme_Dark)
+    setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
     mainLayout.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {

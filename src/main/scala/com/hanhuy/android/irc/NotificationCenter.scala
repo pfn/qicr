@@ -20,8 +20,6 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
   private[this] val notifications = RingBuffer[NotificationMessage](64)
   private[this] var newest = 0l
 
-  lazy val daynight = Settings.get(Settings.DAYNIGHT_MODE)
-
   override def itemId(position: Int) = notifications(position).hashCode
 
   override def size = notifications.size
@@ -47,10 +45,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
         p.addRule(BELOW, Id.timestamp)
         margins(all = 8.dp)(p)
       } >>= gone >>= kestrel { iv =>
-      if (daynight)
-        DrawableCompat.setTint(iv.getDrawable.mutate(), 0xff000000)
-      else
-        DrawableCompat.setTint(iv.getDrawable.mutate(), 0xffffffff)
+      DrawableCompat.setTint(iv.getDrawable.mutate(), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
     },
     w[TextView] >>= id(Id.channel_server) >>=
       text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
@@ -89,7 +84,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
       if (n.isNew && n.important) {
         DrawableCompat.setTint(DrawableCompat.wrap(icon.getDrawable.mutate()), 0xff26a69a)
       } else {
-        DrawableCompat.setTint(DrawableCompat.wrap(icon.getDrawable.mutate()), if (daynight) 0xff000000 else 0xffffffff)
+        DrawableCompat.setTint(DrawableCompat.wrap(icon.getDrawable.mutate()), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
       }
       n match {
         case NotifyNotification(ts, server, sender, msg) =>

@@ -33,12 +33,21 @@
         <item name="qicrStopIcon">@drawable/ic_cancel_white_24dp</item>
         <item name="qicrThemeIcon">@drawable/ic_chrome_reader_mode_white_24dp</item>
         <item name="qicrChatStartIcon">@drawable/ic_chat_white_24dp</item>
+        <item name="qicrNickCompleteIcon">@drawable/ic_person_pin_white_24dp</item>
+        <item name="qicrNewMessageIcon">@drawable/ic_message_white_24dp</item>
+        <item name="qicrSendIcon">@drawable/ic_send_white_24dp</item>
+        <item name="qicrSpeechRecIcon">@drawable/ic_mic_white_24dp</item>
+        <item name="qicrInputHistoryIcon">@drawable/ic_keyboard_arrow_up_white_24dp</item>
         <item name="qicrChatEndIcon">@drawable/ic_chat_bubble_outline_white_24dp</item>
+        <item name="qicrBrowserOpenIcon">@drawable/ic_open_in_browser_white_18dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
         <item name="qicrDrawerBackground">#cc222222</item>
         <item name="windowActionModeOverlay">true</item>
+        <item name="qicrCurrentTheme">@style/AppTheme.Dark</item>
+        <item name="qicrToolbarPopupTheme">@style/ThemeOverlay.AppCompat.Dark</item>
         <item name="inputBackground">@drawable/input_background_dark</item>
+        <item name="qicrNotificationIconTint">#ffffffff</item>
     </style>
     <style name="Base.AppTheme.Light" parent="@style/Theme.AppCompat.Light.NoActionBar">
         <item name="windowActionModeOverlay">true</item>
@@ -58,12 +67,21 @@
         <item name="qicrStopIcon">@drawable/ic_cancel_black_24dp</item>
         <item name="qicrThemeIcon">@drawable/ic_chrome_reader_mode_black_24dp</item>
         <item name="qicrChatStartIcon">@drawable/ic_chat_black_24dp</item>
+        <item name="qicrNickCompleteIcon">@drawable/ic_person_pin_black_24dp</item>
+        <item name="qicrNewMessageIcon">@drawable/ic_message_black_24dp</item>
+        <item name="qicrSendIcon">@drawable/ic_send_black_24dp</item>
+        <item name="qicrInputHistoryIcon">@drawable/ic_keyboard_arrow_up_black_24dp</item>
+        <item name="qicrBrowserOpenIcon">@drawable/ic_open_in_browser_black_18dp</item>
+        <item name="qicrSpeechRecIcon">@drawable/ic_mic_black_24dp</item>
         <item name="qicrChatEndIcon">@drawable/ic_chat_bubble_outline_black_24dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
         <item name="qicrDrawerBackground">#e0dddddd</item>
         <item name="inputBackground">@drawable/input_background_light</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Light</item>
+        <item name="qicrCurrentTheme">@style/AppTheme.Light</item>
+        <item name="qicrToolbarPopupTheme">@style/ThemeOverlay.AppCompat.Light</item>
+        <item name="qicrNotificationIconTint">#ff000000</item>
     </style>
 
     <style name="AppTheme.Light" parent="Base.AppTheme.Light"/>

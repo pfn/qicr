@@ -102,12 +102,11 @@ object Tweaks {
     e.setInputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_AUTO_CORRECT)
     e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
   }
-  def newToolbar(daynight: Boolean)(implicit ctx: Context) = {
+  def newToolbar(implicit ctx: Context) = {
     IO(new Toolbar(new ContextThemeWrapper(
       ctx, R.style.ThemeOverlay_AppCompat_ActionBar))) >>= id(Id.toolbar) >>=
       kestrel { t =>
-        t.setPopupTheme(if (daynight) R.style.ThemeOverlay_AppCompat_Light else
-          R.style.ThemeOverlay_AppCompat_Dark)
+        t.setPopupTheme(resolveAttr(R.attr.qicrToolbarPopupTheme, _.resourceId))
         t.setBackgroundColor(resolveAttr(R.attr.colorPrimary, _.data))
       } >>= kitkatPaddingRight
 //    https://code.google.com/p/android/issues/detail?id=196729
