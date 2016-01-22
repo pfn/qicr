@@ -364,8 +364,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
     line foreach { l =>
 
       channel match {
-        case Some(ch: Channel) =>
-          val chan = manager.channels(ch)
+        case Some(ch: Channel) => manager.channels.get(ch).foreach { chan =>
           if (ch.server.state != Server.State.CONNECTED)
             return addCommandError(R.string.error_server_disconnected)
           if (ch.state != Channel.State.JOINED)
@@ -380,8 +379,9 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
                 u.hasOperator, u.hasVoice))
             else
               ch.add(Privmsg(ch.server.currentNick, l))
-                chan.sendMessage(l)
+            chan.sendMessage(l)
           }
+        }
         case Some(query: Query)=>
           if (query.server.state != Server.State.CONNECTED)
             return addCommandError(R.string.error_server_disconnected)
