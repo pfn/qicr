@@ -11,8 +11,8 @@ import android.widget.{Toast, EditText}
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 import Tweaks._
 
-import android.app.{Activity, AlertDialog, Fragment}
-import android.support.v7.app.{AppCompatActivity, ActionBarActivity}
+import android.app.AlertDialog
+import android.support.v7.app.AppCompatActivity
 import android.content.{DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
 import android.preference._
@@ -21,65 +21,76 @@ import com.hanhuy.android.conversions._
 import org.acra.ACRA
 import iota._
 
-import scala.reflect.ClassTag
 import scala.util.Try
 
 object Setting {
   private var settings = Map.empty[String,Setting[_]]
   def unapply(key: String): Option[Setting[_]] = settings get key
-  def apply[A](key: String, default: A) = new Setting(key, default, None)
-  def apply[A](key: String, res: Int) = new Setting(key,
-    null.asInstanceOf[A], Some(res))
 }
-class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
-  Setting.settings = Setting.settings + ((key, this))
 
-  override def toString = {
-    "Setting: " + key
-  }
+trait Setting[A] {
+  type T = A
+  val key: String
+  val default: T
+  def get(c: Context, p: SharedPreferences): T
+  def set(p: SharedPreferences, value: T): Unit
+  Setting.settings = Setting.settings + (key -> this)
+}
+
+case class StringSetting(key: String, default: String = null, defaultRes: Option[Int] = None) extends Setting[String] {
+  override def get(c: Context, p: SharedPreferences) = p.getString(key, defaultRes.fold(default)(c.getString))
+  override def set(p: SharedPreferences, value: T) = p.edit().putString(key, value).commit()
+}
+case class IntSetting(key: String, default: Int) extends Setting[Int] {
+  override def get(c: Context, p: SharedPreferences) = p.getInt(key, default)
+  override def set(p: SharedPreferences, value: T) = p.edit().putInt(key, value).commit()
+}
+case class BooleanSetting(key: String, default: Boolean) extends Setting[Boolean] {
+  override def get(c: Context, p: SharedPreferences) = p.getBoolean(key, default)
+  override def set(p: SharedPreferences, value: T) = p.edit().putBoolean(key, value).commit()
 }
 
 object Settings {
   val NAVIGATION_MODE_TABS = "Tabs"
   val NAVIGATION_MODE_DRAWER = "Drawer"
 
-  val CHARSET = Setting[String]("irc_charset", "UTF-8")
-  val FONT_SIZE = Setting[Int]("font_size", default = -1)
-  val FONT_NAME = Setting[String]("font_name", null)
-  val IRC_LOGGING = Setting[Boolean]("irc_logging", true)
-  val RUNNING_NOTIFICATION = Setting[Boolean]("notification_running_enable", true)
-  val NOTIFICATION_SOUND = Setting[String]("notification_sound",
+  val CHARSET = StringSetting("irc_charset", "UTF-8")
+  val FONT_SIZE = IntSetting("font_size", default = -1)
+  val FONT_NAME = StringSetting("font_name", null)
+  val IRC_LOGGING = BooleanSetting("irc_logging", true)
+  val RUNNING_NOTIFICATION = BooleanSetting("notification_running_enable", true)
+  val NOTIFICATION_SOUND = StringSetting("notification_sound",
     ASettings.System.DEFAULT_NOTIFICATION_URI.toString)
-  val NOTIFICATION_VIBRATE = Setting[Boolean]("notification_vibrate_enable", false)
-  val WIDGET_IDS = Setting[String]("internal_widget_ids", "")
-  val HIDE_KEYBOARD = Setting[Boolean]("ui_hide_kbd_after_send", false)
-  val IRC_DEBUG = Setting[Boolean]("irc_debug_log", false)
-  val NAVIGATION_MODE = Setting[String]("ui_selector_mode2",
+  val NOTIFICATION_VIBRATE = BooleanSetting("notification_vibrate_enable", false)
+  val WIDGET_IDS = StringSetting("internal_widget_ids", "")
+  val HIDE_KEYBOARD = BooleanSetting("ui_hide_kbd_after_send", false)
+  val IRC_DEBUG = BooleanSetting("irc_debug_log", false)
+  val NAVIGATION_MODE = StringSetting("ui_selector_mode2",
     NAVIGATION_MODE_DRAWER)
-  val QUIT_MESSAGE = Setting[String]("irc_quit_message",
-    R.string.pref_quit_message_default)
-  val SPEECH_REC_EOL = Setting[String]("speech_cmd_eol",
-    R.string.pref_speech_rec_eol_default)
-  val SPEECH_REC_CLEAR_LINE = Setting[String]("speech_cmd_clear_line",
-    R.string.pref_speech_rec_clearline_default)
-  val ROTATE_LOCK = Setting[Boolean]("ui_rotate_lock", false)
-  val QUIT_PROMPT = Setting[Boolean]("ui_quit_prompt", true)
-  val SHOW_TIMESTAMP = Setting[Boolean]("ui_show_timestamp", false)
-  val CLOSE_TAB_PROMPT = Setting[Boolean]("ui_close_tab_prompt", true)
-  val MESSAGE_LINES = Setting[String]("ui_message_lines",
+  val QUIT_MESSAGE = StringSetting("irc_quit_message",
+    defaultRes = Some(R.string.pref_quit_message_default))
+  val SPEECH_REC_EOL = StringSetting("speech_cmd_eol",
+    defaultRes = Some(R.string.pref_speech_rec_eol_default))
+  val SPEECH_REC_CLEAR_LINE = StringSetting("speech_cmd_clear_line",
+    defaultRes = Some(R.string.pref_speech_rec_clearline_default))
+  val ROTATE_LOCK = BooleanSetting("ui_rotate_lock", false)
+  val QUIT_PROMPT = BooleanSetting("ui_quit_prompt", true)
+  val SHOW_TIMESTAMP = BooleanSetting("ui_show_timestamp", false)
+  val CLOSE_TAB_PROMPT = BooleanSetting("ui_close_tab_prompt", true)
+  val MESSAGE_LINES = StringSetting("ui_message_lines",
     MessageAdapter.DEFAULT_MAXIMUM_SIZE.toString)
-  val SHOW_JOIN_PART_QUIT = Setting[Boolean]("irc_show_join_part_quit", false)
-  val SHOW_SPEECH_REC = Setting[Boolean]("ui_show_speech_rec", true)
-  val SHOW_NICK_COMPLETE = Setting[Boolean]("ui_show_nick_complete",
+  val SHOW_JOIN_PART_QUIT = BooleanSetting("irc_show_join_part_quit", false)
+  val SHOW_SPEECH_REC = BooleanSetting("ui_show_speech_rec", true)
+  val SHOW_NICK_COMPLETE = BooleanSetting("ui_show_nick_complete",
     honeycombAndNewer)
-  val DAYNIGHT_MODE = Setting[Boolean]("ui_daynight_mode", false)
+  val DAYNIGHT_MODE = BooleanSetting("ui_daynight_mode", false)
 
 
   private lazy val instance = new Settings
 
-  def get[A](setting: Setting[A])(implicit m: ClassTag[A]): A =
+  def get[A](setting: Setting[A]): A =
     instance.get(setting)
-  def set[A](setting: Setting[A], value: A)(implicit m: ClassTag[A]): Unit = {
+  def set[A](setting: Setting[A], value: A): Unit = {
     instance.set(setting, value)
   }
 
@@ -101,37 +112,8 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
       }
     }
 
-  def get[A](setting: Setting[A])(implicit m: ClassTag[A]): A = {
-    val result = if (classOf[String] == m.runtimeClass) {
-      val default: String = setting.defaultRes map {
-        Application.context.getString
-      } getOrElse setting.default.asInstanceOf[String]
-      p.getString(setting.key, default)
-    } else if (classOf[Boolean] == m.runtimeClass) {
-      p.getBoolean(setting.key, setting.default.asInstanceOf[Boolean])
-    } else if (classOf[Long] == m.runtimeClass) {
-      p.getLong(setting.key, setting.default.asInstanceOf[Long])
-    } else if (classOf[Int] == m.runtimeClass) {
-      // broken otherwise
-      return p.getInt(setting.key, setting.default.asInstanceOf[Int]).asInstanceOf[A]
-    } else if (classOf[Float] == m.runtimeClass) {
-      p.getFloat(setting.key, setting.default.asInstanceOf[Float])
-    } else {
-      throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
-    }
-    result.asInstanceOf[A]
-  }
-  def set[A](setting: Setting[A], value: A)(implicit m: ClassTag[A]) {
-    val editor = p.edit()
-    if (classOf[Boolean] == m.runtimeClass) {
-      editor.putBoolean(setting.key, value.asInstanceOf[Boolean])
-    } else if (classOf[String] == m.runtimeClass) {
-        editor.putString(setting.key, value.asInstanceOf[String])
-    } else {
-      throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
-    }
-    editor.commit()
-  }
+  def get[A](setting: Setting[A]): setting.T = setting.get(Application.context, p)
+  def set[A](setting: Setting[A], value: A): Unit = setting.set(p, value)
 }
 
 // android3.0+
