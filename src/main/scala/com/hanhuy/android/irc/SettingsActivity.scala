@@ -1,21 +1,19 @@
 package com.hanhuy.android.irc
 
-import android.annotation.TargetApi
 import android.media.RingtoneManager
 import android.net.Uri
-import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceClickListener}
+import android.support.v7.preference.Preference.OnPreferenceClickListener
+import android.support.v7.preference.{ListPreference, Preference, PreferenceScreen, PreferenceManager}
 import android.text.{Editable, TextWatcher}
 import android.provider.{Settings => ASettings}
 import android.util.AttributeSet
 import android.widget.{Toast, EditText}
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
-import Tweaks._
 
 import android.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
-import android.content.{DialogInterface, Context, SharedPreferences}
+import android.content.{Intent, DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
-import android.preference._
 import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 import org.acra.ACRA
@@ -29,25 +27,24 @@ object Setting {
 }
 
 trait Setting[A] {
-  type T = A
   val key: String
-  val default: T
-  def get(c: Context, p: SharedPreferences): T
-  def set(p: SharedPreferences, value: T): Unit
+  val default: A
+  def get(c: Context, p: SharedPreferences): A
+  def set(p: SharedPreferences, value: A): Unit
   Setting.settings = Setting.settings + (key -> this)
 }
 
 case class StringSetting(key: String, default: String = null, defaultRes: Option[Int] = None) extends Setting[String] {
   override def get(c: Context, p: SharedPreferences) = p.getString(key, defaultRes.fold(default)(c.getString))
-  override def set(p: SharedPreferences, value: T) = p.edit().putString(key, value).commit()
+  override def set(p: SharedPreferences, value: String) = p.edit().putString(key, value).commit()
 }
 case class IntSetting(key: String, default: Int) extends Setting[Int] {
   override def get(c: Context, p: SharedPreferences) = p.getInt(key, default)
-  override def set(p: SharedPreferences, value: T) = p.edit().putInt(key, value).commit()
+  override def set(p: SharedPreferences, value: Int) = p.edit().putInt(key, value).commit()
 }
 case class BooleanSetting(key: String, default: Boolean) extends Setting[Boolean] {
   override def get(c: Context, p: SharedPreferences) = p.getBoolean(key, default)
-  override def set(p: SharedPreferences, value: T) = p.edit().putBoolean(key, value).commit()
+  override def set(p: SharedPreferences, value: Boolean) = p.edit().putBoolean(key, value).commit()
 }
 
 object Settings {
@@ -112,22 +109,19 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
       }
     }
 
-  def get[A](setting: Setting[A]): setting.T = setting.get(Application.context, p)
+  def get[A](setting: Setting[A]): A = setting.get(Application.context, p)
   def set[A](setting: Setting[A], value: A): Unit = setting.set(p, value)
 }
 
 // android3.0+
 // now actionbaractivity for material on <5.0
-@TargetApi(11)
 class SettingsFragmentActivity extends AppCompatActivity {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
-    val content = new android.widget.FrameLayout(this)
-    content.setId(Id.content)
-    setContentView((IO(content) >>= kitkatPadding).perform())
-    val f = getFragmentManager.findFragmentByTag("settings fragment")
+    setContentView((w[android.widget.FrameLayout] >>= id(Id.content)).perform())
+    val f = getSupportFragmentManager.findFragmentByTag("settings fragment")
     if (f == null) {
-      val tx = getFragmentManager.beginTransaction()
+      val tx = getSupportFragmentManager.beginTransaction()
       tx.add(Id.content, new SettingsFragment, "settings fragment")
       tx.commit()
     }
@@ -137,81 +131,103 @@ class SettingsFragmentActivity extends AppCompatActivity {
 object SettingsFragment {
   def setupNotificationPreference(c: Context, ps: PreferenceScreen): Unit = {
 
-    val p = ps.findPreference(Settings.NOTIFICATION_SOUND.key)
+    val p = Option(ps.findPreference(Settings.NOTIFICATION_SOUND.key))
     val notification = Settings.get(Settings.NOTIFICATION_SOUND)
-    val r = RingtoneManager.getRingtone(c, Uri.parse(notification))
-    Option(p) foreach { pref =>
-      pref.setSummary(Option(r).fold("")(_.getTitle(c)))
-      pref.setOnPreferenceChangeListener(new OnPreferenceChangeListener {
-        override def onPreferenceChange(preference: Preference, newValue: scala.Any) = {
-          val r = RingtoneManager.getRingtone(c, Uri.parse(newValue.toString))
-          pref.setSummary(Option(r).fold("")(_.getTitle(c)))
-          true
-        }
-      })
+    val r = Option(RingtoneManager.getRingtone(c, Uri.parse(notification)))
+    p foreach { pref =>
+      pref.setSummary(r.fold("")(_.getTitle(c)))
     }
 
   }
 }
-@TargetApi(11)
 class SettingsFragment
-extends PreferenceFragment {
-
-  override def onCreate(bundle: Bundle) {
-    super.onCreate(bundle)
+extends android.support.v7.preference.PreferenceFragmentCompat {
+  override def onCreatePreferences(bundle: Bundle, s: String) = {
     addPreferencesFromResource(R.xml.settings)
-
     SettingsFragment.setupNotificationPreference(getActivity, getPreferenceScreen)
 
     getPreferenceScreen.findPreference(
       "debug.log").setOnPreferenceClickListener(
-        new OnPreferenceClickListener {
-          override def onPreferenceClick(pref: Preference) = {
-            val b = new AlertDialog.Builder(getActivity)
-            b.setTitle("Submit debug logs")
-            b.setMessage("Add details about this log")
-            val edit = new EditText(getActivity)
-            b.setView(edit)
-            b.setPositiveButton("Send", { () =>
-              Toast.makeText(getActivity, "Debug log sent", Toast.LENGTH_SHORT).show()
-              val e = new Exception("User submitted log: " + edit.getText)
-              e.setStackTrace(Array(new StackTraceElement(
-                Build.BRAND, Build.MODEL, Build.PRODUCT,
-                (System.currentTimeMillis / 1000).toInt)))
-              ACRA.getErrorReporter.handleSilentException(e)
-              ()
-            })
-            b.setNegativeButton("Cancel", {(d: DialogInterface, i: Int) =>
-              d.dismiss()
-            })
-            val d = b.show()
-            val button = d.getButton(DialogInterface.BUTTON_POSITIVE)
-            button.setEnabled(false)
-            edit.addTextChangedListener(new TextWatcher {
-              override def afterTextChanged(p1: Editable) {}
-              override def beforeTextChanged(p1: CharSequence,
-                                             p2: Int, p3: Int, p4: Int) { }
+      new OnPreferenceClickListener {
+        override def onPreferenceClick(pref: Preference) = {
+          val b = new AlertDialog.Builder(getActivity)
+          b.setTitle("Submit debug logs")
+          b.setMessage("Add details about this log")
+          val edit = new EditText(getActivity)
+          b.setView(edit)
+          b.setPositiveButton("Send", { () =>
+            Toast.makeText(getActivity, "Debug log sent", Toast.LENGTH_SHORT).show()
+            val e = new Exception("User submitted log: " + edit.getText)
+            e.setStackTrace(Array(new StackTraceElement(
+              Build.BRAND, Build.MODEL, Build.PRODUCT,
+              (System.currentTimeMillis / 1000).toInt)))
+            ACRA.getErrorReporter.handleSilentException(e)
+            ()
+          })
+          b.setNegativeButton("Cancel", {(d: DialogInterface, i: Int) =>
+            d.dismiss()
+          })
+          val d = b.show()
+          val button = d.getButton(DialogInterface.BUTTON_POSITIVE)
+          button.setEnabled(false)
+          edit.addTextChangedListener(new TextWatcher {
+            override def afterTextChanged(p1: Editable) {}
+            override def beforeTextChanged(p1: CharSequence,
+                                           p2: Int, p3: Int, p4: Int) { }
 
-              override def onTextChanged(p1: CharSequence,
-                                         p2: Int, p3: Int, p4: Int) {
-                button.setEnabled(p1.length > 0)
-              }
+            override def onTextChanged(p1: CharSequence,
+                                       p2: Int, p3: Int, p4: Int) {
+              button.setEnabled(p1.length > 0)
+            }
 
-            })
-            true
-          }
-        })
+          })
+          true
+        }
+      })
   }
-}
 
-class SettingsActivity extends PreferenceActivity {
-  override def onCreate(b: Bundle) {
-    super.onCreate(b)
-    addPreferencesFromResource(R.xml.settings)
-    SettingsFragment.setupNotificationPreference(this, getPreferenceScreen)
-    val p = getPreferenceScreen().findPreference("debug.log")
-    getPreferenceScreen.removePreference(p)
+  val REQUEST_CODE_ALERT_RINGTONE = 16
+  override def onPreferenceTreeClick(preference: Preference) = {
+    import android.provider.{Settings => ASettings}
+    if (preference.getKey == Settings.NOTIFICATION_SOUND.key) {
+      val intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+      intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+      intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+      intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+      intent.putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI,
+        ASettings.System.DEFAULT_NOTIFICATION_URI)
+
+      intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+        getRingtone.fold(ASettings.System.DEFAULT_NOTIFICATION_URI)(u =>
+          if (u.nonEmpty) Uri.parse(u) else null))
+
+      startActivityForResult(intent, REQUEST_CODE_ALERT_RINGTONE)
+      true
+    } else {
+      super.onPreferenceTreeClick(preference)
+    }
   }
+
+  override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+    if (requestCode == REQUEST_CODE_ALERT_RINGTONE && data != null) {
+      val ringtone: Option[Uri] = Option(data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI))
+      setRingtone(ringtone.fold("")(_.toString))
+    } else {
+      super.onActivityResult(requestCode, resultCode, data)
+    }
+  }
+
+  def setRingtone(ringtone: String): Unit = {
+    getPreferenceManager.getSharedPreferences.edit().putString(
+      Settings.NOTIFICATION_SOUND.key, ringtone).apply()
+    val pref = findPreference(Settings.NOTIFICATION_SOUND.key)
+    val ringtoneUri = Uri.parse(ringtone)
+    val rt = RingtoneManager.getRingtone(getContext, ringtoneUri)
+    pref.setSummary(rt.getTitle(getContext))
+  }
+
+  def getRingtone = Option(getPreferenceManager.getSharedPreferences.getString(
+    Settings.NOTIFICATION_SOUND.key, null))
 }
 
 class CharsetPreference(c: Context, attrs: AttributeSet)

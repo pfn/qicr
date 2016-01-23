@@ -26,6 +26,8 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" % "viewserver" % "1.0.3",
   "com.android.support" % "design" % supportSdkVersion,
   "com.android.support" % "support-v4" % supportSdkVersion,
+  "com.android.support" % "preference-v7" % supportSdkVersion,
+  "com.android.support" % "preference-v14" % supportSdkVersion,
   "com.android.support" % "appcompat-v7" % supportSdkVersion)
 
 proguardOptions ++=

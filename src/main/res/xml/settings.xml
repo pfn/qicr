@@ -93,7 +93,7 @@
                 android:enabled="@bool/is_v16plus"
                 android:defaultValue="true"
                 />
-        <RingtonePreference
+        <Preference
             android:key="notification_sound"
             android:ringtoneType="notification"
             android:showDefault="true"

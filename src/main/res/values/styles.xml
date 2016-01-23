@@ -84,6 +84,13 @@
         <item name="qicrNotificationIconTint">#ff000000</item>
     </style>
 
+    <style name="Base.SettingTheme" parent="@style/Theme.AppCompat">
+        <item name="colorAccent">#99cc00</item>
+        <item name="colorPrimary">#a4c639</item>
+    </style>
+    <style name="SettingTheme" parent="Base.SettingTheme">
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+    </style>
     <style name="AppTheme.Light" parent="Base.AppTheme.Light"/>
 
     <style name="AppTheme.Dark" parent="Base.AppTheme.Dark"/>

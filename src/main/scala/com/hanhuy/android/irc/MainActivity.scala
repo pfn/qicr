@@ -730,9 +730,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
             exit()
             true
     case R_id_settings =>
-      val clazz = if (honeycombAndNewer) classOf[SettingsFragmentActivity]
-        else classOf[SettingsActivity]
-      val intent = new Intent(this, clazz)
+      val intent = new Intent(this, classOf[SettingsFragmentActivity])
       startActivity(intent)
       true
     case R_id_toggle_theme =>

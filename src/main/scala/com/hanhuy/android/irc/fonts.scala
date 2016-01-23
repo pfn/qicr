@@ -3,13 +3,16 @@ package com.hanhuy.android.irc
 import java.io._
 import java.nio.ByteBuffer
 
+import android.app.Activity
 import android.content.Context
+import android.content.res.TypedArray
 import android.graphics.{Paint, Typeface}
-import android.preference.{ListPreference, Preference}
+import android.support.v7.preference.{PreferenceViewHolder, ListPreference, Preference}
 import android.text.{TextPaint, TextUtils}
 import android.text.style.MetricAffectingSpan
 import android.util.{TypedValue, AttributeSet}
-import android.view.{View, Gravity, ViewGroup}
+import android.view.{ContextThemeWrapper, View, Gravity, ViewGroup}
+import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget._
 import com.hanhuy.android.common._
 import iota._
@@ -104,32 +107,67 @@ object FontManager {
   }
 }
 class FontSizePreference(c: Context, attrs: AttributeSet)
-extends Preference(c, attrs)
-with SeekBar.OnSeekBarChangeListener with HasContext with HasActivity {
-  override def context = c
-  override def activity = c.asInstanceOf[android.app.Activity]
-  import android.view.ViewGroup.LayoutParams._
-  import com.hanhuy.android.irc.Tweaks._
+extends Preference(c, attrs) {
+  def progressChanged[A](fn: (Int, Boolean) => A) = new OnSeekBarChangeListener {
+    override def onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) =
+      fn(progress, fromUser)
+    override def onStopTrackingTouch(seekBar: SeekBar) = ()
+    override def onStartTrackingTouch(seekBar: SeekBar) = ()
+  }
+  setLayoutResource(R.layout.preference_font_size)
 
-  lazy val summary = new TextView(c)
   var defaultSize: Int = _
 
-  val fontNameKey = themeAttrs(R.styleable.FontSizePreference,
-    _.getString(R.styleable.FontSizePreference_fontNameKey))
-
-  override def onBindView(view: View) = {
-    super.onBindView(view)
-    summary.setText("%d sp" format getPersistedInt(defaultSize))
-    summary.setTextSize(
-      TypedValue.COMPLEX_UNIT_SP, getPersistedInt(defaultSize))
+  def themeAttrs[A](styleable: Array[Int], f: TypedArray => A)(implicit activity: ContextThemeWrapper): A = {
+    val themeAttrs = activity.getTheme.obtainStyledAttributes(styleable)
+    val c = f(themeAttrs)
+    themeAttrs.recycle()
+    c
   }
+  val fontNameKey = themeAttrs(R.styleable.FontSizePreference,
+    _.getString(R.styleable.FontSizePreference_fontNameKey))(c.asInstanceOf[ContextThemeWrapper])
 
-  override def onCreateView(parent: ViewGroup) = {
+
+  override def onBindViewHolder(holder: PreferenceViewHolder) = {
     val typeface = for {
       k <- Option(fontNameKey)
       n <- Option(getSharedPreferences.getString(k, null))
       t  = Typeface.createFromFile(n)
     } yield t
+    val summary = holder.findViewById(android.R.id.summary).asInstanceOf[TextView]
+    defaultSize = (summary.getTextSize /
+      getContext.getResources.getDisplayMetrics.scaledDensity).toInt
+    summary.setText("%d sp" format getPersistedInt(defaultSize))
+    summary.setTextSize(TypedValue.COMPLEX_UNIT_SP, getPersistedInt(defaultSize))
+    summary.setIncludeFontPadding(false)
+    val seekbar = holder.findViewById(R.id.font_size).asInstanceOf[SeekBar]
+    seekbar.setProgress(math.max(0, getPersistedInt(defaultSize) - 4))
+    seekbar.setOnSeekBarChangeListener(progressChanged { (p, touch) => ()
+      if (touch) {
+        val size = p + 4
+        persistInt(size)
+        summary.setText("%d sp" format size)
+        summary.setTextSize( TypedValue.COMPLEX_UNIT_SP, size)
+      }
+    })
+    typeface foreach summary.setTypeface
+  }
+
+  /*
+  override def onCreateView(parent: ViewGroup) = {
+    w[TextView] >>= id(android.R.id.summary) >>=
+      kestrel { tv =>
+        tv.setGravity(Gravity.CENTER)
+        tv.setTextAppearance(c, android.R.style.TextAppearance_Small)
+        defaultSize = (tv.getTextSize /
+          getContext.getResources.getDisplayMetrics.scaledDensity).toInt
+        typeface foreach tv.setTypeface
+        tv.setMaxLines(4)
+        tv.setIncludeFontPadding(false)
+      } >>= lpK(WRAP_CONTENT, 26 sp) { (p: RelativeLayout.LayoutParams) =>
+      p.addRule(RelativeLayout.RIGHT_OF, android.R.id.title)
+      margins(left = 8 dp)(p)
+    }
     // hackery because summary is singleton
     Option(summary.getParent).foreach { case p: ViewGroup => p.removeView(summary) }
     (
@@ -167,18 +205,7 @@ with SeekBar.OnSeekBarChangeListener with HasContext with HasActivity {
       ) >>= padding(left = 16 dp, right = 8 dp, top = 6 dp, bottom = 6 dp)
     ).perform()
   }
-
-  override def onStartTrackingTouch(seekBar: SeekBar) = ()
-  override def onStopTrackingTouch(seekBar: SeekBar) = ()
-  override def onProgressChanged(seekBar: SeekBar, progress: Int,
-                                 fromTouch: Boolean) = {
-    if (fromTouch) {
-      val size = progress + 4
-      persistInt(size)
-      summary.setText("%d sp" format size)
-      summary.setTextSize( TypedValue.COMPLEX_UNIT_SP, size)
-    }
-  }
+  */
 }
 
 class TypefaceSpan(typeface: Typeface) extends MetricAffectingSpan {
