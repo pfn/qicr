@@ -376,6 +376,9 @@ class IrcManager extends EventBus.RefOwner {
         if (!showing)
           showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
             m.toString, Some(query))
+        else {
+          markCurrentRead()
+        }
       }
     }
   }
@@ -451,9 +454,21 @@ class IrcManager extends EventBus.RefOwner {
       case c: model.Channel =>
         NotificationCenter += ChannelMessageNotification(m.ts, c.server.name, c.name, sender, msg)
     }
-    if (!showing && c.isNew(m))
+    if (!showing && c.isNew(m)) {
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
         getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
+    } else {
+      markCurrentRead()
+    }
+  }
+
+  private def markCurrentRead(): Unit = {
+    for {
+      activity <- MainActivity.instance
+      channel <- activity.adapter.currentTab.channel
+    } {
+      NotificationCenter.markRead(channel.name, channel.server.name)
+    }
   }
 
   private def showNotification(id: Int, icon: Int, text: String,

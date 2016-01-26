@@ -17,12 +17,24 @@ import Tweaks._
   * @author pfnguyen
   */
 object NotificationCenter extends TrayAdapter[NotificationMessage] {
+  val NNil: List[NotificationMessage] = Nil
   private[this] val notifications = RingBuffer[NotificationMessage](64)
+  def sortedNotifications = {
+    val (is, ns) = notifications.foldRight((NNil, NNil)) {
+      case (n, (important,normal)) =>
+      if (n.isNew && n.important)
+        (n :: important, normal)
+      else
+        (important, n :: normal)
+    }
+    ns ++ is
+  }
+  private[this] var sorted = sortedNotifications
   private[this] var newest = 0l
 
-  override def itemId(position: Int) = notifications(position).hashCode
+  override def itemId(position: Int) = sorted(position).hashCode
 
-  override def size = notifications.size
+  override def size = sorted.size
 
   override def emptyItem = R.string.no_notifications
 
@@ -65,7 +77,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
       p.addRule(RIGHT_OF, Id.notif_icon)
       p.addRule(LEFT_OF, Id.notif_arrow)
     } >>= textGravity(Gravity.CENTER_VERTICAL)
-  ) >>= padding(all = 8.dp)
+  ) >>= padding(top = 12.dp, bottom = 12.dp, right = 8.dp, left = 8.dp)
 
   override def onGetView(position: Int, convertView: View, parent: ViewGroup) = {
     implicit val ctx = parent.getContext
@@ -105,9 +117,9 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
   }
 
   override def getItem(position: Int): Option[NotificationMessage] =
-    if (size == 0) None else notifications(position).?
+    if (size == 0) None else sorted(position).?
 
-  def hasImportantNotifications = notifications.exists(n => n.isNew && n.important)
+  def hasImportantNotifications = sorted.exists(n => n.isNew && n.important)
 
   def +=(msg: NotificationMessage) = {
     val msgtime = msg.ts.getTime
@@ -147,6 +159,11 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
     notifyDataSetChanged()
     if (!hasImportantNotifications)
       UiBus.send(BusEvent.ReadNotification)
+  }
+
+  override def notifyDataSetChanged() = {
+    sorted = sortedNotifications
+    super.notifyDataSetChanged()
   }
 }
 
