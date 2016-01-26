@@ -71,12 +71,13 @@ class Server extends MessageAppender with Ordered[Server] {
     if (p == null || p.trim().length() == 0) null else p
 
   var _autorun: String = _
-  def autorun = _autorun
+  import com.hanhuy.android.irc._
+  def autorun = _autorun.?
   def autorun_=(a: String) = _autorun =
     if (a == null || a.trim().length() == 0) null else a
 
   var _autojoin: String = _
-  def autojoin = _autojoin
+  def autojoin = _autojoin.?
   def autojoin_=(a: String) = _autojoin =
     if (a == null || a.trim().length() == 0) null else a
 
@@ -120,8 +121,8 @@ class Server extends MessageAppender with Ordered[Server] {
     values.put(Config.FIELD_USERNAME,    username)
     values.put(Config.FIELD_PASSWORD,    password)
     values.put(Config.FIELD_REALNAME,    realname)
-    values.put(Config.FIELD_AUTOJOIN,    autojoin)
-    values.put(Config.FIELD_AUTORUN,     autorun)
+    values.put(Config.FIELD_AUTOJOIN,    autojoin.orNull)
+    values.put(Config.FIELD_AUTORUN,     autorun.orNull)
 
     values.put(Config.FIELD_LOGGING,     logging)
     values.put(Config.FIELD_USESASL,     sasl)
@@ -141,8 +142,8 @@ class Server extends MessageAppender with Ordered[Server] {
     realname = other.realname
     username = other.username
     password = other.password
-    autojoin = other.autojoin
-    autorun = other.autorun
+    autojoin = other.autojoin.orNull
+    autorun = other.autorun.orNull
     logging = other.logging
     sasl = other.sasl
     socks = other.socks

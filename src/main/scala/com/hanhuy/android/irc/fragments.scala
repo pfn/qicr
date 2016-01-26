@@ -164,8 +164,8 @@ class ServerSetupFragment extends DialogFragment {
       realname.setText(s.realname)
       username.setText(s.username)
       password.setText(s.password)
-      autojoin.setText(s.autojoin)
-      autorun.setText(s.autorun)
+      autojoin.setText(s.autojoin.getOrElse(""))
+      autorun.setText(s.autorun.getOrElse(""))
     }
   }
 
@@ -208,12 +208,13 @@ class ServerSetupFragment extends DialogFragment {
   override def onCreateView(inflater: LayoutInflater,
       container: ViewGroup, bundle: Bundle) : View = {
     // otherwise an AndroidRuntimeException occurs
-    if (dialogShown) return super.onCreateView(inflater, container, bundle)
-
-    val l = layout
-    if (bundle == null)
-      server = _server
-    l
+    if (dialogShown) super.onCreateView(inflater, container, bundle)
+    else {
+      val l = layout
+      if (bundle == null)
+        server = _server
+      l
+    }
   }
 
   var dialogShown = false
@@ -392,9 +393,8 @@ class ChannelFragment(_channel: Option[Channel])
       startActivity(MessageLogActivity.createIntent(channel.get))
       getActivity.overridePendingTransition(
         R.anim.slide_in_left, R.anim.slide_out_right)
-      return true
-    }
-    if (R.id.channel_close == item.getItemId) {
+      true
+    } else if (R.id.channel_close == item.getItemId) {
       val activity = getActivity
       val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
 
@@ -422,9 +422,8 @@ class ChannelFragment(_channel: Option[Channel])
           removeChannel()
         }
       }
-      return true
-    }
-    false
+      true
+    } else false
   }
 }
 
@@ -470,17 +469,15 @@ class QueryFragment(_query: Option[Query]) extends MessagesFragment {
         builder.setPositiveButton(R.string.yes, removeQuery _)
         builder.setNegativeButton(R.string.no, null)
         builder.create().show()
-        return true
       } else
         removeQuery()
-      return true
+      true
     } else if (R.id.channel_log == item.getItemId) {
       startActivity(MessageLogActivity.createIntent(query.get))
       getActivity.overridePendingTransition(
         R.anim.slide_in_left, R.anim.slide_out_right)
-      return true
-    }
-    false
+      true
+    } else false
   }
 
 }
@@ -651,9 +648,6 @@ with EventBus.RefOwner {
       tx.add(Id.servers_container, fragment, name)
       if (fragment.isDetached)
         tx.attach(fragment)
-      // fragment is sometimes visible without being shown?
-      // showing again shouldn't hurt?
-      //if (fragment.isVisible()) return
       tx.show(fragment)
     }
 
@@ -668,31 +662,34 @@ with EventBus.RefOwner {
       .asInstanceOf[ServerSetupFragment]
     if (fragment == null)
       fragment = new ServerSetupFragment
-    if (fragment.isVisible) return
+    if (!fragment.isVisible) {
 
-    val server = _s getOrElse {
-      val listview = getListView
-      val checked = listview.getCheckedItemPosition
-      if (AdapterView.INVALID_POSITION != checked)
-        listview.setItemChecked(checked, false)
-      new Server
-    }
-    val tx = mgr.beginTransaction()
-    clearServerMessagesFragment(mgr, tx)
+      val server = _s getOrElse {
+        val listview = getListView
+        val checked = listview.getCheckedItemPosition
+        if (AdapterView.INVALID_POSITION != checked)
+          listview.setItemChecked(checked, false)
+        new Server
+      }
+      val tx = mgr.beginTransaction()
+      clearServerMessagesFragment(mgr, tx)
 
-//    if (activity.isLargeScreen) {
-//      tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
-//      tx.addToBackStack(SERVER_SETUP_STACK)
-//      tx.commit() // can't commit a show
-//    } else {
+      //    if (activity.isLargeScreen) {
+      //      tx.add(R.id.servers_container, fragment, SERVER_SETUP_FRAGMENT)
+      //      tx.addToBackStack(SERVER_SETUP_STACK)
+      //      tx.commit() // can't commit a show
+      //    } else {
       fragment.setStyle(DialogFragment.STYLE_NO_TITLE,
         resolveAttr(R.attr.qicrCurrentTheme, _.resourceId))
       fragment.show(tx, SERVER_SETUP_FRAGMENT)
-//    }
+      //    }
 
-    fragment.server = server
-    getActivity.input.setVisibility(View.INVISIBLE)
-    UiBus.post { HoneycombSupport.invalidateActionBar() }
+      fragment.server = server
+      getActivity.input.setVisibility(View.INVISIBLE)
+      UiBus.post {
+        HoneycombSupport.invalidateActionBar()
+      }
+    }
   }
 
   def changeListener(server: Server) {
@@ -712,8 +709,8 @@ with EventBus.RefOwner {
   }
 
   def addListener(server: Server) {
-    if (adapter == null) return
-    adapter.notifyDataSetChanged()
+    if (adapter != null)
+      adapter.notifyDataSetChanged()
   }
 
   def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
@@ -780,9 +777,9 @@ with EventBus.RefOwner {
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
     if (R.id.add_server == item.getItemId) {
       getActivity.servers.addServerSetupFragment()
-      return true
-    }
-    onServerMenuItemClicked(item, _server)
+      true
+    } else
+      onServerMenuItemClicked(item, _server)
   }
 
   override def onPrepareOptionsMenu(menu: Menu) {

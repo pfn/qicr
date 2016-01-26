@@ -314,12 +314,11 @@ class IrcManager extends EventBus.RefOwner {
     log.v("Connecting server: %s", server)
     if (server.state == Server.State.CONNECTING ||
       server.state == Server.State.CONNECTED) {
-      return
+    } else {
+      server.state = Server.State.CONNECTING
+      Future(connectServerTask(server))
+      _running = true
     }
-
-    server.state = Server.State.CONNECTING
-    Future(connectServerTask(server))
-    _running = true
   }
 
   def getServers = Config.servers
@@ -339,6 +338,7 @@ class IrcManager extends EventBus.RefOwner {
     UiBus.send(BusEvent.StartQuery(query))
   }
 
+  // TODO figure out how to get rid of null value for mchannels
   def addQuery(q: Query): Unit = {
     queries += (((q.server, q.name), q))
     mchannels += ((q,null))
@@ -346,38 +346,41 @@ class IrcManager extends EventBus.RefOwner {
   def addQuery(c: IrcConnection, _nick: String, msg: String,
                sending: Boolean = false, action: Boolean = false,
                notice: Boolean = false, ts: Date = new Date) {
-    val server = _connections.getOrElse(c, { return })
-    val nick = if (sending) server.currentNick else _nick
+    if (_connections.contains(c)) {
+      val server = _connections(c)
+      val nick = if (sending) server.currentNick else _nick
 
-    if (!Config.Ignores(nick)) {
-      val query = queries.getOrElse((server, _nick.toLowerCase), {
-        val q = Query(server, _nick)
-        queries += (((server, _nick.toLowerCase), q))
-        q
-      })
-      mchannels += ((query, null))
+      if (!Config.Ignores(nick)) {
+        val query = queries.getOrElse((server, _nick.toLowerCase), {
+          val q = Query(server, _nick)
+          queries += (((server, _nick.toLowerCase), q))
+          q
+        })
+        // TODO figure out how to get rid of null value for mchannels
+        mchannels += ((query, null))
 
 
-      UiBus.run {
-        val m = if (notice) Notice(nick, msg, ts)
-        else if (action) CtcpAction(nick, msg, ts)
-        else Privmsg(nick, msg, ts = ts)
-        UiBus.send(BusEvent.PrivateMessage(query, m))
-        ServiceBus.send(BusEvent.PrivateMessage(query, m))
+        UiBus.run {
+          val m = if (notice) Notice(nick, msg, ts)
+          else if (action) CtcpAction(nick, msg, ts)
+          else Privmsg(nick, msg, ts = ts)
+          UiBus.send(BusEvent.PrivateMessage(query, m))
+          ServiceBus.send(BusEvent.PrivateMessage(query, m))
 
-        query += m
-        val fmt = m match {
-          case CtcpAction(_, _, _) => R.string.action_template
-          case Notice(_, _, _) => R.string.notice_template
-          case _ => R.string.message_template
-        }
-        val msg2 = Application.context.getString(fmt) formatSpans(MessageAdapter.colorNick(nick), msg)
-        NotificationCenter += UserMessageNotification(m.ts, server.name, nick, msg2)
-        if (!showing)
-          showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
-            m.toString, Some(query))
-        else {
-          markCurrentRead()
+          query += m
+          val fmt = m match {
+            case CtcpAction(_, _, _) => R.string.action_template
+            case Notice(_, _, _) => R.string.notice_template
+            case _ => R.string.message_template
+          }
+          val msg2 = Application.context.getString(fmt) formatSpans(MessageAdapter.colorNick(nick), msg)
+          NotificationCenter += UserMessageNotification(m.ts, server.name, nick, msg2)
+          if (!showing)
+            showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
+              m.toString, Some(query))
+          else {
+            markCurrentRead()
+          }
         }
       }
     }
@@ -530,12 +533,12 @@ class IrcManager extends EventBus.RefOwner {
       intent.getAction match {
         case ConnectivityManager.CONNECTIVITY_ACTION =>
           val cmm = c.systemService[ConnectivityManager]
-          val info = cmm.getActiveNetworkInfo
-          val inf = if (info != null)
-            NetInfo(info.getTypeName, info.getExtraInfo) else NetInfo("", "")
+          val info = cmm.getActiveNetworkInfo.?
+          val inf = info.fold(NetInfo("",""))(inf =>
+            NetInfo(inf.getTypeName, inf.getExtraInfo))
           val connectivity = !intent.getBooleanExtra(
             ConnectivityManager.EXTRA_NO_CONNECTIVITY, false) &&
-            info != null && info.isConnected
+            info.exists(_.isConnected)
           if (_running || (System.currentTimeMillis - lastRunning) < 15000) {
             if (hasRunOnce && (!connectivity || lastConnectedInfo != inf))
               getServers foreach (disconnect(_, None, true))

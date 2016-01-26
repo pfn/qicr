@@ -15,33 +15,30 @@ import android.support.v4.view.MenuItemCompat
 object HoneycombSupport {
   val TAG = "HoneycombSupport"
   var activity = Option.empty[MainActivity]
-  var _server: WeakReference[Server] = WeakReference(null)
-  var _actionmode: WeakReference[ActionMode] = WeakReference(null)
+  var _server: WeakReference[Server] = WeakReference.empty
+  var _actionmode: WeakReference[ActionMode] = WeakReference.empty
   var menuItemListener = Option.empty[(MenuItem, Option[Server]) => Boolean]
 
   def init(main: MainActivity) = activity = main.?
 
   def close() {
     menuItemListener = None
-    activity = null
+    activity = None
   }
 
   def invalidateActionBar() {
-    if (activity != null)
-      activity.foreach(_.supportInvalidateOptionsMenu())
+    activity.foreach(_.supportInvalidateOptionsMenu())
   }
 
   def stopActionMode() {
-    if (_actionmode == null) return
     _actionmode.get foreach { _.finish() }
-    _actionmode = null
+    _actionmode = WeakReference.empty
   }
 
   def recreate() {
 
     if (honeycombAndNewer) {
-      if (activity != null)
-        activity.foreach(_.recreate())
+      activity.foreach(_.recreate())
     } else {
       IrcManager.instance foreach (_.queueCreateActivity(activity.fold(0)(_.adapter.page)))
       activity.foreach(_.finish())
@@ -50,17 +47,12 @@ object HoneycombSupport {
 
   def startActionMode(server: Server) {
     _server = new WeakReference(server)
-    if (activity == null) return
-    _actionmode = activity.fold(null: WeakReference[ActionMode])(a => new WeakReference(
+    _actionmode = activity.fold(WeakReference.empty[ActionMode])(a => WeakReference(
       a.startSupportActionMode(ServerActionModeSetup)))
   }
 
-  def setTitle(s: String) = if (activity != null) {
-    activity.foreach(_.getSupportActionBar.setTitle(s))
-  }
-  def setSubtitle(s: String) = if (activity != null) {
-    activity.foreach(_.getSupportActionBar.setSubtitle(s))
-  }
+  def setTitle(s: String) = activity.foreach(_.getSupportActionBar.setTitle(s))
+  def setSubtitle(s: String) = activity.foreach(_.getSupportActionBar.setSubtitle(s))
 
   object ServerActionModeSetup extends ActionMode.Callback {
     override def onActionItemClicked(mode: ActionMode, item: MenuItem) = {
@@ -86,7 +78,7 @@ object HoneycombSupport {
     override def onDestroyActionMode(mode: ActionMode) = ()
 
     def setServerConnectionAction(menu: Menu): Unit = {
-      _server.get map { s =>
+      _server.get foreach { s =>
         val connected = s.state match {
           case Server.State.INITIAL      => false
           case Server.State.DISCONNECTED => false
@@ -106,10 +98,8 @@ object HoneycombSupport {
   def startNickActionMode(nick: String)(f: (MenuItem => Unit)) {
     NickListActionModeSetup.callback = f
     NickListActionModeSetup.nick = nick.dropWhile(n => Set(' ','@','+')(n))
-    if (activity != null) {
-      _actionmode = activity.fold(null: WeakReference[ActionMode])(a => new WeakReference(
+      _actionmode = activity.fold(WeakReference.empty[ActionMode])(a => WeakReference(
         a.startSupportActionMode(NickListActionModeSetup)))
-    }
   }
 
   object NickListActionModeSetup extends ActionMode.Callback {
@@ -144,11 +134,11 @@ object HoneycombSupport {
 
 object GingerbreadSupport {
   var _init = false
-  val DEVELOPMENT_MODE = true
   def init() {
-    if (_init) return
-    _init = true
-    if (DEVELOPMENT_MODE) StrictMode.setVmPolicy(
-      new StrictMode.VmPolicy.Builder().detectAll.penaltyLog.build)
+    if (!_init) {
+      _init = true
+      if (BuildConfig.DEBUG) StrictMode.setVmPolicy(
+        new StrictMode.VmPolicy.Builder().detectAll.penaltyLog.build)
+    }
   }
 }

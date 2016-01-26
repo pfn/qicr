@@ -66,10 +66,8 @@ object IrcListeners {
 
   // sometimes a null is passed in...
   def matchesNick(server: Server, msg: CharSequence) = {
-    if (msg != null)
-      matchesNickIndex(server.currentNick.toLowerCase, msg.toString.toLowerCase, 0) != -1
-    else
-      false
+    msg.?.fold(false)(m =>
+      matchesNickIndex(server.currentNick.toLowerCase, m.toString.toLowerCase, 0) != -1)
   }
 
   implicit class EnhancedUser(val u: User) extends AnyVal {
@@ -90,11 +88,11 @@ with ModeListener with ServerEventListener with MessageEventListener {
           server.state = Server.State.CONNECTED
           server += ServerInfo(manager.getString(R.string.server_connected))
         }
-        if (server.autorun != null || server.autojoin != null) {
+        if (server.autorun.isDefined || server.autojoin.isDefined) {
           val proc = CommandProcessor(Application.context, null)
           proc.server = Some(server)
-          if (server.autorun != null) {
-            server.autorun.split(";") foreach { cmd =>
+          server.autorun.foreach { autorun =>
+            autorun.split(";") foreach { cmd =>
               if (cmd.trim().length() > 0) {
                 var command = cmd.trim()
                 if (command.charAt(0) != '/')
@@ -103,9 +101,9 @@ with ModeListener with ServerEventListener with MessageEventListener {
               }
             }
           }
-          if (server.autojoin != null) {
+          server.autojoin.foreach { autojoin =>
             val join = manager.getString(R.string.command_join_1)
-            val channels = server.autojoin.split(";")
+            val channels = autojoin.split(";")
             channels foreach { c =>
               if (c.trim().length() > 0)
                 UiBus.run {
@@ -247,7 +245,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
         // 333 = topic change info
         // 366 = end of /names list
         line.getNumericCommand match {
-          case   5 => return // server capabilities list
+          case   5 => // server capabilities list
           case 251 => () // msg, network users info
           case 252 => () // args[1] ircops online
           case 254 => () // args[1] channel count
@@ -258,7 +256,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
           case 301 => () // args[1], target nick, away msg (reply)
           case 305 => () // unaway (user)
           case 306 => () // nowaway (user)
-          case 333 => return // topic change timestamp
+          case 333 => // topic change timestamp
           // whois response line1
           // 1: nick, 2: username, 3: host, 4: ?; msg = realname
           case 311 => handleWhois(line, true)
@@ -274,8 +272,8 @@ with ModeListener with ServerEventListener with MessageEventListener {
           case 401 => handleWhois(line, true) // args[1], nick, whois not there
           case 406 => handleWhois(line, true) // args[1], nick, whowas not there
           case 671 => handleWhois(line) // args[1], nick, is using a secure connection
-          case 366 => return // end of names list
-          case 375 => return // motd start
+          case 366 => // end of names list
+          case 375 => // motd start
           case _ => ()
         }
       } else {
@@ -351,20 +349,22 @@ with ModeListener with ServerEventListener with MessageEventListener {
     val user = quit.sender
     val msg = quit.message
     val c = quit.connection
-    if (user.isUs) return
-    manager._connections.get(c) foreach { server =>
-      UiBus.run {
-        try { // guard can change values if slow...
-          manager.channels.values collect {
-            case c: Channel if c.hasUser(user) => manager._channels.get(c)
-          } foreach { c =>
-            if (c.isDefined && c.get.server == server) {
-              UiBus.send(BusEvent.NickListChanged(c.get))
-              c.get += Quit(user.getNick, user.address, msg, quit.timestamp)
+    if (!user.isUs) {
+      manager._connections.get(c) foreach { server =>
+        UiBus.run {
+          try {
+            // guard can change values if slow...
+            manager.channels.values collect {
+              case c: Channel if c.hasUser(user) => manager._channels.get(c)
+            } foreach { c =>
+              if (c.isDefined && c.get.server == server) {
+                UiBus.send(BusEvent.NickListChanged(c.get))
+                c.get += Quit(user.getNick, user.address, msg, quit.timestamp)
+              }
             }
+          } catch {
+            case _: MatchError => ()
           }
-        } catch {
-          case _: MatchError => ()
         }
       }
     }
@@ -376,15 +376,16 @@ with ModeListener with ServerEventListener with MessageEventListener {
     val channel = part.channel
     val user = part.sender
     val msg = part.message
-    if (!manager._channels.contains(channel)) return
-    UiBus.run {
-      val ch = manager._channels(channel)
-      if (user.isUs) {
-        ch.state = QicrChannel.State.PARTED
-      } else {
-        UiBus.send(BusEvent.NickListChanged(ch))
+    if (manager._channels.contains(channel)) {
+      UiBus.run {
+        val ch = manager._channels(channel)
+        if (user.isUs) {
+          ch.state = QicrChannel.State.PARTED
+        } else {
+          UiBus.send(BusEvent.NickListChanged(ch))
+        }
+        ch += Part(user.getNick, user.address, msg, part.timestamp)
       }
-      ch += Part(user.getNick, user.address, msg, part.timestamp)
     }
   }
 
@@ -393,7 +394,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
     val src = topic.sender
     manager._channels.get(channel) foreach { c =>
       UiBus.run {
-        c += Topic(if (src != null) Some(src.getNick) else None, topic.topic, topic.timestamp)
+        c += Topic(src.?.map(_.getNick), topic.topic, topic.timestamp)
       }
     }
   }
@@ -404,7 +405,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
     val user = kick.target
     val op = kick.sender
     UiBus.run {
-      manager._channels.get(channel) map { ch =>
+      manager._channels.get(channel) foreach { ch =>
         if (user.isUs) {
           // TODO update adapter's channel state
           ch.state = QicrChannel.State.KICKED
@@ -485,7 +486,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
     if (manager.showing) {
       UiBus.run {
         val msg = MessageAdapter.formatText(Application.context, r)
-        MainActivity.instance map { activity =>
+        MainActivity.instance foreach { activity =>
           val tab = activity.adapter.currentTab
           (tab.channel orElse tab.server).fold {
             s += r
@@ -499,19 +500,19 @@ with ModeListener with ServerEventListener with MessageEventListener {
   }
 
   override def onNotice(n: MessageEventListener.Notice) {
-    val channel = n.target
+    val chan = n.target.?
     val src = n.sender
     val msg = n.message
-    if (channel != null) {
+    chan.fold(UiBus.run {
+      val sn = manager._connections.get(n.connection).map(_.name).getOrElse(n.connection.getServer.getAddress)
+      NotificationCenter += NotifyNotification(
+        n.timestamp, sn, src.getNick, s"-${MessageAdapter.colorNick(src.getNick)}- $msg")
+    }) { channel =>
       val c = manager._channels(channel)
       val notice = Notice(src.getNick, msg, n.timestamp)
       UiBus.run { c += notice }
       if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
         manager.addChannelMention(c, notice)
-    } else UiBus.run {
-      val sn = manager._connections.get(n.connection).map(_.name).getOrElse(n.connection.getServer.getAddress)
-      NotificationCenter += NotifyNotification(
-        n.timestamp, sn, src.getNick, s"-${MessageAdapter.colorNick(src.getNick)}- $msg")
     }
   }
 
@@ -531,11 +532,14 @@ with ModeListener with ServerEventListener with MessageEventListener {
   }
 
   override def onAction(a: Action) {
-    val channel = a.target
+    val chan = a.target.?
     val src = a.sender
     val msg = a.action
 
-    if (channel != null) {
+    chan.fold(UiBus.run {
+      manager.addQuery(a.connection, src.getNick, msg,
+        action = true, ts = a.timestamp)
+    }) { channel =>
       manager._channels.get(channel) foreach { c =>
         if (src.isUs) {
           cancelNotifications(c)
@@ -547,9 +551,6 @@ with ModeListener with ServerEventListener with MessageEventListener {
         if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
           manager.addChannelMention(c, action)
       }
-    } else UiBus.run {
-      manager.addQuery(a.connection, src.getNick, msg,
-        action = true, ts = a.timestamp)
     }
   }
 }

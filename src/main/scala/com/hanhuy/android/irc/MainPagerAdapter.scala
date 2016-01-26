@@ -135,31 +135,31 @@ with EventBus.RefOwner {
 
   def refreshTabTitle(c: ChannelLike) {
     val idx = Collections.binarySearch(channels, c, channelcomp)
-    if (idx < 0) return
-    val t = tabs(idx + channelBase)
+    if (idx >= 0) {
+      val t = tabs(idx + channelBase)
 
-    // disconnected flag needs to be set before returning because page ==
-    if (c.server.state == Server.State.DISCONNECTED)
-      t.flags |= TabInfo.FLAG_DISCONNECTED
+      // disconnected flag needs to be set before returning because page ==
+      if (c.server.state == Server.State.DISCONNECTED)
+        t.flags |= TabInfo.FLAG_DISCONNECTED
 
-    if (page == idx + channelBase) {
-      // make sure they're cleared when coming back
-      c.newMentions = false
-      c.newMessages = false
-      t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
-      t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
-      return
+      if (page == idx + channelBase) {
+        // make sure they're cleared when coming back
+        c.newMentions = false
+        c.newMessages = false
+        t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
+        t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
+      } else {
+        if (c.newMessages)
+          t.flags |= TabInfo.FLAG_NEW_MESSAGES
+        else
+          t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
+        if (c.newMentions)
+          t.flags |= TabInfo.FLAG_NEW_MENTIONS
+        else
+          t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
+        refreshTabTitle(idx + channelBase)
+      }
     }
-
-    if (c.newMessages)
-      t.flags |= TabInfo.FLAG_NEW_MESSAGES
-    else
-      t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
-    if (c.newMentions)
-      t.flags |= TabInfo.FLAG_NEW_MENTIONS
-    else
-      t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
-    refreshTabTitle(idx + channelBase)
   }
 
   val refreshTabRunnable: Runnable = () => {
@@ -326,18 +326,18 @@ with EventBus.RefOwner {
       Log.d(TAG, "Available tabs: " + tabs)
       Log.w(TAG, "Invalid position for removeTab: " + pos,
         new IllegalArgumentException)
-      return
+    } else {
+      pager.setCurrentItem(0)
+      val i = pos - 1
+      if (i < servers.size)
+        servers = servers filterNot (_ == servers(i))
+      else
+        channels = channels filterNot (_ == channels(i - servers.size))
+      tabs = tabs filterNot (_ == tabs(pos))
+      val idx = Math.max(0, i)
+      notifyDataSetChanged()
+      pager.setCurrentItem(idx)
     }
-    pager.setCurrentItem(0)
-    val i = pos - 1
-    if (i < servers.size)
-      servers = servers filterNot (_ == servers(i))
-    else
-      channels = channels filterNot (_ == channels(i-servers.size))
-    tabs = tabs filterNot (_== tabs(pos))
-    val idx = Math.max(0, i)
-    notifyDataSetChanged()
-    pager.setCurrentItem(idx)
   }
 
   override def getItemPosition(item: Object): Int = {

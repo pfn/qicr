@@ -602,50 +602,50 @@ extends Activity with TypedFindView {
 
   // TODO refactor my ass with MainActivity's
   override def onActivityResult(req: Int, res: Int, i: Intent) {
-    if (req != REQUEST_SPEECH_RECOGNITION ||
-      res == Activity.RESULT_CANCELED) return
-    if (res != Activity.RESULT_OK) {
-      Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
-      return
-    }
-    val results = i.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+    if (req == REQUEST_SPEECH_RECOGNITION) {
+      if (res != Activity.RESULT_OK) {
+        Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
+      } else {
+        val results = i.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
 
-    if (results.size == 0) {
-      Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
-      return
-    }
+        if (results.size == 0) {
+          Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
+        } else {
 
-    val eol = Settings.get(Settings.SPEECH_REC_EOL)
-    val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
+          val eol = Settings.get(Settings.SPEECH_REC_EOL)
+          val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
 
-    results find { r => r == eol || r == clearLine } match {
-      case Some(c) =>
-        if (c == eol) {
-          proc.handleLine(input.getText.toString)
-          InputProcessor.clear(input)
-        } else if (c == clearLine) {
-          InputProcessor.clear(input)
+          results find { r => r == eol || r == clearLine } match {
+            case Some(c) =>
+              if (c == eol) {
+                proc.handleLine(input.getText.toString)
+                InputProcessor.clear(input)
+              } else if (c == clearLine) {
+                InputProcessor.clear(input)
+              }
+            case None =>
+              val builder = new AlertDialog.Builder(this)
+              builder.setTitle(R.string.speech_select)
+              builder.setItems(results.toArray(
+                new Array[CharSequence](results.size)),
+                (d: DialogInterface, which: Int) => {
+                  input.getText.append(results(which) + " ")
+
+                  val rec = results(which).toLowerCase
+                  if (rec.endsWith(" " + eol) || rec == eol) {
+                    val t = input.getText.toString
+                    val line = t.substring(0, t.length() - eol.length() - 1)
+                    proc.handleLine(line)
+                    InputProcessor.clear(input)
+                  } else if (rec == clearLine) {
+                    InputProcessor.clear(input)
+                  }
+                })
+              builder.setNegativeButton(R.string.speech_cancel, null)
+              builder.create().show()
+          }
         }
-      case None =>
-        val builder = new AlertDialog.Builder(this)
-        builder.setTitle(R.string.speech_select)
-        builder.setItems(results.toArray(
-          new Array[CharSequence](results.size)),
-          (d: DialogInterface, which: Int) => {
-            input.getText.append(results(which) + " ")
-
-            val rec = results(which).toLowerCase
-            if (rec.endsWith(" " + eol) || rec == eol) {
-              val t = input.getText.toString
-              val line = t.substring(0, t.length() - eol.length() - 1)
-              proc.handleLine(line)
-              InputProcessor.clear(input)
-            } else if (rec == clearLine) {
-              InputProcessor.clear(input)
-            }
-          })
-        builder.setNegativeButton(R.string.speech_cancel, null)
-        builder.create().show()
+      }
     }
   }
   override def onSearchRequested() = {

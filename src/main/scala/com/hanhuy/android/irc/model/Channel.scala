@@ -139,22 +139,23 @@ object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
     if (name == _name) name else stripInitial(name)
   }
   override def compare(c1: ChannelLike, c2: ChannelLike): Int = {
-    if (c1.isInstanceOf[Channel] && c2.isInstanceOf[Query])
-      return 1
-    if (c1.isInstanceOf[Query] && c2.isInstanceOf[Channel])
-      return -1
-    val c1name = c1.name
-    val c2name = c2.name
-    val ch1 = if (c1name.length > 0) c1name.charAt(0)
-    val ch2 = if (c2name.length > 0) c2name.charAt(0)
-    (ch1, ch2) match {
-      case ('&', '#') => return -1
-      case ('#', '&') => return 1
-      case          _ => ()
+    (c1, c2) match {
+      case (_: Channel, _: Query) => 1
+      case (_: Query, _: Channel) => -1
+      case _ =>
+        val c1name = c1.name
+        val c2name = c2.name
+        val ch1 = if (c1name.length > 0) c1name.charAt(0)
+        val ch2 = if (c2name.length > 0) c2name.charAt(0)
+        (ch1, ch2) match {
+          case ('&', '#') => -1
+          case ('#', '&') => 1
+          case _ =>
+            val r = stripInitial(c1.name).compareToIgnoreCase(stripInitial(c2.name))
+            if (r == 0)
+              c1.server.name.compareToIgnoreCase(c2.server.name)
+            else r
+        }
     }
-    var r = stripInitial(c1.name).compareToIgnoreCase(stripInitial(c2.name))
-    if (r == 0)
-      r = c1.server.name.compareToIgnoreCase(c2.server.name)
-    r
   }
 }

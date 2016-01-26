@@ -60,28 +60,30 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
 
   var nicks: List[android.text.Spanned] = _
   override def notifyDataSetChanged() {
-    if (c == null) return
-    nicks = c.getUsers.toList.map { u =>
-      val prefix = if (u.hasOperator) '@' else if (u.hasVoice) '+' else ' '
-      NickAndMode(prefix, u.getNick)
-    }.filterNot {
-      _.nick == "***" // znc playback user
-    }.sortWith { (a, b) =>
-      (a.mode, b.mode) match {
-        case ('@', y) if y != '@'             => true
-        case (x, '@') if x != '@'             => false
-        case ('+', y) if y != '@' && y != '+' => true
-        case (x, '+') if x != '@' && x != '+' => false
-        case (_,_) => a.nick.compareToIgnoreCase(b.nick) < 0
-      }
-    }.map { n =>
-      val colored = SpannedGenerator.textColor(MessageAdapter.nickColor(n.nick), n.nick)
-      val s = if (Config.Ignores(n.nick))
-        span(new StrikethroughSpan, colored) else colored
+    if (c != null) {
+      nicks = c.getUsers.toList.map { u =>
+        val prefix = if (u.hasOperator) '@' else if (u.hasVoice) '+' else ' '
+        NickAndMode(prefix, u.getNick)
+      }.filterNot {
+        _.nick == "***" // znc playback user
+      }.sortWith { (a, b) =>
+        (a.mode, b.mode) match {
+          case ('@', y) if y != '@' => true
+          case (x, '@') if x != '@' => false
+          case ('+', y) if y != '@' && y != '+' => true
+          case (x, '+') if x != '@' && x != '+' => false
+          case (_, _) => a.nick.compareToIgnoreCase(b.nick) < 0
+        }
+      }.map { n =>
+        val colored = SpannedGenerator.textColor(MessageAdapter.nickColor(n.nick), n.nick)
+        val s = if (Config.Ignores(n.nick))
+          span(new StrikethroughSpan, colored)
+        else colored
 
-      "%1%2" formatSpans (String.valueOf(n.mode), s)
+        "%1%2" formatSpans(String.valueOf(n.mode), s)
+      }
+      super.notifyDataSetChanged()
     }
-    super.notifyDataSetChanged()
   }
 
   override def getItemId(pos: Int) = pos
