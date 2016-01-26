@@ -39,6 +39,7 @@
         <item name="qicrSpeechRecIcon">@drawable/ic_mic_white_24dp</item>
         <item name="qicrInputHistoryIcon">@drawable/ic_keyboard_arrow_up_white_24dp</item>
         <item name="qicrChatEndIcon">@drawable/ic_chat_bubble_outline_white_24dp</item>
+        <item name="qicrChatIgnoreIcon">@drawable/ic_chat_ignore_dark</item>
         <item name="qicrBrowserOpenIcon">@drawable/ic_open_in_browser_white_18dp</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
@@ -74,6 +75,7 @@
         <item name="qicrBrowserOpenIcon">@drawable/ic_open_in_browser_black_18dp</item>
         <item name="qicrSpeechRecIcon">@drawable/ic_mic_black_24dp</item>
         <item name="qicrChatEndIcon">@drawable/ic_chat_bubble_outline_black_24dp</item>
+        <item name="qicrChatIgnoreIcon">@drawable/ic_chat_ignore_light</item>
         <item name="qicrProgressSpinnerStyle">@android:style/Widget.ProgressBar.Small</item>
         <item name="android:tabWidgetStyle">@style/TextAppearance.TabWidget_Light</item>
         <item name="qicrDrawerBackground">#e0dddddd</item>

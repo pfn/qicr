@@ -23,6 +23,7 @@
     <attr name="qicrThemeIcon" format="reference"/>
     <attr name="qicrChatStartIcon" format="reference"/>
     <attr name="qicrChatEndIcon" format="reference"/>
+    <attr name="qicrChatIgnoreIcon" format="reference"/>
     <attr name="qicrLockRotationIcon" format="reference"/>
     <attr name="qicrAddServerIcon" format="reference"/>
     <declare-styleable name="AppTheme">

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:drawable="@drawable/action_bg_checked"/>
+  <item android:drawable="@drawable/ic_chat_bubble_outline_white_24dp"/>
+</layer-list>
