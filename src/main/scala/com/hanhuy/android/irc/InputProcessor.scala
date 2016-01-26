@@ -15,7 +15,6 @@ import android.util.Log
 
 import com.sorcix.sirc.IrcConnection
 
-import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 
 import com.hanhuy.android.conversions._
@@ -51,13 +50,12 @@ object HistoryAdapter extends TrayAdapter[String] {
   override def emptyItem = R.string.no_history
 
   override def onGetView(position: Int, convertView: View, parent: ViewGroup) = {
-    if (convertView != null) {
-      val tv = convertView.asInstanceOf[TextView]
-      tv.setText(history(position))
-      tv
-    } else {
+    convertView.?.fold {
       val view = LayoutInflater.from(parent.getContext).inflate(
         android.R.layout.simple_list_item_1, parent, false)
+      view.asInstanceOf[TextView].setText(history(position))
+      view
+    } { view =>
       view.asInstanceOf[TextView].setText(history(position))
       view
     }
@@ -136,87 +134,84 @@ abstract class InputProcessor(activity: Activity) {
 
   var completionPrefix: Option[String] = None
   var completionOffset: Option[Int]    = None
-  @tailrec
   final def nickComplete(input: EditText) {
     val (_, channel) = currentState
-    val c = channel match {
-      case Some(c: Channel) => c
-      case _ => return
-    }
+    channel foreach { c =>
 
-    val caret = input.getSelectionStart
-    val in = input.getText.toString
-    // completion logic:  starts off with recents first, then alphabet
-    // match a prefix, lowercased
-    //   (store the prefix and start index if not set)
-    //   verify prefix still matches if set (user input on soft kb)
-    //     if the prefix no longer matches, reset
-    // compare against recent, then sorted (iterate through)
-    // fill in the entire word, add a comma if at beginning of line
-    //   word should come from users (convert to proper case)
-    // if called again, replace previous result with the next result
-    //   lowercase the word first
-    //   compare current word against recent and sorted to find index
-    //   skip current nick if found again
-    // replace everytime called unless prefix and start index are unset
-    // prefix and start index get unset by key events or page change
-    // do nothing if no match
-    //   fell off the end? revert to prefix/start over
-    val prefix = completionPrefix getOrElse {
-      val start = input.getSelectionStart
-      val beginning = math.max(in.lastIndexOf(" ", start - 1), in.lastIndexOf("@", start - 1))
-      val p = in.substring(if (beginning == -1) 0 else beginning + 1, start)
-      completionPrefix = Some(p)
-      completionOffset = Some(start - p.length())
-      p
-    }
-    // TODO make ", " a preference
-    val suffix = ", "
-    val offset = completionOffset.get
-    val lowerp  = prefix.toLowerCase
+      val caret = input.getSelectionStart
+      val in = input.getText.toString
+      // completion logic:  starts off with recents first, then alphabet
+      // match a prefix, lowercased
+      //   (store the prefix and start index if not set)
+      //   verify prefix still matches if set (user input on soft kb)
+      //     if the prefix no longer matches, reset
+      // compare against recent, then sorted (iterate through)
+      // fill in the entire word, add a comma if at beginning of line
+      //   word should come from users (convert to proper case)
+      // if called again, replace previous result with the next result
+      //   lowercase the word first
+      //   compare current word against recent and sorted to find index
+      //   skip current nick if found again
+      // replace everytime called unless prefix and start index are unset
+      // prefix and start index get unset by key events or page change
+      // do nothing if no match
+      //   fell off the end? revert to prefix/start over
+      val prefix = completionPrefix getOrElse {
+        val start = input.getSelectionStart
+        val beginning = math.max(in.lastIndexOf(" ", start - 1), in.lastIndexOf("@", start - 1))
+        val p = in.substring(if (beginning == -1) 0 else beginning + 1, start)
+        completionPrefix = Some(p)
+        completionOffset = Some(start - p.length())
+        p
+      }
+      // TODO make ", " a preference
+      val suffix = ", "
+      val offset = completionOffset.get
+      val lowerp = prefix.toLowerCase
 
-    if (in.length() < offset || offset > caret || !in.substring(
+      if (in.length() < offset || offset > caret || !in.substring(
         offset).toLowerCase.startsWith(lowerp)) {
-      completionPrefix = None
-      completionOffset = None
-      nickComplete(input)
-    } else {
-      val selected = in.substring(offset, caret)
-      val current = (if (selected.endsWith(suffix))
-        selected.substring(0, selected.length() - suffix.length())
-      else selected).toLowerCase
-
-      val ch = manager.channels(c)
-      val users = ch.getUsers.map {
-        u => (u.getNick.toLowerCase, u.getNick)
-      }.toMap
-
-      val recent = c.messages.messages.reverse.collect {
-        case ChatMessage(s, m) => s.toLowerCase
-      }.distinct.toList
-      val names = (recent ++ users.keys.toList.sorted.filterNot(
-        recent.toSet)) filterNot { n => n == "***" || n == c.server.currentNick }
-
-      def goodCandidate(x: String) = x.startsWith(lowerp) && users.contains(x)
-      val candidate: Option[String] = if (current == lowerp) {
-        val i = names.indexWhere(goodCandidate)
-        if (i != -1) Some(users(names(i))) else None
+        completionPrefix = None
+        completionOffset = None
+        nickComplete(input)
       } else {
-        val i = names.indexWhere(_.equals(current))
-        if (i != -1 && i < names.size - 1) {
-          val n = names.indexWhere(goodCandidate, i + 1)
-          if (n != -1) Some(users(names(n))) else None
-        } else None
-      }
+        val selected = in.substring(offset, caret)
+        val current = (if (selected.endsWith(suffix))
+          selected.substring(0, selected.length() - suffix.length())
+        else selected).toLowerCase
 
-      val replacement = candidate.fold(prefix: CharSequence) { nick =>
-        "%1%2" formatSpans(MessageAdapter.colorNick(nick), if (offset <= 1) suffix else "")
+        val ch = manager.channels(c)
+        val users = ch.getUsers.map {
+          u => (u.getNick.toLowerCase, u.getNick)
+        }.toMap
+
+        val recent = c.messages.messages.reverse.collect {
+          case ChatMessage(s, m) => s.toLowerCase
+        }.distinct.toList
+        val names = (recent ++ users.keys.toList.sorted.filterNot(
+          recent.toSet)) filterNot { n => n == "***" || n == c.server.currentNick }
+
+        def goodCandidate(x: String) = x.startsWith(lowerp) && users.contains(x)
+        val candidate: Option[String] = if (current == lowerp) {
+          val i = names.indexWhere(goodCandidate)
+          if (i != -1) Some(users(names(i))) else None
+        } else {
+          val i = names.indexWhere(_.equals(current))
+          if (i != -1 && i < names.size - 1) {
+            val n = names.indexWhere(goodCandidate, i + 1)
+            if (n != -1) Some(users(names(n))) else None
+          } else None
+        }
+
+        val replacement = candidate.fold(prefix: CharSequence) { nick =>
+          "%1%2" formatSpans(MessageAdapter.colorNick(nick), if (offset <= 1) suffix else "")
+        }
+        // replace offset to cursor with replacement
+        // move cursor to end of replacement
+        val out = "%1%2%3" formatSpans(in.substring(0, offset), replacement, in.substring(caret))
+        input.setText(out)
+        input.setSelection(offset + replacement.length())
       }
-      // replace offset to cursor with replacement
-      // move cursor to end of replacement
-      val out = "%1%2%3" formatSpans(in.substring(0, offset), replacement, in.substring(caret))
-      input.setText(out)
-      input.setSelection(offset + replacement.length())
     }
   }
 }
@@ -247,61 +242,63 @@ extends InputProcessor(activity) {
     case _ => (None, None)
   }
   def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
+    if (KeyEvent.KEYCODE_SEARCH != k) {
+      completionPrefix = None
+      completionOffset = None
+    }
     // keyboard shortcuts / honeycomb and above only
     if (KeyEvent.ACTION_UP == e.getAction) {
       val meta = e.getMetaState
       val altOn   = (meta & KeyEvent.META_ALT_ON)   > 0
       val ctrlOn  = (meta & KeyEvent.META_CTRL_ON)  > 0
       val shiftOn = (meta & KeyEvent.META_SHIFT_ON) > 0
-      var pageTarget = -1
-
-      k match {
+      val (handled, target) = k match {
         case KeyEvent.KEYCODE_TAB =>
           if (ctrlOn && shiftOn) { // move backward in tabs
           val count = activity.adapter.getCount()
             val current = activity.pager.getCurrentItem
             val next = if (current - 1 < 0) count - 1 else current - 1
             activity.pager.setCurrentItem(next)
-          } else if (ctrlOn) { // move forward in tabs
-          val count = activity.adapter.getCount()
+          } else if (ctrlOn) {
+            // move forward in tabs
+            val count = activity.adapter.getCount()
             val current = activity.pager.getCurrentItem
             val next = if (current + 1 >= count) 0 else current + 1
             activity.pager.setCurrentItem(next)
-          } else { // tab completion
           }
-          return true
-        case KeyEvent.KEYCODE_1 => pageTarget =  1
-        case KeyEvent.KEYCODE_2 => pageTarget =  2
-        case KeyEvent.KEYCODE_3 => pageTarget =  3
-        case KeyEvent.KEYCODE_4 => pageTarget =  4
-        case KeyEvent.KEYCODE_5 => pageTarget =  5
-        case KeyEvent.KEYCODE_6 => pageTarget =  6
-        case KeyEvent.KEYCODE_7 => pageTarget =  7
-        case KeyEvent.KEYCODE_8 => pageTarget =  8
-        case KeyEvent.KEYCODE_9 => pageTarget =  9
-        case KeyEvent.KEYCODE_0 => pageTarget = 10
-        case KeyEvent.KEYCODE_Q => pageTarget = 11
-        case KeyEvent.KEYCODE_W => pageTarget = 12
-        case KeyEvent.KEYCODE_E => pageTarget = 13
-        case KeyEvent.KEYCODE_R => pageTarget = 14
-        case KeyEvent.KEYCODE_T => pageTarget = 15
-        case KeyEvent.KEYCODE_Y => pageTarget = 16
-        case KeyEvent.KEYCODE_U => pageTarget = 17
-        case KeyEvent.KEYCODE_I => pageTarget = 18
-        case KeyEvent.KEYCODE_O => pageTarget = 19
-        case KeyEvent.KEYCODE_P => pageTarget = 20
-        case _ => ()
+          (true.?,None)
+        case KeyEvent.KEYCODE_1 => (None,  1.?)
+        case KeyEvent.KEYCODE_2 => (None,  2.?)
+        case KeyEvent.KEYCODE_3 => (None,  3.?)
+        case KeyEvent.KEYCODE_4 => (None,  4.?)
+        case KeyEvent.KEYCODE_5 => (None,  5.?)
+        case KeyEvent.KEYCODE_6 => (None,  6.?)
+        case KeyEvent.KEYCODE_7 => (None,  7.?)
+        case KeyEvent.KEYCODE_8 => (None,  8.?)
+        case KeyEvent.KEYCODE_9 => (None,  9.?)
+        case KeyEvent.KEYCODE_0 => (None, 10.?)
+        case KeyEvent.KEYCODE_Q => (None, 11.?)
+        case KeyEvent.KEYCODE_W => (None, 12.?)
+        case KeyEvent.KEYCODE_E => (None, 13.?)
+        case KeyEvent.KEYCODE_R => (None, 14.?)
+        case KeyEvent.KEYCODE_T => (None, 15.?)
+        case KeyEvent.KEYCODE_Y => (None, 16.?)
+        case KeyEvent.KEYCODE_U => (None, 17.?)
+        case KeyEvent.KEYCODE_I => (None, 18.?)
+        case KeyEvent.KEYCODE_O => (None, 19.?)
+        case KeyEvent.KEYCODE_P => (None, 20.?)
+        case _ => (None,None)
       }
-      if (altOn && pageTarget != -1) {
-        activity.pager.setCurrentItem(pageTarget)
-        return true
+      handled.getOrElse {
+        target.fold(false) { page =>
+          if (altOn) {
+            activity.pager.setCurrentItem(page)
+          }
+          altOn
+        }
       }
-    }
-    if (KeyEvent.KEYCODE_SEARCH != k) {
-      completionPrefix = None
-      completionOffset = None
-    }
-    false
+    } else
+      false
   }
 }
 
@@ -318,44 +315,43 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
   lazy val manager = IrcManager.start()
 
-  lazy val activity: MainActivity = {
-    ctx match {
-      case a: MainActivity => a
-      case _ => null
-    }
+  lazy val activity = ctx match {
+    case a: MainActivity => a.?
+    case _ => None
   }
 
   // accept a nullable string in case of input that isn't pre-cleaned
   def executeLine(line: String) {
-    if (line == null || line.trim().length() == 0) return
-    if (line.charAt(0) == '/') {
-      val idx = line.indexOf(" ")
-      var cmd = line.substring(1)
-      var args: Option[String] = None
-      if (idx != -1) {
-        cmd = line.substring(1, idx)
+    if (line.? exists (_.nonEmpty)) {
+      if (line.charAt(0) == '/') {
+        val idx = line.indexOf(" ")
+        var cmd = line.substring(1)
+        var args: Option[String] = None
+        if (idx != -1) {
+          cmd = line.substring(1, idx)
 
-        val a = line.substring(idx + 1)
-        if (a.trim().length() == 0) args = None else args = Some(a)
+          val a = line.substring(idx + 1)
+          if (a.trim().length() == 0) args = None else args = Some(a)
+        }
+        cmd = cmd.toLowerCase
+        if (cmd.length() == 0 || cmd.charAt(0) == ' ') {
+          cmd = getString(R.string.command_quote)
+          val a = if (line.length() > 2) line.substring(2) else ""
+          args = if (a.trim().length() == 0) None else Some(a)
+        }
+        executeCommand(cmd, args)
+      } else {
+        sendMessage(Some(line))
       }
-      cmd = cmd.toLowerCase
-      if (cmd.length() == 0 || cmd.charAt(0) == ' ') {
-        cmd = getString(R.string.command_quote)
-        val a = if (line.length() > 2) line.substring(2) else ""
-        args = if (a.trim().length() == 0) None else Some(a)
-      }
-      executeCommand(cmd, args)
-    } else {
-      sendMessage(Some(line))
     }
   }
 
   def addCommandError(error: Int): Unit = addCommandError(getString(error))
 
   def addCommandError(error: String) {
-    (channel.map(_.+= _) orElse server.map(_.+= _)).fold (
+    (channel orElse server).fold (
       Log.w(TAG, "Unable to addCommandError, no server or channel: " + error): Any
-    )(_(CommandError(error)))
+    )(_ += CommandError(error))
   }
 
   def sendMessage(line: Option[String], action: Boolean = false) {
@@ -363,40 +359,45 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
       channel match {
         case Some(ch: Channel) => manager.channels.get(ch).foreach { chan =>
-          if (ch.server.state != Server.State.CONNECTED)
-            return addCommandError(R.string.error_server_disconnected)
-          if (ch.state != Channel.State.JOINED)
-            return addCommandError(R.string.error_channel_disconnected)
-          if (action) {
-            ch += CtcpAction(ch.server.currentNick, l)
-            chan.sendAction(l)
+          if (ch.server.state != Server.State.CONNECTED) {
+            addCommandError(R.string.error_server_disconnected)
+          } else if (ch.state != Channel.State.JOINED) {
+            addCommandError(R.string.error_channel_disconnected)
           } else {
-            val u = chan.getUs
-            if (u != null) // I doubt this will ever be null
-              ch += Privmsg(ch.server.currentNick, l,
-                u.hasOperator, u.hasVoice)
-            else
-              ch += Privmsg(ch.server.currentNick, l)
-            chan.sendMessage(l)
+            if (action) {
+              ch += CtcpAction(ch.server.currentNick, l)
+              chan.sendAction(l)
+            } else {
+              chan.getUs.?.fold(
+                ch += Privmsg(ch.server.currentNick, l)
+              ){ u => ch += Privmsg(ch.server.currentNick, l,
+                  u.hasOperator, u.hasVoice)
+              }
+              chan.sendMessage(l)
+            }
           }
         }
         case Some(query: Query)=>
-          if (query.server.state != Server.State.CONNECTED)
-            return addCommandError(R.string.error_server_disconnected)
-          manager.connections.get(query.server) map { conn =>
-            val user = conn.createUser(query.name)
-            if (conn.isConnected) {
-              if (action) {
-                query += CtcpAction(query.server.currentNick, l)
-                user.sendAction(l)
+          if (query.server.state != Server.State.CONNECTED) {
+            addCommandError(R.string.error_server_disconnected)
+          } else {
+            manager.connections.get(query.server).fold(
+              addCommandError("No connection found for this session")
+            ){ conn =>
+              val user = conn.createUser(query.name)
+              if (conn.isConnected) {
+                if (action) {
+                  query += CtcpAction(query.server.currentNick, l)
+                  user.sendAction(l)
+                } else {
+                  query += Privmsg(query.server.currentNick, l)
+                  user.sendMessage(l)
+                }
               } else {
-                query += Privmsg(query.server.currentNick, l)
-                user.sendMessage(l)
+                addCommandError(R.string.not_connected)
               }
-            } else {
-              addCommandError(R.string.not_connected)
             }
-          } getOrElse addCommandError("No connection found for this session")
+          }
         case _ => addCommandError(R.string.error_no_channel)
       }
     }
@@ -414,7 +415,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
   object JoinCommand extends Command {
     override def execute(args: Option[String]) {
-      args map { chan =>
+      args.fold(addCommandError(R.string.usage_join)){ chan =>
         var chan = args.get
         val idx = chan.indexOf(" ")
         var password: Option[String] = None
@@ -422,23 +423,24 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
           password = Some(chan.substring(idx + 1))
           chan = chan.substring(0, idx)
         }
-        if (chan.length == 0)
-          return addCommandError(R.string.usage_join)
+        if (chan.length == 0) {
+          addCommandError(R.string.usage_join)
+        } else {
 
-        val first = chan.charAt(0)
-        if (first != '#' && first != '&')
-          chan = "#" + chan
+          val first = chan.charAt(0)
+          if (first != '#' && first != '&')
+            chan = "#" + chan
 
-        withConnection { conn =>
-          if (conn.isConnected) {
-            val c = conn.createChannel(chan)
-            password map { p => c.join(p)} getOrElse c.join()
-          } else {
-            addCommandError("Not connected")
+          withConnection { conn =>
+            if (conn.isConnected) {
+              val c = conn.createChannel(chan)
+              password.fold(c.join())(p => c.join(p))
+            } else {
+              addCommandError("Not connected")
+            }
           }
-
         }
-      } getOrElse addCommandError(R.string.usage_join)
+      }
     }
   }
 
@@ -450,21 +452,21 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
             addCommandError(R.string.error_server_disconnected)
           else if (c.state != Channel.State.JOINED)
             addCommandError(R.string.error_channel_disconnected)
-          else {
+          else activity.foreach { act =>
 
             // TODO refactor with stuff in fragments
             val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
             def removeChannel() {
-              if (channel != null && c.state == Channel.State.JOINED) {
+              if (c.state == Channel.State.JOINED) {
                 manager.channels.get(c) foreach {
                   _.part()
                 }
               }
               manager.remove(c)
-              activity.adapter.removeTab(activity.adapter.getItemPosition(this))
+              act.adapter.removeTab(act.adapter.getItemPosition(this))
             }
             if (c.state == Channel.State.JOINED && prompt) {
-              val builder = new AlertDialog.Builder(activity)
+              val builder = new AlertDialog.Builder(act)
               builder.setTitle(R.string.channel_close_confirm_title)
               builder.setMessage(getString(R.string.channel_close_confirm))
               builder.setPositiveButton(R.string.yes, () => {
@@ -480,14 +482,14 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
         case Some(qu: Query) =>
           if (qu.server.state != Server.State.CONNECTED)
             addCommandError(R.string.error_server_disconnected)
-          else {
+          else activity.foreach { act =>
             val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
             def removeQuery() {
               manager.remove(qu)
-              activity.adapter.removeTab(activity.adapter.getItemPosition(this))
+              act.adapter.removeTab(act.adapter.getItemPosition(this))
             }
             if (prompt) {
-              val builder = new AlertDialog.Builder(activity)
+              val builder = new AlertDialog.Builder(act)
               builder.setTitle(R.string.query_close_confirm_title)
               builder.setMessage(getString(R.string.query_close_confirm))
               builder.setPositiveButton(R.string.yes, removeQuery _)
@@ -504,7 +506,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   }
 
   object QuitCommand extends Command {
-    override def execute(args: Option[String]) = MainActivity.instance map {
+    override def execute(args: Option[String]) = MainActivity.instance foreach {
       _.exit(args)
     }
   }
@@ -519,27 +521,28 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
     args collect {
       case CommandPattern(target, line) =>
-      if (line.trim().length() == 0)
-        return addCommandError(usage)
-
-      withConnection { c =>
-        target.charAt(0) match {
-          case '&' | '#' => () // do nothing if it's a channel
-          case _ => manager.addQuery(c, target, line, sending = true)
+      if (line.trim().length() == 0) {
+        addCommandError(usage)
+      } else {
+        withConnection { c =>
+          target.charAt(0) match {
+            case '&' | '#' => () // do nothing if it's a channel
+            case _ => manager.addQuery(c, target, line, sending = true)
+          }
+          val user = c.createUser(target)
+          if (notice) user.sendNotice(line) else user.sendMessage(line)
         }
-        val user = c.createUser(target)
-        if (notice) user.sendNotice(line) else user.sendMessage(line)
       }
     } getOrElse addCommandError(usage)
   }
 
   def withConnection(f: IrcConnection => Unit) {
-    currentServer map { s =>
+    currentServer.fold(addCommandError(R.string.error_server_disconnected)){ s =>
       if (s.state != Server.State.CONNECTED)
-        return addCommandError(R.string.error_server_disconnected)
-
-      manager.connections.get(s) foreach f
-    } getOrElse addCommandError(R.string.error_server_disconnected)
+        addCommandError(R.string.error_server_disconnected)
+      else
+        manager.connections.get(s) foreach f
+    }
   }
 
   def TODO = addCommandError("This command has not been implemented yet")
@@ -572,10 +575,8 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   object TopicCommand extends Command {
     override def execute(args: Option[String]) {
       channel match {
-        case Some(c: Channel) =>
-          args map { _ => TODO } getOrElse {
-            c.topic foreach (t => c += t.copy(forceShow = true))
-          }
+        case Some(c: Channel) => args.fold(
+          c.topic foreach (t => c += t.copy(forceShow = true)))(_ => TODO)
         case _ => TODO
       }
     }
@@ -595,15 +596,12 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
             if (trimmedArg.length == 0) "" else " " + trimmedArg)
 
           val r = CtcpRequest(manager._connections(c),
-             target, command.toUpperCase,
-             (if (trimmedArg.length == 0) null else trimmedArg).?)
+             target, command.toUpperCase, trimmedArg.?.find(_.nonEmpty))
 
           val (server, channel) = proc.currentState
           // show in currently visible tab or the server's message tab
           // if not currently on a message tab
-          channel orElse server map { _ += r } getOrElse {
-            currentServer map { _ += r }
-          }
+          (channel orElse server).fold(currentServer foreach { _ += r })(_ += r)
           c.createUser(target).sendCtcp(line)
         }
       } getOrElse addCommandError(R.string.usage_ctcp)
@@ -612,9 +610,9 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
   object NickCommand extends Command {
     override def execute(args: Option[String]) {
-      args map { newnick =>
+      args.fold(addCommandError(R.string.usage_nick)){ newnick =>
         withConnection (conn => Future { conn.setNick(newnick) })
-      } getOrElse addCommandError(R.string.usage_nick)
+      }
     }
   }
 
@@ -640,58 +638,49 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
   object IgnoreCommand extends Command {
     override def execute(args: Option[String]) = {
-      args map { toIgnore =>
-        toIgnore.trim.split("\\s+") foreach { i =>
-          Config.Ignores += i
-
-          addCommandError(getString(R.string.ignore_add_prefix, i))
-        }
-
-        ()
-      } getOrElse {
+      args.fold {
         if (Config.Ignores.isEmpty)
           addCommandError(R.string.error_ignores_empty)
         else {
           addCommandError(getString(R.string.ignore_list_prefix,
             Config.Ignores map ( "  " + _ ) mkString "\n"))
         }
-        ()
+      } { toIgnore =>
+        toIgnore.trim.split("\\s+") foreach { i =>
+          Config.Ignores += i
+
+          addCommandError(getString(R.string.ignore_add_prefix, i))
+        }
       }
     }
   }
 
   object UnignoreCommand extends Command {
     override def execute(args: Option[String]) = {
-      args map { toUnignore =>
+      args.fold(addCommandError(R.string.usage_unignore)){ toUnignore =>
         toUnignore.trim.split("\\s+") foreach { i =>
           Config.Ignores -= i
 
           addCommandError(getString(R.string.ignore_remove_prefix, i))
         }
-
-        ()
-      } getOrElse {
-        addCommandError(R.string.usage_unignore)
       }
     }
   }
 
   object ClearCommand extends Command {
     override def execute(args: Option[String]): Unit = {
-      channel map { c =>
-        c.clear()
-      } getOrElse addCommandError(R.string.error_no_channel)
+      channel.fold(addCommandError(R.string.error_no_channel))(_.clear())
     }
   }
 
   object RawCommand extends Command {
     override def execute(args: Option[String]) {
-      args map { line =>
+      args.fold(addCommandError(R.string.usage_raw)){ line =>
         if (line.trim().length() == 0)
           addCommandError(R.string.usage_raw)
         else
           withConnection { c => c.sendRaw(line) }
-      } getOrElse addCommandError(R.string.usage_raw)
+      }
     }
   }
 

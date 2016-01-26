@@ -11,7 +11,7 @@ import android.widget.AbsListView.OnScrollListener
   * @author pfnguyen
   */
 package object irc {
-  implicit class AnyRefAsOptionExtension[T <: AnyRef](val any: T) extends AnyVal {
+  implicit class AnyAsOptionExtension[T <: Any](val any: T) extends AnyVal {
     def ? = Option(any)
   }
 
