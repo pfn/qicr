@@ -107,7 +107,9 @@ object FontManager {
   }
 }
 class FontSizePreference(c: Context, attrs: AttributeSet)
-extends Preference(c, attrs) {
+extends Preference(c, attrs) with HasContext {
+  override def context = c
+
   def progressChanged[A](fn: (Int, Boolean) => A) = new OnSeekBarChangeListener {
     override def onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) =
       fn(progress, fromUser)
@@ -118,14 +120,8 @@ extends Preference(c, attrs) {
 
   var defaultSize: Int = _
 
-  def themeAttrs[A](styleable: Array[Int], f: TypedArray => A)(implicit activity: ContextThemeWrapper): A = {
-    val themeAttrs = activity.getTheme.obtainStyledAttributes(styleable)
-    val c = f(themeAttrs)
-    themeAttrs.recycle()
-    c
-  }
   val fontNameKey = themeAttrs(R.styleable.FontSizePreference,
-    _.getString(R.styleable.FontSizePreference_fontNameKey))(c.asInstanceOf[ContextThemeWrapper])
+    _.getString(R.styleable.FontSizePreference_fontNameKey))
 
 
   override def onBindViewHolder(holder: PreferenceViewHolder) = {
