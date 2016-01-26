@@ -88,7 +88,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
         UiBus.run {
           // ugh, need to do it here so that the auto commands can run
           server.state = Server.State.CONNECTED
-          server.add(ServerInfo(manager.getString(R.string.server_connected)))
+          server += ServerInfo(manager.getString(R.string.server_connected))
         }
         if (server.autorun != null || server.autojoin != null) {
           val proc = CommandProcessor(Application.context, null)
@@ -134,7 +134,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
   override def onMotd(motd: ServerEventListener.Motd) {
     manager._connections.get(motd.connection) foreach { server =>
       // sIRC sends motd as one big blob of lines, split before adding
-      UiBus.run { motd.motd.split("\r?\n") foreach { m => server.add(Motd(m)) } }
+      UiBus.run { motd.motd.split("\r?\n") foreach { m => server += Motd(m) } }
     }
   }
 
@@ -175,10 +175,10 @@ with ModeListener with ServerEventListener with MessageEventListener {
         line.getNumericCommand match {
           case 318 =>
             UiBus.run(manager.lastChannel foreach (
-              _.add(accumulateWhois(nick, realNick))))
+              _ += accumulateWhois(nick, realNick)))
           case 369 =>
             UiBus.run(manager.lastChannel foreach (
-              _.add(accumulateWhois(nick, realNick))))
+              _ += accumulateWhois(nick, realNick)))
           case _ =>
         }
       }
@@ -302,9 +302,9 @@ with ModeListener with ServerEventListener with MessageEventListener {
         }
       }
       if (line.getCommand != "PONG") UiBus.run {
-        server.add(ServerInfo("[%s](%s):[%s]" format (
+        server += ServerInfo("[%s](%s):[%s]" format (
           line.getCommand, line.getArguments,
-          line.getMessage)))
+          line.getMessage))
       }
     }
   }
@@ -328,7 +328,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
         manager._channels.values foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
-            c.add(NickChange(oldnick.getNick, newnick.getNick, nick.timestamp))
+            c += NickChange(oldnick.getNick, newnick.getNick, nick.timestamp)
           }
         }
       }
@@ -340,7 +340,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
         }.toSeq.distinct foreach { c =>
           if (c.server == server) {
             UiBus.send(BusEvent.NickListChanged(c))
-            c.add(NickChange(oldnick.getNick, newnick.getNick, nick.timestamp))
+            c += NickChange(oldnick.getNick, newnick.getNick, nick.timestamp)
           }
         }
       }
@@ -360,7 +360,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
           } foreach { c =>
             if (c.isDefined && c.get.server == server) {
               UiBus.send(BusEvent.NickListChanged(c.get))
-              c.get.add(Quit(user.getNick, user.address, msg, quit.timestamp))
+              c.get += Quit(user.getNick, user.address, msg, quit.timestamp)
             }
           }
         } catch {
@@ -384,7 +384,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
       } else {
         UiBus.send(BusEvent.NickListChanged(ch))
       }
-      ch.add(Part(user.getNick, user.address, msg, part.timestamp))
+      ch += Part(user.getNick, user.address, msg, part.timestamp)
     }
   }
 
@@ -393,7 +393,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
     val src = topic.sender
     manager._channels.get(channel) foreach { c =>
       UiBus.run {
-        c.add(Topic(if (src != null) Some(src.getNick) else None, topic.topic, topic.timestamp))
+        c += Topic(if (src != null) Some(src.getNick) else None, topic.topic, topic.timestamp)
       }
     }
   }
@@ -411,7 +411,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
         } else {
           UiBus.send(BusEvent.NickListChanged(ch))
         }
-        ch.add(Kick(op.getNick, user.getNick, msg, kick.timestamp))
+        ch += Kick(op.getNick, user.getNick, msg, kick.timestamp)
       }
     }
 
@@ -429,7 +429,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
       manager._channels.get(channel) foreach { ch =>
         UiBus.send(BusEvent.NickListChanged(ch))
         if (!user.isUs)
-          ch.add(Join(user.getNick, user.address, join.timestamp))
+          ch += Join(user.getNick, user.address, join.timestamp)
       }
     }
 
@@ -457,7 +457,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
           manager.addChannelMention(c, pm)
 
         UiBus.run {
-          c.add(pm)
+          c += pm
         }
     }
   }
@@ -487,14 +487,14 @@ with ModeListener with ServerEventListener with MessageEventListener {
         val msg = MessageAdapter.formatText(Application.context, r)
         MainActivity.instance map { activity =>
           val tab = activity.adapter.currentTab
-          tab.channel orElse tab.server map { _.add(r) } getOrElse {
-            s.add(r)
+          (tab.channel orElse tab.server).fold {
+            s += r
             Toast.makeText(Application.context, msg, Toast.LENGTH_LONG).show()
-          }
+          }{ _ += r }
         }
       }
     } else {
-      s.add(r)
+      s += r
     }
   }
 
@@ -505,9 +505,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
     if (channel != null) {
       val c = manager._channels(channel)
       val notice = Notice(src.getNick, msg, n.timestamp)
-      UiBus.run {
-        c.add(notice)
-      }
+      UiBus.run { c += notice }
       if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
         manager.addChannelMention(c, notice)
     } else UiBus.run {
@@ -544,7 +542,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
         }
         val action = CtcpAction(src.getNick, msg, a.timestamp)
         UiBus.run {
-          c.add(action)
+          c += action
         }
         if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
           manager.addChannelMention(c, action)

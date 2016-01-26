@@ -294,12 +294,12 @@ class IrcManager extends EventBus.RefOwner {
     removeConnection(server) // gotta go after the foreach above
     server.state = Server.State.DISCONNECTED
     // handled by onDisconnect
-    server.add(ServerInfo(getString(R.string.server_disconnected)))
+    server += ServerInfo(getString(R.string.server_disconnected))
 
     //if (disconnected && server.autoconnect) // not requested?  auto-connect
     //    connect(server)
 
-    if (connections.size == 0) {
+    if (connections.isEmpty) {
       // do not stop context if onDisconnect unless showing
       // do not stop context if quitting, quit() will do it
       if ((!disconnected || showing) && !quitting) {
@@ -332,7 +332,7 @@ class IrcManager extends EventBus.RefOwner {
   def startQuery(server: Server, nick: String) {
     val query = queries.getOrElse((server, nick.toLowerCase), {
       val q = Query(server, nick)
-      q add MessageLike.Query()
+      q += MessageLike.Query()
       queries += (((server, nick.toLowerCase),q))
       q
     })
@@ -365,7 +365,7 @@ class IrcManager extends EventBus.RefOwner {
         UiBus.send(BusEvent.PrivateMessage(query, m))
         ServiceBus.send(BusEvent.PrivateMessage(query, m))
 
-        query.add(m)
+        query += m
         val fmt = m match {
           case CtcpAction(_, _, _) => R.string.action_template
           case Notice(_, _, _) => R.string.notice_template
@@ -577,7 +577,7 @@ class IrcManager extends EventBus.RefOwner {
 
   def serverMessage(message: String, server: Server) {
     UiBus.run {
-      server.add(ServerInfo(message))
+      server += ServerInfo(message)
     }
   }
 

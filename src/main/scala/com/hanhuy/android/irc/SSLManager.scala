@@ -34,7 +34,7 @@ extends X509TrustManager {
                 TrustManagerFactory.getDefaultAlgorithm)
         factory.init(null.asInstanceOf[KeyStore])
         val managers = factory.getTrustManagers
-        if (managers.length == 0)
+        if (managers.isEmpty)
             throw new IllegalStateException("No trust manager found")
         managers(0).asInstanceOf[X509TrustManager]
     }
@@ -44,23 +44,23 @@ extends X509TrustManager {
     override def checkServerTrusted(
             chain: Array[X509Certificate], authType: String) {
         UiBus.run {
-            server.add(SslInfo(
-                    chain(0).getSubjectX500Principal.toString))
-            server.add(SslInfo(
+            server += SslInfo(
+                    chain(0).getSubjectX500Principal.toString)
+            server += SslInfo(
                     context.getString(R.string.sha1_fingerprint) +
-                    sha1(chain(0))))
-            server.add(SslInfo(
+                    sha1(chain(0)))
+            server += SslInfo(
                     context.getString(R.string.md5_fingerprint) +
-                    md5(chain(0))))
+                    md5(chain(0)))
         }
         try {
             chain(0).checkValidity()
         } catch {
             case e: Exception =>
                 UiBus.run {
-                    server.add(SslError(
-                            context.getString(R.string.ssl_expired)))
-                    server.add(SslError(e.getMessage))
+                    server += SslError(
+                            context.getString(R.string.ssl_expired))
+                    server += SslError(e.getMessage)
                 }
         }
     }

@@ -36,7 +36,7 @@ class Server extends MessageAppender with Ordered[Server] {
 
   override def clear() = messages.clear()
 
-  def add(m: MessageLike) = {
+  def +=(m: MessageLike) = {
     ServiceBus.send(ServerMessage(this, m))
     messages.add(m)
   }

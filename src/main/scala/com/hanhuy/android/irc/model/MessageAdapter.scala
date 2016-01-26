@@ -29,7 +29,7 @@ import scala.util.Try
 import iota.{textColor => _, _}
 
 trait MessageAppender {
-  def add(m: MessageLike): Unit
+  def +=(m: MessageLike): Unit
   def clear(): Unit
 }
 

@@ -66,13 +66,13 @@ abstract class ChannelLike(val server: Server, val name: String)
     messages.clear()
   }
 
-  def addInternal(m: MessageLike): Unit = {
+  private[this] def addInternal(m: MessageLike): Unit = {
     messages.add(m)
     MessageLog.log(m, this)
     ServiceBus.send(BusEvent.ChannelMessage(this, m))
     UiBus.send(BusEvent.ChannelMessage(this, m))
   }
-  def add(m: MessageLike) = synchronized {
+  def +=(m: MessageLike) = synchronized {
     if (isNew(m)) m match {
       case c: ChatMessage =>
         lastTs = m.ts.getTime
@@ -109,21 +109,21 @@ class Channel private(s: Server, n: String) extends ChannelLike(s, n) {
     _state = state
   }
 
-  override def add(m: MessageLike) = m match {
+  override def +=(m: MessageLike) = m match {
     case t@Topic(sender, topic, ts, force) =>
       // do not repeat topic when re-connecting to a bnc
       if (!lastTopic.exists(_.topic == topic) || force)
-        super.add(m)
+        super.+=(m)
 
       lastTopic = Some(t)
     case _ =>
-      super.add(m)
+      super.+=(m)
   }
 }
 class Query private(s: Server, n: String) extends ChannelLike(s, n) {
-  override def add(m: MessageLike) {
+  override def +=(m: MessageLike) {
     newMentions = true // always true in a query
-    super.add(m)
+    super.+=(m)
   }
 }
 
@@ -131,11 +131,11 @@ object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
   @tailrec
   private def stripInitial(_name: String): String = {
     var name = _name
-    name = if (name.length == 0) "" else (name.charAt(0) match {
+    name = if (name.length == 0) "" else name.charAt(0) match {
       case '#' => name.substring(1)
       case '&' => name.substring(1)
       case _   => name
-    })
+    }
     if (name == _name) name else stripInitial(name)
   }
   override def compare(c1: ChannelLike, c2: ChannelLike): Int = {

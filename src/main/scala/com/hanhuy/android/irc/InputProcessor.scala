@@ -4,23 +4,21 @@ import android.support.v7.app.AlertDialog
 import com.hanhuy.android.irc.model._
 import com.hanhuy.android.irc.model.MessageLike._
 
-import android.content.{DialogInterface, Context}
+import android.content.Context
 import android.text.TextWatcher
 import android.text.Editable
 import android.view.{LayoutInflater, ViewGroup, View, KeyEvent}
-import android.view.inputmethod.{InputMethodManager, EditorInfo}
+import android.view.inputmethod.EditorInfo
 import android.widget.{TextView, EditText}
 import android.text.method.TextKeyListener
 import android.util.Log
 
 import com.sorcix.sirc.IrcConnection
-import iota.HasActivity
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 
 import com.hanhuy.android.conversions._
-import com.hanhuy.android.appcompat.extensions._
 import com.hanhuy.android.common._
 import android.app.Activity
 import com.hanhuy.android.irc.model.MessageLike.CommandError
@@ -355,7 +353,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   def addCommandError(error: Int): Unit = addCommandError(getString(error))
 
   def addCommandError(error: String) {
-    (channel.map(_.add _) orElse server.map(_.add _)).fold (
+    (channel.map(_.+= _) orElse server.map(_.+= _)).fold (
       Log.w(TAG, "Unable to addCommandError, no server or channel: " + error): Any
     )(_(CommandError(error)))
   }
@@ -370,15 +368,15 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
           if (ch.state != Channel.State.JOINED)
             return addCommandError(R.string.error_channel_disconnected)
           if (action) {
-            ch.add(CtcpAction(ch.server.currentNick, l))
+            ch += CtcpAction(ch.server.currentNick, l)
             chan.sendAction(l)
           } else {
             val u = chan.getUs
             if (u != null) // I doubt this will ever be null
-              ch.add(Privmsg(ch.server.currentNick, l,
-                u.hasOperator, u.hasVoice))
+              ch += Privmsg(ch.server.currentNick, l,
+                u.hasOperator, u.hasVoice)
             else
-              ch.add(Privmsg(ch.server.currentNick, l))
+              ch += Privmsg(ch.server.currentNick, l)
             chan.sendMessage(l)
           }
         }
@@ -389,10 +387,10 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
             val user = conn.createUser(query.name)
             if (conn.isConnected) {
               if (action) {
-                query.add(CtcpAction(query.server.currentNick, l))
+                query += CtcpAction(query.server.currentNick, l)
                 user.sendAction(l)
               } else {
-                query.add(Privmsg(query.server.currentNick, l))
+                query += Privmsg(query.server.currentNick, l)
                 user.sendMessage(l)
               }
             } else {
@@ -407,9 +405,9 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   def sendAction(line: Option[String]) = sendMessage(line, true)
 
   def executeCommand(cmd: String, args: Option[String]) {
-    commands.get(cmd) map { _.execute(args) } getOrElse {
+    commands.get(cmd).fold(
       addCommandError(getString(R.string.error_command_unknown, cmd))
-    }
+    )(_.execute(args))
   }
 
   def currentServer = channel map { _.server } orElse server
@@ -576,7 +574,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
       channel match {
         case Some(c: Channel) =>
           args map { _ => TODO } getOrElse {
-            c.topic foreach (t => c.add(t.copy(forceShow = true)))
+            c.topic foreach (t => c += t.copy(forceShow = true))
           }
         case _ => TODO
       }
@@ -603,8 +601,8 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
           val (server, channel) = proc.currentState
           // show in currently visible tab or the server's message tab
           // if not currently on a message tab
-          channel orElse server map { _.add(r) } getOrElse {
-            currentServer map { _.add(r) }
+          channel orElse server map { _ += r } getOrElse {
+            currentServer map { _ += r }
           }
           c.createUser(target).sendCtcp(line)
         }
