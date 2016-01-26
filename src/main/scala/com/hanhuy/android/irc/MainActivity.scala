@@ -2,10 +2,10 @@ package com.hanhuy.android.irc
 
 import android.annotation.TargetApi
 import android.app.{NotificationManager, Activity, AlertDialog}
-import android.content.{Context, Intent, DialogInterface}
+import android.content.{BroadcastReceiver, Context, Intent, DialogInterface}
 import android.graphics.{Color, Rect}
 import android.graphics.drawable.ColorDrawable
-import android.os.{Build, Bundle}
+import android.os.{PowerManager, Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.design.widget.TabLayout
 import android.support.v4.view.{ViewCompat, MotionEventCompat, ViewPager}
@@ -524,6 +524,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
+    registerReceiver(dozeReceiver, PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
     val nm = this.systemService[NotificationManager]
     nm.cancelAll()
 
@@ -783,6 +784,17 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       userCount.setText(
         getString(R.string.users_count,
           nickList.getAdapter.getCount: java.lang.Integer))
+    }
+  }
+
+  val dozeReceiver: BroadcastReceiver = (c: Context, i: Intent) => {
+    @TargetApi(23)
+    def goToBack(): Unit = {
+      if (systemService[PowerManager].isDeviceIdleMode)
+        moveTaskToBack(true)
+    }
+    i.getAction.? collect {
+      case PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED => goToBack()
     }
   }
 }
