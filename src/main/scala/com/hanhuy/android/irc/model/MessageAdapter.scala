@@ -36,7 +36,7 @@ trait MessageAppender {
 object MessageAdapter extends EventBus.RefOwner {
   lazy val gbfont = Typeface.createFromAsset(
     Application.context.getAssets, "DejaVuSansMono.ttf")
-  private var fontSetting = Option(Settings.get(Settings.FONT_NAME)) flatMap (
+  private var fontSetting = Settings.get(Settings.FONT_NAME).? flatMap (
     n => Try(Typeface.createFromFile(n)).toOption)
   val NICK_COLORS: Array[Int] = Array(
     0xfff44336, 0xffe91e63, 0xff9c27b0, 0xff7E57C2, 0xff5c6bc0, 0xff2196f3,
@@ -51,7 +51,7 @@ object MessageAdapter extends EventBus.RefOwner {
 
   def formatText(c: Context, msg: MessageLike)
       (implicit channel: ChannelLike = null, nicks: Set[String] = Set.empty): CharSequence = {
-    val ch = Option(channel)
+    val ch = channel.?
     msg match {
       case Whois(text,_) => text
       case MessageLike.Query(_) => formatText(c, msg, R.string.query_template,
@@ -138,7 +138,7 @@ object MessageAdapter extends EventBus.RefOwner {
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
       msg: String, modes: (Boolean,Boolean) = (false, false))(
       implicit channel: ChannelLike, currentNicks: Set[String]) = {
-    val server = Option(channel) map (_.server)
+    val server = channel.? map (_.server)
     val (op, voice) = modes
 
     val prefix = {if (op) "@" else if (voice) "+" else ""}

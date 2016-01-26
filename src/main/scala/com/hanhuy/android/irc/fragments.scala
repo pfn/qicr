@@ -286,7 +286,7 @@ extends Fragment with EventBus.RefOwner {
         override def onScrollStateChanged(v: AbsListView, s: Int) {
           if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
             val imm = getActivity.systemService[InputMethodManager]
-            val focused = Option(getActivity.getCurrentFocus)
+            val focused = getActivity.getCurrentFocus.?
             focused foreach { f =>
               imm.hideSoftInputFromWindow(f.getWindowToken, 0)
             }

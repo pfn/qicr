@@ -284,7 +284,7 @@ class WidgetProvider extends AppWidgetProvider {
       case Widgets.ACTION_STATUS_CLICK =>
         Widgets.setMessageView(c, intent.getIntExtra(
           AppWidgetManager.EXTRA_APPWIDGET_ID, 0),
-          Option(intent.getStringExtra(IrcManager.EXTRA_SUBJECT)))
+          intent.getStringExtra(IrcManager.EXTRA_SUBJECT).?)
       case Widgets.ACTION_BACK =>
         Widgets.setStatusView(c,
           intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
@@ -307,7 +307,7 @@ class WidgetProvider extends AppWidgetProvider {
       if (idx != -1 && all.size > 0) {
         val tgt = (all.size + idx + direction) % all.size
         Widgets.setMessageView(c, intent.getIntExtra(
-          AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Option(Widgets.toString(all(tgt))), true)
+          AppWidgetManager.EXTRA_APPWIDGET_ID, 0), Widgets.toString(all(tgt)).?, true)
       }
     }
   }
@@ -503,7 +503,7 @@ extends Activity with TypedFindView {
           override def onScrollStateChanged(v: AbsListView, s: Int) {
             if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
               val imm = WidgetChatActivity.this.systemService[InputMethodManager]
-              val focused = Option(getCurrentFocus)
+              val focused = getCurrentFocus.?
               focused foreach { f =>
                 imm.hideSoftInputFromWindow(f.getWindowToken, 0)
               }

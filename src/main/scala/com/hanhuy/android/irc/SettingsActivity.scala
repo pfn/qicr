@@ -131,9 +131,9 @@ class SettingsFragmentActivity extends AppCompatActivity {
 object SettingsFragment {
   def setupNotificationPreference(c: Context, ps: PreferenceScreen): Unit = {
 
-    val p = Option(ps.findPreference(Settings.NOTIFICATION_SOUND.key))
+    val p = ps.findPreference(Settings.NOTIFICATION_SOUND.key).?
     val notification = Settings.get(Settings.NOTIFICATION_SOUND)
-    val r = Option(RingtoneManager.getRingtone(c, Uri.parse(notification)))
+    val r = RingtoneManager.getRingtone(c, Uri.parse(notification)).?
     p foreach { pref =>
       pref.setSummary(r.fold("")(_.getTitle(c)))
     }
@@ -226,8 +226,8 @@ extends android.support.v7.preference.PreferenceFragmentCompat {
     pref.setSummary(rt.getTitle(getContext))
   }
 
-  def getRingtone = Option(getPreferenceManager.getSharedPreferences.getString(
-    Settings.NOTIFICATION_SOUND.key, null))
+  def getRingtone = getPreferenceManager.getSharedPreferences.getString(
+    Settings.NOTIFICATION_SOUND.key, null).?
 }
 
 class CharsetPreference(c: Context, attrs: AttributeSet)

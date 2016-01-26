@@ -19,7 +19,7 @@ object HoneycombSupport {
   var _actionmode: WeakReference[ActionMode] = WeakReference(null)
   var menuItemListener = Option.empty[(MenuItem, Option[Server]) => Boolean]
 
-  def init(main: MainActivity) = activity = Option(main)
+  def init(main: MainActivity) = activity = main.?
 
   def close() {
     menuItemListener = None

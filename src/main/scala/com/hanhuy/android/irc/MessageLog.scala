@@ -385,7 +385,7 @@ class MessageLog private(context: Context)
 
     new CursorAdapter(Application.context, cursor, 0) with Closeable {
 
-      lazy val fontSetting = Option(Settings.get(Settings.FONT_NAME)) flatMap (
+      lazy val fontSetting = Settings.get(Settings.FONT_NAME).? flatMap (
         n => Try(Typeface.createFromFile(n)).toOption)
       lazy val sizeSetting = Settings.get(Settings.FONT_SIZE)
 
@@ -798,7 +798,7 @@ class MessageLogActivity extends AppCompatActivity {
     searchView.setOnQueryTextListener(new OnQueryTextListener {
       override def onQueryTextSubmit(p1: String) = {
         val imm = MessageLogActivity.this.systemService[InputMethodManager]
-        val focused = Option(getCurrentFocus)
+        val focused = getCurrentFocus.?
         focused foreach { f =>
           f.clearFocus()
           imm.hideSoftInputFromWindow(f.getWindowToken, 0)

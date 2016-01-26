@@ -67,7 +67,7 @@ object HistoryAdapter extends TrayAdapter[String] {
   override def itemId(position: Int) = history(position).hashCode
 
   override def getItem(position: Int): Option[String] =
-    if (size == 0) None else Option(history(position))
+    if (size == 0) None else history(position).?
 }
 
 abstract class InputProcessor(activity: Activity) {
@@ -598,7 +598,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
           val r = CtcpRequest(manager._connections(c),
              target, command.toUpperCase,
-             Option(if (trimmedArg.length == 0) null else trimmedArg))
+             (if (trimmedArg.length == 0) null else trimmedArg).?)
 
           val (server, channel) = proc.currentState
           // show in currently visible tab or the server's message tab

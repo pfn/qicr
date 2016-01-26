@@ -284,7 +284,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
             server.currentPing map { ping =>
               server.currentPing = None
               catching(classOf[Exception]) opt {
-                (Option(line.getMessage) getOrElse
+                (line.getMessage.? getOrElse
                   line.getArgumentsArray()(1)).toLong
               } map { p =>
                 // non-numeric should pass through
@@ -475,10 +475,10 @@ with ModeListener with ServerEventListener with MessageEventListener {
             // prevent malicious overflow causing a crash
             val ts = seconds.toLong * 1000 + (micros.toLong / 1000)
             Server.intervalString(System.currentTimeMillis - ts)
-          } orElse Option(reply)
-        case _ => Option(reply)
+          } orElse reply.?
+        case _ => reply.?
       }
-      case _ => Option(reply)
+      case _ => reply.?
     }, ctcp.timestamp)
 
     // TODO show in current WidgetChatActivity

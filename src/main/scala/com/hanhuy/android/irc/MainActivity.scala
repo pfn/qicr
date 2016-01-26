@@ -269,7 +269,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
           }
         ).perform()
         def launchLink(): Unit = {
-          val u = Option(web.getUrl) getOrElse url
+          val u = web.getUrl.? getOrElse url
           val uri = android.net.Uri.parse(u)
           val intent = new Intent(Intent.ACTION_VIEW, uri)
           intent.putExtra(android.provider.Browser.EXTRA_APPLICATION_ID, getPackageName)
@@ -419,7 +419,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
       override def onDrawerOpened(drawerView: View) {
         val imm = MainActivity.this.systemService[InputMethodManager]
-        val focused = Option(getCurrentFocus)
+        val focused = getCurrentFocus.?
         focused foreach { f =>
           imm.hideSoftInputFromWindow(f.getWindowToken, 0)
         }
@@ -592,7 +592,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     destroyed = true
     super.onDestroy()
     // unregister, or else we have a memory leak on observer -> this
-    Option(nickList.getAdapter) foreach {
+    nickList.getAdapter.? foreach {
       _.unregisterDataSetObserver(observer)
     }
     ServiceBus.send(BusEvent.MainActivityDestroy)
@@ -641,7 +641,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_UNLOCKED, drawerRight)
 
-        Option(nickList.getAdapter) foreach { a =>
+        nickList.getAdapter.? foreach { a =>
           try { // throws because of the unregister in onStop  :-(
             a.unregisterDataSetObserver(observer)
           } catch { case _: Exception => }

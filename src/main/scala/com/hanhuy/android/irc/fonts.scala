@@ -130,8 +130,8 @@ extends Preference(c, attrs) {
 
   override def onBindViewHolder(holder: PreferenceViewHolder) = {
     val typeface = for {
-      k <- Option(fontNameKey)
-      n <- Option(getSharedPreferences.getString(k, null))
+      k <- fontNameKey.?
+      n <- getSharedPreferences.getString(k, null).?
       t  = Typeface.createFromFile(n)
     } yield t
     val summary = holder.findViewById(android.R.id.summary).asInstanceOf[TextView]
@@ -152,60 +152,6 @@ extends Preference(c, attrs) {
     })
     typeface foreach summary.setTypeface
   }
-
-  /*
-  override def onCreateView(parent: ViewGroup) = {
-    w[TextView] >>= id(android.R.id.summary) >>=
-      kestrel { tv =>
-        tv.setGravity(Gravity.CENTER)
-        tv.setTextAppearance(c, android.R.style.TextAppearance_Small)
-        defaultSize = (tv.getTextSize /
-          getContext.getResources.getDisplayMetrics.scaledDensity).toInt
-        typeface foreach tv.setTypeface
-        tv.setMaxLines(4)
-        tv.setIncludeFontPadding(false)
-      } >>= lpK(WRAP_CONTENT, 26 sp) { (p: RelativeLayout.LayoutParams) =>
-      p.addRule(RelativeLayout.RIGHT_OF, android.R.id.title)
-      margins(left = 8 dp)(p)
-    }
-    // hackery because summary is singleton
-    Option(summary.getParent).foreach { case p: ViewGroup => p.removeView(summary) }
-    (
-      l[RelativeLayout](
-        w[TextView] >>= id(android.R.id.title) >>= kestrel { tv: TextView =>
-          tv.setSingleLine(true)
-          tv.setTextAppearance(c, android.R.style.TextAppearance_Medium)
-          tv.setEllipsize(TextUtils.TruncateAt.MARQUEE)
-          tv.setGravity(Gravity.CENTER)
-          tv.setHorizontalFadingEdgeEnabled(true)
-        } >>= lp(WRAP_CONTENT, 26 sp),
-        w[TextView] >>= id(android.R.id.summary) >>=
-          kestrel { tv =>
-            tv.setGravity(Gravity.CENTER)
-            tv.setTextAppearance(c, android.R.style.TextAppearance_Small)
-            defaultSize = (tv.getTextSize /
-              getContext.getResources.getDisplayMetrics.scaledDensity).toInt
-            typeface foreach tv.setTypeface
-            tv.setMaxLines(4)
-            tv.setIncludeFontPadding(false)
-          } >>= lpK(WRAP_CONTENT, 26 sp) { (p: RelativeLayout.LayoutParams) =>
-            p.addRule(RelativeLayout.RIGHT_OF, android.R.id.title)
-            margins(left = 8 dp)(p)
-          },
-        w[SeekBar] >>= kestrel { sb =>
-          sb.setMax(20)
-          sb.setProgress(math.max(0, getPersistedInt(defaultSize) - 4))
-          sb.setOnSeekBarChangeListener(this)
-        } >>=
-          lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
-            p.addRule(RelativeLayout.BELOW, android.R.id.title)
-            p.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 1)
-            p.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 1)
-          }
-      ) >>= padding(left = 16 dp, right = 8 dp, top = 6 dp, bottom = 6 dp)
-    ).perform()
-  }
-  */
 }
 
 class TypefaceSpan(typeface: Typeface) extends MetricAffectingSpan {

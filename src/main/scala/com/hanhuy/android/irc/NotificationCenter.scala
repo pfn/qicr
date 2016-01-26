@@ -105,7 +105,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
   }
 
   override def getItem(position: Int): Option[NotificationMessage] =
-    if (size == 0) None else Option(notifications(position))
+    if (size == 0) None else notifications(position).?
 
   def hasImportantNotifications = notifications.exists(n => n.isNew && n.important)
 

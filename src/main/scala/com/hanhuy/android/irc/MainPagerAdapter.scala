@@ -170,7 +170,7 @@ with EventBus.RefOwner {
       UiBus.handler.postDelayed(refreshTabRunnable, 100)
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
       if (tabindicators.getTabCount > pos)
-        Option(tabindicators.getTabAt(pos).getCustomView.asInstanceOf[TextView]).foreach (_.setText(makeTabTitle(pos)))
+        tabindicators.getTabAt(pos).getCustomView.asInstanceOf[TextView].?.foreach (_.setText(makeTabTitle(pos)))
     }
   }
 
@@ -229,7 +229,7 @@ with EventBus.RefOwner {
 
     refreshTabTitle(pos)
     val imm = activity.systemService[InputMethodManager]
-    Option(activity.getCurrentFocus) foreach { f =>
+    activity.getCurrentFocus.? foreach { f =>
       imm.hideSoftInputFromWindow(f.getWindowToken, 0)
     }
   }
@@ -290,7 +290,7 @@ with EventBus.RefOwner {
     if (idx < 0) {
       idx = idx * -1
       channels = insert(channels, idx - 1, c)
-      val tag = MainActivity.getFragmentTag(Option(c))
+      val tag = MainActivity.getFragmentTag(c.?)
       val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else c match {
         case ch: Channel => new ChannelFragment(Some(ch))
@@ -311,7 +311,7 @@ with EventBus.RefOwner {
     if (idx < 0) {
       idx = idx * -1
       servers = insert(servers, idx - 1, s)
-      val tag = MainActivity.getFragmentTag(Option(s))
+      val tag = MainActivity.getFragmentTag(s.?)
       val f = fm.findFragmentByTag(tag)
       val frag = if (f != null) f else new ServerMessagesFragment(Some(s))
       val info = insertTab(s.name, frag, idx - 1)
