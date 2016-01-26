@@ -228,10 +228,7 @@ with EventBus.RefOwner {
       } getOrElse activity.getString(R.string.app_name))
 
     refreshTabTitle(pos)
-    val imm = activity.systemService[InputMethodManager]
-    activity.getCurrentFocus.? foreach { f =>
-      imm.hideSoftInputFromWindow(f.getWindowToken, 0)
-    }
+    hideIME()(activity)
   }
 
   def hasNewMentions = channels.exists(_.newMentions)

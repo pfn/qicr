@@ -798,11 +798,7 @@ class MessageLogActivity extends AppCompatActivity {
     searchView.setOnQueryTextListener(new OnQueryTextListener {
       override def onQueryTextSubmit(p1: String) = {
         val imm = MessageLogActivity.this.systemService[InputMethodManager]
-        val focused = getCurrentFocus.?
-        focused foreach { f =>
-          f.clearFocus()
-          imm.hideSoftInputFromWindow(f.getWindowToken, 0)
-        }
+        hideIME()
         val query = searchView.getQuery.toString
         if (query.trim.nonEmpty) {
           setAdapter(None)

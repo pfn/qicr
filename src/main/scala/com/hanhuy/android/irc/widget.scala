@@ -502,11 +502,7 @@ extends Activity with TypedFindView {
           import OnScrollListener._
           override def onScrollStateChanged(v: AbsListView, s: Int) {
             if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
-              val imm = WidgetChatActivity.this.systemService[InputMethodManager]
-              val focused = getCurrentFocus.?
-              focused foreach { f =>
-                imm.hideSoftInputFromWindow(f.getWindowToken, 0)
-              }
+              hideIME()
             }
           }
 

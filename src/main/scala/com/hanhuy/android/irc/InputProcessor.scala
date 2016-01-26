@@ -14,6 +14,7 @@ import android.text.method.TextKeyListener
 import android.util.Log
 
 import com.sorcix.sirc.IrcConnection
+import iota.HasActivity
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -89,8 +90,7 @@ abstract class InputProcessor(activity: Activity) {
       clear(input)
       val hideKeyboard = Settings.get(Settings.HIDE_KEYBOARD)
       if (hideKeyboard) {
-        activity.systemService[InputMethodManager].hideSoftInputFromWindow(
-          activity.getWindow.getDecorView.getWindowToken, 0)
+        hideIME()(activity)
       }
       !hideKeyboard
     } else

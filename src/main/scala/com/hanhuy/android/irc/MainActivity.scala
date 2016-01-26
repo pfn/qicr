@@ -419,10 +419,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
       override def onDrawerOpened(drawerView: View) {
         val imm = MainActivity.this.systemService[InputMethodManager]
-        val focused = getCurrentFocus.?
-        focused foreach { f =>
-          imm.hideSoftInputFromWindow(f.getWindowToken, 0)
-        }
+        hideIME()
         if (drawerView == drawerLeft)
           drawerToggle.onDrawerOpened(drawerView)
       }
