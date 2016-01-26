@@ -281,15 +281,11 @@ extends Fragment with EventBus.RefOwner {
       l.setDrawSelectorOnTop(true)
       if (!getActivity.isFinishing)
         l.setAdapter(adapter.get)
-      l.setOnScrollListener(new OnScrollListener {
+      l.scrollStateChanged((v, s) => {
         import OnScrollListener._
-        override def onScrollStateChanged(v: AbsListView, s: Int) {
-          if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
-            hideIME()
-          }
+        if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
+          hideIME()
         }
-
-        override def onScroll(p1: AbsListView, p2: Int, p3: Int, p4: Int) {}
       })
     })
 
@@ -337,17 +333,15 @@ extends Fragment with EventBus.RefOwner {
     } yield h
 
     inputHeight.fold {
-      v.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
-        override def onPreDraw() = {
-          inputHeight exists { h =>
-            v.getViewTreeObserver.removeOnPreDrawListener(this)
-            val p = v.getPaddingBottom + h
-            v.setPadding(
-              v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight, p)
-            true
-          }
+      v.onPreDraw { l =>
+        inputHeight exists { h =>
+          v.getViewTreeObserver.removeOnPreDrawListener(l)
+          val p = v.getPaddingBottom + h
+          v.setPadding(
+            v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight, p)
+          true
         }
-      })
+      }
     }{ h =>
       val p = v.getPaddingBottom + h
       v.setPadding(v.getPaddingLeft, v.getPaddingTop, v.getPaddingRight, p)

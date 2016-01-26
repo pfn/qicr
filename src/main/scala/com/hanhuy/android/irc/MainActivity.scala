@@ -389,16 +389,14 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
-    mainLayout.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
-      override def onPreDraw() = {
-        if (buttonLayout.getMeasuredHeight > 0) {
-          mainLayout.getViewTreeObserver.removeOnPreDrawListener(this)
-          val lp = buttonLayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
-          inputHeight = Some(buttonLayout.getMeasuredHeight + lp.topMargin)
-          true
-        } else false
-      }
-    })
+    mainLayout.onPreDraw { l =>
+      if (buttonLayout.getMeasuredHeight > 0) {
+        mainLayout.getViewTreeObserver.removeOnPreDrawListener(l)
+        val lp = buttonLayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
+        inputHeight = Some(buttonLayout.getMeasuredHeight + lp.topMargin)
+        true
+      } else false
+    }
     setContentView(mainLayout)
     ViewCompat.setElevation(toolbar, 4.dp)
     setSupportActionBar(findView(Id.toolbar))
@@ -521,7 +519,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
   override def onResume() {
     super.onResume()
-    registerReceiver(dozeReceiver, PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
     val nm = this.systemService[NotificationManager]
     nm.cancelAll()
 
@@ -575,6 +572,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     IrcManager.start()
     ServiceBus.send(BusEvent.MainActivityStart)
     HoneycombSupport.init(this)
+    registerReceiver(dozeReceiver, PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
   }
 
   override def onStop() {
@@ -582,6 +580,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     instance = None
     ServiceBus.send(BusEvent.MainActivityStop)
     HoneycombSupport.close()
+    unregisterReceiver(dozeReceiver)
   }
 
   private[this] var destroyed = false

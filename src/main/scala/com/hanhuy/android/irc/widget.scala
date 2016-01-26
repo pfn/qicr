@@ -498,15 +498,11 @@ extends Activity with TypedFindView {
         l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
         l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
         l.setClipToPadding(false)
-        l.setOnScrollListener(new OnScrollListener {
+        l.scrollStateChanged((v, s) => {
           import OnScrollListener._
-          override def onScrollStateChanged(v: AbsListView, s: Int) {
-            if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
-              hideIME()
-            }
+          if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
+            hideIME()
           }
-
-          override def onScroll(p1: AbsListView, p2: Int, p3: Int, p4: Int) {}
         })
       } >>= padding(bottom = 48 dp),
     l[LinearLayout](
