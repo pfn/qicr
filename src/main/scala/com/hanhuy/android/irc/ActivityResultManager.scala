@@ -23,7 +23,7 @@ trait BaseResultManager {
   }
   private[this] val arlog = Logcat("ActivityResultManager")
   private[this] var results = Map.empty[Int,Promise[Intent]]
-  protected def processActivityResult(request: Int,
+  final protected def processActivityResult(request: Int,
                                       resultCode: Int,
                                       data: Intent): Unit = {
     if (results.contains(request)) {
