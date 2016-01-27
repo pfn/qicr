@@ -57,10 +57,10 @@ object MainActivity {
   def getFragmentTag(c: Option[MessageAppender]) = {
     c match {
       case Some(ch: ChannelLike) =>
-        val s = ch.server
-        val sinfo = if (s == null) "server-object-null:"
-        else "%s::%s::%d::%s::%s::".format(
-          s.name, s.hostname, s.port, s.username, s.nickname)
+        val sinfo = ch.server.?.fold("server-object-null:") { s =>
+          "%s::%s::%d::%s::%s::".format(
+            s.name, s.hostname, s.port, s.username, s.nickname)
+        }
 
         "fragment:" + sinfo + ch.name
       case Some(s: Server) =>
@@ -220,7 +220,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     if(v(19)) l.setClipToPadding(false)
   }
 
-  private var manager: IrcManager = null
+  lazy val manager: IrcManager = IrcManager.init()
   private var currentPopup = Option.empty[PopupWindow]
 
   def supportIsDestroyed: Boolean = {
@@ -353,8 +353,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
   lazy val drawerToggle = new ActionBarDrawerToggle(this,
     drawer, R.string.app_name, R.string.app_name)
   lazy val servers = { // because of retain instance
-    val f = getSupportFragmentManager.findFragmentByTag(SERVERS_FRAGMENT)
-    if (f != null) f.asInstanceOf[ServersFragment] else new ServersFragment
+    getSupportFragmentManager.findFragmentByTag(SERVERS_FRAGMENT).?.fold(new ServersFragment){
+    _.asInstanceOf[ServersFragment]}
   }
   lazy val tabs = new TabLayout(this)
   lazy val drawer = new KitKatDrawerLayout(this)
@@ -385,7 +385,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     LifecycleService.start()
     getWindow.setSoftInputMode(
       WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
-    manager = IrcManager.start()
+    manager.start()
     setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.AppTheme_Light else R.style.AppTheme_Dark)
 
     super.onCreate(bundle)
@@ -401,8 +401,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     ViewCompat.setElevation(toolbar, 4.dp)
     setSupportActionBar(findView(Id.toolbar))
 
-    if (bundle != null)
-      page = bundle.getInt("page")
+    bundle.?.foreach { b => page = b.getInt("page") }
 
     adapter.createTab(getString(R.string.tab_servers), servers)
 
@@ -522,12 +521,16 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
 
     def refreshTabs() {
       adapter.refreshTabs()
-      val i = getIntent
-      if (i != null && i.hasExtra(IrcManager.EXTRA_SUBJECT)) {
-        val subject = i.getStringExtra(IrcManager.EXTRA_SUBJECT)
-        // removeExtra so subsequent onResume doesn't select this tab
-        i.removeExtra(IrcManager.EXTRA_SUBJECT)
-        if (subject != null) {
+      getIntent.?.fold {
+        if (page != -1) {
+          pager.setCurrentItem(page)
+          page = -1
+        }
+      } { i =>
+        if (i.hasExtra(IrcManager.EXTRA_SUBJECT)) {
+          val subject = i.getStringExtra(IrcManager.EXTRA_SUBJECT)
+          // removeExtra so subsequent onResume doesn't select this tab
+          i.removeExtra(IrcManager.EXTRA_SUBJECT)
           if (subject == "")
             pager.setCurrentItem(0)
           else {
@@ -537,15 +540,12 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
               page = -1
             }
           }
+        } else if (i.hasExtra(IrcManager.EXTRA_PAGE)) {
+          val page = i.getIntExtra(IrcManager.EXTRA_PAGE, 0)
+          i.removeExtra(IrcManager.EXTRA_PAGE)
+          //tabhost.setCurrentTab(page)
+          pager.setCurrentItem(page)
         }
-      } else if (i != null && i.hasExtra(IrcManager.EXTRA_PAGE)) {
-        val page = i.getIntExtra(IrcManager.EXTRA_PAGE, 0)
-        i.removeExtra(IrcManager.EXTRA_PAGE)
-        //tabhost.setCurrentTab(page)
-        pager.setCurrentItem(page)
-      } else if (page != -1) {
-        pager.setCurrentItem(page)
-        page = -1
       }
       // scroll tabwidget if necessary
       pageChanged(adapter.page)
@@ -567,7 +567,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
   override def onStart() {
     super.onStart()
     instance = Some(this)
-    IrcManager.start()
+    IrcManager.init()
     ServiceBus.send(BusEvent.MainActivityStart)
     HoneycombSupport.init(this)
     registerReceiver(dozeReceiver, PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)

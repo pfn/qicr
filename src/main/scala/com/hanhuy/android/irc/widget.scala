@@ -223,19 +223,20 @@ object Widgets extends EventBus.RefOwner {
   }
   private val updateStatusRunnable: Runnable = updateStatus _
 
-  def appenderForSubject(subject: String) = {
-    IrcManager.instance flatMap { manager =>
-      if (subject == null) None
-      else
-        subject.split(IrcManager.EXTRA_SPLITTER) match {
-          case Array(serverName) =>
-            manager.getServers.find(_.name == serverName)
-          case Array(serverName, channelName) =>
-            manager.channels.keys.find(c =>
-              c.server.name == serverName && c.name == channelName)
-          case null => None
-        }
-    }
+  def appenderForSubject(subj: String) = {
+    (for {
+      manager <- IrcManager.instance
+      subject <- subj.?
+    } yield {
+      subject.split(IrcManager.EXTRA_SPLITTER) match {
+        case Array(serverName) =>
+          manager.getServers.find(_.name == serverName)
+        case Array(serverName, channelName) =>
+          manager.channels.keys.find(c =>
+            c.server.name == serverName && c.name == channelName)
+        case null => None
+      }
+    }).flatten
   }
 }
 
@@ -279,7 +280,7 @@ class WidgetProvider extends AppWidgetProvider {
           views.setTextViewText(R.id.not_running,
             c.getString(R.string.launching))
           awm.partiallyUpdateAppWidget(Widgets(c).ids, views)
-          IrcManager.start()
+          IrcManager.init().start()
         }
       case Widgets.ACTION_STATUS_CLICK =>
         Widgets.setMessageView(c, intent.getIntExtra(
@@ -297,7 +298,7 @@ class WidgetProvider extends AppWidgetProvider {
   }
 
   def nextPrevMessages(c: Context, intent: Intent, direction: Int) {
-    val manager = IrcManager.start()
+    val manager = IrcManager.init()
     def all = manager.channels.keys.toList.sortWith(_ < _).groupBy(_.server)
       .toList.sortWith(_._1 < _._1) flatMap { case (k, v) => k :: v}
 
@@ -395,18 +396,19 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
     }
   }
 
-  private var _all: Seq[MessageAppender] = null
+  private var _all: Option[Seq[MessageAppender]] = None
   def all = {
-    if (_all == null) {
-      _all = manager.channels.keys.toList.sortWith(_<_).groupBy(_.server)
-          .toList.sortWith(_._1<_._1) flatMap { case (k,v) => k :: v }
+    _all.getOrElse {
+      val everything = manager.channels.keys.toList.sortWith(_ < _).groupBy(_.server)
+        .toList.sortWith(_._1 < _._1) flatMap { case (k, v) => k :: v })
+      _all = everything.?
+      everything
     }
-    _all
   }
 
   def getViewTypeCount = 2
   def getCount = all.size
-  def onDataSetChanged() { _all = null }
+  def onDataSetChanged() { _all = None }
 
   def getLoadingView = null
   def hasStableIds = false

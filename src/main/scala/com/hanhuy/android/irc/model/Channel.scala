@@ -95,7 +95,7 @@ abstract class ChannelLike(val server: Server, val name: String)
   def compare(that: ChannelLike): Int =
     ChannelLikeComparator.compare(this, that)
 
-  lazy val manager = IrcManager.start()
+  lazy val manager = IrcManager.init()
 }
 
 class Channel private(s: Server, n: String) extends ChannelLike(s, n) {

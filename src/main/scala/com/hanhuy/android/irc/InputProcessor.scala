@@ -68,7 +68,7 @@ object HistoryAdapter extends TrayAdapter[String] {
 }
 
 abstract class InputProcessor(activity: Activity) {
-  val manager = IrcManager.start()
+  val manager = IrcManager.init()
   import InputProcessor._
   val TAG = "InputProcessor"
 
@@ -313,7 +313,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   var channel: Option[ChannelLike] = None
   var server: Option[Server] = None
 
-  lazy val manager = IrcManager.start()
+  lazy val manager = IrcManager.init()
 
   lazy val activity = ctx match {
     case a: MainActivity => a.?

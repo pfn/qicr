@@ -22,7 +22,7 @@ class Application extends android.app.Application {
 
 object Application {
   // this should absolutely always be non-null
-  private var _instance: Application = null
+  private var _instance: Application = _
 
   def context = _instance
 }

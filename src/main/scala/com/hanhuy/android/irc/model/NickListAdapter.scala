@@ -41,10 +41,8 @@ case class NickAndMode(mode: Char, nick: String)
 class NickListAdapter(activity: WeakReference[MainActivity], channel: Channel)
 extends BaseAdapter with EventBus.RefOwner with HasContext {
   import ViewGroup.LayoutParams._
-  import Tweaks._
-  val manager = IrcManager.start()
-  var c: SircChannel = _
-  manager.channels.get(channel).foreach(c = _)
+  val manager = IrcManager.init()
+  val c = manager.channels.get(channel)
   notifyDataSetChanged()
 
   override def context = activity()
@@ -60,7 +58,7 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
 
   var nicks: List[android.text.Spanned] = _
   override def notifyDataSetChanged() {
-    if (c != null) {
+    c.foreach { c =>
       nicks = c.getUsers.toList.map { u =>
         val prefix = if (u.hasOperator) '@' else if (u.hasVoice) '+' else ' '
         NickAndMode(prefix, u.getNick)
@@ -88,10 +86,9 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
 
   override def getItemId(pos: Int) = pos
   override def getItem(pos: Int) = nicks(pos)
-  override def getCount : Int = if (nicks != null) nicks.size else 0
+  override def getCount : Int = nicks.?.fold(0)(_.size)
   override def getView(pos: Int, convertView: View, container: ViewGroup) = {
-    val c = convertView.asInstanceOf[TextView]
-    val view = if (c != null) c else layout.perform()
+    val view = convertView.?.fold(layout.perform())(_.asInstanceOf[TextView])
 
     view.setText(getItem(pos))
     view

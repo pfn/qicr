@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc.Config
+import com.hanhuy.android.irc._
 
 import android.content.ContentValues
 import com.hanhuy.android.irc.model.BusEvent.ServerMessage
@@ -67,19 +67,16 @@ class Server extends MessageAppender with Ordered[Server] {
   var realname: String = "strong faster qicr"
   var _password: String = _
   def password = _password
-  def password_=(p: String) = _password =
-    if (p == null || p.trim().length() == 0) null else p
+  def password_=(p: String) = _password = p.?.find(_.trim.nonEmpty).orNull
 
   var _autorun: String = _
   import com.hanhuy.android.irc._
   def autorun = _autorun.?
-  def autorun_=(a: String) = _autorun =
-    if (a == null || a.trim().length() == 0) null else a
+  def autorun_=(a: String) = _autorun = a.?.find(_.trim.nonEmpty).orNull
 
   var _autojoin: String = _
   def autojoin = _autojoin.?
-  def autojoin_=(a: String) = _autojoin =
-    if (a == null || a.trim().length() == 0) null else a
+  def autojoin_=(a: String) = _autojoin = a.?.find(_.trim.nonEmpty).orNull
 
   var socks = false
   var socksHost: String = _
@@ -97,7 +94,7 @@ class Server extends MessageAppender with Ordered[Server] {
   var currentNick = nickname
   override def toString = name
 
-  def blank(s: String) : Boolean = s == null || s == ""
+  def blank(s: String) : Boolean = s.?.forall(_.trim.isEmpty)
   def valid: Boolean = {
     var valid = true
     valid = valid && !blank(name)

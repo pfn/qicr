@@ -31,9 +31,9 @@ object FontManager {
     val dir = new File("/system/fonts")
 
     if (dir.exists) {
-      val files = dir.listFiles
+      val filesOpt = dir.listFiles.?
 
-      if (files != null) {
+      filesOpt foreach { files =>
         files foreach { file =>
           val fontname = Try(getFontName(file.getAbsolutePath)).toOption.flatten
 
@@ -162,7 +162,7 @@ class TypefaceSpan(typeface: Typeface) extends MetricAffectingSpan {
 
   def update(paint: Paint) {
     val oldTypeface = paint.getTypeface
-    val oldStyle    = if (oldTypeface != null) oldTypeface.getStyle else 0
+    val oldStyle    = oldTypeface.?.fold(0)(_.getStyle)
     val fakeStyle   = oldStyle & ~typeface.getStyle
     if ((fakeStyle & Typeface.BOLD)   != 0) paint.setFakeBoldText(true)
     if ((fakeStyle & Typeface.ITALIC) != 0) paint.setTextSkewX(-0.25f)

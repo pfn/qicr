@@ -55,12 +55,8 @@ object IrcManager {
 
   var instance: Option[IrcManager] = None
 
-  def start() = {
-    instance getOrElse {
-      val m = new IrcManager()
-      m.start()
-      m
-    }
+  def init() = {
+    instance getOrElse new IrcManager
   }
 
   def stop[A](message: Option[String] = None, cb: Option[() => A] = None) {
@@ -216,7 +212,7 @@ class IrcManager extends EventBus.RefOwner {
     }
   }
 
-  private def start() {
+  def start() {
     if (!running) {
       Application.context.registerReceiver(receiver, filter)
 

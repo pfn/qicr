@@ -57,7 +57,7 @@ class MainPagerAdapter(activity: MainActivity)
 extends FragmentPagerAdapter(activity.getSupportFragmentManager)
 with ViewPager.OnPageChangeListener
 with EventBus.RefOwner {
-  val manager = IrcManager.start()
+  val manager = IrcManager.init()
   private var channels = List.empty[ChannelLike]
   private var servers  = List.empty[Server]
   private var tabs = List.empty[TabInfo]
@@ -288,11 +288,10 @@ with EventBus.RefOwner {
       idx = idx * -1
       channels = insert(channels, idx - 1, c)
       val tag = MainActivity.getFragmentTag(c.?)
-      val f = fm.findFragmentByTag(tag)
-      val frag = if (f != null) f else c match {
+      val frag = fm.findFragmentByTag(tag).?.getOrElse (c match {
         case ch: Channel => new ChannelFragment(Some(ch))
         case qu: Query   => new QueryFragment(Some(qu))
-      }
+      })
       val info = insertTab(c.name, frag, idx - 1)
       refreshTabTitle(idx + channelBase - 1) // why -1?
       info.channel = Some(c)
@@ -309,8 +308,7 @@ with EventBus.RefOwner {
       idx = idx * -1
       servers = insert(servers, idx - 1, s)
       val tag = MainActivity.getFragmentTag(s.?)
-      val f = fm.findFragmentByTag(tag)
-      val frag = if (f != null) f else new ServerMessagesFragment(Some(s))
+      val frag = fm.findFragmentByTag(tag).?.getOrElse(new ServerMessagesFragment(Some(s)))
       val info = insertTab(s.name, frag, idx - 1)
       refreshTabTitle(idx)
       pager.setCurrentItem(idx)
@@ -389,37 +387,36 @@ with EventBus.RefOwner {
       val tab = tabs(pos)
 
       val t = getItemViewType(pos)
-      val view = if (convert == null ||
-        t != convert.getTag(R.id.dropdown_view_type)) {
+      val view = convert.?.getOrElse {
         val layout = getItemViewType(pos) match {
           case 0 => R.layout.simple_dropdown_item_2line
           case 1 => R.layout.simple_dropdown_item_1line
         }
         inflater.inflate(layout, container, false)
-      } else convert
-      view.setTag(R.id.dropdown_view_type, t)
+      }
+//      view.setTag(R.id.dropdown_view_type, t)
 
       view.findViewById(android.R.id.text1).asInstanceOf[TextView].setText(makeTabTitle(pos))
 
       val line2 = view.findViewById(android.R.id.text2).asInstanceOf[TextView]
-      tab.channel map { c =>
+      tab.channel.fold(
+        tab.server foreach { s =>
+          if (pos == page) {
+            line2.setText(" - %s (%s)" format (
+              s.currentNick, Server.intervalString(s.currentLag)))
+          } else {
+            line2.setText(" - %s" format s.currentNick)
+          }
+        }
+      ) { c =>
         val s = c.server
-
         if (pos == page) { // show lag for the selected item
           line2.setText(" - %s: %s" format(
             s.name, Server.intervalString(s.currentLag)))
         } else {
           line2.setText(" - %s: %s" format (s.name, s.currentNick))
         }
-      } getOrElse (tab.server map { s =>
-
-        if (pos == page) {
-          line2.setText(" - %s (%s)" format (
-            s.currentNick, Server.intervalString(s.currentLag)))
-        } else {
-          line2.setText(" - %s" format s.currentNick)
-        }
-      })
+      }
       view
     }
   }

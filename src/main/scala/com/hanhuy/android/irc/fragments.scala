@@ -34,15 +34,17 @@ import scala.util.Try
 import iota._
 
 class ServerSetupFragment extends DialogFragment {
-  val manager = IrcManager.start()
+  val manager = IrcManager.init()
 
   // hack to store text
   var idholder = 0x10001000
+
   import ViewGroup.LayoutParams._
 
   def header = {
     new TextView(getActivity, null, android.R.attr.listSeparatorTextViewStyle)
   }
+
   def label = c[TableRow](w[TextView] >>=
     lpK(WRAP_CONTENT, WRAP_CONTENT)(margins(right = 12.dp)))
 
@@ -80,7 +82,7 @@ class ServerSetupFragment extends DialogFragment {
         ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         IO(header) >>= text("User Info"),
         l[TableRow](
-          label>>= text("Nickname"),
+          label >>= text("Nickname"),
           IO(nickname) >>= inputTweaks >>= hint("required")
         ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
         l[TableRow](
@@ -133,26 +135,28 @@ class ServerSetupFragment extends DialogFragment {
   lazy val sasl = checkbox
 
   val _server: Server = new Server
+
   def server: Server = {
     val s = _server
-    s.name        = server_name.getText.toString
-    s.hostname    = server_host.getText.toString
-    s.port        = Try(port.getText.toString.toInt).toOption getOrElse 6667
-    s.ssl         = ssl.isChecked
+    s.name = server_name.getText.toString
+    s.hostname = server_host.getText.toString
+    s.port = Try(port.getText.toString.toInt).toOption getOrElse 6667
+    s.ssl = ssl.isChecked
     s.autoconnect = autoconnect.isChecked
-    s.nickname    = nickname.getText.toString
-    s.altnick     = altnick.getText.toString
-    s.realname    = realname.getText.toString
-    s.username    = username.getText.toString
-    s.password    = password.getText.toString
-    s.autojoin    = autojoin.getText.toString
-    s.autorun     = autorun.getText.toString
-    s.sasl        = sasl.isChecked
+    s.nickname = nickname.getText.toString
+    s.altnick = altnick.getText.toString
+    s.realname = realname.getText.toString
+    s.username = username.getText.toString
+    s.password = password.getText.toString
+    s.autojoin = autojoin.getText.toString
+    s.autorun = autorun.getText.toString
+    s.sasl = sasl.isChecked
     _server
   }
+
   def server_=(s: Server) = {
     _server.copy(s)
-    if (layoutInit && s != null) {
+    if (layoutInit) {
       server_name.setText(s.name)
       server_host.setText(s.hostname)
       port.setText("" + s.port)
@@ -206,7 +210,7 @@ class ServerSetupFragment extends DialogFragment {
   }
 
   override def onCreateView(inflater: LayoutInflater,
-      container: ViewGroup, bundle: Bundle) : View = {
+                            container: ViewGroup, bundle: Bundle): View = {
     // otherwise an AndroidRuntimeException occurs
     if (dialogShown) super.onCreateView(inflater, container, bundle)
     else {
@@ -218,6 +222,7 @@ class ServerSetupFragment extends DialogFragment {
   }
 
   var dialogShown = false
+
   override def onCreateDialog(bundle: Bundle): Dialog = {
     dialogShown = true
     val activity = getActivity
@@ -237,17 +242,18 @@ class ServerSetupFragment extends DialogFragment {
     d.onShow0 {
       val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
       b.onClick0 {
-        val s = server
-        if (s != null && s.valid) {
-          if (s.id == -1)
-            manager.addServer(s)
-          else
-            manager.updateServer(s)
-          d.dismiss()
-        } else {
+        server.?.fold(
           Toast.makeText(getActivity,
             R.string.server_incomplete,
             Toast.LENGTH_SHORT).show()
+        ) { s =>
+          if (s.valid) {
+            if (s.id == -1)
+              manager.addServer(s)
+            else
+              manager.updateServer(s)
+            d.dismiss()
+          }
         }
       }
     }
@@ -290,12 +296,11 @@ extends Fragment with EventBus.RefOwner {
       })
     })
 
-  val manager = IrcManager.start()
+  val manager = IrcManager.init()
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
-    if (bundle != null)
-      lookupId = bundle.getString("channel.key")
+    bundle.?.foreach(b => lookupId = b.getString("channel.key"))
 
     if (adapter.isEmpty) {
       manager.queueCreateActivity(0)
@@ -318,10 +323,10 @@ extends Fragment with EventBus.RefOwner {
   }
 
   def scrollToEnd() {
-    if (listView != null)
-      for {
-        a <- adapter
-      } listView.setSelection(a.getCount - 1)
+    for {
+      a <- adapter
+      l <- listView.?
+    } l.setSelection(a.getCount - 1)
   }
 
   override def onCreateView(i: LayoutInflater, c: ViewGroup, b: Bundle) = {
@@ -400,7 +405,7 @@ class ChannelFragment(_channel: Option[Channel])
 
       channel foreach { c =>
         def removeChannel() {
-          if (channel != null && c.state == Channel.State.JOINED) {
+          if (c.state == Channel.State.JOINED) {
             manager.channels.get(c) foreach {
               _.part()
             }
@@ -532,7 +537,7 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
 
 class ServersFragment extends ListFragment
 with EventBus.RefOwner {
-  val manager = IrcManager.start()
+  val manager = IrcManager.init()
   var adapter: ServersAdapter = _
   var _server: Option[Server] = None // currently selected server
   var serverMessagesFragmentShowing: Option[String] = None
@@ -573,9 +578,7 @@ with EventBus.RefOwner {
     // so recreate the adapter here
     adapter = new ServersAdapter(getActivity)
     setListAdapter(adapter)
-    if (manager != null) {
-      adapter.notifyDataSetChanged()
-    }
+    adapter.notifyDataSetChanged()
   }
 
   override def onResume() {
@@ -610,28 +613,22 @@ with EventBus.RefOwner {
 
   def clearServerMessagesFragment(mgr: FragmentManager,
       tx: FragmentTransaction = null) {
-    var mytx: FragmentTransaction = null
-    if (tx == null) // need mytx to commit if set
-      mytx = mgr.beginTransaction()
-
-    serverMessagesFragmentShowing foreach { name =>
-      val f = mgr.findFragmentByTag(name)
-      if (f != null) {
-        if (mytx != null)
-          mytx.hide(f)
-        else if (tx != null)
-          tx.hide(f)
+    def withTx(txn: FragmentTransaction) = {
+      for {
+        name <- serverMessagesFragmentShowing
+        f    <- mgr.findFragmentByTag(name).?
+      } {
+        txn.hide(f)
       }
+      txn
     }
-
-    if (mytx != null)
-      mytx.commit()
+    tx.?.fold(withTx(mgr.beginTransaction()).commit(): Any)(withTx)
   }
 
   def addServerMessagesFragment(server: Server) {
     val mgr = getActivity.getSupportFragmentManager
     val name = SERVER_MESSAGES_FRAGMENT_PREFIX + server.name
-    var fragment = mgr.findFragmentByTag(name).asInstanceOf[MessagesFragment]
+    val fragmentOpt = mgr.findFragmentByTag(name).asInstanceOf[MessagesFragment].?
 
     mgr.popBackStack(SERVER_SETUP_STACK,
       FragmentManager.POP_BACK_STACK_INCLUSIVE)
@@ -639,16 +636,15 @@ with EventBus.RefOwner {
     clearServerMessagesFragment(mgr, tx)
 
     serverMessagesFragmentShowing = Some(name)
-    if (fragment == null) {
-      fragment = new ServerMessagesFragment(Some(server))
-      tx.add(Id.servers_container, fragment, name)
-    } else {
+    fragmentOpt.fold {
+      tx.add(Id.servers_container, new ServerMessagesFragment(Some(server)), name)
+    } { fragment =>
       tx.remove(fragment)
-      fragment = new ServerMessagesFragment(Some(server))
-      tx.add(Id.servers_container, fragment, name)
-      if (fragment.isDetached)
-        tx.attach(fragment)
-      tx.show(fragment)
+      val newfragment = new ServerMessagesFragment(Some(server))
+      tx.add(Id.servers_container, newfragment, name)
+      if (newfragment.isDetached)
+        tx.attach(newfragment)
+      tx.show(newfragment)
     }
 
     tx.commit()
@@ -657,11 +653,8 @@ with EventBus.RefOwner {
   def addServerSetupFragment(_s: Option[Server] = None) {
     val activity = getActivity
     val mgr = activity.getSupportFragmentManager
-    var fragment: ServerSetupFragment = null
-    fragment = mgr.findFragmentByTag(SERVER_SETUP_FRAGMENT)
-      .asInstanceOf[ServerSetupFragment]
-    if (fragment == null)
-      fragment = new ServerSetupFragment
+    val fragment = mgr.findFragmentByTag(SERVER_SETUP_FRAGMENT)
+      .asInstanceOf[ServerSetupFragment].?.getOrElse(new ServerSetupFragment)
     if (!fragment.isVisible) {
 
       val server = _s getOrElse {
@@ -693,35 +686,28 @@ with EventBus.RefOwner {
   }
 
   def changeListener(server: Server) {
-    _server foreach { s =>
-      val a = getActivity
-      if (s == server && s.state == Server.State.CONNECTED && a != null)
+    for {
+      s <- _server
+      a <- getActivity.?
+    } {
+      if (s == server && s.state == Server.State.CONNECTED)
         a.input.setVisibility(View.VISIBLE)
     }
-    if (adapter != null)
-      adapter.notifyDataSetChanged()
+    adapter.?.foreach(_.notifyDataSetChanged())
   }
 
   def removeListener(server: Server) {
-    if (adapter != null) {
-      adapter.notifyDataSetChanged()
-    }
+    adapter.?.foreach(_.notifyDataSetChanged())
   }
 
   def addListener(server: Server) {
-    if (adapter != null)
-      adapter.notifyDataSetChanged()
+    adapter.?.foreach(_.notifyDataSetChanged())
   }
 
   def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
       Boolean = {
-    val R_id_server_delete = R.id.server_delete
-    val R_id_server_messages = R.id.server_messages
-    val R_id_server_options = R.id.server_options
-    val R_id_server_connect = R.id.server_connect
-    val R_id_server_disconnect = R.id.server_disconnect
     item.getItemId match {
-      case R_id_server_delete =>
+      case R.id.server_delete =>
         server match {
         case Some(s) =>
           val builder = new AlertDialog.Builder(getActivity)
@@ -743,22 +729,22 @@ with EventBus.RefOwner {
             R.string.server_not_selected, Toast.LENGTH_SHORT).show()
       }
         true
-      case R_id_server_connect =>
+      case R.id.server_connect =>
         server.fold{
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }(manager.connect)
         true
-      case R_id_server_disconnect =>
+      case R.id.server_disconnect =>
         server.fold {
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
         }(manager.disconnect(_))
         true
-      case R_id_server_options =>
+      case R.id.server_options =>
         addServerSetupFragment(server)
         true
-      case R_id_server_messages =>
+      case R.id.server_messages =>
         server.fold {
           Toast.makeText(getActivity, R.string.server_not_selected,
             Toast.LENGTH_SHORT).show()
@@ -783,13 +769,11 @@ with EventBus.RefOwner {
   }
 
   override def onPrepareOptionsMenu(menu: Menu) {
-    val activity = getActivity
-    if (activity != null) {
+    getActivity.?.foreach { activity =>
       val m = activity.getSupportFragmentManager
 
       var page = 0
-      if (activity.adapter != null)
-        page = activity.adapter.page
+      activity.adapter.?.foreach(a => page = a.page)
 
       val found = page == 0 && ((0 until m.getBackStackEntryCount) exists {
         i => m.getBackStackEntryAt(i).getName == SERVER_SETUP_STACK
@@ -799,7 +783,7 @@ with EventBus.RefOwner {
     }
   }
   class ServersAdapter(override val context: Activity) extends BaseAdapter with HasContext {
-    val manager = IrcManager.start()
+    val manager = IrcManager.init()
 
     override def getCount = manager.getServers.size
 
@@ -842,10 +826,7 @@ with EventBus.RefOwner {
       val server = getItem(pos)
       val list = parent.asInstanceOf[ListView]
 
-      val v = if (convertView != null)
-        convertView.asInstanceOf[ViewGroup]
-      else
-        layout.perform()
+      val v = convertView.?.fold(layout.perform())(_.asInstanceOf[LinearLayout])
 
       val checked = list.getCheckedItemPosition
       val img = v.findView(Id.server_item_status)

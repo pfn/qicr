@@ -10,7 +10,7 @@ import android.util.AttributeSet
 import android.widget.{Toast, EditText}
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 
-import android.app.AlertDialog
+import android.app.{Activity, AlertDialog}
 import android.support.v7.app.AppCompatActivity
 import android.content.{Intent, DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
@@ -119,8 +119,7 @@ class SettingsFragmentActivity extends AppCompatActivity {
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
     setContentView((w[android.widget.FrameLayout] >>= id(Id.content)).perform())
-    val f = getSupportFragmentManager.findFragmentByTag("settings fragment")
-    if (f == null) {
+    if (getSupportFragmentManager.findFragmentByTag("settings fragment") == null) {
       val tx = getSupportFragmentManager.beginTransaction()
       tx.add(Id.content, new SettingsFragment, "settings fragment")
       tx.commit()
@@ -209,8 +208,8 @@ extends android.support.v7.preference.PreferenceFragmentCompat {
   }
 
   override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
-    if (requestCode == REQUEST_CODE_ALERT_RINGTONE && data != null) {
-      val ringtone: Option[Uri] = Option(data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI))
+    if (requestCode == REQUEST_CODE_ALERT_RINGTONE && resultCode == Activity.RESULT_OK) {
+      val ringtone = data.?.map(_.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI): Uri)
       setRingtone(ringtone.fold("")(_.toString))
     } else {
       super.onActivityResult(requestCode, resultCode, data)
@@ -226,8 +225,7 @@ extends android.support.v7.preference.PreferenceFragmentCompat {
     pref.setSummary(rt.getTitle(getContext))
   }
 
-  def getRingtone = getPreferenceManager.getSharedPreferences.getString(
-    Settings.NOTIFICATION_SOUND.key, null).?
+  def getRingtone = Settings.get(Settings.NOTIFICATION_SOUND).?
 }
 
 class CharsetPreference(c: Context, attrs: AttributeSet)

@@ -220,11 +220,11 @@ abstract class TrayAdapter[A] extends BaseAdapter {
   final override def getView(position: Int, convertView: View, parent: ViewGroup) = {
     if (size == 0) {
       implicit val context = parent.getContext
-      if (convertView == null) {
+      convertView.?.getOrElse {
         // do nothing with onClick so that onItemClick doesn't execute
         c[AbsListView](w[TextView] >>= text(emptyItem) >>= textGravity(Gravity.CENTER) >>=
           hook0.onClick(IO(())) >>= lp(MATCH_PARENT, 128.dp)).perform()
-      } else convertView
+      }
     } else {
       onGetView(position, convertView, parent)
     }

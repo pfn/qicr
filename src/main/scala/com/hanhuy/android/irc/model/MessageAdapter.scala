@@ -110,11 +110,11 @@ object MessageAdapter extends EventBus.RefOwner {
       case Join(n, u,_)    => formatText(c, msg, R.string.join_template,
         colorNick(n), u)
       case Part(n, u, m,_) => formatText(c, msg, R.string.part_template,
-        colorNick(n), u, if (m == null) "" else m)
+        colorNick(n), u, m.?.getOrElse(""))
       case Quit(n, u, m,_) => formatText(c, msg, R.string.quit_template,
         colorNick(n), u, m)
       case Kick(o, n, m,_) => formatText(c, msg, R.string.kick_template,
-        colorNick(n), colorNick(o), if (m == null) "" else m)
+        colorNick(n), colorNick(o), m.?.getOrElse(""))
       case CommandError(m,_)  => formatText(c, msg, -1, m)
       case ServerInfo(m,_)    => formatText(c, msg, -1, m)
       case Motd(m,_)          => formatText(c, msg, -1, m)
@@ -244,10 +244,10 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     }
   }
 
-  var _activity: WeakReference[Activity] = _
+  var _activity: WeakReference[Activity] = WeakReference.empty
   // can't make this IrcService due to resource changes on recreation
-  def context_= (c: Activity) = {
-    if (c != null) {
+  def context_= (activity: Activity) = {
+    activity.?.foreach { c =>
       _activity = new WeakReference(c)
       IrcManager.instance foreach { manager =>
         // It'd be nice to register a ServiceBus listener, but no way
@@ -273,7 +273,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     messages += item
     filterCache = None
     nickCache = None
-    if (_activity != null && isMainThread)
+    if (isMainThread)
       _activity.get foreach { _ => notifyDataSetChanged() }
   }
 
@@ -311,9 +311,8 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
   private var size = Settings.get(Settings.FONT_SIZE)
 
   override def getView(pos: Int, convertView: View, container: ViewGroup) = {
-    val c = if (convertView == null || convertView.getContext == context)
-      convertView.asInstanceOf[TextView] else null
-    val view = if (c != null) c else {
+    val c = convertView.?.find(_.getContext == context).map(_.asInstanceOf[TextView])
+    val view = c.getOrElse {
       val v = messageLayout(_activity.get.get).perform()
 
       if (!icsAndNewer)
@@ -328,7 +327,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
 
     val spanned = formatText(getItem(pos)) match {
       case s: Spannable => s
-      case s => new SpannableString(if (s == null) "" else s)
+      case s => new SpannableString(s.?.getOrElse(""))
     }
     Linkify.addLinks(spanned,
       Linkify.WEB_URLS | Linkify.EMAIL_ADDRESSES | Linkify.MAP_ADDRESSES)

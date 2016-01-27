@@ -311,7 +311,7 @@ class MessageLog private(context: Context)
         db.beginTransaction()
         db.update(TABLE_CHANNELS, c.values, s"${BaseColumns._ID}  = ?",
           Array(String.valueOf(c.id)))
-        val newid = db.insertOrThrow(TABLE_LOGS, null, e.values)
+        db.insertOrThrow(TABLE_LOGS, null, e.values)
         db.setTransactionSuccessful()
         db.endTransaction()
         close(db)
@@ -539,18 +539,16 @@ class MessageLogActivity extends AppCompatActivity {
   override def onNewIntent(intent: Intent) = {
     val bar = getSupportActionBar
     nid = intent.getLongExtra(EXTRA_SERVER, -1)
-    channel = intent.getStringExtra(EXTRA_CHANNEL)
+    channel = intent.getStringExtra(EXTRA_CHANNEL).?.getOrElse("")
     val query = intent.getStringExtra(EXTRA_QUERY)
     setAdapter(None)
 
-    if (channel != null && MessageLog.channels.contains(nid -> channel.toLowerCase)) {
+    if (MessageLog.channels.contains(nid -> channel.toLowerCase)) {
       bar.setTitle(s"logs: $channel")
       bar.setSubtitle(null)
       Future {
-        if (query == null)
-          MessageLog.get(this, nid, channel)
-        else
-          MessageLog.get(this, nid, channel, query)
+        query.?.fold(MessageLog.get(this, nid, channel))(
+          MessageLog.get(this, nid, channel, _))
       } onSuccessMain { case a => setAdapter(Some(a)) }
     } else {
       Toast.makeText(this, "No logs available", Toast.LENGTH_SHORT).show()
@@ -648,36 +646,34 @@ class MessageLogActivity extends AppCompatActivity {
         override def hasStableIds = true
 
         override def getChildView(p1: Int, p2: Int, p3: Boolean, p4: View, p5: ViewGroup) = {
-          val text = if (p4 == null) {
+          val text = p4.?.fold{
             val v = new TextView(MessageLogActivity.this,
               null, android.R.style.TextAppearance_Medium)
             v.setLayoutParams(new AbsListView.LayoutParams(MATCH_PARENT, 48 dp))
             v.setPadding(48 dp, 0, 0, 0)
             v.setGravity(Gravity.CENTER_VERTICAL)
             v
-          } else
-            p4.asInstanceOf[TextView]
+          }(_.asInstanceOf[TextView])
 
           text.setText(getChild(p1, p2).name)
           text
         }
 
         override def getGroupView(p1: Int, p2: Boolean, p3: View, p4: ViewGroup) = {
-          val text = if (p3 == null) {
+          val text = p3.?.fold{
             val v = new TextView(MessageLogActivity.this,
               null, android.R.style.TextAppearance_Large)
             v.setLayoutParams(new AbsListView.LayoutParams(MATCH_PARENT, 48 dp))
             v.setGravity(Gravity.CENTER_VERTICAL)
             v.setPadding(36 dp, 0, 0, 0)
             v
-          } else
-            p3.asInstanceOf[TextView]
+          }(_.asInstanceOf[TextView])
 
           text.setText(getGroup(p1).name)
           text
         }
       })
-      (0 until networks.size) foreach (i => othersLayout.expandGroup(i))
+      networks.indices foreach (i => othersLayout.expandGroup(i))
       othersLayout.setOnChildClickListener(new OnChildClickListener {
         override def onChildClick(p1: ExpandableListView,
                                   p2: View, p3: Int, p4: Int, p5: Long) = {
