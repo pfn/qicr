@@ -17,7 +17,7 @@ trait BaseResultManager {
 
   def activityFragmentWrapper: ActivityResultProcessor[_,_]
   private[this] var _requestCode = 0
-  final def requestCode = {
+  private[this] def requestCode = {
     _requestCode = _requestCode + 1
     _requestCode % 0xff
   }
