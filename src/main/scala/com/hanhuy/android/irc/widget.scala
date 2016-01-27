@@ -4,7 +4,6 @@ import android.annotation.TargetApi
 import android.graphics.{Point, Color}
 import android.graphics.drawable.ColorDrawable
 import android.text.TextUtils.TruncateAt
-import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
@@ -21,6 +20,7 @@ import android.os.{Handler, Bundle}
 import android.speech.RecognizerIntent
 import com.hanhuy.android.irc.model.BusEvent._
 import iota._
+import Futures._
 
 object Widgets extends EventBus.RefOwner {
   val ACTION_LAUNCH = "com.hanhuy.android.irc.action.LAUNCH"
@@ -455,7 +455,7 @@ with RemoteViewsService.RemoteViewsFactory {
 // TODO refactor and cleanup, so ugly, copy/paste from MainActivity
 @TargetApi(14)
 class WidgetChatActivity
-extends Activity with TypedFindView {
+extends Activity with TypedFindView with ActivityResultManager {
   import Tweaks._
   import ViewGroup.LayoutParams._
 
@@ -527,7 +527,6 @@ extends Activity with TypedFindView {
   }
 
   import collection.JavaConversions._
-  val REQUEST_SPEECH_RECOGNITION = 1
   lazy val input = new EditText(this)
   lazy val speechrec = new ImageButton(this)
   lazy val nickcomplete = new ImageButton(this)
@@ -583,7 +582,51 @@ extends Activity with TypedFindView {
           RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
         try {
-          startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
+          val f = requestActivityResult(intent)
+          f.onFailureMain { case _ =>
+            Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
+          }
+          f.onSuccessMain { case i =>
+            val results = i.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+
+            if (results.size == 0) {
+              Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
+            } else {
+
+              val eol = Settings.get(Settings.SPEECH_REC_EOL)
+              val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
+
+              results find { r => r == eol || r == clearLine } match {
+                case Some(c) =>
+                  if (c == eol) {
+                    proc.foreach(_.handleLine(input.getText.toString))
+                    InputProcessor.clear(input)
+                  } else if (c == clearLine) {
+                    InputProcessor.clear(input)
+                  }
+                case None =>
+                  val builder = new AlertDialog.Builder(this)
+                  builder.setTitle(R.string.speech_select)
+                  builder.setItems(results.toArray(
+                    new Array[CharSequence](results.size)),
+                    (d: DialogInterface, which: Int) => {
+                      input.getText.append(results(which) + " ")
+
+                      val rec = results(which).toLowerCase
+                      if (rec.endsWith(" " + eol) || rec == eol) {
+                        val t = input.getText.toString
+                        val line = t.substring(0, t.length() - eol.length() - 1)
+                        proc.foreach(_.handleLine(line))
+                        InputProcessor.clear(input)
+                      } else if (rec == clearLine) {
+                        InputProcessor.clear(input)
+                      }
+                    })
+                  builder.setNegativeButton(R.string.speech_cancel, null)
+                  builder.create().show()
+              }
+            }
+          }
         } catch {
           case e: Exception =>
             Toast.makeText(this, R.string.speech_unsupported,
@@ -602,53 +645,6 @@ extends Activity with TypedFindView {
   }
 
   // TODO refactor my ass with MainActivity's
-  override def onActivityResult(req: Int, res: Int, i: Intent) {
-    if (req == REQUEST_SPEECH_RECOGNITION) {
-      if (res != Activity.RESULT_OK) {
-        Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
-      } else {
-        val results = i.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-
-        if (results.size == 0) {
-          Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
-        } else {
-
-          val eol = Settings.get(Settings.SPEECH_REC_EOL)
-          val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
-
-          results find { r => r == eol || r == clearLine } match {
-            case Some(c) =>
-              if (c == eol) {
-                proc.foreach(_.handleLine(input.getText.toString))
-                InputProcessor.clear(input)
-              } else if (c == clearLine) {
-                InputProcessor.clear(input)
-              }
-            case None =>
-              val builder = new AlertDialog.Builder(this)
-              builder.setTitle(R.string.speech_select)
-              builder.setItems(results.toArray(
-                new Array[CharSequence](results.size)),
-                (d: DialogInterface, which: Int) => {
-                  input.getText.append(results(which) + " ")
-
-                  val rec = results(which).toLowerCase
-                  if (rec.endsWith(" " + eol) || rec == eol) {
-                    val t = input.getText.toString
-                    val line = t.substring(0, t.length() - eol.length() - 1)
-                    proc.foreach(_.handleLine(line))
-                    InputProcessor.clear(input)
-                  } else if (rec == clearLine) {
-                    InputProcessor.clear(input)
-                  }
-                })
-              builder.setNegativeButton(R.string.speech_cancel, null)
-              builder.create().show()
-          }
-        }
-      }
-    }
-  }
   override def onSearchRequested() = {
     proc.foreach(_.nickComplete(input))
     true // prevent KEYCODE_SEARCH being sent to onKey

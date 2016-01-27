@@ -19,6 +19,8 @@ import com.hanhuy.android.conversions._
 import org.acra.ACRA
 import iota._
 
+import Futures._
+
 import scala.util.Try
 
 object Setting {
@@ -140,7 +142,7 @@ object SettingsFragment {
   }
 }
 class SettingsFragment
-extends android.support.v7.preference.PreferenceFragmentCompat {
+extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResultManager {
   override def onCreatePreferences(bundle: Bundle, s: String) = {
     addPreferencesFromResource(R.xml.settings)
     SettingsFragment.setupNotificationPreference(getActivity, getPreferenceScreen)
@@ -200,19 +202,13 @@ extends android.support.v7.preference.PreferenceFragmentCompat {
         getRingtone.fold(ASettings.System.DEFAULT_NOTIFICATION_URI)(u =>
           if (u.nonEmpty) Uri.parse(u) else null))
 
-      startActivityForResult(intent, REQUEST_CODE_ALERT_RINGTONE)
+      requestActivityResult(intent).onSuccessMain { case data =>
+        val ringtone = data.?.map(_.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI): Uri)
+        setRingtone(ringtone.fold("")(_.toString))
+      }
       true
     } else {
       super.onPreferenceTreeClick(preference)
-    }
-  }
-
-  override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
-    if (requestCode == REQUEST_CODE_ALERT_RINGTONE && resultCode == Activity.RESULT_OK) {
-      val ringtone = data.?.map(_.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI): Uri)
-      setRingtone(ringtone.fold("")(_.toString))
-    } else {
-      super.onActivityResult(requestCode, resultCode, data)
     }
   }
 

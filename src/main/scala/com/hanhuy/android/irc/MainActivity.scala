@@ -11,7 +11,6 @@ import android.support.design.widget.TabLayout
 import android.support.v4.view.{ViewCompat, MotionEventCompat, ViewPager}
 import android.util.DisplayMetrics
 import android.view.View.MeasureSpec
-import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
 import android.view.inputmethod.InputMethodManager
 import android.webkit.{WebChromeClient, WebViewClient, WebView}
@@ -35,8 +34,7 @@ import com.hanhuy.android.irc.model.BusEvent
 
 import iota._
 import Tweaks._
-
-import scala.concurrent.Future
+import Futures._
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -47,8 +45,6 @@ object MainActivity {
   val SERVER_MESSAGES_STACK = "servermessages"
 
   val log = Logcat("MainActivity")
-
-  val REQUEST_SPEECH_RECOGNITION = 1
 
   if (gingerbreadAndNewer) GingerbreadSupport.init()
 
@@ -72,7 +68,7 @@ object MainActivity {
 
   var instance = Option.empty[MainActivity]
 }
-class MainActivity extends AppCompatActivity with EventBus.RefOwner {
+class MainActivity extends AppCompatActivity with EventBus.RefOwner with ActivityResultManager {
   import ViewGroup.LayoutParams._
 
   private[this] var requestRecreate = false
@@ -137,7 +133,49 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
             RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
             try {
-              startActivityForResult(intent, REQUEST_SPEECH_RECOGNITION)
+              val f = requestActivityResult(intent)
+              f.onFailureMain { case _ =>
+                Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
+              }
+              f.onSuccessMain { case i =>
+                val results = i.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                if (results.size == 0) {
+                  Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
+                } else {
+                  val eol = Settings.get(Settings.SPEECH_REC_EOL)
+                  val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
+
+                  results find { r => r == eol || r == clearLine } match {
+                    case Some(c) =>
+                      if (c == eol) {
+                        proc.handleLine(input.getText.toString)
+                        InputProcessor.clear(input)
+                      } else if (c == clearLine) {
+                        InputProcessor.clear(input)
+                      }
+                    case None =>
+                      val builder = new AlertDialog.Builder(this)
+                      builder.setTitle(R.string.speech_select)
+                      builder.setItems(results.toArray(
+                        new Array[CharSequence](results.size)),
+                        (d: DialogInterface, which: Int) => {
+                          input.getText.append(results(which) + " ")
+
+                          val rec = results(which).toLowerCase
+                          if (rec.endsWith(" " + eol) || rec == eol) {
+                            val t = input.getText.toString
+                            val line = t.substring(0, t.length() - eol.length() - 1)
+                            proc.handleLine(line)
+                            InputProcessor.clear(input)
+                          } else if (rec == clearLine) {
+                            InputProcessor.clear(input)
+                          }
+                        })
+                      builder.setNegativeButton(R.string.speech_cancel, null)
+                      builder.create().show()
+                  }
+                }
+              }
             } catch {
               case x: Exception =>
                 log.e("Unable to request speech recognition", x)
@@ -459,51 +497,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     drawerToggle.setDrawerIndicatorEnabled(true)
   }
 
-  override def onActivityResult(req: Int, res: Int, i: Intent) {
-    if (req == REQUEST_SPEECH_RECOGNITION) {
-      if (res != Activity.RESULT_OK) {
-        Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
-      } else {
-        val results = i.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-        if (results.size == 0) {
-          Toast.makeText(this, R.string.speech_failed, Toast.LENGTH_SHORT).show()
-        } else {
-          val eol = Settings.get(Settings.SPEECH_REC_EOL)
-          val clearLine = Settings.get(Settings.SPEECH_REC_CLEAR_LINE)
-
-          results find { r => r == eol || r == clearLine } match {
-            case Some(c) =>
-              if (c == eol) {
-                proc.handleLine(input.getText.toString)
-                InputProcessor.clear(input)
-              } else if (c == clearLine) {
-                InputProcessor.clear(input)
-              }
-            case None =>
-              val builder = new AlertDialog.Builder(this)
-              builder.setTitle(R.string.speech_select)
-              builder.setItems(results.toArray(
-                new Array[CharSequence](results.size)),
-                (d: DialogInterface, which: Int) => {
-                  input.getText.append(results(which) + " ")
-
-                  val rec = results(which).toLowerCase
-                  if (rec.endsWith(" " + eol) || rec == eol) {
-                    val t = input.getText.toString
-                    val line = t.substring(0, t.length() - eol.length() - 1)
-                    proc.handleLine(line)
-                    InputProcessor.clear(input)
-                  } else if (rec == clearLine) {
-                    InputProcessor.clear(input)
-                  }
-                })
-              builder.setNegativeButton(R.string.speech_cancel, null)
-              builder.create().show()
-          }
-        }
-      }
-    }
-  }
 
   override def onSearchRequested() = {
     proc.nickComplete(input)
