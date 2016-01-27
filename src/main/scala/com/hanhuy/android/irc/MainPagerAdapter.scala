@@ -42,9 +42,7 @@ object MainPagerAdapter {
     val FLAG_NEW_MESSAGES = 2
     val FLAG_NEW_MENTIONS = 4
   }
-  class TabInfo(t: String, _fragment: Fragment) {
-    var title    = t
-    def fragment = _fragment
+  class TabInfo(val title: String, val fragment: Fragment) {
     var tag: Option[String] = None
     var channel: Option[ChannelLike] = None
     var server: Option[Server] = None
@@ -176,17 +174,15 @@ with EventBus.RefOwner {
 
   def makeTabTitle(pos: Int) = {
     val t = tabs(pos)
-    var title: CharSequence = t.title
 
-    if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
-      title = SpannedGenerator.textColor(0xffec407a, title)
+    val title = if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
+      SpannedGenerator.textColor(0xffec407a, t.title)
     else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0)
-      title = SpannedGenerator.textColor(0xff26a69a, title)
+      SpannedGenerator.textColor(0xff26a69a, t.title)
+    else t.title
 
     if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
-      title = "(%1)" formatSpans title
-
-    title
+      "(%1)" formatSpans title else title
   }
 
   def actionBarNavigationListener(pos: Int, id: Long) = {
@@ -283,35 +279,36 @@ with EventBus.RefOwner {
     prefix ++ List(item) ++ suffix
   }
   private def addChannel(c: ChannelLike) = {
-    var idx = Collections.binarySearch(channels, c, channelcomp)
+    val idx = Collections.binarySearch(channels, c, channelcomp)
     if (idx < 0) {
-      idx = idx * -1
-      channels = insert(channels, idx - 1, c)
+      val nidx = idx * -1
+      channels = insert(channels, nidx - 1, c)
       val tag = MainActivity.getFragmentTag(c.?)
       val frag = fm.findFragmentByTag(tag).?.getOrElse (c match {
         case ch: Channel => new ChannelFragment(Some(ch))
         case qu: Query   => new QueryFragment(Some(qu))
       })
-      val info = insertTab(c.name, frag, idx - 1)
-      refreshTabTitle(idx + channelBase - 1) // why -1?
+      val info = insertTab(c.name, frag, nidx - 1)
+      refreshTabTitle(nidx + channelBase - 1) // why -1?
       info.channel = Some(c)
+      nidx
     } else {
       tabs(idx + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
       refreshTabTitle(idx + channelBase)
+      idx
     }
-    idx
   }
 
   def addServer(s: Server) {
-    var idx = Collections.binarySearch(servers, s, servercomp)
+    val idx = Collections.binarySearch(servers, s, servercomp)
     if (idx < 0) {
-      idx = idx * -1
-      servers = insert(servers, idx - 1, s)
+      val nidx = idx * -1
+      servers = insert(servers, nidx - 1, s)
       val tag = MainActivity.getFragmentTag(s.?)
       val frag = fm.findFragmentByTag(tag).?.getOrElse(new ServerMessagesFragment(Some(s)))
-      val info = insertTab(s.name, frag, idx - 1)
-      refreshTabTitle(idx)
-      pager.setCurrentItem(idx)
+      val info = insertTab(s.name, frag, nidx - 1)
+      refreshTabTitle(nidx)
+      pager.setCurrentItem(nidx)
       info.server = Some(s)
     } else {
       tabs(idx).flags &= ~TabInfo.FLAG_DISCONNECTED

@@ -94,10 +94,11 @@ with ModeListener with ServerEventListener with MessageEventListener {
           server.autorun.foreach { autorun =>
             autorun.split(";") foreach { cmd =>
               if (cmd.trim().length() > 0) {
-                var command = cmd.trim()
-                if (command.charAt(0) != '/')
-                  command = "/" + command
-                UiBus.run { proc.executeLine(command) }
+                val command = cmd.trim()
+                UiBus.run {
+                  proc.executeLine(
+                    if (command.charAt(0) != '/') "/" + command else command)
+                }
               }
             }
           }

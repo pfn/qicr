@@ -327,10 +327,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
       else if (input.getText.length > 0) send.setVisibility(View.VISIBLE)
       _imeShowing = showing
     case BusEvent.PreferenceChanged(_, key) => key match {
-      case Settings.SHOW_NICK_COMPLETE =>
-        showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
-      case Settings.SHOW_SPEECH_REC =>
-        showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
       case Settings.NAVIGATION_MODE =>
         requestRecreate = true
       case _ =>
@@ -347,8 +343,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner {
     currentPopup = None
   }
 
-  private var showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
-  private var showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
+  def showNickComplete = Settings.get(Settings.SHOW_NICK_COMPLETE)
+  def showSpeechRec = Settings.get(Settings.SHOW_SPEECH_REC)
 
   lazy val drawerToggle = new ActionBarDrawerToggle(this,
     drawer, R.string.app_name, R.string.app_name)

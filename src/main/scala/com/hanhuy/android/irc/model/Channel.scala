@@ -130,11 +130,10 @@ class Query private(s: Server, n: String) extends ChannelLike(s, n) {
 object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
   @tailrec
   private def stripInitial(_name: String): String = {
-    var name = _name
-    name = if (name.length == 0) "" else name.charAt(0) match {
-      case '#' => name.substring(1)
-      case '&' => name.substring(1)
-      case _   => name
+    val name = if (_name.length == 0) "" else _name.charAt(0) match {
+      case '#' => _name.substring(1)
+      case '&' => _name.substring(1)
+      case _   => _name
     }
     if (name == _name) name else stripInitial(name)
   }

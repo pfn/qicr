@@ -226,7 +226,6 @@ class IrcManager extends EventBus.RefOwner {
       log.v("Launching autoconnect servers")
       Config.servers.foreach { s =>
         if (s.autoconnect) connect(s)
-        s.messages.maximumSize = Settings.maximumMessageLines
       }
       ServiceBus.send(IrcManagerStart)
     }
@@ -384,13 +383,13 @@ class IrcManager extends EventBus.RefOwner {
 
   def addChannel(c: IrcConnection, ch: SircChannel) {
     val server = _connections(c)
-    var channel: ChannelLike = Channel(server, ch.getName)
-    channels.keys.find(_ == channel) foreach { _c =>
-      channel    = _c
-      val _ch    = channels(channel)
-      mchannels  -= channel
+    val chan: ChannelLike = Channel(server, ch.getName)
+    val channel = channels.keys.find(_ == chan).map { _c =>
+      val _ch    = channels(_c)
+      mchannels  -= _c
       m_channels -= _ch
-    }
+      _c
+    }.getOrElse(chan)
     mchannels  += ((channel,ch))
     m_channels += ((ch,channel))
 

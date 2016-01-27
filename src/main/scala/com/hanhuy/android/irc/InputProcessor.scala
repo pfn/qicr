@@ -325,21 +325,16 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
     if (line.? exists (_.nonEmpty)) {
       if (line.charAt(0) == '/') {
         val idx = line.indexOf(" ")
-        var cmd = line.substring(1)
-        var args: Option[String] = None
-        if (idx != -1) {
-          cmd = line.substring(1, idx)
-
+        val cmd = line.substring(1)
+        val (cmd2, args) = if (idx != -1) {
           val a = line.substring(idx + 1)
-          if (a.trim().length() == 0) args = None else args = Some(a)
-        }
-        cmd = cmd.toLowerCase
-        if (cmd.length() == 0 || cmd.charAt(0) == ' ') {
-          cmd = getString(R.string.command_quote)
+          (line.substring(1, idx), if (a.trim().length() == 0) None else Some(a))
+        } else (cmd, None)
+        val (cmd3, args2) = if (cmd2.length() == 0 || cmd2.charAt(0) == ' ') {
           val a = if (line.length() > 2) line.substring(2) else ""
-          args = if (a.trim().length() == 0) None else Some(a)
-        }
-        executeCommand(cmd, args)
+          (getString(R.string.command_quote), if (a.trim().length() == 0) None else Some(a))
+        } else (cmd2, args)
+        executeCommand(cmd3.toLowerCase, args2)
       } else {
         sendMessage(Some(line))
       }
@@ -416,24 +411,21 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
   object JoinCommand extends Command {
     override def execute(args: Option[String]) {
       args.fold(addCommandError(R.string.usage_join)){ chan =>
-        var chan = args.get
         val idx = chan.indexOf(" ")
-        var password: Option[String] = None
-        if (idx != -1) {
-          password = Some(chan.substring(idx + 1))
-          chan = chan.substring(0, idx)
+        val (password, chan2) = if (idx != -1) {
+          (Some(chan.substring(idx + 1)), chan.substring(0, idx))
+        } else {
+          (None, chan)
         }
-        if (chan.length == 0) {
+        if (chan2.length == 0) {
           addCommandError(R.string.usage_join)
         } else {
-
           val first = chan.charAt(0)
-          if (first != '#' && first != '&')
-            chan = "#" + chan
+          val chan3 = if (first != '#' && first != '&') "#" + chan else chan
 
           withConnection { conn =>
             if (conn.isConnected) {
-              val c = conn.createChannel(chan)
+              val c = conn.createChannel(chan3)
               password.fold(c.join())(p => c.join(p))
             } else {
               addCommandError("Not connected")

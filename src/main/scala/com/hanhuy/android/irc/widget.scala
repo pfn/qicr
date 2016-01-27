@@ -397,13 +397,11 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
   }
 
   private var _all: Option[Seq[MessageAppender]] = None
-  def all = {
-    _all.getOrElse {
-      val everything = manager.channels.keys.toList.sortWith(_ < _).groupBy(_.server)
-        .toList.sortWith(_._1 < _._1) flatMap { case (k, v) => k :: v })
-      _all = everything.?
-      everything
-    }
+  def all = _all.getOrElse {
+    val everything = manager.channels.keys.toList.sortWith(_ < _).groupBy(_.server)
+      .toList.sortWith(_._1 < _._1) flatMap { case (k, v) => k :: v }
+    _all = everything.?
+    everything
   }
 
   def getViewTypeCount = 2
@@ -428,7 +426,7 @@ with RemoteViewsService.RemoteViewsFactory {
 
   private val MAX_LINES = 128
 
-  var items: Seq[MessageLike] = _
+  var items: Seq[MessageLike] = Nil
 
   def getViewAt(pos: Int) = {
     val views = new RemoteViews(Application.context.getPackageName,
@@ -535,7 +533,7 @@ extends Activity with TypedFindView {
   lazy val nickcomplete = new ImageButton(this)
   lazy val titleview = new TextView(this)
   lazy val list = new ListView(this)
-  private var proc: InputProcessor = _
+  lazy val proc = withAppender(m => new SimpleInputProcessor(this, m))
 
   private def withAppender[A](f: MessageAppender => A): Option[A] = {
     Widgets.appenderForSubject(
@@ -574,10 +572,11 @@ extends Activity with TypedFindView {
       list.setAdapter(a)
       titleview.setText(title)
       UiBus.post { list.setSelection(list.getAdapter.getCount - 1) }
-      proc = new SimpleInputProcessor(this, m)
-      input.addTextChangedListener(proc.TextListener)
-      input.onEditorAction(proc.onEditorActionListener _)
-      nickcomplete onClick0 proc.nickComplete(input)
+      proc.foreach { p =>
+        input.addTextChangedListener(p.TextListener)
+        input.onEditorAction(p.onEditorActionListener _)
+        nickcomplete onClick0 p.nickComplete(input)
+      }
       speechrec onClick0 {
         val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -620,7 +619,7 @@ extends Activity with TypedFindView {
           results find { r => r == eol || r == clearLine } match {
             case Some(c) =>
               if (c == eol) {
-                proc.handleLine(input.getText.toString)
+                proc.foreach(_.handleLine(input.getText.toString))
                 InputProcessor.clear(input)
               } else if (c == clearLine) {
                 InputProcessor.clear(input)
@@ -637,7 +636,7 @@ extends Activity with TypedFindView {
                   if (rec.endsWith(" " + eol) || rec == eol) {
                     val t = input.getText.toString
                     val line = t.substring(0, t.length() - eol.length() - 1)
-                    proc.handleLine(line)
+                    proc.foreach(_.handleLine(line))
                     InputProcessor.clear(input)
                   } else if (rec == clearLine) {
                     InputProcessor.clear(input)
@@ -651,7 +650,7 @@ extends Activity with TypedFindView {
     }
   }
   override def onSearchRequested() = {
-    proc.nickComplete(input)
+    proc.foreach(_.nickComplete(input))
     true // prevent KEYCODE_SEARCH being sent to onKey
   }
 }

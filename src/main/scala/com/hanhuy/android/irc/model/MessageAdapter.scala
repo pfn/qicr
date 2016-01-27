@@ -213,14 +213,8 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
   // TODO FIXME might activity might be None
 
   implicit val channel = _channel
-  var showJoinPartQuit = false
-  var _maximumSize = DEFAULT_MAXIMUM_SIZE
-  def maximumSize = _maximumSize
-  def maximumSize_=(s: Int) = {
-    if (_maximumSize != s)
-      _messages = messages.copy(s)
-    _maximumSize = s
-  }
+  def showJoinPartQuit = Settings.get(Settings.SHOW_JOIN_PART_QUIT)
+  def maximumSize = Settings.maximumMessageLines
 
   private var filterCache = Option.empty[Seq[MessageLike]]
   def messages = _messages
@@ -229,9 +223,8 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     // only register once to prevent memory leak
   UiBus += { case BusEvent.PreferenceChanged(s, k) =>
     if (k == Settings.MESSAGE_LINES) {
-      maximumSize = Settings.maximumMessageLines
+      _messages = messages.copy(maximumSize)
     } else if (k == Settings.SHOW_JOIN_PART_QUIT) {
-      showJoinPartQuit = s.get(Settings.SHOW_JOIN_PART_QUIT)
       notifyDataSetChanged()
     } else if (k == Settings.SHOW_TIMESTAMP) {
       MessageAdapter.showTimestamp = s.get(Settings.SHOW_TIMESTAMP)
@@ -253,8 +246,6 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
         // It'd be nice to register a ServiceBus listener, but no way
         // to clean up when this adapter goes away?
         // add it to UiBus here maybe?
-        maximumSize = Settings.maximumMessageLines
-        showJoinPartQuit = Settings.get(Settings.SHOW_JOIN_PART_QUIT)
         MessageAdapter.showTimestamp = Settings.get(Settings.SHOW_TIMESTAMP)
       }
     }

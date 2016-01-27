@@ -56,7 +56,7 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
       tv.setShadowLayer(1.2f, 0, 0, Color.parseColor("#ff333333"))
     } >>= padding(left = 6 dp))
 
-  var nicks: List[android.text.Spanned] = _
+  var nicks: List[android.text.Spanned] = Nil
   override def notifyDataSetChanged() {
     c.foreach { c =>
       nicks = c.getUsers.toList.map { u =>

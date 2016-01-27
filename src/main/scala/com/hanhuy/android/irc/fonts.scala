@@ -118,8 +118,6 @@ extends Preference(c, attrs) with HasContext {
   }
   setLayoutResource(R.layout.preference_font_size)
 
-  var defaultSize: Int = _
-
   val fontNameKey = themeAttrs(R.styleable.FontSizePreference,
     _.getString(R.styleable.FontSizePreference_fontNameKey))
 
@@ -131,7 +129,7 @@ extends Preference(c, attrs) with HasContext {
       t  = Typeface.createFromFile(n)
     } yield t
     val summary = holder.findViewById(android.R.id.summary).asInstanceOf[TextView]
-    defaultSize = (summary.getTextSize /
+    val defaultSize = (summary.getTextSize /
       getContext.getResources.getDisplayMetrics.scaledDensity).toInt
     summary.setText("%d sp" format getPersistedInt(defaultSize))
     summary.setTextSize(TypedValue.COMPLEX_UNIT_SP, getPersistedInt(defaultSize))

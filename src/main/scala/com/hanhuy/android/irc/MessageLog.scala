@@ -483,7 +483,6 @@ class MessageLogActivity extends AppCompatActivity {
   import MessageLogActivity._
   val log = Logcat("MessageLogActivity")
   lazy val listview = new ListView(this)
-  var dateText: TextView = _
 
   lazy val layout = l[FrameLayout](
     w[TextView] >>= gone >>=

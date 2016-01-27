@@ -772,8 +772,7 @@ with EventBus.RefOwner {
     getActivity.?.foreach { activity =>
       val m = activity.getSupportFragmentManager
 
-      var page = 0
-      activity.adapter.?.foreach(a => page = a.page)
+      val page = activity.adapter.?.fold(0)(_.page)
 
       val found = page == 0 && ((0 until m.getBackStackEntryCount) exists {
         i => m.getBackStackEntryAt(i).getName == SERVER_SETUP_STACK
