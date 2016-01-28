@@ -8,7 +8,7 @@ import javax.net.ssl.SSLContext
 import android.graphics.Typeface
 import android.text.{Layout, StaticLayout, TextPaint, TextUtils}
 import android.text.style.TextAppearanceSpan
-import android.util.{TypedValue, DisplayMetrics}
+import android.util.{Log, TypedValue, DisplayMetrics}
 import android.view.WindowManager
 import com.hanhuy.android.irc.model._
 
@@ -194,15 +194,15 @@ class IrcManager extends EventBus.RefOwner {
     messagesId
   }
 
-  def removeConnection(server: Server) {
-    //Log.d(TAG, "Unregistering connection: " + server, new StackTrace)
+  def removeConnection(server: Server) = synchronized {
+//    log.d("Unregistering connection: " + server, new StackTrace)
     connections.get(server).foreach(c => {
       mconnections -= server
       m_connections -= c
     })
   }
 
-  def addConnection(server: Server, connection: IrcConnection) {
+  def addConnection(server: Server, connection: IrcConnection) = synchronized {
     log.i("Registering connection: " + server + " => " + connection)
     mconnections += ((server, connection))
     m_connections += ((connection, server))
@@ -511,6 +511,24 @@ class IrcManager extends EventBus.RefOwner {
     nm.notify(id, notif)
   }
 
+  def pingLoop(c: IrcConnection, server: Server): Unit = {
+    import scala.concurrent.duration._
+    if (server.state == Server.State.CONNECTED) {
+      // TODO make interval into a pref?
+      handler.postDelayed(() => pingLoop(c, server), 30.seconds.toMillis)
+      // force PING if last ping was longer than 5 minutes ago
+      val now = System.currentTimeMillis
+      val pingTime = server.currentPing getOrElse now
+      val delta = now - pingTime
+      if (delta == 0 || delta > 60.seconds.toMillis)
+        ping(c, server)
+      if (delta > 120.seconds.toMillis) { // automatically reconnect if ping gets over 120s
+        disconnect(server, None, true)
+        connect(server)
+      } else if (delta > server.currentLag.now)
+        server.currentLag() = delta.toInt
+    }
+  }
   def ping(c: IrcConnection, server: Server) {
     val now = System.currentTimeMillis
     server.currentPing = Some(now)
@@ -663,10 +681,11 @@ class IrcManager extends EventBus.RefOwner {
     if (server.state == Server.State.DISCONNECTED)
       connection.disconnect()
 
-    if (state == Server.State.CONNECTED && connection.isConnected)
-      ping(connection, server)
-
-    UiBus.run { server.state = state }
+    UiBus.run {
+      server.state = state
+      if (state == Server.State.CONNECTED && connection.isConnected)
+        handler.post(() => pingLoop(connection, server))
+    }
   }
   def runningString = getString(R.string.notif_connected_servers,
     connections.size: java.lang.Integer)

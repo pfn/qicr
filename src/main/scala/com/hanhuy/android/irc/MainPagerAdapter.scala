@@ -2,7 +2,6 @@ package com.hanhuy.android.irc
 
 import android.support.design.widget.TabLayout
 import android.support.design.widget.TabLayout.{Tab, OnTabSelectedListener}
-import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ServerComparator
 import com.hanhuy.android.irc.model.Channel
@@ -31,7 +30,6 @@ import com.hanhuy.android.common._
 import com.hanhuy.android.irc.model.BusEvent.ChannelStatusChanged
 
 import scala.util.Try
-import TypedResource._
 
 object MainPagerAdapter {
   val TAG = "MainPagerAdapter"
@@ -217,7 +215,7 @@ with EventBus.RefOwner {
     manager.lastChannel = t.channel
 
     HoneycombSupport.setSubtitle(t.channel.map(_.server).orElse(t.server).map(
-      s => Server.intervalString(s.currentLag)).orNull)
+      s => Server.intervalString(s.currentLag.now)).orNull)
     HoneycombSupport.setTitle(t.channel map { _.server } orElse
       t.server map { s =>
         "%s / %s" format(t.title, s.name)
@@ -400,7 +398,7 @@ with EventBus.RefOwner {
         tab.server foreach { s =>
           if (pos == page) {
             line2.setText(" - %s (%s)" format (
-              s.currentNick, Server.intervalString(s.currentLag)))
+              s.currentNick, Server.intervalString(s.currentLag.now)))
           } else {
             line2.setText(" - %s" format s.currentNick)
           }
@@ -409,7 +407,7 @@ with EventBus.RefOwner {
         val s = c.server
         if (pos == page) { // show lag for the selected item
           line2.setText(" - %s: %s" format(
-            s.name, Server.intervalString(s.currentLag)))
+            s.name, Server.intervalString(s.currentLag.now)))
         } else {
           line2.setText(" - %s: %s" format (s.name, s.currentNick))
         }

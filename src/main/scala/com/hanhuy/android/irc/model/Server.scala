@@ -5,6 +5,7 @@ import com.hanhuy.android.irc._
 import android.content.ContentValues
 import com.hanhuy.android.irc.model.BusEvent.ServerMessage
 import com.hanhuy.android.common.{UiBus, ServiceBus}
+import rx.Var
 
 object Server {
   trait State
@@ -89,7 +90,7 @@ class Server extends MessageAppender with Ordered[Server] {
   var saslPass: String = _
 
   var currentPing: Option[Long] = None
-  var currentLag: Int = 0
+  val currentLag = Var(0)
 
   var currentNick = nickname
   override def toString = name

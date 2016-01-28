@@ -17,7 +17,7 @@ import com.sorcix.sirc.event.MessageEventListener.{Message, Action}
 import com.sorcix.sirc.event.ServerEventListener.{Invite, Nick, Mode}
 import com.sorcix.sirc.event.{ServerEventListener, MessageEventListener}
 
-import scala.util.control.Exception._
+import scala.util.Try
 import com.hanhuy.android.common._
 import SpannedGenerator._
 import IrcListeners._
@@ -280,21 +280,18 @@ with ModeListener with ServerEventListener with MessageEventListener {
       } else {
         line.getCommand match {
           case "PONG" =>
-            server.currentPing map { ping =>
+            for {
+              ping <- server.currentPing
+              p    <- Try((line.getMessage.? getOrElse
+                line.getArgumentsArray()(1)).toLong).toOption
+            } {
               server.currentPing = None
-              catching(classOf[Exception]) opt {
-                (line.getMessage.? getOrElse
-                  line.getArgumentsArray()(1)).toLong
-              } map { p =>
-                // non-numeric should pass through
-                // should always match if the lag timer is working
-                if (p == ping) {
-                  val t = System.currentTimeMillis
-                  server.currentLag = (t - p).toInt
-                  UiBus.send(BusEvent.ServerChanged(server))
-                }
-                // TODO make interval into a pref?
-                manager.handler.postDelayed(() => manager.ping(c, server), 30000)
+              // non-numeric should pass through
+              // should always match if the lag timer is working
+              if (p == ping) {
+                val t = System.currentTimeMillis
+                server.currentLag() = (t - p).toInt
+                UiBus.send(BusEvent.ServerChanged(server))
               }
             }
           case _ => ()
@@ -473,11 +470,11 @@ with ModeListener with ServerEventListener with MessageEventListener {
     val r = CtcpReply(s, src.getNick, cmd, cmd match {
       case "PING" => reply match {
         case CtcpPing(seconds, micros) =>
-          catching(classOf[Exception]) opt {
+          Try {
             // prevent malicious overflow causing a crash
             val ts = seconds.toLong * 1000 + (micros.toLong / 1000)
             Server.intervalString(System.currentTimeMillis - ts)
-          } orElse reply.?
+          }.toOption orElse reply.?
         case _ => reply.?
       }
       case _ => reply.?

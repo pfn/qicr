@@ -10,7 +10,7 @@ import android.util.AttributeSet
 import android.widget.{Toast, EditText}
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 
-import android.app.{Activity, AlertDialog}
+import android.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.content.{Intent, DialogInterface, Context, SharedPreferences}
 import android.os.{Build, Bundle}
@@ -187,7 +187,6 @@ extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResu
       })
   }
 
-  val REQUEST_CODE_ALERT_RINGTONE = 16
   override def onPreferenceTreeClick(preference: Preference) = {
     import android.provider.{Settings => ASettings}
     if (preference.getKey == Settings.NOTIFICATION_SOUND.key) {

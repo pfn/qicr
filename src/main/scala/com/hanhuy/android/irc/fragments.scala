@@ -7,10 +7,7 @@ import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.TypedValue
-import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view._
-import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
 import android.widget._
 
@@ -845,14 +842,17 @@ with EventBus.RefOwner {
       val t = IO(v.findView(Id.server_checked_text) : CheckedTextView)
       (t >>= kestrel { tv =>
         tv.setChecked(pos == checked)
-        val lag = if (server.state == CONNECTED) {
-          val l = server.currentPing flatMap { p =>
-            if (server.currentLag == 0) None
-            else Some((System.currentTimeMillis - p).toInt)
-          } getOrElse server.currentLag
-          Server.intervalString(l)
-        } else ""
-        tv.setText(lag)
+        // any thread may update currentLag, must run on correct thread
+        server.currentLag.trigger(UiBus.post {
+          val lag = if (server.state == CONNECTED) {
+            val l = server.currentPing flatMap { p =>
+              if (server.currentLag.now == 0) None
+              else Some((System.currentTimeMillis - p).toInt)
+            } getOrElse server.currentLag.now
+            Server.intervalString(l)
+          } else ""
+          tv.setText(lag)
+        })
       }).perform()
       v
     }
