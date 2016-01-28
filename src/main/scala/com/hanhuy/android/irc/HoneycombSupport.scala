@@ -96,15 +96,12 @@ object HoneycombSupport {
   }
 
   def startNickActionMode(nick: String)(f: (MenuItem => Unit)) {
-    NickListActionModeSetup.callback = f
-    NickListActionModeSetup.nick = nick.dropWhile(n => Set(' ','@','+')(n))
       _actionmode = activity.fold(WeakReference.empty[ActionMode])(a => WeakReference(
-        a.startSupportActionMode(NickListActionModeSetup)))
+        a.startSupportActionMode(
+          NickListActionModeSetup(nick.dropWhile(Set(' ', '@', '+')), f))))
   }
 
-  object NickListActionModeSetup extends ActionMode.Callback {
-    var callback: (MenuItem => Unit) = _
-    var nick: String = _
+  case class NickListActionModeSetup[A](nick: String, callback: MenuItem => A) extends ActionMode.Callback {
 
     override def onActionItemClicked(mode: ActionMode, item: MenuItem) = {
       mode.finish()
@@ -112,18 +109,16 @@ object HoneycombSupport {
       true
     }
 
-    override def onCreateActionMode(mode: ActionMode, menu: Menu) = {
-      activity.fold(false) { a =>
-        implicit val act = a
-        val inflater = new MenuInflater(a)
-        inflater.inflate(R.menu.nicklist_menu, menu)
-        mode.setTitle(nick)
-        val item = menu.findItem(R.id.nick_ignore)
-        item.setChecked(Config.Ignores(nick))
-        item.setIcon(iota.resolveAttr(if (Config.Ignores(nick))
-          R.attr.qicrChatIgnoreIcon else R.attr.qicrChatEndIcon, _.resourceId))
-        true
-      }
+    override def onCreateActionMode(mode: ActionMode, menu: Menu) = activity.fold(false) { a =>
+      implicit val act = a
+      val inflater = new MenuInflater(a)
+      inflater.inflate(R.menu.nicklist_menu, menu)
+      mode.setTitle(nick)
+      val item = menu.findItem(R.id.nick_ignore)
+      item.setChecked(Config.Ignores(nick))
+      item.setIcon(iota.resolveAttr(if (Config.Ignores(nick))
+        R.attr.qicrChatIgnoreIcon else R.attr.qicrChatEndIcon, _.resourceId))
+      true
     }
 
     override def onDestroyActionMode(mode: ActionMode) = ()
