@@ -569,6 +569,19 @@ class MessageLogActivity extends AppCompatActivity {
     toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_mtrl_am_alpha)
 
     onNewIntent(getIntent)
+    var first = 0
+    listview.scrolled {
+      (_, fst, vis, total) =>
+        if (fst != first) {
+          adapter foreach { a =>
+            if (fst < a.getCount) {
+              val t = a.getItem(fst)
+              toolbar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+            }
+          }
+        }
+        first = fst
+    }
     listview.setOnScrollListener(new OnScrollListener {
       var first = 0
 
@@ -593,11 +606,8 @@ class MessageLogActivity extends AppCompatActivity {
       v.setTextAppearance(this, android.R.style.TextAppearance_Medium)
     })
 
-  val Menu_log_others = R.id.menu_log_others
-  val Menu_log_info = R.id.menu_log_info
-  val Menu_log_delete = R.id.menu_log_delete
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
-    case Menu_log_delete =>
+    case R.id.menu_log_delete =>
       val builder = new AlertDialog.Builder(this)
       builder.setTitle("Delete Logs?")
       builder.setMessage("Delete all logs or messages from the current window?")
@@ -616,7 +626,7 @@ class MessageLogActivity extends AppCompatActivity {
       })
       builder.create().show()
       true
-    case Menu_log_others =>
+    case R.id.menu_log_others =>
       val othersLayout = (
         w[ExpandableListView] >>= padding(all = 12 dp)
       ).perform()
@@ -688,7 +698,7 @@ class MessageLogActivity extends AppCompatActivity {
       popup.showAtLocation(getWindow.getDecorView, Gravity.CENTER, 0, 0)
 
       true
-    case Menu_log_info =>
+    case R.id.menu_log_info =>
       lazy val databaseSize = new TextView(this)
       lazy val channelLines = new TextView(this)
       lazy val channelName = new TextView(this)
@@ -792,7 +802,6 @@ class MessageLogActivity extends AppCompatActivity {
     })
     searchView.setOnQueryTextListener(new OnQueryTextListener {
       override def onQueryTextSubmit(p1: String) = {
-        val imm = MessageLogActivity.this.systemService[InputMethodManager]
         hideIME()
         val query = searchView.getQuery.toString
         if (query.trim.nonEmpty) {

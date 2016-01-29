@@ -843,8 +843,11 @@ with EventBus.RefOwner {
 
       (IO(v.findView(Id.server_checked_text) : CheckedTextView) >>=
         kestrel { tv =>
-          tv.detachedFromWindow(
-            tv.getTag(Id.obs).asInstanceOf[Obs].?.foreach(_.kill()))
+          if (iota.v(12)) {
+            // early honeycomb and gingerbread will leak the obs
+            tv.onDetachedFromWindow(
+              tv.getTag(Id.obs).asInstanceOf[Obs].?.foreach(_.kill()))
+          }
           tv.setChecked(pos == checked)
           tv.getTag(Id.obs).asInstanceOf[Obs].?.foreach(_.kill())
           // any thread may update currentLag, must run on correct thread

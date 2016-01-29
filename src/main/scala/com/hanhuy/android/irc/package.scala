@@ -1,5 +1,6 @@
 package com.hanhuy.android
 
+import android.annotation.TargetApi
 import android.app.Activity
 import android.view.View.OnAttachStateChangeListener
 import android.view.{View, ViewTreeObserver}
@@ -49,7 +50,8 @@ package object irc {
   }
 
   implicit class ViewAttachStateChangeListener(val view: View) extends AnyVal {
-    @inline def detachedFromWindow[A](f: => A) =
+    @TargetApi(12)
+    @inline def onDetachedFromWindow[A](f: => A) =
       view.addOnAttachStateChangeListener(new OnAttachStateChangeListener {
         override def onViewDetachedFromWindow(v: View) = {
           view.removeOnAttachStateChangeListener(this)

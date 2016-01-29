@@ -449,7 +449,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       }
 
       override def onDrawerOpened(drawerView: View) {
-        val imm = MainActivity.this.systemService[InputMethodManager]
         hideIME()
         if (drawerView == drawerLeft)
           drawerToggle.onDrawerOpened(drawerView)
