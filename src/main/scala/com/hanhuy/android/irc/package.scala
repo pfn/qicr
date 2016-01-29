@@ -1,6 +1,7 @@
 package com.hanhuy.android
 
 import android.app.Activity
+import android.view.View.OnAttachStateChangeListener
 import android.view.{View, ViewTreeObserver}
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view.inputmethod.InputMethodManager
@@ -13,9 +14,6 @@ import android.widget.AbsListView.OnScrollListener
 package object irc {
   implicit class WeakReferenceEmptyOp(val wrt: ref.WeakReference.type) extends AnyVal {
     @inline def empty[T <: AnyRef] = scala.ref.WeakReference[T](null.asInstanceOf[T])
-  }
-  implicit class AnyAsOptionExtension[T <: Any](val any: T) extends AnyVal {
-    @inline def ? = Option(any)
   }
 
   @inline def hideIME()(implicit c: Activity): Unit = {
@@ -47,6 +45,17 @@ package object irc {
       view.getViewTreeObserver.addOnPreDrawListener(new OnPreDrawListener {
         // pass this to allow listener to remove self
         override def onPreDraw() = f(this)
+      })
+  }
+
+  implicit class ViewAttachStateChangeListener(val view: View) extends AnyVal {
+    @inline def detachedFromWindow[A](f: => A) =
+      view.addOnAttachStateChangeListener(new OnAttachStateChangeListener {
+        override def onViewDetachedFromWindow(v: View) = {
+          view.removeOnAttachStateChangeListener(this)
+          f
+        }
+        override def onViewAttachedToWindow(v: View) = ()
       })
   }
 }

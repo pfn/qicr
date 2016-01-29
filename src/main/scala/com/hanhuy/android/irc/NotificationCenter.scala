@@ -1,5 +1,7 @@
 package com.hanhuy.android.irc
 
+import com.hanhuy.android.common._
+
 import java.text.SimpleDateFormat
 import java.util.Date
 

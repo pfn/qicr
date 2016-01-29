@@ -7,6 +7,7 @@ import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.view.View.OnAttachStateChangeListener
 import android.view._
 import android.widget.AbsListView.OnScrollListener
 import android.widget._
@@ -26,6 +27,7 @@ import com.hanhuy.android.extensions._
 import MainActivity._
 
 import Tweaks._
+import rx.Obs
 
 import scala.util.Try
 import iota._
@@ -839,21 +841,25 @@ with EventBus.RefOwner {
         case CONNECTING   => android.R.drawable.presence_away
       }) >>= condK((server.state != Server.State.CONNECTING) ? visible | gone)).perform()
 
-      val t = IO(v.findView(Id.server_checked_text) : CheckedTextView)
-      (t >>= kestrel { tv =>
-        tv.setChecked(pos == checked)
-        // any thread may update currentLag, must run on correct thread
-        server.currentLag.trigger(UiBus.post {
-          val lag = if (server.state == CONNECTED) {
-            val l = server.currentPing flatMap { p =>
-              if (server.currentLag.now == 0) None
-              else Some((System.currentTimeMillis - p).toInt)
-            } getOrElse server.currentLag.now
-            Server.intervalString(l)
-          } else ""
-          tv.setText(lag)
-        })
-      }).perform()
+      (IO(v.findView(Id.server_checked_text) : CheckedTextView) >>=
+        kestrel { tv =>
+          tv.detachedFromWindow(
+            tv.getTag(Id.obs).asInstanceOf[Obs].?.foreach(_.kill()))
+          tv.setChecked(pos == checked)
+          tv.getTag(Id.obs).asInstanceOf[Obs].?.foreach(_.kill())
+          // any thread may update currentLag, must run on correct thread
+          val obs = server.currentLag.trigger(UiBus.post {
+            val lag = if (server.state == CONNECTED) {
+              val l = server.currentPing flatMap { p =>
+                if (server.currentLag.now == 0) None
+                else Some((System.currentTimeMillis - p).toInt)
+              } getOrElse server.currentLag.now
+              Server.intervalString(l)
+            } else ""
+            tv.setText(lag)
+          })
+          tv.setTag(Id.obs, obs)
+        }).perform()
       v
     }
   }

@@ -774,7 +774,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     @TargetApi(23)
     def goToBack(): Unit = {
       if (systemService[PowerManager].isDeviceIdleMode)
-        moveTaskToBack(true)
+        finish() // moveTaskToBack(true) does not seem to work
     }
     i.getAction.? collect {
       case PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED => goToBack()

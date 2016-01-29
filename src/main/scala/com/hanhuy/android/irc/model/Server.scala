@@ -1,6 +1,6 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.irc._
+import com.hanhuy.android.common._
 
 import android.content.ContentValues
 import com.hanhuy.android.irc.model.BusEvent.ServerMessage
