@@ -8,7 +8,7 @@ import javax.net.ssl.SSLContext
 import android.graphics.Typeface
 import android.text.{Layout, StaticLayout, TextPaint, TextUtils}
 import android.text.style.TextAppearanceSpan
-import android.util.{Log, TypedValue, DisplayMetrics}
+import android.util.{DisplayMetrics, TypedValue}
 import android.view.WindowManager
 import com.hanhuy.android.irc.model._
 
@@ -33,7 +33,6 @@ import com.hanhuy.android.irc.model.BusEvent
 import org.acra.ACRA
 
 import scala.concurrent.Future
-import scala.util.Try
 
 object IrcManager {
   val log = Logcat("IrcManager")
@@ -140,15 +139,39 @@ class IrcManager extends EventBus.RefOwner {
   instance = Some(this)
   var recreateActivity: Option[Int] = None // int = page to flip to
   var messagesId = 0
-  def connected = connections.size > 0
+  def connected = connections.nonEmpty
 
   lazy val handlerThread = {
     val t = new HandlerThread("IrcManagerHandler")
     t.start()
     t
   }
-  // used to schedule an irc ping every 30 seconds
-  lazy val handler = new Handler(handlerThread.getLooper)
+  {
+    // schedule pings every 30 seconds
+    val h = new Handler(handlerThread.getLooper)
+    def pingLoop(): Unit = {
+      import scala.concurrent.duration._
+      h.postDelayed(() => pingLoop(), 30.seconds.toMillis)
+      mconnections.foreach { case (server, c) =>
+        if (server.state == Server.State.CONNECTED) {
+          val now = System.currentTimeMillis
+          val pingTime = server.currentPing getOrElse now
+          val delta = now - pingTime
+          if (delta == 0 || delta > 60.seconds.toMillis) {
+            // re-send previous PING if it exceeds 1 minute
+            ping(c, server, server.currentPing)
+          }
+          if (delta > 2.minutes.toMillis) {
+            // automatically reconnect if ping gets over 120s
+            disconnect(server, None, true)
+            connect(server)
+          } else if (delta > server.currentLag.now)
+            server.currentLag() = delta.toInt
+        }
+      }
+    }
+    h.post(() => pingLoop())
+  }
 
   def connections  = mconnections
   def _connections = m_connections
@@ -307,6 +330,7 @@ class IrcManager extends EventBus.RefOwner {
 
   def connect(server: Server) {
     log.v("Connecting server: %s", server)
+    server.currentPing = None // have to reset the last ping or else it'll get lost
     if (server.state == Server.State.CONNECTING ||
       server.state == Server.State.CONNECTED) {
     } else {
@@ -511,28 +535,10 @@ class IrcManager extends EventBus.RefOwner {
     nm.notify(id, notif)
   }
 
-  def pingLoop(c: IrcConnection, server: Server): Unit = {
-    import scala.concurrent.duration._
-    if (server.state == Server.State.CONNECTED) {
-      // TODO make interval into a pref?
-      handler.postDelayed(() => pingLoop(c, server), 30.seconds.toMillis)
-      // force PING if last ping was longer than 5 minutes ago
-      val now = System.currentTimeMillis
-      val pingTime = server.currentPing getOrElse now
-      val delta = now - pingTime
-      if (delta == 0 || delta > 60.seconds.toMillis)
-        ping(c, server)
-      if (delta > 120.seconds.toMillis) { // automatically reconnect if ping gets over 120s
-        disconnect(server, None, true)
-        connect(server)
-      } else if (delta > server.currentLag.now)
-        server.currentLag() = delta.toInt
-    }
-  }
-  def ping(c: IrcConnection, server: Server) {
-    val now = System.currentTimeMillis
-    server.currentPing = Some(now)
-    c.sendRaw("PING %d" format now)
+  def ping(c: IrcConnection, server: Server, pingTime: Option[Long] = None) {
+    val p = pingTime getOrElse System.currentTimeMillis
+    server.currentPing = p.?
+    c.sendRaw("PING " + p)
   }
 
   val connReceiver = new BroadcastReceiver {
@@ -683,8 +689,8 @@ class IrcManager extends EventBus.RefOwner {
 
     UiBus.run {
       server.state = state
-      if (state == Server.State.CONNECTED && connection.isConnected)
-        handler.post(() => pingLoop(connection, server))
+      if (state == Server.State.CONNECTED)
+        ping(connection, server)
     }
   }
   def runningString = getString(R.string.notif_connected_servers,
