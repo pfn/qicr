@@ -202,7 +202,7 @@ extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResu
           if (u.nonEmpty) Uri.parse(u) else null))
 
       requestActivityResult(intent).onSuccessMain { case data =>
-        val ringtone = data.?.map(_.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI): Uri)
+        val ringtone = data.?.flatMap(_.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI).asInstanceOf[Uri].?)
         setRingtone(ringtone.fold("")(_.toString))
       }
       true

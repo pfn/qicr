@@ -56,7 +56,7 @@ trait MessageLike {
     def ts: Date
 }
 
-trait BusEvent extends com.hanhuy.android.common.BusEvent
+sealed trait BusEvent extends com.hanhuy.android.common.BusEvent
 object BusEvent {
   case object ExitApplication extends BusEvent
   case object IrcManagerStart extends BusEvent

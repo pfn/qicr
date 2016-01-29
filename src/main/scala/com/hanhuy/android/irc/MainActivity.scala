@@ -50,20 +50,18 @@ object MainActivity {
 
   @inline implicit def toMainActivity(a: Activity): MainActivity = a.asInstanceOf[MainActivity]
 
-  def getFragmentTag(c: Option[MessageAppender]) = {
-    c match {
-      case Some(ch: ChannelLike) =>
-        val sinfo = ch.server.?.fold("server-object-null:") { s =>
-          "%s::%s::%d::%s::%s::".format(
-            s.name, s.hostname, s.port, s.username, s.nickname)
-        }
+  def getFragmentTag(c: Option[MessageAppender]) = c match {
+    case Some(ch: ChannelLike) =>
+      val sinfo = ch.server.?.fold("server-object-null:") { s =>
+        "%s::%s::%d::%s::%s::".format(
+          s.name, s.hostname, s.port, s.username, s.nickname)
+      }
 
-        "fragment:" + sinfo + ch.name
-      case Some(s: Server) =>
-        "fragment:server:" + s.name
-      case None =>
-        "none"
-    }
+      "fragment:" + sinfo + ch.name
+    case Some(s: Server) =>
+      "fragment:server:" + s.name
+    case None =>
+      "none"
   }
 
   var instance = Option.empty[MainActivity]
@@ -833,7 +831,8 @@ class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity
         closeDrawer(toolbar)
         val bottom = kitkatBottomPadding(activity)
         // uh, why is this a magic number, is it because dragOffset doesn't reach 1.0?
-        input.setRotation(inputDragOffset(top) * 194)
+        if (v(11))
+          input.setRotation(inputDragOffset(top) * 194)
         val t = (getHeight - bottom) - (inputStart - top)
         val b = getHeight - bottom
         bottomdrawer.layout(0, t, getWidth, b)
