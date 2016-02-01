@@ -2,22 +2,20 @@ package com.hanhuy.android.irc
 
 import android.annotation.TargetApi
 import android.app.{NotificationManager, Activity, AlertDialog}
-import android.content.{BroadcastReceiver, Context, Intent, DialogInterface}
+import android.content.{Context, Intent, DialogInterface}
 import android.graphics.{Color, Rect}
 import android.graphics.drawable.ColorDrawable
-import android.os.{PowerManager, Build, Bundle}
+import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.design.widget.TabLayout
 import android.support.v4.view.{ViewCompat, MotionEventCompat, ViewPager}
 import android.util.DisplayMetrics
 import android.view.View.MeasureSpec
 import android.view._
-import android.view.inputmethod.InputMethodManager
 import android.webkit.{WebChromeClient, WebViewClient, WebView}
 import android.widget._
 
 import android.support.v4.app.FragmentManager
-import com.android.debug.hv.ViewServer
 import scala.collection.JavaConversions._
 
 import com.hanhuy.android.irc.model._
@@ -480,7 +478,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     setRequestedOrientation(
       if (Settings.get(Settings.ROTATE_LOCK))
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
-    ViewServer.get(this).addWindow(this)
   }
 
   override def onPostCreate(savedInstanceState: Bundle) {
@@ -540,7 +537,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     refreshTabs()
     newmessages.setVisibility(if (NotificationCenter.hasImportantNotifications)
       View.VISIBLE else View.GONE)
-    ViewServer.get(this).setFocusedWindow(this)
 
     if (requestRecreate) _recreate()
   }
@@ -556,7 +552,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     IrcManager.init()
     ServiceBus.send(BusEvent.MainActivityStart)
     HoneycombSupport.init(this)
-    registerReceiver(dozeReceiver, PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
   }
 
   override def onStop() {
@@ -564,7 +559,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     instance = None
     ServiceBus.send(BusEvent.MainActivityStop)
     HoneycombSupport.close()
-    unregisterReceiver(dozeReceiver)
   }
 
   private[this] var destroyed = false
@@ -576,7 +570,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       _.unregisterDataSetObserver(observer)
     }
     ServiceBus.send(BusEvent.MainActivityDestroy)
-    ViewServer.get(this).removeWindow(this)
   }
 
   def pageChanged(idx: Int) {
@@ -767,16 +760,6 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     }
   }
 
-  val dozeReceiver: BroadcastReceiver = (c: Context, i: Intent) => {
-    @TargetApi(23)
-    def goToBack(): Unit = {
-      if (systemService[PowerManager].isDeviceIdleMode)
-        finish() // moveTaskToBack(true) does not seem to work
-    }
-    i.getAction.? collect {
-      case PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED => goToBack()
-    }
-  }
 }
 
 // workaround for https://code.google.com/p/android/issues/detail?id=63777

@@ -79,7 +79,7 @@ object HoneycombSupport {
 
     def setServerConnectionAction(menu: Menu): Unit = {
       _server.get foreach { s =>
-        val connected = s.state match {
+        val connected = s.state.now match {
           case Server.State.INITIAL      => false
           case Server.State.DISCONNECTED => false
           case _                         => true

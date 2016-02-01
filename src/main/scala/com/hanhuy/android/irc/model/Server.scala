@@ -41,15 +41,10 @@ class Server extends MessageAppender with Ordered[Server] {
     ServiceBus.send(ServerMessage(this, m))
     messages.add(m)
   }
-  private var _state: State = State.INITIAL
-  def state = _state
-  def state_=(state: State) = {
-    val oldstate = _state
-    _state = state
-    if (oldstate != state) {
-      ServiceBus.send(BusEvent.ServerStateChanged(this, oldstate))
-      UiBus.send(BusEvent.ServerChanged(this))
-    }
+  val state: Var[Server.State] = Var(State.INITIAL)
+  state.trigger {
+    ServiceBus.send(BusEvent.ServerStateChanged(this, state.now))
+    UiBus.send(BusEvent.ServerChanged(this))
   }
 
   var id: Long = -1

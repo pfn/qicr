@@ -19,6 +19,7 @@ import android.widget.{FrameLayout, TextView, BaseAdapter}
 
 import android.support.v4.view.{ViewPager, PagerAdapter}
 import android.support.v4.app.Fragment
+import rx.Obs
 
 import scala.collection.JavaConversions._
 import scala.math.Numeric.{IntIsIntegral => Math}
@@ -60,6 +61,20 @@ with EventBus.RefOwner {
   lazy val channelcomp = ChannelLikeComparator
   lazy val servercomp  = ServerComparator
   lazy val tabindicators = activity.tabs
+  private[this] var serverObservers = List.empty[Obs]
+  val serverObs = Config.servers.trigger {
+    serverObservers.foreach(_.kill())
+    serverObservers = Config.servers.now.flatMap { s =>
+      def updateIfCurrent(): Unit = {
+        val tab = tabs(page)
+        if (tab.channel.exists(_.server == s ) || tab.server.contains(s))
+          UiBus.post(updateServerInformation(tab, page))
+      }
+      val stateObs = s.state.triggerLater(updateIfCurrent())
+      val lagObs = s.currentLag.triggerLater(updateIfCurrent())
+      List(lagObs, stateObs)
+    }
+  }
   private var navMode = Settings.get(Settings.NAVIGATION_MODE)
 
   def channelBase = servers.size + 1
@@ -87,15 +102,18 @@ with EventBus.RefOwner {
         navMode = Settings.get(Settings.NAVIGATION_MODE)
     case BusEvent.ChannelStatusChanged(_) =>
       UiBus.run(channels foreach refreshTabTitle)
+    case BusEvent.MainActivityDestroy =>
+      serverObs.kill()
+      serverObservers.foreach(_.kill())
   }
   UiBus += {
-  case BusEvent.ServerChanged(server)   => serverStateChanged(server)
-  case BusEvent.ChannelMessage(c, m)    => refreshTabTitle(c)
-  case BusEvent.ChannelAdded(c)         => addChannel(c)
-  case BusEvent.PrivateMessage(q, m)    => addChannel(q)
-  case BusEvent.StartQuery(q)           =>
-    manager.addQuery(q)
-    pager.setCurrentItem(addChannel(q))
+    case BusEvent.ServerChanged(server)   => serverStateChanged(server)
+    case BusEvent.ChannelMessage(c, m)    => refreshTabTitle(c)
+    case BusEvent.ChannelAdded(c)         => addChannel(c)
+    case BusEvent.PrivateMessage(q, m)    => addChannel(q)
+    case BusEvent.StartQuery(q)           =>
+      manager.addQuery(q)
+      pager.setCurrentItem(addChannel(q))
   }
 
   def refreshTabs() {
@@ -109,7 +127,7 @@ with EventBus.RefOwner {
   }
 
   def serverStateChanged(server: Server) {
-    server.state match {
+    server.state.now match {
     case Server.State.DISCONNECTED =>
       // iterate channels and flag them as disconnected
       channels.indices foreach { i =>
@@ -135,7 +153,7 @@ with EventBus.RefOwner {
       val t = tabs(idx + channelBase)
 
       // disconnected flag needs to be set before returning because page ==
-      if (c.server.state == Server.State.DISCONNECTED)
+      if (c.server.state.now == Server.State.DISCONNECTED)
         t.flags |= TabInfo.FLAG_DISCONNECTED
 
       if (page == idx + channelBase) {
@@ -214,15 +232,19 @@ with EventBus.RefOwner {
     })
     manager.lastChannel = t.channel
 
-    HoneycombSupport.setSubtitle(t.channel.map(_.server).orElse(t.server).map(
+    updateServerInformation(t, pos)
+    hideIME()(activity)
+  }
+
+  private def updateServerInformation(tab: TabInfo, pos: Int): Unit = {
+    HoneycombSupport.setSubtitle(tab.channel.map(_.server).orElse(tab.server).map(
       s => Server.intervalString(s.currentLag.now)).orNull)
-    HoneycombSupport.setTitle(t.channel map { _.server } orElse
-      t.server map { s =>
-        "%s / %s" format(t.title, s.name)
-      } getOrElse activity.getString(R.string.app_name))
+    HoneycombSupport.setTitle(tab.channel map { _.server } orElse
+      tab.server map { s =>
+      "%s / %s" format(tab.title, s.name)
+    } getOrElse activity.getString(R.string.app_name))
 
     refreshTabTitle(pos)
-    hideIME()(activity)
   }
 
   def hasNewMentions = channels.exists(_.newMentions)

@@ -5,6 +5,7 @@ import java.nio.charset.Charset
 import java.util.Date
 import javax.net.ssl.SSLContext
 
+import android.annotation.TargetApi
 import android.graphics.Typeface
 import android.text.{Layout, StaticLayout, TextPaint, TextUtils}
 import android.text.style.TextAppearanceSpan
@@ -14,7 +15,7 @@ import com.hanhuy.android.irc.model._
 
 import android.app.NotificationManager
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
-import android.os.{Build, Handler, HandlerThread}
+import android.os.{PowerManager, Build, Handler, HandlerThread}
 import android.app.Notification
 import android.app.PendingIntent
 import android.widget.{Toast, RemoteViews}
@@ -152,8 +153,13 @@ class IrcManager extends EventBus.RefOwner {
     def pingLoop(): Unit = {
       import scala.concurrent.duration._
       h.postDelayed(() => pingLoop(), 30.seconds.toMillis)
-      mconnections.foreach { case (server, c) =>
-        if (server.state == Server.State.CONNECTED) {
+      mconnections.filterKeys(!Config.servers.now.filter(
+        _.state.now == Server.State.CONNECTED).toSet(_)).keys foreach { s =>
+        disconnect(s, None, true)
+      }
+      mconnections.foreach { case (server,c) =>
+        if (server.state.now == Server.State.CONNECTED) {
+
           val now = System.currentTimeMillis
           val pingTime = server.currentPing getOrElse now
           val delta = now - pingTime
@@ -238,6 +244,7 @@ class IrcManager extends EventBus.RefOwner {
   def start() {
     if (!running) {
       Application.context.registerReceiver(receiver, filter)
+      Application.context.registerReceiver(dozeReceiver, PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
 
       val connFilter = new IntentFilter
       connFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
@@ -247,7 +254,7 @@ class IrcManager extends EventBus.RefOwner {
         new Intent(Application.context, classOf[LifecycleService]))
 
       log.v("Launching autoconnect servers")
-      Config.servers.foreach { s =>
+      Config.servers.now.foreach { s =>
         if (s.autoconnect) connect(s)
       }
       ServiceBus.send(IrcManagerStart)
@@ -263,6 +270,7 @@ class IrcManager extends EventBus.RefOwner {
   def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
     instance = None
     Application.context.unregisterReceiver(receiver)
+    Application.context.unregisterReceiver(dozeReceiver)
     Application.context.unregisterReceiver(connReceiver)
     nm.cancelAll()
     ServiceBus.send(BusEvent.ExitApplication)
@@ -310,7 +318,7 @@ class IrcManager extends EventBus.RefOwner {
       }
     }
     removeConnection(server) // gotta go after the foreach above
-    server.state = Server.State.DISCONNECTED
+    server.state() = Server.State.DISCONNECTED
     // handled by onDisconnect
     server += ServerInfo(getString(R.string.server_disconnected))
 
@@ -331,16 +339,16 @@ class IrcManager extends EventBus.RefOwner {
   def connect(server: Server) {
     log.v("Connecting server: %s", server)
     server.currentPing = None // have to reset the last ping or else it'll get lost
-    if (server.state == Server.State.CONNECTING ||
-      server.state == Server.State.CONNECTED) {
+    if (server.state.now == Server.State.CONNECTING ||
+      server.state.now == Server.State.CONNECTED) {
     } else {
-      server.state = Server.State.CONNECTING
+      server.state() = Server.State.CONNECTING
       Future(connectServerTask(server))
       _running = true
     }
   }
 
-  def getServers = Config.servers
+  def getServers = Config.servers.now
 
   def addServer(server: Server) {
     Config.addServer(server)
@@ -604,7 +612,7 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   def connectServerTask(server: Server) {
-    var state = server.state
+    var state = server.state.now
     val ircserver = new IrcServer(server.hostname, server.port,
       if (server.sasl) null else server.password, server.ssl)
     val connection = IrcConnection2(server.name)
@@ -642,7 +650,7 @@ class IrcManager extends EventBus.RefOwner {
 
     try {
       server.currentNick = server.nickname
-      if (server.state == Server.State.CONNECTING) {
+      if (server.state.now == Server.State.CONNECTING) {
         connection.connect(sslctx)
         // sasl authentication failure callback will force a disconnect
         if (state != Server.State.DISCONNECTED)
@@ -654,7 +662,7 @@ class IrcManager extends EventBus.RefOwner {
         server.currentNick = server.altnick
         serverMessage(getString(R.string.server_nick_retry), server)
         try {
-          if (server.state == Server.State.CONNECTING) {
+          if (server.state.now == Server.State.CONNECTING) {
             connection.connect(sslctx)
             state = Server.State.CONNECTED
           }
@@ -684,11 +692,11 @@ class IrcManager extends EventBus.RefOwner {
         serverMessage(getString(R.string.server_disconnected), server)
     }
 
-    if (server.state == Server.State.DISCONNECTED)
+    if (server.state.now == Server.State.DISCONNECTED)
       connection.disconnect()
 
     UiBus.run {
-      server.state = state
+      server.state() = state
       if (state == Server.State.CONNECTED)
         ping(connection, server)
     }
@@ -788,6 +796,17 @@ class IrcManager extends EventBus.RefOwner {
 
       n
     } getOrElse builder.build
+  }
+
+  val dozeReceiver: BroadcastReceiver = (c: Context, i: Intent) => {
+    @TargetApi(23)
+    def goToBack(): Unit = {
+      if (Application.context.systemService[PowerManager].isDeviceIdleMode)
+        MainActivity.instance.foreach(_.moveTaskToBack(true))
+    }
+    i.getAction.? collect {
+      case PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED => goToBack()
+    }
   }
 }
 

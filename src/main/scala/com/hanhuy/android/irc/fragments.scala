@@ -507,7 +507,7 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
     inflater.inflate(R.menu.server_messages_menu, menu)
     server.foreach { s =>
-      val connected = s.state match {
+      val connected = s.state.now match {
         case Server.State.INITIAL => false
         case Server.State.DISCONNECTED => false
         case _ => true
@@ -526,7 +526,7 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
       // need to look up server in case it was edited
       val r = getActivity.servers.onServerMenuItemClicked(item, for {
         s <- server
-        n <- Config.servers.find(_.id == s.id)
+        n <- Config.servers.now.find(_.id == s.id)
       } yield n)
       if (r) HoneycombSupport.invalidateActionBar()
       r
@@ -601,7 +601,7 @@ with EventBus.RefOwner {
     HoneycombSupport.invalidateActionBar()
     HoneycombSupport.startActionMode(server)
 
-    if (server.state == Server.State.CONNECTED) {
+    if (server.state.now == Server.State.CONNECTED) {
       activity.input.setVisibility(View.VISIBLE)
     }
 //    if (activity.isLargeScreen)
@@ -689,7 +689,7 @@ with EventBus.RefOwner {
       s <- _server
       a <- getActivity.?
     } {
-      if (s == server && s.state == Server.State.CONNECTED)
+      if (s == server && s.state.now == Server.State.CONNECTED)
         a.input.setVisibility(View.VISIBLE)
     }
     adapter.?.foreach(_.notifyDataSetChanged())
@@ -831,15 +831,15 @@ with EventBus.RefOwner {
 
       (IO(v.findView(Id.server_item_text)) >>= text(server.name)).perform()
       (IO(v.findView(Id.server_item_progress)) >>= condK(
-        (server.state == Server.State.CONNECTING) ? visible
+        (server.state.now == Server.State.CONNECTING) ? visible
         | gone)).perform()
 
-      (IO(img) >>= imageResource(server.state match {
+      (IO(img) >>= imageResource(server.state.now match {
         case INITIAL      => android.R.drawable.presence_offline
         case DISCONNECTED => android.R.drawable.presence_busy
         case CONNECTED    => android.R.drawable.presence_online
         case CONNECTING   => android.R.drawable.presence_away
-      }) >>= condK((server.state != Server.State.CONNECTING) ? visible | gone)).perform()
+      }) >>= condK((server.state.now != Server.State.CONNECTING) ? visible | gone)).perform()
 
       (IO(v.findView(Id.server_checked_text) : CheckedTextView) >>=
         kestrel { tv =>
@@ -852,7 +852,7 @@ with EventBus.RefOwner {
           tv.getTag(Id.obs).asInstanceOf[Obs].?.foreach(_.kill())
           // any thread may update currentLag, must run on correct thread
           val obs = server.currentLag.trigger(UiBus.post {
-            val lag = if (server.state == CONNECTED) {
+            val lag = if (server.state.now == CONNECTED) {
               val l = server.currentPing flatMap { p =>
                 if (server.currentLag.now == 0) None
                 else Some((System.currentTimeMillis - p).toInt)

@@ -354,7 +354,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
       channel match {
         case Some(ch: Channel) => manager.channels.get(ch).foreach { chan =>
-          if (ch.server.state != Server.State.CONNECTED) {
+          if (ch.server.state.now != Server.State.CONNECTED) {
             addCommandError(R.string.error_server_disconnected)
           } else if (ch.state != Channel.State.JOINED) {
             addCommandError(R.string.error_channel_disconnected)
@@ -373,7 +373,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
           }
         }
         case Some(query: Query)=>
-          if (query.server.state != Server.State.CONNECTED) {
+          if (query.server.state.now != Server.State.CONNECTED) {
             addCommandError(R.string.error_server_disconnected)
           } else {
             manager.connections.get(query.server).fold(
@@ -440,7 +440,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
     override def execute(args: Option[String]): Unit = {
       channel match {
         case Some(c: Channel) =>
-          if (c.server.state != Server.State.CONNECTED)
+          if (c.server.state.now != Server.State.CONNECTED)
             addCommandError(R.string.error_server_disconnected)
           else if (c.state != Channel.State.JOINED)
             addCommandError(R.string.error_channel_disconnected)
@@ -472,7 +472,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
             }
           }
         case Some(qu: Query) =>
-          if (qu.server.state != Server.State.CONNECTED)
+          if (qu.server.state.now != Server.State.CONNECTED)
             addCommandError(R.string.error_server_disconnected)
           else activity.foreach { act =>
             val prompt = Settings.get(Settings.CLOSE_TAB_PROMPT)
@@ -530,7 +530,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
   def withConnection(f: IrcConnection => Unit) {
     currentServer.fold(addCommandError(R.string.error_server_disconnected)){ s =>
-      if (s.state != Server.State.CONNECTED)
+      if (s.state.now != Server.State.CONNECTED)
         addCommandError(R.string.error_server_disconnected)
       else
         manager.connections.get(s) foreach f

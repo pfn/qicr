@@ -23,7 +23,6 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "iota" % "0.9",
   "com.hanhuy" % "sirc" % "1.1.6-pfn.2",
   "ch.acra" % "acra" % "4.7.0",
-  "com.hanhuy.android" % "viewserver" % "1.0.3",
   "com.lihaoyi" %% "scalarx" % "0.3.0",
   "com.android.support" % "design" % supportSdkVersion,
   "com.android.support" % "support-v4" % supportSdkVersion,

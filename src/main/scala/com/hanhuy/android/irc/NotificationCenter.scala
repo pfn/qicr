@@ -144,7 +144,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
     })
   }
 
-  def markAllRead(): Unit = {
+  def markAllRead(): Unit = UiBus.run {
     notifications foreach { _.markRead() }
     notifyDataSetChanged()
   }
@@ -158,7 +158,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
         if (server == s && channel == c)
           n.markRead()
     }
-    notifyDataSetChanged()
+    UiBus.run(notifyDataSetChanged())
     if (!hasImportantNotifications)
       UiBus.send(BusEvent.ReadNotification)
   }

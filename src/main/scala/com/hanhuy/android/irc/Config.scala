@@ -11,6 +11,7 @@ import android.provider.BaseColumns
 import android.widget.Toast
 
 import Config._
+import rx.Var
 
 object Config {
   val log = Logcat("QicrConfig")
@@ -142,8 +143,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     }
   }
 
-  private var _servers = listServers
-  def servers = _servers
+  val servers = Var(listServers)
   private def listServers = {
     try {
       val db = getReadableDatabase
@@ -164,7 +164,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       val col_autojoin    = c.getColumnIndexOrThrow(FIELD_AUTOJOIN)
       val col_usesasl     = c.getColumnIndexOrThrow(FIELD_USESASL)
 
-      val list = Stream.continually(c.moveToNext()).takeWhile (_==true).map {
+      val list = Iterator.continually(c.moveToNext()).takeWhile (_==true).map {
         _ =>
         val s = new Server
         s.id          = c.getLong(col_id)
@@ -182,7 +182,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
         s.autojoin    = c.getString(col_autojoin)
         s.sasl        = c.getInt(col_usesasl) != 0
         s
-      }.force
+      }.toList
 
       c.close()
       db.close()
@@ -192,7 +192,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
         Toast.makeText(Application.context,
           "Failed to open database", Toast.LENGTH_LONG).show()
         log.e("Unable to open database", x)
-        Seq.empty[Server]
+        Nil
     }
   }
 
@@ -203,7 +203,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     db.close()
     if (id == -1)
       throw new IllegalStateException("Unable to create server")
-    _servers = server +: _servers
+    servers() = server :: servers.now
   }
 
   def updateServer(server: Server) {
@@ -213,7 +213,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     db.close()
     if (rows != 1)
       log.e("Wrong rows updated: " + rows, new StackTrace)
-    _servers = server +: (_servers filterNot (_ == server))
+    servers() = server :: (servers.now filterNot (_ == server))
   }
 
   def deleteServer(server: Server) {
@@ -223,13 +223,13 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     db.close()
     if (rows != 1)
       log.e("Wrong rows deleted: " + rows, new StackTrace)
-    _servers = _servers filterNot (_ == server)
+    servers() = servers.now filterNot (_ == server)
   }
 
   def listIgnores = {
     val db = getReadableDatabase
     val c = db.query(TABLE_IGNORES, Array(FIELD_NICKNAME), null, null, null, null, null)
-    val list = Stream.continually(c.moveToNext()).takeWhile (_==true).map { _ =>
+    val list = Iterator.continually(c.moveToNext()).takeWhile (_==true).map { _ =>
       c.getString(0)
     } toSet
 

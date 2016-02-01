@@ -177,7 +177,6 @@ object MessageLog {
     t.start()
     t
   }
-  // used to schedule an irc ping every 30 seconds
   lazy val handler = new Handler(handlerThread.getLooper)
   private val instance = new MessageLog(Application.context)
 
@@ -206,11 +205,11 @@ class MessageLog private(context: Context)
     val c = db.query(TABLE_SERVERS, null, null, null, null, null, null)
     val idcol   = c.getColumnIndexOrThrow(BaseColumns._ID)
     val namecol = c.getColumnIndexOrThrow(FIELD_NAME)
-    val networks = Stream.continually(c.moveToNext()).takeWhile (x => x).map {
+    val networks = Iterator.continually(c.moveToNext()).takeWhile (x => x).map {
       _ =>
         val id = c.getLong(idcol)
         id -> Network(c.getString(namecol), id)
-    }.force.toMap
+    }.toMap
 
     c.close()
     close(db)
@@ -226,12 +225,12 @@ class MessageLog private(context: Context)
     val querycol  = c.getColumnIndexOrThrow(FIELD_QUERY)
     val lastcol   = c.getColumnIndexOrThrow(FIELD_LAST_TS)
 
-    val channels = Stream.continually(c.moveToNext()).takeWhile(x => x).map { _ =>
+    val channels = Iterator.continually(c.moveToNext()).takeWhile(x => x).map { _ =>
       val network = networks(c.getLong(servercol))
       val name = c.getString(namecol)
       (network.id, name.toLowerCase) -> Channel(network,
         c.getLong(idcol), name, c.getLong(lastcol), c.getInt(querycol) != 0)
-    }.force.toMap
+    }.toMap
     c.close()
     close(db)
     channels
