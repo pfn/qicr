@@ -171,13 +171,17 @@ with ModeListener with ServerEventListener with MessageEventListener {
       if (whoisBuffer.contains(nick)) {
         whoisBuffer += (nick -> (whoisBuffer(nick) ++ List(line)))
 
+        def whois(): Unit = {
+          for {
+            c <- manager.lastChannel
+            w <- accumulateWhois(nick, realNick)
+          } {
+            UiBus.run(c += w)
+          }
+        }
         line.getNumericCommand match {
-          case 318 =>
-            UiBus.run(manager.lastChannel foreach (
-              _ += accumulateWhois(nick, realNick)))
-          case 369 =>
-            UiBus.run(manager.lastChannel foreach (
-              _ += accumulateWhois(nick, realNick)))
+          case 318 => whois()
+          case 369 => whois()
           case _ =>
         }
       }
@@ -187,56 +191,58 @@ with ModeListener with ServerEventListener with MessageEventListener {
   def whoisPrefix = "%1%2%3" formatSpans( textColor(0xff777777, "-"),
     textColor(0xff00ff00, "!"), textColor(0xff777777, "-"))
   def accumulateWhois(nick: String, realNick: String) = {
-    val b = (new SpannableStringBuilder /: whoisBuffer(nick)) { (buf,line) =>
-      val args = line.getArgumentsArray
-      val m = line.getMessage
-      line.getNumericCommand match {
-        case 318 => // end of whois
-        case 369 => // end of whowas
-        case 311 =>
-          val (user, host, name) = (args(2), args(3), m)
-          val t = "%1 %2 [%3@%4]\n%6   name: %5" formatSpans(
-            whoisPrefix, MessageAdapter.colorNick(realNick), user, host,
-            bold(name), whoisPrefix)
-          buf.append(t)
-        case 314 =>
-          val (user, host, name) = (args(2), args(3), m)
-          val t = "%1 %2 was [%3@%4]\n%1   name: %5" formatSpans(
-            whoisPrefix, MessageAdapter.colorNick(realNick), user, host, bold(name))
-          buf.append(t)
-        case 312 =>
-          val (server,tag) = (args(2), m)
-          val t = "\n%1   server: %2 [%3]" formatSpans(whoisPrefix, server, tag)
-          buf.append(t)
-        case 330 =>
-          val (login,tag) = (args(2), m)
-          val t = "\n%1   %3: %2" formatSpans(whoisPrefix, login,tag)
-          buf.append(t)
-        case 319 =>
-          buf.append("\n%1   channels: %2" formatSpans(whoisPrefix, m))
-        case 338 =>
-          if (args.length > 2)
-            buf.append("\n%1   %2: %3" formatSpans(whoisPrefix, m, args(2)))
-          else
+    whoisBuffer.get(nick).map { lines =>
+      val b = lines.foldLeft(new SpannableStringBuilder) { (buf, line) =>
+        val args = line.getArgumentsArray
+        val m = line.getMessage
+        line.getNumericCommand match {
+          case 318 => // end of whois
+          case 369 => // end of whowas
+          case 311 =>
+            val (user, host, name) = (args(2), args(3), m)
+            val t = "%1 %2 [%3@%4]\n%6   name: %5" formatSpans(
+              whoisPrefix, MessageAdapter.colorNick(realNick), user, host,
+              bold(name), whoisPrefix)
+            buf.append(t)
+          case 314 =>
+            val (user, host, name) = (args(2), args(3), m)
+            val t = "%1 %2 was [%3@%4]\n%1   name: %5" formatSpans(
+              whoisPrefix, MessageAdapter.colorNick(realNick), user, host, bold(name))
+            buf.append(t)
+          case 312 =>
+            val (server, tag) = (args(2), m)
+            val t = "\n%1   server: %2 [%3]" formatSpans(whoisPrefix, server, tag)
+            buf.append(t)
+          case 330 =>
+            val (login, tag) = (args(2), m)
+            val t = "\n%1   %3: %2" formatSpans(whoisPrefix, login, tag)
+            buf.append(t)
+          case 319 =>
+            buf.append("\n%1   channels: %2" formatSpans(whoisPrefix, m))
+          case 338 =>
+            if (args.length > 2)
+              buf.append("\n%1   %2: %3" formatSpans(whoisPrefix, m, args(2)))
+            else
+              buf.append("\n%1   %2" formatSpans(whoisPrefix, m))
+          case 317 =>
+            val (idle, time) = (args(2).toInt, args(3).toLong * 1000)
+            buf.append("\n%1   %2: %3, %4" formatSpans(whoisPrefix, m,
+              args(2), new java.util.Date(time).toString))
+          case 401 =>
+            buf.append("%1 %2: %3" formatSpans(whoisPrefix,
+              MessageAdapter.colorNick(realNick), m))
+          case 406 =>
+            buf.append("%1 %2: %3" formatSpans(whoisPrefix,
+              MessageAdapter.colorNick(realNick), m))
+          case 671 =>
             buf.append("\n%1   %2" formatSpans(whoisPrefix, m))
-        case 317 =>
-          val (idle, time) = (args(2).toInt, args(3).toLong * 1000)
-          buf.append("\n%1   %2: %3, %4" formatSpans(whoisPrefix, m,
-            args(2), new java.util.Date(time).toString))
-        case 401 =>
-          buf.append("%1 %2: %3" formatSpans(whoisPrefix,
-            MessageAdapter.colorNick(realNick), m))
-        case 406 =>
-          buf.append("%1 %2: %3" formatSpans(whoisPrefix,
-            MessageAdapter.colorNick(realNick), m))
-        case 671 =>
-          buf.append("\n%1   %2" formatSpans(whoisPrefix, m))
-        case _ =>
+          case _ =>
+        }
+        buf
       }
-      buf
+      whoisBuffer -= nick
+      Whois(b)
     }
-    whoisBuffer -= nick
-    Whois(b)
   }
   // AdvancedListener
   override def onUnknown(c: IrcConnection, line: IrcPacket) {
