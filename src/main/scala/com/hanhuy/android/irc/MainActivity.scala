@@ -89,7 +89,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
 
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
     IO(qicrdrawers)(
-      IO(tabs) >>=
+      IO(tabs) >>= id(Id.tabs) >>=
         lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
         } >>= kitkatPaddingTop >>=
@@ -182,7 +182,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
                   Toast.LENGTH_SHORT).show()
             }
           }) >>= buttonTweaks
-      ) >>= horizontal >>=
+      ) >>= horizontal >>= id(Id.buttonlayout) >>=
         lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
         } >>= kitkatInputMargin,
@@ -291,7 +291,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
             lpK(WRAP_CONTENT, 36 dp) {(p: RelativeLayout.LayoutParams) =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
               p.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 1)
-            },
+            } >>= id(Id.icon),
           IO(title) >>= text(url) >>= textGravity(Gravity.LEFT | Gravity.CENTER) >>=
             backgroundColor(0xff26A69A) >>= padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) >>=
             singleLine >>=
@@ -299,7 +299,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
               p.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 1)
               p.addRule(RelativeLayout.RIGHT_OF, Id.icon)
-            },
+            } >>= id(Id.title),
           IO(web) >>= lpK(MATCH_PARENT, MATCH_PARENT) { (p: RelativeLayout.LayoutParams) =>
             p.addRule(RelativeLayout.BELOW, Id.title)
             p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)

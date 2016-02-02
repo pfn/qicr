@@ -61,14 +61,14 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
       new TextView(c),
       new TextView(c))
     l[RelativeLayout](
-      holder.icon.! >>=
+      holder.icon.! >>= id(Id.notif_icon) >>=
         imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
         lpK(24.dp, 24.dp) { (p: LP) =>
           p.addRule(ALIGN_PARENT_LEFT, 1)
           p.addRule(BELOW, Id.channel_server)
           margins(all = 8.dp)(p)
         },
-      holder.arrow.! >>=
+      holder.arrow.! >>= id(Id.notif_arrow) >>=
         imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
         imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
         lpK(24.dp, 24.dp) { (p: LP) =>
@@ -78,19 +78,19 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
         } >>= gone >>= kestrel { iv =>
         DrawableCompat.setTint(iv.getDrawable.mutate(), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
       },
-      holder.channelServer.! >>=
+      holder.channelServer.! >>= id(Id.channel_server) >>=
         text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
         p.addRule(ALIGN_PARENT_LEFT, 1)
         p.addRule(RIGHT_OF, Id.notif_icon)
         p.addRule(ALIGN_PARENT_TOP, 1)
         margins(left = 8.dp)(p)
       },
-      holder.timestamp.! >>= text("9:09pm") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+      holder.timestamp.! >>= id(Id.timestamp) >>= text("9:09pm") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
         p.addRule(ALIGN_PARENT_RIGHT, 1)
         p.addRule(ALIGN_PARENT_TOP, 1)
         margins(right = 8.dp)(p)
       },
-      holder.text.! >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+      holder.text.! >>= id(Id.text) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
         p.addRule(ALIGN_TOP, Id.notif_icon)
         p.alignWithParent = true
         p.addRule(RIGHT_OF, Id.notif_icon)
