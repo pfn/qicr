@@ -1,5 +1,37 @@
 import android.dsl._
 
+lazy val iotaIds = taskKey[Unit]("iota id to res XML converter")
+
+iotaIds := {
+  implicit val output = outputLayout.value
+  val mergeTarget = projectLayout.value.generatedRes / "values" / "iota-public.xml"
+  val resTarget = projectLayout.value.mergedRes / "values" / "iota-ids.xml"
+  val lst = Keys.target.value / "iota" / "iota-ids-lst.txt"
+  if (lst.exists) {
+    FileFunction.cached(streams.value.cacheDirectory / "iota-ids", FilesInfo.lastModified) { in =>
+      val elements = IO.readLines(in.head).map { line =>
+        val Array(name, id) = line.split(" ")
+        (f"""<public type="id" name="Id.$name" id="0x${id.toInt}%x"/>""",
+        s"""<item type="id" name="Id.$name"/>""")
+      }
+      if (elements.isEmpty)
+        resTarget.delete()
+      else {
+        val header =
+          """<?xml version="1.0" encoding="utf-8"?>""" ::
+            "<resources>" ::
+            Nil
+        val footer = "</resources>" :: Nil
+        IO.writeLines(resTarget, header ++ elements.map(_._1) ++ footer)
+        IO.writeLines(mergeTarget, header ++ elements.map(_._2) ++ footer)
+      }
+      Set(resTarget)
+    }(Set(lst))
+  }
+}
+
+collectResources <<= collectResources dependsOn iotaIds
+
 versionName := {
   import com.typesafe.sbt.SbtGit.GitKeys.gitReader
   gitReader.value.withGit(_.describedVersion)
@@ -40,7 +72,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions-appcompat" % "1.6",
   "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
   "com.hanhuy.android" %% "scala-common" % "1.2",
-  "com.hanhuy.android" %% "iota" % "0.9",
+  "com.hanhuy.android" %% "iota" % "0.9.1-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-pfn.2",
   "ch.acra" % "acra" % "4.7.0",
   "com.lihaoyi" %% "scalarx" % "0.3.0",
