@@ -1,5 +1,25 @@
 import android.dsl._
 
+versionName := {
+  import com.typesafe.sbt.SbtGit.GitKeys.gitReader
+  gitReader.value.withGit(_.describedVersion)
+}
+
+versionCode := {
+  versionName.value.map { v =>
+    val dashIdx = v.indexOf("-")
+    val commit = if (dashIdx != -1)
+      v.charAt(dashIdx + 1).toString.toInt
+    else 0
+    val parts = v.takeWhile(_ != '-') split "\\." map (p =>
+      util.Try(p.toInt).toOption.getOrElse(0))
+    parts.reverse.foldLeft((1000000000,1)) { case ((ac,mult),x) =>
+      (ac + x * math.max(10,mult), mult * 1000)
+    }._1 + commit
+  }
+}
+
+
 val supportSdkVersion = "23.1.1"
 
 platformTarget := "android-23"
