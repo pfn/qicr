@@ -8,13 +8,11 @@ import com.hanhuy.android.common.{UiBus, ServiceBus}
 import rx.Var
 
 object Server {
-  trait State
-  object State {
-    case object INITIAL extends State
-    case object DISCONNECTED extends State
-    case object CONNECTING extends State
-    case object CONNECTED extends State
-  }
+  sealed trait State
+  case object INITIAL extends State
+  case object DISCONNECTED extends State
+  case object CONNECTING extends State
+  case object CONNECTED extends State
 
   def intervalString(l: Long) = {
     // ms if under 1s
@@ -41,7 +39,7 @@ class Server extends MessageAppender with Ordered[Server] {
     ServiceBus.send(ServerMessage(this, m))
     messages.add(m)
   }
-  val state: Var[Server.State] = Var(State.INITIAL)
+  val state: Var[State] = Var(INITIAL)
   state.trigger {
     ServiceBus.send(BusEvent.ServerStateChanged(this, state.now))
     UiBus.send(BusEvent.ServerChanged(this))

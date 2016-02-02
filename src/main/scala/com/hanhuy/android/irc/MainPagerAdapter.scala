@@ -128,7 +128,7 @@ with EventBus.RefOwner {
 
   def serverStateChanged(server: Server) {
     server.state.now match {
-    case Server.State.DISCONNECTED =>
+    case Server.DISCONNECTED =>
       // iterate channels and flag them as disconnected
       channels.indices foreach { i =>
         if (channels(i).server == server) {
@@ -136,7 +136,7 @@ with EventBus.RefOwner {
           refreshTabTitle(i + channelBase)
         }
       }
-    case Server.State.CONNECTED =>
+    case Server.CONNECTED =>
       channels.indices foreach { i =>
         if (channels(i).server == server) {
           tabs(i + channelBase).flags &= ~TabInfo.FLAG_DISCONNECTED
@@ -153,7 +153,7 @@ with EventBus.RefOwner {
       val t = tabs(idx + channelBase)
 
       // disconnected flag needs to be set before returning because page ==
-      if (c.server.state.now == Server.State.DISCONNECTED)
+      if (c.server.state.now == Server.DISCONNECTED)
         t.flags |= TabInfo.FLAG_DISCONNECTED
 
       if (page == idx + channelBase) {

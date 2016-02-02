@@ -154,11 +154,11 @@ class IrcManager extends EventBus.RefOwner {
       import scala.concurrent.duration._
       h.postDelayed(() => pingLoop(), 30.seconds.toMillis)
       mconnections.filterKeys(!Config.servers.now.filter(
-        _.state.now == Server.State.CONNECTED).toSet(_)).keys foreach { s =>
+        _.state.now == Server.CONNECTED).toSet(_)).keys foreach { s =>
         disconnect(s, None, true)
       }
       mconnections.foreach { case (server,c) =>
-        if (server.state.now == Server.State.CONNECTED) {
+        if (server.state.now == Server.CONNECTED) {
 
           val now = System.currentTimeMillis
           val pingTime = server.currentPing getOrElse now
@@ -318,7 +318,7 @@ class IrcManager extends EventBus.RefOwner {
       }
     }
     removeConnection(server) // gotta go after the foreach above
-    server.state() = Server.State.DISCONNECTED
+    server.state() = Server.DISCONNECTED
     // handled by onDisconnect
     server += ServerInfo(getString(R.string.server_disconnected))
 
@@ -339,10 +339,10 @@ class IrcManager extends EventBus.RefOwner {
   def connect(server: Server) {
     log.v("Connecting server: %s", server)
     server.currentPing = None // have to reset the last ping or else it'll get lost
-    if (server.state.now == Server.State.CONNECTING ||
-      server.state.now == Server.State.CONNECTED) {
+    if (server.state.now == Server.CONNECTING ||
+      server.state.now == Server.CONNECTED) {
     } else {
-      server.state() = Server.State.CONNECTING
+      server.state() = Server.CONNECTING
       Future(connectServerTask(server))
       _running = true
     }
@@ -623,7 +623,7 @@ class IrcManager extends EventBus.RefOwner {
           if (!result) {
             connection.disconnect()
             removeConnection(server)
-            state = Server.State.DISCONNECTED
+            state = Server.DISCONNECTED
             UiBus.run {
               Toast.makeText(Application.context,
                 s"SASL authentication for $server failed",
@@ -650,11 +650,11 @@ class IrcManager extends EventBus.RefOwner {
 
     try {
       server.currentNick = server.nickname
-      if (server.state.now == Server.State.CONNECTING) {
+      if (server.state.now == Server.CONNECTING) {
         connection.connect(sslctx)
         // sasl authentication failure callback will force a disconnect
-        if (state != Server.State.DISCONNECTED)
-          state = Server.State.CONNECTED
+        if (state != Server.DISCONNECTED)
+          state = Server.CONNECTED
       }
     } catch {
       case e: NickNameException =>
@@ -662,21 +662,21 @@ class IrcManager extends EventBus.RefOwner {
         server.currentNick = server.altnick
         serverMessage(getString(R.string.server_nick_retry), server)
         try {
-          if (server.state.now == Server.State.CONNECTING) {
+          if (server.state.now == Server.CONNECTING) {
             connection.connect(sslctx)
-            state = Server.State.CONNECTED
+            state = Server.CONNECTED
           }
         } catch {
           case e: Exception =>
             log.w("Failed to connect, nick exception?", e)
             serverMessage(getString(R.string.server_nick_error), server)
-            state = Server.State.DISCONNECTED
+            state = Server.DISCONNECTED
             connection.disconnect()
             serverMessage(getString(R.string.server_disconnected), server)
             removeConnection(server)
         }
       case e: Exception =>
-        state = Server.State.DISCONNECTED
+        state = Server.DISCONNECTED
         removeConnection(server)
         log.e("Unable to connect", e)
         serverMessage(e.getMessage, server)
@@ -687,17 +687,17 @@ class IrcManager extends EventBus.RefOwner {
             log.e("Exception cleanup failed", ex)
             connection.setConnected(false)
             connection.disconnect()
-            state = Server.State.DISCONNECTED
+            state = Server.DISCONNECTED
         }
         serverMessage(getString(R.string.server_disconnected), server)
     }
 
-    if (server.state.now == Server.State.DISCONNECTED)
+    if (server.state.now == Server.DISCONNECTED)
       connection.disconnect()
 
     UiBus.run {
       server.state() = state
-      if (state == Server.State.CONNECTED)
+      if (state == Server.CONNECTED)
         ping(connection, server)
     }
   }

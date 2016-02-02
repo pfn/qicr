@@ -85,7 +85,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
       case Some(server) =>
         UiBus.run {
           // ugh, need to do it here so that the auto commands can run
-          server.state() = Server.State.CONNECTED
+          server.state() = Server.CONNECTED
           server += ServerInfo(manager.getString(R.string.server_connected))
         }
         if (server.autorun.isDefined || server.autojoin.isDefined) {

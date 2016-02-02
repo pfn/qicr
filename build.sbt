@@ -15,7 +15,7 @@ versionCode := {
       util.Try(p.toInt).toOption.getOrElse(0))
     parts.reverse.foldLeft((1000000000,1)) { case ((ac,mult),x) =>
       (ac + x * math.max(10,mult), mult * 1000)
-    }._1 + commit
+    }._1 + math.min(9,commit) // commits beyond 9 do not move versionCode
   }
 }
 
