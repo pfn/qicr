@@ -442,6 +442,10 @@ class IrcManager extends EventBus.RefOwner {
   def updateServer(server: Server) = {
     Config.updateServer(server)
     UiBus.send(BusEvent.ServerChanged(server))
+    mconnections.get(server) foreach { c =>
+      mconnections += (server -> c)
+      m_connections += (c -> server)
+    }
   }
 
   def deleteServer(server: Server) {

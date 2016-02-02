@@ -8,6 +8,7 @@ import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView
 import android.widget.AbsListView.OnScrollListener
+import iota.IO
 
 /**
   * @author pfnguyen
@@ -15,6 +16,10 @@ import android.widget.AbsListView.OnScrollListener
 package object irc {
   implicit class WeakReferenceEmptyOp(val wrt: ref.WeakReference.type) extends AnyVal {
     @inline def empty[T <: AnyRef] = scala.ref.WeakReference[T](null.asInstanceOf[T])
+  }
+
+  implicit class ViewIOLiftOp[T <: View](val view: T) extends AnyVal {
+    @inline def ! = iota.IO[T](view)
   }
 
   @inline def hideIME()(implicit c: Activity): Unit = {

@@ -103,12 +103,12 @@ object Tweaks {
     e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
   }
   def newToolbar(implicit ctx: Context) = {
-    IO(new Toolbar(new ContextThemeWrapper(
-      ctx, R.style.ThemeOverlay_AppCompat_ActionBar))) >>= id(Id.toolbar) >>=
+    (IO(new Toolbar(new ContextThemeWrapper(
+      ctx, R.style.ThemeOverlay_AppCompat_ActionBar))) >>=
       kestrel { t =>
         t.setPopupTheme(resolveAttr(R.attr.qicrToolbarPopupTheme, _.resourceId))
         t.setBackgroundColor(resolveAttr(R.attr.colorPrimary, _.data))
-      } >>= kitkatPaddingRight
+      } >>= kitkatPaddingRight).perform()
 //    https://code.google.com/p/android/issues/detail?id=196729
       // setting lpK here doesn't carry margin, why??
       // >>= lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)

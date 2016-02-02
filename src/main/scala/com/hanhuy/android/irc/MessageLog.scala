@@ -505,9 +505,11 @@ class MessageLogActivity extends AppCompatActivity {
       } >>= kitkatPadding,
     IO(progressbar) >>=
       lp(128 dp, 128 dp, Gravity.CENTER),
-    newToolbar >>=
+    toolbar.! >>=
       lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
   )
+
+  lazy val toolbar = newToolbar
 
   lazy val progressbar = new ProgressBar(this)
   var adapter = Option.empty[LogAdapter]
@@ -563,7 +565,6 @@ class MessageLogActivity extends AppCompatActivity {
         SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
 
     setContentView(layout.perform())
-    val toolbar: Toolbar = findView(Id.toolbar)
     setSupportActionBar(toolbar)
     toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_mtrl_am_alpha)
 

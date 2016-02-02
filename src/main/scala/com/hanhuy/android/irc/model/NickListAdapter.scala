@@ -47,7 +47,7 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
 
   override def context = activity()
 
-  val layout = iota.std.Views.c[AbsListView](w[TextView] >>= id(android.R.id.text1) >>=
+  val layout = iota.std.Views.c[AbsListView](w[TextView] >>=
     backgroundResource(R.drawable.selector_background) >>=
     lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel { tv: TextView =>
       tv.setTextAppearance(activity(), android.R.style.TextAppearance_Small)

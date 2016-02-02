@@ -26,6 +26,7 @@ import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
 
 import android.support.v7.app.{AppCompatActivity, ActionBarDrawerToggle}
+import android.support.v7.widget.Toolbar
 import android.support.v4.widget.{ViewDragHelper, DrawerLayout}
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
@@ -80,13 +81,15 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
   private var _imeShowing = false
 
   lazy val nickcomplete = new ImageButton(this)
-  lazy val qicrdrawers = new QicrRelativeLayout(this)
+  lazy val topdrawer = new FrameLayout(this)
+  lazy val bottomdrawer = new FrameLayout(this)
+  lazy val qicrdrawers = QicrRelativeLayout(this, toolbar, uparrow, topdrawer, bottomdrawer)
 
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
     IO(qicrdrawers)(
-      IO(tabs) >>= id(Id.tabs) >>=
+      IO(tabs) >>=
         lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
         } >>= kitkatPaddingTop >>=
@@ -179,11 +182,11 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
                   Toast.LENGTH_SHORT).show()
             }
           }) >>= buttonTweaks
-      ) >>= horizontal >>= id(Id.buttonlayout) >>=
+      ) >>= horizontal >>=
         lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
         } >>= kitkatInputMargin,
-      l[FrameLayout](
+      topdrawer.!(
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
           l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL)
           l.setAdapter(NotificationCenter)
@@ -205,9 +208,9 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
             }
           }
         } >>= kitkatPaddingRight
-      ) >>= id(Id.topdrawer) >>= kestrel { _.setClickable(true) } >>=
+      ) >>= kestrel { _.setClickable(true) } >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
-      l[FrameLayout](
+      bottomdrawer.!(
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
           l.setDivider(new ColorDrawable(Color.TRANSPARENT))
           l.setDividerHeight(0)
@@ -218,21 +221,21 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
             qicrdrawers.closeDrawer(uparrow)
           }
         } >>= kitkatPaddingRight
-      ) >>= id(Id.bottomdrawer) >>= clickable >>=
+      ) >>= clickable >>=
         backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { v =>
         if (iota.v(21))
           v.setElevation(12.dp)
       },
-      w[ImageView] >>= imageResource(
+      uparrow.! >>= imageResource(
         resolveAttr(R.attr.qicrInputHistoryIcon, _.resourceId)) >>=
         imageScale(ImageView.ScaleType.CENTER) >>=
         lpK(48.dp, 48.dp) { (p: RelativeLayout.LayoutParams) =>
           p.addRule(RelativeLayout.ALIGN_TOP, Id.buttonlayout)
           p.addRule(RelativeLayout.CENTER_HORIZONTAL, 1)
           margins(top = -24.dp)(p)
-        } >>= id(Id.uparrow) >>= hook0.onClick(IO { qicrdrawers.toggleBottomDrawer() }),
-      newToolbar >>= lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
-    ) >>= lp(MATCH_PARENT, actionBarHeight) >>= id(Id.qicrdrawers),
+        } >>= hook0.onClick(IO { qicrdrawers.toggleBottomDrawer() }),
+      toolbar.! >>= lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
+    ) >>= lp(MATCH_PARENT, actionBarHeight),
     IO(drawerLeft)(
       IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
     ) >>=
@@ -247,7 +250,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       backgroundColor(drawerBackground)
   ) >>= lp(MATCH_PARENT, MATCH_PARENT)).perform()
 
-  lazy val toolbar = findViewById(Id.toolbar)
+  lazy val toolbar = newToolbar
 
   def listTweaks[V <: ListView]: Kestrel[V] = kestrel { l =>
     l.setCacheColorHint(drawerBackground)
@@ -284,12 +287,12 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
         val popupLayout = l[RelativeLayout](
           IO(icon) >>= backgroundColor(0xff26a69a) >>= padding(left = 8 dp) >>=
             imageResource(resolveAttr(R.attr.qicrBrowserOpenIcon, _.resourceId)) >>=
-            imageScale(ImageView.ScaleType.CENTER_INSIDE) >>= id(Id.icon) >>=
+            imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
             lpK(WRAP_CONTENT, 36 dp) {(p: RelativeLayout.LayoutParams) =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
               p.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 1)
             },
-          IO(title) >>= text(url) >>= id(Id.title) >>= textGravity(Gravity.LEFT | Gravity.CENTER) >>=
+          IO(title) >>= text(url) >>= textGravity(Gravity.LEFT | Gravity.CENTER) >>=
             backgroundColor(0xff26A69A) >>= padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) >>=
             singleLine >>=
             lpK(MATCH_PARENT, 36 dp) { (p: RelativeLayout.LayoutParams) =>
@@ -410,7 +413,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
 
   lazy val proc = new MainInputProcessor(this)
   lazy val input = new EditText(this)
-  lazy val uparrow = findViewById(Id.uparrow)
+  lazy val uparrow = new ImageView(this)
   private var page = -1 // used for restoring tab selection on recreate
 
   override def onCreate(bundle: Bundle) {
@@ -432,7 +435,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     }
     setContentView(mainLayout)
     ViewCompat.setElevation(toolbar, 4.dp)
-    setSupportActionBar(findView(Id.toolbar))
+    setSupportActionBar(toolbar)
 
     bundle.?.foreach { b => page = b.getInt("page") }
 
@@ -796,12 +799,8 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
   }
 }
 
-class QicrRelativeLayout(val activity: Activity) extends RelativeLayout(activity) with HasActivity {
+case class QicrRelativeLayout(val activity: Activity, toolbar: Toolbar, input: View, topdrawer: View, bottomdrawer: View) extends RelativeLayout(activity) with HasActivity {
   lazy val vdh = ViewDragHelper.create(this, 1.0f, VdhCallback)
-  lazy val toolbar = findViewById(Id.toolbar)
-  lazy val input = findViewById(Id.uparrow)
-  lazy val topdrawer = findViewById(Id.topdrawer)
-  lazy val bottomdrawer = findViewById(Id.bottomdrawer)
 
   object VdhCallback extends ViewDragHelper.Callback {
     override def tryCaptureView(child: View, pointerId: Int) = child == toolbar || child == input

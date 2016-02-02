@@ -789,58 +789,67 @@ with EventBus.RefOwner {
 
     override def getItem(x: Int) = manager.getServers(x)
 
-    def progressBar = IO(new ProgressBar(
-      context, null, R.attr.qicrProgressSpinnerStyle))
 //    val layout = w[LinearLayout]
-    val layout = c[AbsListView](l[LinearLayout](
-      l[FrameLayout](
-        progressBar >>= id(Id.server_item_progress) >>=
-          lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER) >>=
-          padding(left = 6 dp, right = 6 dp) >>= kestrel { p: ProgressBar =>
-          p.setIndeterminate(true) } >>= gone,
-        w[ImageView] >>= lp(64 dp, 64 dp, Gravity.CENTER) >>=
-          imageResource(android.R.drawable.presence_offline) >>=
-          imageScale(ImageView.ScaleType.CENTER_INSIDE) >>= padding(left = 6 dp, right = 6 dp) >>=
-          id(Id.server_item_status)
-      ) >>= kestrel { v: FrameLayout => v.setMeasureAllChildren(true) },
-      w[TextView] >>= lp(0, 64 dp, 1) >>=
-        padding(left = 6 dp, right = 6 dp) >>= kestrel { tv =>
+    case class ServerItemHolder(progressBar: ProgressBar, status: ImageView, serverItem: TextView, serverChecked: CheckedTextView)
+    def layout = {
+      val holder = ServerItemHolder(
+        new ProgressBar(context, null, R.attr.qicrProgressSpinnerStyle),
+        new ImageView(context),
+        new TextView(context),
+        checkedText)
+      c[AbsListView](l[LinearLayout](
+        l[FrameLayout](
+          holder.progressBar.! >>=
+            lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER) >>=
+            padding(left = 6 dp, right = 6 dp) >>= kestrel { p: ProgressBar =>
+            p.setIndeterminate(true) } >>= gone,
+          holder.status.! >>= lp(64 dp, 64 dp, Gravity.CENTER) >>=
+            imageResource(android.R.drawable.presence_offline) >>=
+            imageScale(ImageView.ScaleType.CENTER_INSIDE) >>= padding(left = 6 dp, right = 6 dp) >>=
+            id(Id.server_item_status)
+        ) >>= kestrel { v: FrameLayout => v.setMeasureAllChildren(true) },
+        holder.serverItem.! >>= lp(0, 64 dp, 1) >>=
+          padding(left = 6 dp, right = 6 dp) >>= kestrel { tv =>
           tv.setGravity(Gravity.CENTER_VERTICAL)
           tv.setTextAppearance(context, android.R.style.TextAppearance_Large)
-        } >>= id(Id.server_item_text),
-      IO(checkedText) >>= lp(96 dp, 64 dp) >>= padding(right = 6 dp) >>=
-        kestrel { tv =>
-          tv.setGravity(Gravity.CENTER_VERTICAL)
-          tv.setTextAppearance(context, android.R.style.TextAppearance_Small)
+        },
+        holder.serverChecked.! >>= lp(96 dp, 64 dp) >>= padding(right = 6 dp) >>=
+          kestrel { tv =>
+            tv.setGravity(Gravity.CENTER_VERTICAL)
+            tv.setTextAppearance(context, android.R.style.TextAppearance_Small)
 
-          tv.setCheckMarkDrawable(
-            resolveAttr(android.R.attr.listChoiceIndicatorSingle, _.resourceId))
-        } >>= id(Id.server_checked_text)
-    ) >>= kestrel { _.setGravity(Gravity.CENTER_VERTICAL) } >>=
-      lp(MATCH_PARENT, WRAP_CONTENT))
+            tv.setCheckMarkDrawable(
+              resolveAttr(android.R.attr.listChoiceIndicatorSingle, _.resourceId))
+          }
+      ) >>= kestrel { c =>
+        c.setGravity(Gravity.CENTER_VERTICAL)
+        c.setTag(Id.holder, holder)
+      } >>=
+        lp(MATCH_PARENT, WRAP_CONTENT))
+    }
 
     override def getView(pos: Int, convertView: View, parent: ViewGroup) = {
       val server = getItem(pos)
       val list = parent.asInstanceOf[ListView]
 
       val v = convertView.?.fold(layout.perform())(_.asInstanceOf[LinearLayout])
+      val holder = v.getTag(Id.holder).asInstanceOf[ServerItemHolder]
 
       val checked = list.getCheckedItemPosition
-      val img = v.findView(Id.server_item_status)
 
-      (IO(v.findView(Id.server_item_text)) >>= text(server.name)).perform()
-      (IO(v.findView(Id.server_item_progress)) >>= condK(
+      (holder.serverItem.! >>= text(server.name)).perform()
+      (holder.progressBar.! >>= condK(
         (server.state.now == Server.CONNECTING) ? visible
         | gone)).perform()
 
-      (IO(img) >>= imageResource(server.state.now match {
+      (IO(holder.status) >>= imageResource(server.state.now match {
         case Server.INITIAL      => android.R.drawable.presence_offline
         case Server.DISCONNECTED => android.R.drawable.presence_busy
         case Server.CONNECTED    => android.R.drawable.presence_online
         case Server.CONNECTING   => android.R.drawable.presence_away
       }) >>= condK((server.state.now != Server.CONNECTING) ? visible | gone)).perform()
 
-      (IO(v.findView(Id.server_checked_text) : CheckedTextView) >>=
+      (IO(holder.serverChecked) >>=
         kestrel { tv =>
           if (iota.v(12)) {
             // early honeycomb and gingerbread will leak the obs
@@ -860,10 +869,18 @@ with EventBus.RefOwner {
             } else ""
             tv.setText(lag)
           })
+          obss = obs :: obss
           tv.setTag(Id.obs, obs)
         }).perform()
       v
     }
+  }
+  private[this] var obss = List.empty[Obs]
+
+  override def onPause() = {
+    super.onPause()
+    obss.foreach(_.kill())
+    obss = Nil
   }
 }
 

@@ -21,16 +21,18 @@ import Tweaks._
 object NotificationCenter extends TrayAdapter[NotificationMessage] {
   val NNil: List[NotificationMessage] = Nil
   private[this] val notifications = RingBuffer[NotificationMessage](64)
+
   def sortedNotifications = {
     val (is, ns) = notifications.foldRight((NNil, NNil)) {
-      case (n, (important,normal)) =>
-      if (n.isNew && n.important)
-        (n :: important, normal)
-      else
-        (important, n :: normal)
+      case (n, (important, normal)) =>
+        if (n.isNew && n.important)
+          (n :: important, normal)
+        else
+          (important, n :: normal)
     }
     ns ++ is
   }
+
   private[this] var sorted = sortedNotifications
   private[this] var newest = 0l
 
@@ -41,45 +43,61 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
   override def emptyItem = R.string.no_notifications
 
   type LP = RelativeLayout.LayoutParams
+
   import ViewGroup.LayoutParams._
   import RelativeLayout._
-  def notificationLayout(implicit c: Context) = l[RelativeLayout](
-    w[ImageView] >>= id(Id.notif_icon) >>=
-      imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
-      lpK(24.dp, 24.dp) { (p: LP) =>
+
+  case class NotificationHolder(icon: ImageView,
+                                arrow: ImageView,
+                                channelServer: TextView,
+                                timestamp: TextView,
+                                text: TextView)
+
+  def notificationLayout(implicit c: Context) = {
+    val holder = NotificationHolder(
+      new ImageView(c),
+      new ImageView(c),
+      new TextView(c),
+      new TextView(c),
+      new TextView(c))
+    l[RelativeLayout](
+      holder.icon.! >>=
+        imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
+        lpK(24.dp, 24.dp) { (p: LP) =>
+          p.addRule(ALIGN_PARENT_LEFT, 1)
+          p.addRule(BELOW, Id.channel_server)
+          margins(all = 8.dp)(p)
+        },
+      holder.arrow.! >>=
+        imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
+        imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
+        lpK(24.dp, 24.dp) { (p: LP) =>
+          p.addRule(ALIGN_PARENT_RIGHT, 1)
+          p.addRule(BELOW, Id.timestamp)
+          margins(all = 8.dp)(p)
+        } >>= gone >>= kestrel { iv =>
+        DrawableCompat.setTint(iv.getDrawable.mutate(), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
+      },
+      holder.channelServer.! >>=
+        text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
         p.addRule(ALIGN_PARENT_LEFT, 1)
-        p.addRule(BELOW, Id.channel_server)
-        margins(all = 8.dp)(p)
-    },
-    w[ImageView] >>= id(Id.notif_arrow) >>=
-      imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
-      imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
-      lpK(24.dp, 24.dp) { (p: LP) =>
+        p.addRule(RIGHT_OF, Id.notif_icon)
+        p.addRule(ALIGN_PARENT_TOP, 1)
+        margins(left = 8.dp)(p)
+      },
+      holder.timestamp.! >>= text("9:09pm") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
         p.addRule(ALIGN_PARENT_RIGHT, 1)
-        p.addRule(BELOW, Id.timestamp)
-        margins(all = 8.dp)(p)
-      } >>= gone >>= kestrel { iv =>
-      DrawableCompat.setTint(iv.getDrawable.mutate(), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
-    },
-    w[TextView] >>= id(Id.channel_server) >>=
-      text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
-      p.addRule(ALIGN_PARENT_LEFT, 1)
-      p.addRule(RIGHT_OF, Id.notif_icon)
-      p.addRule(ALIGN_PARENT_TOP, 1)
-      margins(left = 8.dp)(p)
-    },
-    w[TextView] >>= id(Id.timestamp) >>= text("9:09pm") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
-      p.addRule(ALIGN_PARENT_RIGHT, 1)
-      p.addRule(ALIGN_PARENT_TOP, 1)
-      margins(right = 8.dp)(p)
-    },
-    w[TextView] >>= id(Id.text) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
-      p.addRule(ALIGN_TOP, Id.notif_icon)
-      p.alignWithParent = true
-      p.addRule(RIGHT_OF, Id.notif_icon)
-      p.addRule(LEFT_OF, Id.notif_arrow)
-    } >>= textGravity(Gravity.CENTER_VERTICAL)
-  ) >>= padding(top = 12.dp, bottom = 12.dp, right = 8.dp, left = 8.dp)
+        p.addRule(ALIGN_PARENT_TOP, 1)
+        margins(right = 8.dp)(p)
+      },
+      holder.text.! >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+        p.addRule(ALIGN_TOP, Id.notif_icon)
+        p.alignWithParent = true
+        p.addRule(RIGHT_OF, Id.notif_icon)
+        p.addRule(LEFT_OF, Id.notif_arrow)
+      } >>= textGravity(Gravity.CENTER_VERTICAL)
+    ) >>= padding(top = 12.dp, bottom = 12.dp, right = 8.dp, left = 8.dp) >>= kestrel(_.setTag(Id.holder, holder))
+  }
 
   override def onGetView(position: Int, convertView: View, parent: ViewGroup) = {
     implicit val ctx = parent.getContext
@@ -87,32 +105,30 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
       case vg: ViewGroup => vg
       case _ => notificationLayout.perform()
     }
+    val holder = view.getTag(Id.holder).asInstanceOf[NotificationHolder]
     getItem(position) foreach { n =>
-      view.findView(Id.text).setText(n.message)
-      val arrow = view.findView(Id.notif_arrow)
-      val icon: ImageView = view.findView(Id.notif_icon)
-      icon.setImageResource(n.icon)
+      holder.text.setText(n.message)
+      holder.icon.setImageResource(n.icon)
       val sdf = new SimpleDateFormat("h:mma")
-      view.findView(Id.timestamp).setText(sdf.format(n.ts).toLowerCase)
-      val cs = view.findView(Id.channel_server)
+      holder.timestamp.setText(sdf.format(n.ts).toLowerCase)
       if (n.isNew && n.important) {
-        DrawableCompat.setTint(DrawableCompat.wrap(icon.getDrawable.mutate()), 0xff26a69a)
+        DrawableCompat.setTint(DrawableCompat.wrap(holder.icon.getDrawable.mutate()), 0xff26a69a)
       } else {
-        DrawableCompat.setTint(DrawableCompat.wrap(icon.getDrawable.mutate()), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
+        DrawableCompat.setTint(DrawableCompat.wrap(holder.icon.getDrawable.mutate()), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
       }
       n match {
         case NotifyNotification(ts, server, sender, msg) =>
-          cs.setText(server)
-          arrow.setVisibility(View.GONE)
+          holder.channelServer.setText(server)
+          holder.arrow.setVisibility(View.GONE)
         case UserMessageNotification(ts, server, sender, msg) =>
-          arrow.setVisibility(View.VISIBLE)
-          cs.setText(server)
+          holder.arrow.setVisibility(View.VISIBLE)
+          holder.channelServer.setText(server)
         case ChannelMessageNotification(ts, server, chan, sender, msg) =>
-          arrow.setVisibility(View.VISIBLE)
-          cs.setText(s"$chan / $server")
+          holder.arrow.setVisibility(View.VISIBLE)
+          holder.channelServer.setText(s"$chan / $server")
         case ServerNotification(ic, server, msg) =>
-          arrow.setVisibility(View.GONE)
-          cs.setText(server)
+          holder.arrow.setVisibility(View.GONE)
+          holder.channelServer.setText(server)
       }
     }
     view
