@@ -36,11 +36,12 @@ object NickListAdapter {
 case class NickAndMode(mode: Char, nick: String)
 
 // must reference activity for resources
-class NickListAdapter(activity: WeakReference[MainActivity], channel: Channel)
+class NickListAdapter private(activity: WeakReference[MainActivity], channel: Channel)
 extends BaseAdapter with EventBus.RefOwner with HasContext {
   import ViewGroup.LayoutParams._
   val manager = IrcManager.init()
   val c = manager.channels.get(channel)
+  var nicks: List[android.text.Spanned] = Nil
   notifyDataSetChanged()
 
   override def context = activity()
@@ -54,7 +55,6 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
       tv.setShadowLayer(1.2f, 0, 0, Color.parseColor("#ff333333"))
     } >>= padding(left = 6 dp))
 
-  var nicks: List[android.text.Spanned] = Nil
   override def notifyDataSetChanged() {
     c.foreach { c =>
       nicks = c.getUsers.toList.map { u =>
