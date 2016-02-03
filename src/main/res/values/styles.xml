@@ -95,9 +95,16 @@
     <style name="SettingTheme" parent="Base.SettingTheme">
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
     </style>
-    <style name="AppTheme.Light" parent="Base.AppTheme.Light"/>
+    <style name="ActionModeStyle" parent="Widget.AppCompat.ActionMode">
+        <item name="background">@android:color/darker_gray</item>
+    </style>
+    <style name="AppTheme.Light" parent="Base.AppTheme.Light">
+        <item name="actionModeStyle">@style/ActionModeStyle</item>
+    </style>
 
-    <style name="AppTheme.Dark" parent="Base.AppTheme.Dark"/>
+    <style name="AppTheme.Dark" parent="Base.AppTheme.Dark">
+        <item name="actionModeStyle">@style/ActionModeStyle</item>
+    </style>
 
     <style name="Widget.ImageButton.Dark" parent="@android:style/Widget.ImageButton">
         <item name="android:background">@drawable/btn_selector_dark</item>
