@@ -8,7 +8,7 @@ import android.view.View.MeasureSpec
 import android.view.inputmethod.EditorInfo
 import android.view._
 import android.widget._
-import android.support.v7.widget.Toolbar
+import android.support.v7.widget.{CardView, Toolbar}
 
 import iota._
 
@@ -99,6 +99,9 @@ object Tweaks {
     import EditorInfo._
     e.setInputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_AUTO_CORRECT)
     e.setImeOptions(IME_ACTION_SEND | IME_FLAG_NO_FULLSCREEN)
+  }
+  def cardView(implicit ctx: Context) = {
+    IO(new CardView(ctx, null, R.attr.qicrCardStyle))
   }
   def newToolbar(implicit ctx: Context) = {
     (IO(new Toolbar(new ContextThemeWrapper(

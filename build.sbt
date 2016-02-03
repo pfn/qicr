@@ -44,6 +44,8 @@ libraryDependencies ++= Seq(
   "com.hanhuy" % "sirc" % "1.1.6-pfn.2",
   "ch.acra" % "acra" % "4.8.0",
   "com.lihaoyi" %% "scalarx" % "0.3.0",
+  "com.android.support" % "cardview-v7" % supportSdkVersion,
+  "com.android.support" % "recyclerview-v7" % supportSdkVersion,
   "com.android.support" % "design" % supportSdkVersion,
   "com.android.support" % "support-v4" % supportSdkVersion,
   "com.android.support" % "preference-v7" % supportSdkVersion,

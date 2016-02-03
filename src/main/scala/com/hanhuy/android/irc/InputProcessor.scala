@@ -235,7 +235,7 @@ case class MainInputProcessor(activity: MainActivity)
 extends InputProcessor(activity) {
 
   def currentState = activity.adapter.getItem(activity.adapter.page) match {
-    case s: ServersFragment => (s._server, None)
+    case s: ServersFragment => (s.server, None)
     case s: ServerMessagesFragment => (s.server, None)
     case c: ChannelFragment => (Some(c.channel.get.server), Some(c.channel.get))
     case q: QueryFragment => (Some(q.query.get.server), Some(q.query.get))

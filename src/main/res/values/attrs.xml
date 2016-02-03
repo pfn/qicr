@@ -26,6 +26,7 @@
     <attr name="qicrChatIgnoreIcon" format="reference"/>
     <attr name="qicrLockRotationIcon" format="reference"/>
     <attr name="qicrAddServerIcon" format="reference"/>
+    <attr name="qicrCardStyle" format="reference"/>
     <declare-styleable name="AppTheme">
         <attr name="qicrDrawerBackground" format="color"/>
         <attr name="inputBackground" format="reference"/>

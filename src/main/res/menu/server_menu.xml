@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/server_messages"
-        android:icon="?qicrInfoIcon"
-        android:title="@string/server_messages"
-        />
+          android:icon="?qicrInfoIcon"
+          app:showAsAction="always"
+          android:title="@string/server_messages"
+    />
     <item android:id="@+id/server_connect"
-        android:icon="?qicrReconnectIcon"
-        android:title="@string/server_connect"/>
+          android:icon="?qicrReconnectIcon"
+          app:showAsAction="always"
+          android:title="@string/server_connect"/>
     <item android:id="@+id/server_disconnect"
-        android:icon="?qicrStopIcon"
-        android:title="@string/server_disconnect"/>
+          android:icon="?qicrStopIcon"
+          app:showAsAction="always"
+          android:title="@string/server_disconnect"/>
     <item android:id="@+id/server_options"
-        android:icon="?qicrEditIcon"
-        android:title="@string/server_options"/>
+          android:icon="?qicrEditIcon"
+          app:showAsAction="always"
+          android:title="@string/server_options"/>
     <item android:id="@+id/server_delete"
-        android:icon="?qicrDeleteIcon"
-        android:title="@string/server_delete"/>
+          android:icon="?qicrDeleteIcon"
+          android:title="@string/server_delete"/>
 </menu>
