@@ -11,4 +11,12 @@
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowTranslucentStatus">true</item>
     </style>
+    <style name="SetupTheme.Dark" parent="AppTheme.Dark">
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+    </style>
+    <style name="SetupTheme.Light" parent="AppTheme.Light">
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+    </style>
 </resources>
