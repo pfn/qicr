@@ -20,11 +20,11 @@
                  android:name="com.hanhuy.android.irc.Application"
                  android:installLocation="auto">
         <activity
-                android:name="com.hanhuy.android.irc.SettingsFragmentActivity"
+                android:name=".SettingsFragmentActivity"
                 android:theme="@style/SettingTheme"
                 android:label="@string/app_name"/>
         <activity
-                android:name="com.hanhuy.android.irc.MainActivity"
+                android:name=".MainActivity"
                 android:theme="@style/AppTheme.Dark"
                 android:launchMode="singleTask"
                 android:label="@string/app_name"
@@ -34,7 +34,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name="com.hanhuy.android.irc.LifecycleService"/>
+        <service android:name=".LifecycleService"/>
 
         <!-- widget -->
         <receiver

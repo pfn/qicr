@@ -22,11 +22,9 @@ import android.text.method.LinkMovementMethod
 import android.util.TypedValue
 import android.view.ViewGroup.LayoutParams._
 import android.view._
-import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView.OnScrollListener
 import android.widget.ExpandableListView.OnChildClickListener
 import android.widget.{CursorAdapter => _,_}
-import android.support.v7.widget.Toolbar
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
@@ -601,10 +599,8 @@ class MessageLogActivity extends AppCompatActivity {
     })
   }
 
-  lazy val label = c[TableRow](lpK(WRAP_CONTENT, WRAP_CONTENT)(margins(right = 12.dp)) >=>
-    kestrel { v: TextView =>
-      v.setTextAppearance(this, android.R.style.TextAppearance_Medium)
-    })
+  lazy val label: Kestrel[TextView] = c[TableRow](lpK(WRAP_CONTENT, WRAP_CONTENT)(margins(right = 12.dp)) >=>
+    kestrel(_.setTextAppearance(this, android.R.style.TextAppearance_Medium)))
 
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
     case R.id.menu_log_delete =>
@@ -639,19 +635,12 @@ class MessageLogActivity extends AppCompatActivity {
       othersLayout.setAdapter(new BaseExpandableListAdapter {
 
         override def getChildId(p1: Int, p2: Int) = channels(networks(p1))(p2).id
-
         override def getChild(p1: Int, p2: Int) = channels(networks(p1))(p2)
-
         override def getGroupCount = networks.size
-
         override def isChildSelectable(p1: Int, p2: Int) = true
-
         override def getGroupId(p1: Int) = networks(p1).id
-
         override def getGroup(p1: Int) = networks(p1)
-
         override def getChildrenCount(p1: Int) = channels(networks(p1)).size
-
         override def hasStableIds = true
 
         override def getChildView(p1: Int, p2: Int, p3: Boolean, p4: View, p5: ViewGroup) = {

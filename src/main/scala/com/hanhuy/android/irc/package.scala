@@ -8,7 +8,6 @@ import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView
 import android.widget.AbsListView.OnScrollListener
-import iota.IO
 
 /**
   * @author pfnguyen

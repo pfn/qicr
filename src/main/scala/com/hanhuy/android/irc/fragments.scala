@@ -7,7 +7,6 @@ import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.View.OnAttachStateChangeListener
 import android.view._
 import android.widget.AbsListView.OnScrollListener
 import android.widget._

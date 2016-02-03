@@ -1,8 +1,6 @@
 package com.hanhuy.android.irc
 
-import android.app.Activity
 import android.content.Context
-import android.content.res.TypedArray
 import android.os.Build
 import android.text.InputType
 import android.util.TypedValue

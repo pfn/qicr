@@ -87,16 +87,17 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
 
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
+  type RLP = RelativeLayout.LayoutParams
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
     IO(qicrdrawers)(
       IO(tabs) >>= id(Id.tabs) >>=
-        lpK(MATCH_PARENT, WRAP_CONTENT) { (p: RelativeLayout.LayoutParams) =>
+        lpK(MATCH_PARENT, WRAP_CONTENT) { p: RLP =>
           p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
         } >>= kitkatPaddingTop >>=
         kestrel { t => t.setTabMode(TabLayout.MODE_SCROLLABLE) },
       // id must be set or else fragment manager complains
       IO(pager) >>= id(Id.pager) >>= lpK(MATCH_PARENT, MATCH_PARENT) {
-        (p: RelativeLayout.LayoutParams) =>
+        p: RLP =>
           p.addRule(RelativeLayout.BELOW, Id.tabs)
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
       },
@@ -183,7 +184,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
             }
           }) >>= buttonTweaks
       ) >>= horizontal >>= id(Id.buttonlayout) >>=
-        lpK(MATCH_PARENT, 48.dp) { (p: RelativeLayout.LayoutParams) =>
+        lpK(MATCH_PARENT, 48.dp) { p: RLP =>
           p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
         } >>= kitkatInputMargin,
       topdrawer.!(
@@ -229,7 +230,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       uparrow.! >>= imageResource(
         resolveAttr(R.attr.qicrInputHistoryIcon, _.resourceId)) >>=
         imageScale(ImageView.ScaleType.CENTER) >>=
-        lpK(48.dp, 48.dp) { (p: RelativeLayout.LayoutParams) =>
+        lpK(48.dp, 48.dp) { p: RLP =>
           p.addRule(RelativeLayout.ALIGN_TOP, Id.buttonlayout)
           p.addRule(RelativeLayout.CENTER_HORIZONTAL, 1)
           margins(top = -24.dp)(p)
@@ -288,23 +289,23 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
           IO(icon) >>= backgroundColor(0xff26a69a) >>= padding(left = 8 dp) >>=
             imageResource(resolveAttr(R.attr.qicrBrowserOpenIcon, _.resourceId)) >>=
             imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
-            lpK(WRAP_CONTENT, 36 dp) {(p: RelativeLayout.LayoutParams) =>
+            lpK(WRAP_CONTENT, 36 dp) {p: RLP =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
               p.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 1)
             } >>= id(Id.icon),
           IO(title) >>= text(url) >>= textGravity(Gravity.LEFT | Gravity.CENTER) >>=
             backgroundColor(0xff26A69A) >>= padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) >>=
             singleLine >>=
-            lpK(MATCH_PARENT, 36 dp) { (p: RelativeLayout.LayoutParams) =>
+            lpK(MATCH_PARENT, 36 dp) { p: RLP =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
               p.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 1)
               p.addRule(RelativeLayout.RIGHT_OF, Id.icon)
             } >>= id(Id.title),
-          IO(web) >>= lpK(MATCH_PARENT, MATCH_PARENT) { (p: RelativeLayout.LayoutParams) =>
+          IO(web) >>= lpK(MATCH_PARENT, MATCH_PARENT) { p: RLP =>
             p.addRule(RelativeLayout.BELOW, Id.title)
             p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1)
           },
-          IO(progress) >>= lpK(MATCH_PARENT, 8 dp) { (p: RelativeLayout.LayoutParams) =>
+          IO(progress) >>= lpK(MATCH_PARENT, 8 dp) { p: RLP =>
             p.addRule(RelativeLayout.BELOW, Id.title)
           }
         ).perform()

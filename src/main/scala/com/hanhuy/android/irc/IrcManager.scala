@@ -139,7 +139,6 @@ class IrcManager extends EventBus.RefOwner {
 
   instance = Some(this)
   var recreateActivity: Option[Int] = None // int = page to flip to
-  var messagesId = 0
   def connected = connections.nonEmpty
 
   lazy val handlerThread = {
@@ -218,11 +217,6 @@ class IrcManager extends EventBus.RefOwner {
     _messages += ((idx, adapter))
   }
 
-  def newMessagesId(): Int = {
-    messagesId += 1
-    messagesId
-  }
-
   def removeConnection(server: Server) = synchronized {
 //    log.d("Unregistering connection: " + server, new StackTrace)
     connections.get(server).foreach(c => {
@@ -266,7 +260,6 @@ class IrcManager extends EventBus.RefOwner {
 
   def running = _running
 
-  var disconnectCount = 0
   def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
     instance = None
     Application.context.unregisterReceiver(receiver)
@@ -275,30 +268,21 @@ class IrcManager extends EventBus.RefOwner {
     nm.cancelAll()
     ServiceBus.send(BusEvent.ExitApplication)
 
-    val count = connections.keys.size
     _running = false
-    disconnectCount = 0
-    Future {
-      synchronized {
-        // TODO wait for quit to actually complete?
-        while (disconnectCount < count) {
-          log.d("Waiting for disconnect: %d/%d" format (
-            disconnectCount, count))
-          wait()
-        }
-      }
-      log.d("All disconnects completed, running callback: " + cb)
-      cb.foreach { callback => UiBus.run { callback() } }
-      nm.cancelAll()
+    val fs = Future.sequence(connections.keys.map(disconnect(_, message, false, true)))
+    fs.onComplete {
+      case _ =>
+        log.d("All disconnects completed, running callback: " + cb)
+        cb.foreach { callback => UiBus.run { callback() } }
+        nm.cancelAll()
     }
-    connections.keys.foreach(disconnect(_, message, false, true))
     handlerThread.quit()
     ServiceBus.send(IrcManagerStop)
   }
 
   def disconnect(server: Server, message: Option[String] = None,
-                 disconnected: Boolean = false, quitting: Boolean = false) {
-    connections.get(server).foreach { c =>
+                 disconnected: Boolean = false, quitting: Boolean = false) = {
+    val f = connections.get(server).fold(Future.successful(())) { c =>
       Future {
         try {
           val m = message getOrElse {
@@ -310,10 +294,6 @@ class IrcManager extends EventBus.RefOwner {
             log.e("Disconnect failed", e)
             c.setConnected(false)
             c.disconnect()
-        }
-        synchronized {
-          disconnectCount += 1
-          notify()
         }
       }
     }
@@ -334,6 +314,7 @@ class IrcManager extends EventBus.RefOwner {
         lastRunning = System.currentTimeMillis
       }
     }
+    f
   }
 
   def connect(server: Server) {
