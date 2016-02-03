@@ -1,7 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.content.ContentValues
-import com.hanhuy.android.common.{Logcat, UiBus}
+import com.hanhuy.android.common._
 import com.hanhuy.android.irc.model.BusEvent.IgnoreListChanged
 import com.hanhuy.android.irc.model.Server
 
@@ -167,20 +167,22 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
       val list = Iterator.continually(c.moveToNext()).takeWhile (_==true).map {
         _ =>
         val s = new Server
-        s.id          = c.getLong(col_id)
-        s.name        = c.getString(col_name)
-        s.autoconnect = c.getInt(col_autoconnect) != 0
-        s.hostname    = c.getString(col_hostname)
-        s.port        = c.getInt(col_port)
-        s.ssl         = c.getInt(col_ssl) != 0
-        s.nickname    = c.getString(col_nickname)
-        s.altnick     = c.getString(col_altnick)
-        s.username    = c.getString(col_username)
-        s.password    = c.getString(col_password)
-        s.realname    = c.getString(col_realname)
-        s.autorun     = c.getString(col_autorun)
-        s.autojoin    = c.getString(col_autojoin)
-        s.sasl        = c.getInt(col_usesasl) != 0
+        s.data = Server.ServerData(
+          c.getLong(col_id),
+          c.getString(col_name),
+          c.getString(col_hostname),
+          c.getString(col_nickname),
+          c.getString(col_altnick),
+          c.getInt(col_port),
+          c.getString(col_realname),
+          c.getString(col_username),
+          c.getInt(col_ssl) != 0,
+          c.getInt(col_autoconnect) != 0,
+          c.getString(col_password).?.filter(_.trim.nonEmpty),
+          c.getInt(col_usesasl) != 0,
+          c.getString(col_autorun).?.filter(_.trim.nonEmpty),
+          c.getString(col_autojoin).?.filter(_.trim.nonEmpty)
+        )
         s
       }.toList
 
@@ -196,24 +198,28 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     }
   }
 
-  def addServer(server: Server) {
+  def addServer(data: Server.ServerData) = {
     val db = getWritableDatabase
-    val id = db.insertOrThrow(TABLE_SERVERS, null, server.values)
-    server.id = id
+    val id = db.insertOrThrow(TABLE_SERVERS, null, data.values)
+    val server = new Server
+    server.data = data.copy(id = id)
     db.close()
     if (id == -1)
       throw new IllegalStateException("Unable to create server")
     servers() = server :: servers.now
+    server
   }
 
-  def updateServer(server: Server) {
+  def updateServer(data: Server.ServerData) = {
     val db = getWritableDatabase
-    val rows = db.update(TABLE_SERVERS, server.values,
-      BaseColumns._ID + " = ?", Array[String]("" + server.id))
+    val rows = db.update(TABLE_SERVERS, data.values,
+      BaseColumns._ID + " = ?", Array[String]("" + data.id))
     db.close()
+    val server = servers.now.find(_.id == data.id).get
+    server.data = data
     if (rows != 1)
       log.e("Wrong rows updated: " + rows, new StackTrace)
-    servers() = server :: (servers.now filterNot (_ == server))
+    server
   }
 
   def deleteServer(server: Server) {

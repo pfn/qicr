@@ -331,9 +331,9 @@ class IrcManager extends EventBus.RefOwner {
 
   def getServers = Config.servers.now
 
-  def addServer(server: Server) {
-    Config.addServer(server)
-    UiBus.send(BusEvent.ServerAdded(server))
+  def addServer(server: Server.ServerData) {
+    val s = Config.addServer(server)
+    UiBus.send(BusEvent.ServerAdded(s))
   }
 
   def startQuery(server: Server, nick: String) {
@@ -420,8 +420,8 @@ class IrcManager extends EventBus.RefOwner {
     m_channels -= sircchannel
   }
 
-  def updateServer(server: Server) = {
-    Config.updateServer(server)
+  def updateServer(data: Server.ServerData) = {
+    val server = Config.updateServer(data)
     UiBus.send(BusEvent.ServerChanged(server))
     mconnections.get(server) foreach { c =>
       mconnections += (server -> c)
@@ -599,11 +599,11 @@ class IrcManager extends EventBus.RefOwner {
   def connectServerTask(server: Server) {
     var state = server.state.now
     val ircserver = new IrcServer(server.hostname, server.port,
-      if (server.sasl) null else server.password, server.ssl)
+      if (server.sasl) null else server.password.orNull, server.ssl)
     val connection = IrcConnection2(server.name)
     val negotiator = new CompoundNegotiator(new ServerTimeNegotiator)
     if (server.sasl)
-      negotiator.addListener(SaslNegotiator(server.username, server.password,
+      negotiator.addListener(SaslNegotiator(server.username, server.password.orNull,
         result => {
           if (!result) {
             connection.disconnect()

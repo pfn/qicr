@@ -9,6 +9,7 @@ import android.view._
 import android.widget._
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.common._
+import com.hanhuy.android.extensions._
 import iota._
 import Tweaks._
 
@@ -58,7 +59,70 @@ class ServerSetupActivity extends AppCompatActivity {
   }
 }
 
+object ServerSetupFragment {
+  val EXTRA_MODEL = "qicr.edit.SERVER_MODEL"
+  object ServerEditModel {
+    def fromData(data: Server.ServerData) = ServerEditModel(
+      data.id,
+      Some(data.name),
+      Some(data.hostname),
+      Some(data.nickname),
+      Some(data.altnick),
+      data.port,
+      Some(data.realname),
+      Some(data.username),
+      data.ssl,
+      data.autoconnect,
+      data.password,
+      data.sasl,
+      data.autorun,
+      data.autojoin
+    )
+
+    def empty = ServerEditModel(-1, None, None, None, None, 6667,
+      Some("stronger, better, qicr"), Some("qicruser"),
+      false, false, None, false, None, None)
+  }
+  case class ServerEditModel(id: Long,
+                             name: Option[String],
+                             hostname: Option[String],
+                             nickname: Option[String],
+                             altnick: Option[String],
+                             port: Int,
+                             realname: Option[String],
+                             username: Option[String],
+                             ssl: Boolean,
+                             autoconnect: Boolean,
+                             password: Option[String],
+                             sasl: Boolean,
+                             autorun: Option[String],
+                             autojoin: Option[String]) {
+    def blank(s: Option[String]) = s.forall(_.trim.isEmpty)
+    def blank(s: String) = s.trim.isEmpty
+    def valid: Boolean = !blank(name) && !blank(hostname) && !blank(nickname) &&
+      !blank(altnick orElse nickname.map(_ + "_")) && port > 0 && !blank(username) && !blank(realname)
+
+    def asData = for {
+      n <- name
+      host <- hostname
+      nick <- nickname
+      real <- realname
+      user <- username
+    } yield {
+      Server.ServerData(id, n, host, nick, altnick.getOrElse(nick + "_"),
+        port, real, user, ssl, autoconnect, password, sasl, autorun, autojoin)
+    }
+  }
+}
 class ServerSetupFragment extends Fragment {
+  import ServerSetupFragment._
+
+  override def onSaveInstanceState(outState: Bundle) = {
+    super.onSaveInstanceState(outState)
+    outState.putSerializable(EXTRA_MODEL, model)
+  }
+
+  var model = ServerEditModel.empty
   val manager = IrcManager.init()
 
   // hack to store text
@@ -154,39 +218,19 @@ class ServerSetupFragment extends Fragment {
   lazy val autorun = new EditText(getActivity)
   lazy val sasl = checkbox
 
-  val _server: Server = new Server
-
-  def server: Server = {
-    val s = _server
-    s.name = server_name.getText.toString
-    s.hostname = server_host.getText.toString
-    s.port = Try(port.getText.toString.toInt).toOption getOrElse 6667
-    s.ssl = ssl.isChecked
-    s.autoconnect = autoconnect.isChecked
-    s.nickname = nickname.getText.toString
-    s.altnick = altnick.getText.toString
-    s.realname = realname.getText.toString
-    s.username = username.getText.toString
-    s.password = password.getText.toString
-    s.autojoin = autojoin.getText.toString
-    s.autorun = autorun.getText.toString
-    s.sasl = sasl.isChecked
-    _server
-  }
-
-  def server_=(s: Server) = {
-    _server.copy(s)
-    server_name.setText(s.name)
-    server_host.setText(s.hostname)
+  def sanitize(s: CharSequence) = s.toString.?.map(_.trim).filter(_.nonEmpty)
+  def loadModel(s: ServerEditModel) = {
+    server_name.setText(s.name.getOrElse(""))
+    server_host.setText(s.hostname.getOrElse(""))
     port.setText("" + s.port)
     ssl.setChecked(s.ssl)
     sasl.setChecked(s.sasl)
     autoconnect.setChecked(s.autoconnect)
-    nickname.setText(s.nickname)
-    altnick.setText(s.altnick)
-    realname.setText(s.realname)
-    username.setText(s.username)
-    password.setText(s.password)
+    nickname.setText(s.nickname.getOrElse(""))
+    altnick.setText(s.altnick.getOrElse(""))
+    realname.setText(s.realname.getOrElse(""))
+    username.setText(s.username.getOrElse(""))
+    password.setText(s.password.getOrElse(""))
     autojoin.setText(s.autojoin.getOrElse(""))
     autorun.setText(s.autorun.getOrElse(""))
   }
@@ -202,12 +246,13 @@ class ServerSetupFragment extends Fragment {
   override def onOptionsItemSelected(item: MenuItem) = {
     item.getItemId match {
       case R.id.save_server =>
-        val s = server
-        if (s.valid) {
-          if (s.id == -1)
-            manager.addServer(s)
-          else
-            manager.updateServer(s)
+        if (model.valid) {
+          model.asData.foreach { data =>
+            if (model.id == -1)
+              manager.addServer(data)
+            else
+              manager.updateServer(data)
+          }
           getActivity.finish()
           hideIME()
         } else {
@@ -225,16 +270,34 @@ class ServerSetupFragment extends Fragment {
 
   override def onCreateView(inflater: LayoutInflater,
                             container: ViewGroup, bundle: Bundle): View = {
-    val l = layout
     for {
       args <- getArguments.?
       id = args.getLong(ServerSetupActivity.EXTRA_SERVER, -1)
       s <- Config.servers.now.find(_.id == id) if id != -1
     } {
       if (bundle == null)
-        server = s
+        model = ServerEditModel.fromData(s.data)
     }
-    l
+    bundle.?.foreach(b =>
+      model = b.getSerializable(EXTRA_MODEL).asInstanceOf[ServerEditModel].?.getOrElse(ServerEditModel.empty))
+    loadModel(model)
+
+    server_name.onTextChange(s => model = model.copy(name = sanitize(s)))
+    server_host.onTextChange(s => model = model.copy(hostname = sanitize(s)))
+    port.onTextChange(s =>
+      model = model.copy(port = Try(s.toString.trim.toInt).toOption.getOrElse(0)))
+    ssl.onCheckedChange0(model = model.copy(ssl = ssl.isChecked))
+    sasl.onCheckedChange0(model = model.copy(sasl = sasl.isChecked))
+    autoconnect.onCheckedChange0(model = model.copy(autoconnect = autoconnect.isChecked))
+    nickname.onTextChange(s => model = model.copy(nickname = sanitize(s)))
+    altnick.onTextChange(s => model = model.copy(altnick = sanitize(s)))
+    realname.onTextChange(s => model = model.copy(realname = sanitize(s)))
+    username.onTextChange(s => model = model.copy(username = sanitize(s)))
+    password.onTextChange(s => model = model.copy(password = sanitize(s)))
+    autojoin.onTextChange(s => model = model.copy(autojoin = sanitize(s)))
+    autorun.onTextChange(s => model = model.copy(autorun = sanitize(s)))
+
+    layout
   }
 
 }

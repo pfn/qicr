@@ -188,7 +188,7 @@ object MessageAdapter extends EventBus.RefOwner {
   }
   def messageLayout(implicit ctx: Activity) = {
     import ViewGroup.LayoutParams._
-    c[AbsListView](w[TextView] >>=
+    c[AbsListView](w[TextView] >>= id(android.R.id.text1) >>=
       lp(MATCH_PARENT, WRAP_CONTENT) >>=
       kestrel { tv =>
         tv.setLinksClickable(true)

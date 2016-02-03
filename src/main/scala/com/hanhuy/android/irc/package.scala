@@ -2,11 +2,12 @@ package com.hanhuy.android
 
 import android.annotation.TargetApi
 import android.app.Activity
+import android.text.{Editable, TextWatcher}
 import android.view.View.OnAttachStateChangeListener
 import android.view.{View, ViewTreeObserver}
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view.inputmethod.InputMethodManager
-import android.widget.AbsListView
+import android.widget.{TextView, AbsListView}
 import android.widget.AbsListView.OnScrollListener
 
 /**
@@ -63,5 +64,15 @@ package object irc {
         }
         override def onViewAttachedToWindow(v: View) = ()
       })
+  }
+
+  implicit class TextViewOnTextChange(val tv: TextView) extends AnyVal {
+    @inline def onTextChange[A](f: CharSequence => A) = tv.addTextChangedListener(new TextWatcher {
+      override def beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) = ()
+
+      override def onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) = f(s)
+
+      override def afterTextChanged(s: Editable) = ()
+    })
   }
 }

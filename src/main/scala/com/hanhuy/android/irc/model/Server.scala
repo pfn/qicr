@@ -1,8 +1,7 @@
 package com.hanhuy.android.irc.model
 
-import com.hanhuy.android.common._
-
 import android.content.ContentValues
+import com.hanhuy.android.irc.Config
 import com.hanhuy.android.irc.model.BusEvent.ServerMessage
 import com.hanhuy.android.common.{UiBus, ServiceBus}
 import rx.Var
@@ -27,11 +26,75 @@ object Server {
     }
     fmt format lag
   }
+  object ServerData {
+    val EMPTY = "UNINITIALIZED"
+    def empty = ServerData(-1, EMPTY, EMPTY, EMPTY, EMPTY)
+  }
+  case class ServerData(id: Long,
+                        name: String,
+                        hostname: String,
+                        nickname: String,
+                        altnick: String,
+                        port: Int = 6667,
+                        realname: String = "stronger, better, qicr",
+                        username: String = "qicruser",
+                        ssl: Boolean = false,
+                        autoconnect: Boolean = false,
+                        password: Option[String] = None,
+                        sasl: Boolean = false,
+                        autorun: Option[String] = None,
+                        autojoin: Option[String] = None
+                       ) {
+    def values: ContentValues = {
+      val values = new ContentValues
+      values.put(Config.FIELD_NAME,        name)
+      values.put(Config.FIELD_AUTOCONNECT, autoconnect)
+      values.put(Config.FIELD_HOSTNAME,    hostname)
+      values.put(Config.FIELD_PORT,        new java.lang.Integer(port))
+      values.put(Config.FIELD_SSL,         ssl)
+      values.put(Config.FIELD_NICKNAME,    nickname)
+      values.put(Config.FIELD_ALTNICK,     altnick)
+      values.put(Config.FIELD_USERNAME,    username)
+      values.put(Config.FIELD_PASSWORD,    password.orNull)
+      values.put(Config.FIELD_REALNAME,    realname)
+      values.put(Config.FIELD_AUTOJOIN,    autojoin.orNull)
+      values.put(Config.FIELD_AUTORUN,     autorun.orNull)
+
+      values.put(Config.FIELD_LOGGING,     false)
+      values.put(Config.FIELD_USESASL,     sasl)
+      values.put(Config.FIELD_USESOCKS,    false)
+      values
+    }
+  }
 }
 class Server extends MessageAppender with Ordered[Server] {
 
   import Server._
   val messages = new MessageAdapter(null)
+  private[this] var _data = ServerData.empty
+  def data = _data
+  def data_=(d: ServerData) = {
+    _data = d
+    if (state.now != Server.CONNECTED)
+      currentNick = d.nickname
+    UiBus.send(BusEvent.ServerChanged(this))
+  }
+  var currentNick = data.nickname
+
+  def name = data.name
+  def id = data.id
+  def altnick = data.altnick
+  def nickname = data.nickname
+  def port = data.port
+  def hostname = data.hostname
+  def password = data.password
+  def realname = data.realname
+  def ssl = data.ssl
+  def username = data.username
+  def autoconnect = data.autoconnect
+  def sasl = data.sasl
+  def autorun = data.autorun
+  def autojoin = data.autojoin
 
   override def clear() = messages.clear()
 
@@ -45,100 +108,12 @@ class Server extends MessageAppender with Ordered[Server] {
     UiBus.send(BusEvent.ServerChanged(this))
   }
 
-  var id: Long = -1
-  var name: String = _
-
-  var autoconnect = true
-
-  var hostname: String = _
-  var port = 6667
-  var ssl = false
-  var logging = false
-
-  var nickname: String = _
-  var altnick: String = _
-  var username: String = "qicruser"
-  var realname: String = "strong faster qicr"
-  var _password: String = _
-  def password = _password
-  def password_=(p: String) = _password = p.?.find(_.trim.nonEmpty).orNull
-
-  var _autorun: String = _
-  import com.hanhuy.android.irc._
-  def autorun = _autorun.?
-  def autorun_=(a: String) = _autorun = a.?.find(_.trim.nonEmpty).orNull
-
-  var _autojoin: String = _
-  def autojoin = _autojoin.?
-  def autojoin_=(a: String) = _autojoin = a.?.find(_.trim.nonEmpty).orNull
-
-  var socks = false
-  var socksHost: String = _
-  var socksPort: Int = _
-  var socksUser: String = _
-  var socksPass: String = _
-
-  var sasl = false
-  var saslUser: String = _
-  var saslPass: String = _
-
   var currentPing: Option[Long] = None
   val currentLag = Var(0)
 
-  var currentNick = nickname
-  override def toString = name
+  override def toString = data.name
 
-  def blank(s: String) : Boolean = s.?.forall(_.trim.isEmpty)
-  def valid: Boolean = {
-    var valid = true
-    valid = valid && !blank(name)
-    valid = valid && !blank(hostname)
-    valid = valid && port > 0
-    valid = valid && !blank(nickname)
-    valid = valid && (!sasl || (!blank(username) && !blank(password)))
-    if (valid && !blank(nickname) && blank(altnick))
-      altnick = nickname + "_"
-    valid
-  }
-  def values: ContentValues = {
-    val values = new ContentValues
-    values.put(Config.FIELD_NAME,        name)
-    values.put(Config.FIELD_AUTOCONNECT, autoconnect)
-    values.put(Config.FIELD_HOSTNAME,    hostname)
-    values.put(Config.FIELD_PORT,        new java.lang.Integer(port))
-    values.put(Config.FIELD_SSL,         ssl)
-    values.put(Config.FIELD_NICKNAME,    nickname)
-    values.put(Config.FIELD_ALTNICK,     altnick)
-    values.put(Config.FIELD_USERNAME,    username)
-    values.put(Config.FIELD_PASSWORD,    password)
-    values.put(Config.FIELD_REALNAME,    realname)
-    values.put(Config.FIELD_AUTOJOIN,    autojoin.orNull)
-    values.put(Config.FIELD_AUTORUN,     autorun.orNull)
-
-    values.put(Config.FIELD_LOGGING,     logging)
-    values.put(Config.FIELD_USESASL,     sasl)
-    values.put(Config.FIELD_USESOCKS,    socks)
-    values
-  }
-
-  def copy(other: Server): Unit = {
-    id = other.id
-    name = other.name
-    hostname = other.hostname
-    autoconnect = other.autoconnect
-    port = other.port
-    ssl = other.ssl
-    nickname = other.nickname
-    altnick = other.altnick
-    realname = other.realname
-    username = other.username
-    password = other.password
-    autojoin = other.autojoin.orNull
-    autorun = other.autorun.orNull
-    logging = other.logging
-    sasl = other.sasl
-    socks = other.socks
-  }
+  def values = data.values
 
   override def equals(o: Any): Boolean = o match {
     case s: Server => id == s.id
