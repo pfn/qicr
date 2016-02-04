@@ -386,28 +386,24 @@ case class NickClick(nick: String) extends ClickableSpan {
         // TODO refactor this callback
         HoneycombSupport.startNickActionMode(nick) { item =>
           val manager = IrcManager.instance.get
-          val R_id_nick_start_chat = R.id.nick_start_chat
-          val R_id_nick_whois = R.id.nick_whois
-          val R_id_nick_ignore = R.id.nick_ignore
-          val R_id_nick_log = R.id.channel_log
           item.getItemId match {
-            case R_id_nick_log =>
+            case R.id.channel_log =>
               a.startActivity(MessageLogActivity.createIntent(manager.lastChannel.get, nick))
               a.overridePendingTransition(
                 R.anim.slide_in_left, R.anim.slide_out_right)
-            case R_id_nick_whois =>
+            case R.id.nick_whois =>
               val proc = CommandProcessor(a, null)
               proc.channel = manager.lastChannel
               proc.WhoisCommand.execute(Some(nick))
-            case R_id_nick_ignore => ()
+            case R.id.nick_ignore => ()
               val proc = CommandProcessor(a, null)
               proc.channel = manager.lastChannel
               if (Config.Ignores(nick))
                 proc.UnignoreCommand.execute(Some(nick))
               else
                 proc.IgnoreCommand.execute(Some(nick))
-            case R_id_nick_start_chat =>
-              manager.startQuery(manager.lastChannel.get.server, nick)
+            case R.id.nick_start_chat =>
+              manager.lastChannel.foreach(c => manager.startQuery(c.server, nick))
           }
           ()
         }

@@ -636,6 +636,12 @@ extends Activity with TypedFindView with ActivityResultManager {
       if (!Settings.get(Settings.SHOW_NICK_COMPLETE))
         nickcomplete.setVisibility(View.GONE)
 
+      withAppender {
+        case q: Query =>
+          nickcomplete.setVisibility(View.GONE)
+        case _ =>
+      }
+
       if (!Settings.get(Settings.SHOW_SPEECH_REC))
         speechrec.setVisibility(View.GONE)
     } getOrElse {
