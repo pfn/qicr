@@ -223,10 +223,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
           }
         } >>= kitkatPaddingRight
       ) >>= clickable >>=
-        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { v =>
-        if (iota.v(21))
-          v.setElevation(12.dp)
-      },
+        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= condK(iota.v(21) ? elevation(12.dp))
+      ,
       uparrow.! >>= imageResource(
         resolveAttr(R.attr.qicrInputHistoryIcon, _.resourceId)) >>=
         imageScale(ImageView.ScaleType.CENTER) >>=
