@@ -168,8 +168,9 @@ class IrcManager extends EventBus.RefOwner {
           }
           if (delta > 2.minutes.toMillis) {
             // automatically reconnect if ping gets over 120s
-            disconnect(server, None, true)
-            connect(server)
+            disconnect(server, None, true).onComplete { case _ =>
+              connect(server)
+            }
           } else if (delta > server.currentLag.now)
             server.currentLag() = delta.toInt
         }
@@ -535,32 +536,44 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   val connReceiver = new BroadcastReceiver {
+
     // convoluted because this broadcast gets spammed  :-/
     // only take a real action on connectivity if net info has changed
     case class NetInfo(typ: String, name: String)
+    val EmptyNetInfo = NetInfo("", "")
+
     // this broadcast is sticky...
     var hasRunOnce = false
-    var lastConnectedInfo = NetInfo("", "")
+    var lastConnectedInfo = EmptyNetInfo
+
+    var disconnections: Future[_] = Future.successful(())
+
     def onReceive(c: Context, intent: Intent) {
       intent.getAction match {
         case ConnectivityManager.CONNECTIVITY_ACTION =>
           val cmm = c.systemService[ConnectivityManager]
           val info = cmm.getActiveNetworkInfo.?
-          val inf = info.fold(NetInfo("",""))(inf =>
+          val inf = info.fold(EmptyNetInfo)(inf =>
             NetInfo(inf.getTypeName, inf.getExtraInfo))
           val connectivity = !intent.getBooleanExtra(
             ConnectivityManager.EXTRA_NO_CONNECTIVITY, false) &&
             info.exists(_.isConnected)
-          if (_running || (System.currentTimeMillis - lastRunning) < 15000) {
-            if (hasRunOnce && (!connectivity || lastConnectedInfo != inf))
-              getServers foreach (disconnect(_, None, true))
-            if (hasRunOnce && connectivity && lastConnectedInfo != inf) {
-              getServers filter { _.autoconnect } foreach connect
+          if (hasRunOnce && (_running || (System.currentTimeMillis - lastRunning) < 15000)) {
+            if (!connectivity || lastConnectedInfo != inf) {
+              val fs = Future.sequence(getServers map (disconnect(_, None, true)))
+              // type inference error requires intermediate assignment
+              disconnections = fs
+            }
+            if (connectivity && lastConnectedInfo != inf) {
+              disconnections.onComplete { case _ =>
+                getServers filter (_.autoconnect) foreach connect
+                disconnections = Future.successful(())
+              }
               nm.cancel(DISCON_ID)
             }
+            lastConnectedInfo = if (connectivity) inf else EmptyNetInfo
+            hasRunOnce = true
           }
-          lastConnectedInfo = if (connectivity) inf else NetInfo("", "")
-          hasRunOnce = true
       }
     }
   }
