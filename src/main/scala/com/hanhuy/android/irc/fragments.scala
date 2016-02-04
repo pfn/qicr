@@ -50,7 +50,7 @@ extends Fragment with EventBus.RefOwner {
       if (v(19)) l.setClipToPadding(false)
       l.setDrawSelectorOnTop(true)
       if (!getActivity.isFinishing)
-        l.setAdapter(adapter.get)
+        adapter.foreach(l.setAdapter)
       l.scrollStateChanged((v, s) => {
         import OnScrollListener._
         if (s == SCROLL_STATE_TOUCH_SCROLL || s == SCROLL_STATE_FLING) {
