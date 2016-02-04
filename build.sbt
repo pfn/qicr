@@ -9,7 +9,7 @@ versionCode := {
   versionName.value.map { v =>
     val dashIdx = v.indexOf("-")
     val commit = if (dashIdx != -1)
-      v.charAt(dashIdx + 1).toString.toInt
+      v.substring(dashIdx + 1, v.indexOf("-", dashIdx + 1)).toInt
     else 0
     val parts = v.takeWhile(_ != '-') split "\\." map (p =>
       util.Try(p.toInt).toOption.getOrElse(0))
@@ -40,7 +40,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions-appcompat" % "1.6",
   "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
   "com.hanhuy.android" %% "scala-common" % "1.2",
-  "com.hanhuy.android" %% "iota" % "0.9.1-SNAPSHOT",
+  "com.hanhuy.android" %% "iota" % "0.9.1",
   "com.hanhuy" % "sirc" % "1.1.6-pfn.2",
   "ch.acra" % "acra" % "4.8.0",
   "com.lihaoyi" %% "scalarx" % "0.3.0",
