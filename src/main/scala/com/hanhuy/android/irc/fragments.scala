@@ -283,17 +283,32 @@ class ServerMessagesFragment(_server: Option[Server]) extends MessagesFragment {
   }
 
   override def onOptionsItemSelected(item: MenuItem) : Boolean = {
-    if (R.id.server_close == item.getItemId) {
-      getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
-      true
-    } else {
-      // need to look up server in case it was edited
-      val r = getActivity.servers.onServerMenuItemClicked(item, for {
-        s <- server
-        n <- Config.servers.now.find(_.id == s.id)
-      } yield n)
-      if (r) HoneycombSupport.invalidateActionBar()
-      r
+    item.getItemId match {
+      case R.id.server_close =>
+        getActivity.adapter.removeTab(getActivity.adapter.getItemPosition(this))
+        true
+      case R.id.server_connect =>
+        server.fold{
+          Toast.makeText(getActivity, R.string.server_not_selected,
+            Toast.LENGTH_SHORT).show()
+        }(manager.connect)
+        true
+      case R.id.server_disconnect =>
+        server.fold {
+          Toast.makeText(getActivity, R.string.server_not_selected,
+            Toast.LENGTH_SHORT).show()
+        }(manager.disconnect(_))
+        true
+      case R.id.server_options =>
+        ServerSetupActivity.start(getActivity, server)
+        true
+      case R.id.server_messages =>
+        server.fold {
+          Toast.makeText(getActivity, R.string.server_not_selected,
+            Toast.LENGTH_SHORT).show()
+        }(getActivity.adapter.addServer)
+        true
+      case _ => false
     }
   }
 }

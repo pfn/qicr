@@ -1,13 +1,13 @@
 package com.hanhuy.android.irc
 
 import android.app.{Activity, AlertDialog}
-import android.support.v7.widget.Toolbar.OnMenuItemClickListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
+import com.hanhuy.android.appcompat.extensions.ExtensionOfToolbar
 
 import android.os.Bundle
-import android.support.v4.app.{FragmentTransaction, FragmentManager, Fragment}
+import android.support.v4.app.Fragment
 import android.view._
 import android.support.v7.widget.{CardView, LinearLayoutManager, RecyclerView, Toolbar}
 import android.widget._
@@ -25,13 +25,10 @@ import scala.concurrent.{Promise, Future}
   * @author pfnguyen
   */
 
-class ServersFragment extends Fragment
-  with EventBus.RefOwner {
+class ServersFragment extends Fragment with EventBus.RefOwner {
   def activity = getActivity.asInstanceOf[MainActivity]
   val manager = IrcManager.init()
   lazy val adapter = ServersAdapter(getActivity)
-  var serverMessagesFragmentShowing: Option[String] = None
-
   def server = selectedItem.map(manager.getServers)
 
   lazy val emptyView = new LinearLayout(getActivity)
@@ -58,9 +55,19 @@ class ServersFragment extends Fragment
   }
 
   UiBus += {
-    case e: BusEvent.ServerAdded   => addListener(e.server)
-    case e: BusEvent.ServerChanged => changeListener(e.server)
-    case e: BusEvent.ServerRemoved => removeListener(e.server)
+    case BusEvent.ServerAdded(server)   =>
+      emptyView.setVisibility(View.GONE)
+      recycler.setVisibility(View.VISIBLE)
+      adapter.notifyItemInserted(manager.getServers.indexOf(server))
+    case BusEvent.ServerChanged(server) =>
+      adapter.notifyItemChanged(manager.getServers.indexOf(server))
+    case BusEvent.ServerRemoved(server) =>
+      if (Config.servers.now.isEmpty) {
+        emptyView.setVisibility(View.VISIBLE)
+        recycler.setVisibility(View.GONE)
+      }
+      selectedItem = None
+      adapter.notifyDataSetChanged()
   }
 
   override def onCreate(bundle: Bundle) {
@@ -68,101 +75,9 @@ class ServersFragment extends Fragment
     setHasOptionsMenu(true)
   }
 
-  override def onResume() {
-    super.onResume()
-    HoneycombSupport.menuItemListener = Option(onServerMenuItemClicked)
-  }
+  override def onCreateView(inflater: LayoutInflater, container: ViewGroup, bundle: Bundle) = layout.perform()
 
-  override def onCreateView(inflater: LayoutInflater,
-                            container: ViewGroup, bundle: Bundle) = {
-    val v = layout.perform()
-    v
-  }
-
-  var selectedItem = Option.empty[Int]
-
-  def clearServerMessagesFragment(mgr: FragmentManager,
-                                  tx: FragmentTransaction = null) {
-    def withTx(txn: FragmentTransaction) = {
-      for {
-        name <- serverMessagesFragmentShowing
-        f    <- mgr.findFragmentByTag(name).?
-      } {
-        txn.hide(f)
-      }
-      txn
-    }
-    tx.?.fold(withTx(mgr.beginTransaction()).commit(): Any)(withTx)
-  }
-
-  def changeListener(server: Server) {
-    adapter.notifyItemChanged(manager.getServers.indexOf(server))
-  }
-
-  def removeListener(server: Server) {
-    if (Config.servers.now.isEmpty) {
-      emptyView.setVisibility(View.VISIBLE)
-      recycler.setVisibility(View.GONE)
-    }
-    selectedItem = None
-    adapter.notifyDataSetChanged()
-  }
-
-  def addListener(server: Server) {
-    emptyView.setVisibility(View.GONE)
-    recycler.setVisibility(View.VISIBLE)
-    adapter.notifyItemInserted(manager.getServers.indexOf(server))
-  }
-
-  def onServerMenuItemClicked(item: MenuItem, server: Option[Server]):
-  Boolean = {
-    item.getItemId match {
-      case R.id.server_delete =>
-        server match {
-          case Some(s) =>
-            val builder = new AlertDialog.Builder(getActivity)
-            val mgr = getActivity.getSupportFragmentManager
-            clearServerMessagesFragment(mgr)
-            builder.setTitle(R.string.server_confirm_delete)
-            builder.setMessage(getActivity.getString(
-              R.string.server_confirm_delete_message,
-              s.name))
-            builder.setPositiveButton(R.string.yes,
-              () => {
-                manager.deleteServer(s)
-                ()
-              })
-            builder.setNegativeButton(R.string.no, null)
-            builder.create().show()
-          case None =>
-            Toast.makeText(getActivity,
-              R.string.server_not_selected, Toast.LENGTH_SHORT).show()
-        }
-        true
-      case R.id.server_connect =>
-        server.fold{
-          Toast.makeText(getActivity, R.string.server_not_selected,
-            Toast.LENGTH_SHORT).show()
-        }(manager.connect)
-        true
-      case R.id.server_disconnect =>
-        server.fold {
-          Toast.makeText(getActivity, R.string.server_not_selected,
-            Toast.LENGTH_SHORT).show()
-        }(manager.disconnect(_))
-        true
-      case R.id.server_options =>
-        ServerSetupActivity.start(getActivity, server)
-        true
-      case R.id.server_messages =>
-        server.fold {
-          Toast.makeText(getActivity, R.string.server_not_selected,
-            Toast.LENGTH_SHORT).show()
-        }(activity.adapter.addServer)
-        true
-      case _ => false
-    }
-  }
+  private[this] var selectedItem = Option.empty[Int]
 
   override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
     inflater.inflate(R.menu.servers_menu, menu)
@@ -219,46 +134,41 @@ class ServersFragment extends Fragment
         menu.removeItem(R.id.server_messages)
       }
 
-      toolbar.setOnMenuItemClickListener(new OnMenuItemClickListener {
-        override def onMenuItemClick(menuItem: MenuItem) = {
-          menuItem.getItemId match {
-            case R.id.server_messages =>
-              activity.adapter.addServer(server)
-              true
-            case R.id.server_connect =>
-              if (server.state.now == Server.DISCONNECTED || server.state.now == Server.INITIAL) {
-                manager.connect(server)
-              } else {
-                manager.disconnect(server, None, false).onComplete { case _ =>
-                  manager.connect(server)
-                }
-              }
-              true
-            case R.id.server_disconnect =>
-              manager.disconnect(server)
-              true
-            case R.id.server_options =>
-              ServerSetupActivity.start(getActivity, server.?)
-              true
-            case R.id.server_delete =>
-              val builder = new AlertDialog.Builder(getActivity)
-              val mgr = getActivity.getSupportFragmentManager
-              clearServerMessagesFragment(mgr)
-              builder.setTitle(R.string.server_confirm_delete)
-              builder.setMessage(getActivity.getString(
-                R.string.server_confirm_delete_message,
-                server.name))
-              builder.setPositiveButton(R.string.yes,
-                () => {
-                  manager.deleteServer(server)
-                  ()
-                })
-              builder.setNegativeButton(R.string.no, null)
-              builder.create().show()
-              true
-            case _ => false
+      toolbar.onMenuItemClick(_.getItemId match {
+        case R.id.server_messages =>
+          activity.adapter.addServer(server)
+          true
+        case R.id.server_connect =>
+          if (server.state.now == Server.DISCONNECTED || server.state.now == Server.INITIAL) {
+            manager.connect(server)
+          } else {
+            manager.disconnect(server, None, false).onComplete { case _ =>
+              manager.connect(server)
+            }
           }
-        }
+          true
+        case R.id.server_disconnect =>
+          manager.disconnect(server)
+          true
+        case R.id.server_options =>
+          ServerSetupActivity.start(getActivity, server.?)
+          true
+        case R.id.server_delete =>
+          val builder = new AlertDialog.Builder(getActivity)
+          val mgr = getActivity.getSupportFragmentManager
+          builder.setTitle(R.string.server_confirm_delete)
+          builder.setMessage(getActivity.getString(
+            R.string.server_confirm_delete_message,
+            server.name))
+          builder.setPositiveButton(R.string.yes,
+            () => {
+              manager.deleteServer(server)
+              ()
+            })
+          builder.setNegativeButton(R.string.no, null)
+          builder.create().show()
+          true
+        case _ => false
       })
 
       (IO(status) >>= imageResource(server.state.now match {
