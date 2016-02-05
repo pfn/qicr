@@ -88,6 +88,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
   type RLP = RelativeLayout.LayoutParams
+  def buttonElevation[V <: View]: Kestrel[V] = condK(v(21) ? elevation(2.dp))
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
     IO(qicrdrawers)(
       IO(tabs) >>= id(Id.tabs) >>=
@@ -104,13 +105,14 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       IO(buttonLayout)(
         IO(nickcomplete) >>=
           imageResource(resolveAttr(R.attr.qicrNickCompleteIcon, _.resourceId)) >>=
-            hook0.click(IO { proc.nickComplete(input) }) >>= gone >>= buttonTweaks,
+            hook0.click(IO { proc.nickComplete(input) }) >>= gone >>= buttonTweaks >>=
+            buttonElevation,
         IO(newmessages) >>=
           imageResource(resolveAttr(R.attr.qicrNewMessageIcon, _.resourceId)) >>=
           gone >>= hook0.click(IO {
           qicrdrawers.openDrawer(toolbar)
-        }) >>= buttonTweaks,
-        IO(input) >>=
+        }) >>= buttonTweaks >>= buttonElevation,
+        IO(input) >>= id(Id.input) >>=
           lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4.dp)) >>=
           hint(R.string.input_placeholder) >>= inputTweaks >>= invisible >>=
           padding(left = 8 dp, right = 8 dp) >>=
@@ -118,14 +120,14 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
             e.setOnEditorActionListener(proc.onEditorActionListener _)
             e.setOnKeyListener(proc.onKeyListener _)
             e.addTextChangedListener(proc.TextListener)
-          },
+          } >>= buttonElevation,
         IO(send) >>=
           imageResource(resolveAttr(R.attr.qicrSendIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
-          }) >>= buttonTweaks >>= gone,
-        IO(speechrec) >>=
+          }) >>= buttonTweaks >>= gone >>= buttonElevation,
+        IO(speechrec) >>= buttonElevation >>=
           imageResource(resolveAttr(R.attr.qicrSpeechRecIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
