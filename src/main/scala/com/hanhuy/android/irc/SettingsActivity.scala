@@ -7,7 +7,8 @@ import android.support.v7.preference.{ListPreference, Preference, PreferenceScre
 import android.text.{Editable, TextWatcher}
 import android.provider.{Settings => ASettings}
 import android.util.AttributeSet
-import android.widget.{Toast, EditText}
+import android.view.ViewGroup
+import android.widget.{LinearLayout, Toast, EditText}
 import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
 
 import android.app.AlertDialog
@@ -53,6 +54,7 @@ object Settings {
   val NAVIGATION_MODE_TABS = "Tabs"
   val NAVIGATION_MODE_DRAWER = "Drawer"
 
+  val NICK_COLORS = StringSetting("nick_color_list", null)
   val CHARSET = StringSetting("irc_charset", "UTF-8")
   val FONT_SIZE = IntSetting("font_size", default = -1)
   val FONT_NAME = StringSetting("font_name", null)
@@ -118,9 +120,21 @@ extends SharedPreferences.OnSharedPreferenceChangeListener {
 // android3.0+
 // now actionbaractivity for material on <5.0
 class SettingsFragmentActivity extends AppCompatActivity {
+  import Tweaks._
+  import ViewGroup.LayoutParams._
+  import com.hanhuy.android.appcompat.extensions._
   override def onCreate(bundle: Bundle) {
+    setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.SettingTheme_Light else R.style.SettingTheme_Dark)
     super.onCreate(bundle)
-    setContentView((w[android.widget.FrameLayout] >>= id(Id.content)).perform())
+    val toolbar = newToolbar
+    toolbar.setNavigationIcon(resolveAttr(R.attr.qicrCloseIcon, _.resourceId))
+    setSupportActionBar(toolbar)
+    getSupportActionBar.setTitle(R.string.settings)
+    toolbar.navigationOnClick0(finish())
+    setContentView(
+      (l[LinearLayout](
+        toolbar.! >>= lp(MATCH_PARENT, actionBarHeight) >>= condK(v(21) ? elevation(4.dp))
+      ) >>= vertical >>= id(Id.content)).perform())
     if (getSupportFragmentManager.findFragmentByTag("settings fragment") == null) {
       val tx = getSupportFragmentManager.beginTransaction()
       tx.add(Id.content, new SettingsFragment, "settings fragment")
@@ -205,6 +219,9 @@ extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResu
         val ringtone = data.?.flatMap(_.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI).asInstanceOf[Uri].?)
         setRingtone(ringtone.fold("")(_.toString))
       }
+      true
+    } else if (preference.getKey == Settings.NICK_COLORS.key) {
+      startActivity(new Intent(getActivity, classOf[ColorPreferenceActivity]))
       true
     } else {
       super.onPreferenceTreeClick(preference)

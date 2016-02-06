@@ -8,7 +8,10 @@
         <item name="android:editTextBackground">@drawable/input_background_dark</item>
         <item name="android:imageButtonStyle">@style/Widget.ImageButton.Dark</item>
     </style>
-    <style name="SettingTheme" parent="Base.SettingTheme">
+    <style name="SettingTheme.Dark" parent="Base.AppTheme.Dark">
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
+    </style>
+    <style name="SettingTheme.Light" parent="Base.AppTheme.Light">
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
     </style>
 </resources>

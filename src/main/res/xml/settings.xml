@@ -2,6 +2,11 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:qicr="http://schemas.android.com/apk/res-auto">
     <PreferenceCategory android:title="@string/pref_category_interface">
+        <Preference
+            android:key="nick_color_list"
+            android:persistent="false"
+            android:title="Nick Colors"
+            android:summary="Choose your readable color palette"/>
         <CheckBoxPreference
             android:key="ui_show_nick_complete"
             android:title="@string/pref_show_nick_complete_title"

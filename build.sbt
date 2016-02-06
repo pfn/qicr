@@ -36,9 +36,8 @@ unmanagedJars in Compile ~= { _ filterNot (
   _.data.getName startsWith "android-support-v4") }
 
 libraryDependencies ++= Seq(
-  "com.hanhuy.android" %% "scala-conversions" % "1.6",
-  "com.hanhuy.android" %% "scala-conversions-appcompat" % "1.6",
-  "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
+  "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
+  "com.hanhuy.android" %% "scala-conversions-appcompat" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-common" % "1.2",
   "com.hanhuy.android" %% "iota" % "0.9.1",
   "com.hanhuy" % "sirc" % "1.1.6-pfn.2",

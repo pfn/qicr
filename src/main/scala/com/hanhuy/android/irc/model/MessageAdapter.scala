@@ -38,11 +38,12 @@ object MessageAdapter extends EventBus.RefOwner {
     Application.context.getAssets, "DejaVuSansMono.ttf")
   private var fontSetting = Settings.get(Settings.FONT_NAME).? flatMap (
     n => Try(Typeface.createFromFile(n)).toOption)
-  val NICK_COLORS: Array[Int] = Array(
-    0xfff44336, 0xffe91e63, 0xff9c27b0, 0xff7E57C2, 0xff5c6bc0, 0xff2196f3,
-    0xff03a9f4, 0xff00bcd4, 0xff009688, 0xff4caf50, 0xff8bc34a, 0xffAFB42B,
-    0xffF9A825, 0xffffc107, 0xffff9800, 0xffff5722, 0xff8d6e63, 0xff607d8b
-  )
+  private var nickColors = Option.empty[List[Int]]
+  def NICK_COLORS = nickColors.getOrElse {
+    val cs = ColorPreferenceActivity.colorSetting
+    nickColors = cs.?
+    cs
+  }
 
   val TAG = "MessageAdapter"
   val DEFAULT_MAXIMUM_SIZE = 256
@@ -204,6 +205,8 @@ object MessageAdapter extends EventBus.RefOwner {
         fontSetting = Try(Typeface.createFromFile(
           Settings.get(Settings.FONT_NAME))).toOption
       }
+      if (k == Settings.NICK_COLORS)
+        nickColors = None
   }
 }
 
@@ -233,6 +236,8 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
       notifyDataSetChanged()
     } else if (k == Settings.FONT_SIZE) {
       size = Settings.get(Settings.FONT_SIZE)
+      notifyDataSetChanged()
+    } else if (k == Settings.NICK_COLORS) {
       notifyDataSetChanged()
     }
   }

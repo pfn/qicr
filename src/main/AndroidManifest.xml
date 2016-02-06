@@ -21,12 +21,16 @@
                  android:installLocation="auto">
         <activity
                 android:name=".SettingsFragmentActivity"
-                android:theme="@style/SettingTheme"
+                android:theme="@style/SettingTheme.Dark"
                 android:label="@string/app_name"/>
         <activity
                 android:name=".ServerSetupActivity"
                 android:theme="@style/SetupTheme.Dark"
                 android:windowSoftInputMode="adjustResize"
+                android:label="@string/app_name"/>
+        <activity
+                android:name=".ColorPreferenceActivity"
+                android:theme="@style/SetupTheme.Dark"
                 android:label="@string/app_name"/>
         <activity
                 android:name=".MainActivity"

@@ -17,6 +17,7 @@
         <!-- seems to break autoLink text...
         <item name="android:textAppearanceSmall">@style/TextAppearance.Small</item>
         -->
+        <item name="qicrColorTabStyle">@style/ColorTabs</item>
         <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
         <item name="qicrAddServerIcon">@drawable/ic_add_circle_white_24dp</item>
@@ -52,6 +53,7 @@
         <item name="qicrCardStyle">@style/AppTheme.CardView.Dark</item>
     </style>
     <style name="Base.AppTheme.Light" parent="@style/Theme.AppCompat.Light.NoActionBar">
+        <item name="qicrColorTabStyle">@style/ColorTabs</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
@@ -88,15 +90,14 @@
         <item name="qicrCardStyle">@style/AppTheme.CardView.Light</item>
     </style>
 
-    <style name="Base.SettingTheme" parent="@style/Theme.AppCompat">
-        <item name="colorAccent">#99cc00</item>
-        <item name="colorPrimary">#a4c639</item>
+    <style name="SettingTheme.Dark" parent="Base.AppTheme.Dark">
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+    </style>
+    <style name="SettingTheme.Light" parent="Base.AppTheme.Light">
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
     </style>
     <style name="SetupTheme.Dark" parent="AppTheme.Dark"/>
     <style name="SetupTheme.Light" parent="AppTheme.Light"/>
-    <style name="SettingTheme" parent="Base.SettingTheme">
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
-    </style>
     <style name="AppTheme.CardView.Light" parent="CardView.Light">
         <item name="android:foreground">?android:selectableItemBackground</item>
         <item name="cardUseCompatPadding">true</item>
@@ -118,6 +119,12 @@
 
     <style name="AppTheme.Dark" parent="Base.AppTheme.Dark">
         <item name="actionModeStyle">@style/ActionModeStyle</item>
+    </style>
+    <style name="ColorTabs" parent="Widget.Design.TabLayout">
+        <item name="tabTextAppearance">@style/ColorTabText</item>
+    </style>
+    <style name="ColorTabText" parent="TextAppearance.Design.Tab">
+        <item name="textAllCaps">false</item>
     </style>
 
     <style name="Widget.ImageButton.Dark" parent="@android:style/Widget.ImageButton">
