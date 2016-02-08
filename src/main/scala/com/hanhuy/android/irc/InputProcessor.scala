@@ -661,7 +661,7 @@ sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
 
   object ClearCommand extends Command {
     override def execute(args: Option[String]): Unit = {
-      channel.fold(addCommandError(R.string.error_no_channel))(_.clear())
+      server.orElse(channel).fold(addCommandError(R.string.error_no_channel))(_.clear())
     }
   }
 

@@ -157,7 +157,7 @@ class IrcManager extends EventBus.RefOwner {
         disconnect(s, None, true)
       }
       mconnections.foreach { case (server,c) =>
-        if (server.state.now == Server.CONNECTED) {
+        if (server.state.now == Server.CONNECTED || server.state.now == Server.CONNECTING) {
 
           val now = System.currentTimeMillis
           val pingTime = server.currentPing getOrElse now
@@ -168,6 +168,7 @@ class IrcManager extends EventBus.RefOwner {
           }
           if (delta > 2.minutes.toMillis) {
             // automatically reconnect if ping gets over 120s
+            server += ServerInfo("Disconnecting server due to ping timeout ($delta)")
             disconnect(server, None, true).onComplete { case _ =>
               connect(server)
             }
@@ -321,13 +322,12 @@ class IrcManager extends EventBus.RefOwner {
   def connect(server: Server) {
     log.v("Connecting server: %s", server)
     server.currentPing = None // have to reset the last ping or else it'll get lost
-    if (server.state.now == Server.CONNECTING ||
-      server.state.now == Server.CONNECTED) {
+    if (server.state.now == Server.CONNECTING || server.state.now == Server.CONNECTED) {
     } else {
       server.state() = Server.CONNECTING
       Future(connectServerTask(server))
-      _running = true
     }
+    _running = true
   }
 
   def getServers = Config.servers.now
@@ -560,20 +560,25 @@ class IrcManager extends EventBus.RefOwner {
             info.exists(_.isConnected)
           if (hasRunOnce && (_running || (System.currentTimeMillis - lastRunning) < 15000)) {
             if (!connectivity || lastConnectedInfo != inf) {
+              getServers filter (_.state.now == Server.CONNECTED) foreach (
+                _ += ServerInfo("Disconnecting due to loss of connectivity"))
               val fs = Future.sequence(getServers map (disconnect(_, None, true)))
               // type inference error requires intermediate assignment
               disconnections = fs
             }
             if (connectivity && lastConnectedInfo != inf) {
               disconnections.onComplete { case _ =>
-                getServers filter (_.autoconnect) foreach connect
+                getServers filter (_.autoconnect) foreach { s =>
+                  s += ServerInfo("Connectivity restored, reconnecting...")
+                  connect(s)
+                }
                 disconnections = Future.successful(())
               }
               nm.cancel(DISCON_ID)
             }
             lastConnectedInfo = if (connectivity) inf else EmptyNetInfo
-            hasRunOnce = true
           }
+          hasRunOnce = true
       }
     }
   }

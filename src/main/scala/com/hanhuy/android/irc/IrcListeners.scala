@@ -125,7 +125,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
     manager._connections.get(c) foreach { s =>
       manager.serverDisconnected(s)
       UiBus.run {
-        NotificationCenter += ServerNotification(R.drawable.ic_error_black_24dp, s.name, "Disconnected")
+        NotificationCenter += ServerNotification(R.drawable.ic_error_black_24dp, s.name, Application.context.getString(R.string.server_disconnected))
       }
     }
   }
