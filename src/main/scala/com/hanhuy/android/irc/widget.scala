@@ -464,7 +464,7 @@ extends Activity with TypedFindView with ActivityResultManager {
   lazy val layout = l[FrameLayout](
     l[FrameLayout](
       w[ImageView] >>=
-        imageResource(R.drawable.ic_appicon) >>=
+        k.imageResource(R.drawable.ic_appicon) >>=
         hook0.onClick(IO {
           val launchIntent = new Intent(this, classOf[MainActivity])
           launchIntent.putExtra(IrcManager.EXTRA_SUBJECT,
@@ -481,13 +481,13 @@ extends Activity with TypedFindView with ActivityResultManager {
           tv.setEllipsize(TruncateAt.END)
           tv.setGravity(Gravity.CENTER)
         } >>= padding(left = 48 dp, right = 48 dp)
-    ) >>= lp(MATCH_PARENT, 48 dp) >>= backgroundColor("#77555555"),
-    w[TextView] >>= /* FIXME id(android.R.id.empty) <~ */ gone >>=
+    ) >>= lp(MATCH_PARENT, 48 dp) >>= k.backgroundColor(Color.parseColor("#77555555")),
+    w[TextView] >>= /* FIXME id(android.R.id.empty) <~ */ k.visibility(View.GONE) >>=
       lpK(WRAP_CONTENT, 0)(margins(all = 12 dp)) >>=
       kestrel { tv =>
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
-      } >>= text(R.string.no_messages),
+      } >>= k.text(R.string.no_messages),
     IO(list) >>=
       lpK(MATCH_PARENT, MATCH_PARENT)(margins(top = 48 dp)) >>=
       kestrel { l =>
@@ -507,13 +507,13 @@ extends Activity with TypedFindView with ActivityResultManager {
       } >>= padding(bottom = 48 dp),
     l[LinearLayout](
       IO(nickcomplete) >>= buttonTweaks >>=
-        imageResource(R.drawable.ic_person_pin_white_24dp),
+        k.imageResource(R.drawable.ic_person_pin_white_24dp),
       IO(input) >>= inputTweaks >>=
-        hint(R.string.input_placeholder) >>=
+        k.hint(R.string.input_placeholder) >>=
         lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4 dp)) >>=
         padding(left = 8 dp, right = 8 dp),
       IO(speechrec) >>= buttonTweaks >>=
-        imageResource(R.drawable.ic_mic_white_24dp)
+        k.imageResource(R.drawable.ic_mic_white_24dp)
     ) >>= horizontal >>= lp(MATCH_PARENT, 48 dp, Gravity.BOTTOM)
   ) >>= kestrel { v: FrameLayout =>
     val p = new Point

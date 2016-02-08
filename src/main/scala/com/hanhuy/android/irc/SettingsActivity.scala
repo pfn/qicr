@@ -133,7 +133,7 @@ class SettingsFragmentActivity extends AppCompatActivity {
     toolbar.navigationOnClick0(finish())
     setContentView(
       (l[LinearLayout](
-        toolbar.! >>= lp(MATCH_PARENT, actionBarHeight) >>= condK(v(21) ? elevation(4.dp))
+        toolbar.! >>= lp(MATCH_PARENT, actionBarHeight) >>= condK(v(21) ? k.elevation(4.dp))
       ) >>= vertical >>= id(Id.content)).perform())
     if (getSupportFragmentManager.findFragmentByTag("settings fragment") == null) {
       val tx = getSupportFragmentManager.beginTransaction()

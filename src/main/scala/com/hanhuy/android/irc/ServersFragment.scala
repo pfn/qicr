@@ -36,9 +36,9 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
   lazy val layout = {
     l[FrameLayout](
       emptyView.!(
-        w[TextView] >>= text(R.string.server_none) >>= lpK(MATCH_PARENT, WRAP_CONTENT, 0)(
-          margins(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))) >>= textGravity(Gravity.CENTER),
-        w[Button] >>= id(R.id.add_server) >>= text(R.string.add_server) >>=
+        w[TextView] >>= k.text(R.string.server_none) >>= lpK(MATCH_PARENT, WRAP_CONTENT, 0)(
+          margins(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))) >>= k.gravity(Gravity.CENTER),
+        w[Button] >>= id(R.id.add_server) >>= k.text(R.string.add_server) >>=
           hook0.onClick(IO {
             ServerSetupActivity.start(getActivity)
           }) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(margins(
@@ -118,10 +118,8 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
                              ) extends RecyclerView.ViewHolder(view) {
     def bind(server: Server, pos: Int): Unit = {
       implicit val ctx = view.getContext
-      (serverItem.! >>= text(server.name)).perform()
-      (progressBar.! >>= condK(
-        (server.state.now == Server.CONNECTING) ? visible
-          | gone)).perform()
+      (serverItem.! >>= k.text(server.name)).perform()
+      (progressBar.! >>= visGone(server.state.now == Server.CONNECTING)).perform()
 
       val menu = toolbar.getMenu
       menu.clear()
@@ -171,12 +169,12 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
         case _ => false
       })
 
-      (IO(status) >>= imageResource(server.state.now match {
+      (IO(status) >>= k.imageResource(server.state.now match {
         case Server.INITIAL      => android.R.drawable.presence_offline
         case Server.DISCONNECTED => android.R.drawable.presence_busy
         case Server.CONNECTED    => android.R.drawable.presence_online
         case Server.CONNECTING   => android.R.drawable.presence_away
-      }) >>= condK((server.state.now != Server.CONNECTING) ? visible | gone)).perform()
+      }) >>= visGone(server.state.now != Server.CONNECTING)).perform()
 
       (IO(serverLag) >>=
         kestrel { tv =>
@@ -264,10 +262,10 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
             holder.progressBar.! >>=
               lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER) >>=
               padding(left = 6 dp, right = 6 dp) >>= kestrel { p: ProgressBar =>
-              p.setIndeterminate(true) } >>= gone,
+              p.setIndeterminate(true) } >>= k.visibility(View.GONE),
             holder.status.! >>= lp(64 dp, 64 dp, Gravity.CENTER) >>=
-              imageResource(android.R.drawable.presence_offline) >>=
-              imageScale(ImageView.ScaleType.CENTER_INSIDE) >>= padding(left = 6 dp, right = 6 dp) >>=
+              k.imageResource(android.R.drawable.presence_offline) >>=
+              k.scaleType(ImageView.ScaleType.CENTER_INSIDE) >>= padding(left = 6 dp, right = 6 dp) >>=
               id(Id.server_item_status)
           ) >>= kestrel { v: FrameLayout => v.setMeasureAllChildren(true) },
           holder.serverItem.! >>= lp(0, 64 dp, 1) >>=
@@ -281,7 +279,7 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
               tv.setGravity(Gravity.CENTER_VERTICAL)
               tv.setTextAppearance(context, android.R.style.TextAppearance_Small)
             }
-        ) >>= kestrel(_.setGravity(Gravity.CENTER)) >>= lp(MATCH_PARENT, WRAP_CONTENT, Gravity.TOP),
+        ) >>= k.gravity(Gravity.CENTER) >>= lp(MATCH_PARENT, WRAP_CONTENT, Gravity.TOP),
         holder.expandedInfo.!(
           holder.toolbar.! >>= lp(MATCH_PARENT, actionBarHeight) >>= kestrel { t =>
             t.setPopupTheme(resolveAttr(R.attr.qicrToolbarPopupTheme, _.resourceId))
@@ -289,9 +287,9 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
           w[View] >>= lp(MATCH_PARENT, 0, 1),
           holder.input.! >>=
             lpK(MATCH_PARENT, 48.dp)(margins(all = 8.dp)) >>=
-            hint(R.string.input_placeholder) >>= inputTweaks >>= invisible >>=
+            k.hint(R.string.input_placeholder) >>= inputTweaks >>= k.visibility(View.INVISIBLE) >>=
             padding(left = 8 dp, right = 8 dp) >>=
-            backgroundDrawable(inputBackground) >>= kestrel { e =>
+            k.backgroundDrawable(inputBackground) >>= kestrel { e =>
             e.setOnEditorActionListener(activity.proc.onEditorActionListener _)
             e.setOnKeyListener(activity.proc.onKeyListener _)
             e.addTextChangedListener(activity.proc.TextListener)
@@ -302,7 +300,7 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
     }
 
   }
-  def inputBackground = themeAttrs(R.styleable.AppTheme, _.getDrawable(R.styleable.AppTheme_inputBackground))
+  def inputBackground = styleableAttrs(R.styleable.AppTheme, _.getDrawable(R.styleable.AppTheme_inputBackground))
   private[this] var obss = List.empty[Obs]
 
   override def onPause() = {

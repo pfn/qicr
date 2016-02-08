@@ -145,60 +145,60 @@ class ServerSetupFragment extends Fragment {
 
   lazy val layout = c[ViewGroup](l[ScrollView](
     l[TableLayout](
-      IO(header) >>= text("Connection Info"),
+      IO(header) >>= k.text("Connection Info"),
       l[TableRow](
-        label >>= text("Name"),
-        IO(server_name) >>= inputTweaks >>= hint("required") >>= textCapWords
+        label >>= k.text("Name"),
+        IO(server_name) >>= inputTweaks >>= k.hint("required") >>= textCapWords
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
       l[TableRow](
-        label >>= text("Server address"),
-        IO(server_host) >>= inputTweaks >>= hint("required") >>= textUri
+        label >>= k.text("Server address"),
+        IO(server_host) >>= inputTweaks >>= k.hint("required") >>= textUri
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
       l[TableRow](
-        label >>= text("Port"),
-        IO(port) >>= inputTweaks >>= hint("Default: 6667") >>= number
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        w[View],
-        IO(autoconnect) >>= text("Enable Autoconnect")
+        label >>= k.text("Port"),
+        IO(port) >>= inputTweaks >>= k.hint("Default: 6667") >>= number
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
       l[TableRow](
         w[View],
-        IO(ssl) >>= text("Enable SSL")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      IO(header) >>= text("User Info"),
-      l[TableRow](
-        label >>= text("Nickname"),
-        IO(nickname) >>= inputTweaks >>= hint("required")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= text("Alt. nick"),
-        IO(altnick) >>= inputTweaks >>= hint("Default: <Nickname>_")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= text("Real name"),
-        IO(realname) >>= inputTweaks >>= hint("required") >>= textCapWords
+        IO(autoconnect) >>= k.text("Enable Autoconnect")
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
       l[TableRow](
         w[View],
-        IO(sasl) >>= text("SASL authentication")
+        IO(ssl) >>= k.text("Enable SSL")
+      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+      IO(header) >>= k.text("User Info"),
+      l[TableRow](
+        label >>= k.text("Nickname"),
+        IO(nickname) >>= inputTweaks >>= k.hint("required")
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
       l[TableRow](
-        label >>= text("Username"),
-        IO(username) >>= inputTweaks >>= hint("required")
+        label >>= k.text("Alt. nick"),
+        IO(altnick) >>= inputTweaks >>= k.hint("Default: <Nickname>_")
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
       l[TableRow](
-        label >>= text("Password"),
-        IO(password) >>= inputTweaks >>= hint("optional") >>= textPassword
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      IO(header) >>= text("Session Options"),
-      l[TableRow](
-        label >>= text("Auto join"),
-        IO(autojoin) >>= inputTweaks >>= hint("#chan1 key;#chan2")
+        label >>= k.text("Real name"),
+        IO(realname) >>= inputTweaks >>= k.hint("required") >>= textCapWords
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
       l[TableRow](
-        label >>= text("Auto run"),
-        IO(autorun) >>= inputTweaks >>= hint("m pfn hi there;")
+        w[View],
+        IO(sasl) >>= k.text("SASL authentication")
+      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+      l[TableRow](
+        label >>= k.text("Username"),
+        IO(username) >>= inputTweaks >>= k.hint("required")
+      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+      l[TableRow](
+        label >>= k.text("Password"),
+        IO(password) >>= inputTweaks >>= k.hint("optional") >>= textPassword
+      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+      IO(header) >>= k.text("Session Options"),
+      l[TableRow](
+        label >>= k.text("Auto join"),
+        IO(autojoin) >>= inputTweaks >>= k.hint("#chan1 key;#chan2")
+      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+      l[TableRow](
+        label >>= k.text("Auto run"),
+        IO(autorun) >>= inputTweaks >>= k.hint("m pfn hi there;")
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT)
     ) >>= lpK(MATCH_PARENT, MATCH_PARENT)(margins(all = 8 dp)) >>=
       kestrel(_.setColumnStretchable(1, true)) >>= padding(all = 16.dp)

@@ -118,7 +118,7 @@ extends Preference(c, attrs) with HasContext {
   }
   setLayoutResource(R.layout.preference_font_size)
 
-  val fontNameKey = themeAttrs(R.styleable.FontSizePreference,
+  val fontNameKey = styleableAttrs(R.styleable.FontSizePreference,
     _.getString(R.styleable.FontSizePreference_fontNameKey))
 
 

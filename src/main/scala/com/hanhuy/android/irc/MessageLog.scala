@@ -482,12 +482,12 @@ class MessageLogActivity extends AppCompatActivity {
   lazy val listview = new ListView(this)
 
   lazy val layout = l[FrameLayout](
-    w[TextView] >>= gone >>=
+    w[TextView] >>= k.visibility(View.GONE) >>=
       lpK(WRAP_CONTENT, 0)(margins(all = 12 dp)) >>=
       kestrel { tv =>
         tv.setGravity(Gravity.CENTER)
         tv.setTextAppearance(this, android.R.style.TextAppearance_Medium)
-      } >>= text(R.string.no_messages) >>= kitkatPadding,
+      } >>= k.text(R.string.no_messages) >>= kitkatPadding,
     IO(listview) >>=
       lp(MATCH_PARENT, MATCH_PARENT) >>=
       kestrel { l =>
@@ -697,24 +697,24 @@ class MessageLogActivity extends AppCompatActivity {
       val infoLayout = (
         l[TableLayout](
           l[TableRow](
-            w[TextView] >>= label >>= text("Log Name"),
+            w[TextView] >>= label >>= k.text("Log Name"),
             IO(channelName) >>= label
           ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
-            w[TextView] >>= label >>= text("Start"),
+            w[TextView] >>= label >>= k.text("Start"),
             IO(channelStart)
           ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
-            w[TextView] >>= label >>= text("End"),
+            w[TextView] >>= label >>= k.text("End"),
             IO(channelEnd)
           ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
           l[TableRow](
-            w[TextView] >>= label >>= text("Line Count"),
+            w[TextView] >>= label >>= k.text("Line Count"),
             IO(channelLines) >>= label
           ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
           w[View] >>= lp(MATCH_PARENT, 16 dp),
           l[TableRow](
-            w[TextView] >>= label >>= text("All Logs"),
+            w[TextView] >>= label >>= k.text("All Logs"),
             IO(databaseSize) >>= label
           ) >>= lp(MATCH_PARENT, WRAP_CONTENT)
         ) >>= padding(all = 12 dp) >>=

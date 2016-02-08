@@ -39,7 +39,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-conversions-appcompat" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-common" % "1.2",
-  "com.hanhuy.android" %% "iota" % "0.9.1",
+  "com.hanhuy.android" %% "iota" % "1.0.0-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-pfn.2",
   "ch.acra" % "acra" % "4.8.0",
   "com.lihaoyi" %% "scalarx" % "0.3.0",

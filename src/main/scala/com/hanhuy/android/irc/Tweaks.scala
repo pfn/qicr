@@ -17,10 +17,10 @@ import iota._
  */
 object Tweaks {
   import InputType._
-  def textPassword[A <: TextView]: Kestrel[A] = inputType(TYPE_TEXT_VARIATION_PASSWORD | TYPE_CLASS_TEXT)
-  def number[A <: TextView]: Kestrel[A] = inputType(TYPE_CLASS_NUMBER)
-  def textUri[A <: TextView]: Kestrel[A] = inputType(TYPE_CLASS_TEXT | TYPE_TEXT_VARIATION_URI)
-  def textCapWords[A <: TextView]: Kestrel[A] = inputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_CAP_WORDS)
+  def textPassword[A <: TextView]: Kestrel[A] = k.inputType(TYPE_TEXT_VARIATION_PASSWORD | TYPE_CLASS_TEXT)
+  def number[A <: TextView]: Kestrel[A] = k.inputType(TYPE_CLASS_NUMBER)
+  def textUri[A <: TextView]: Kestrel[A] = k.inputType(TYPE_CLASS_TEXT | TYPE_TEXT_VARIATION_URI)
+  def textCapWords[A <: TextView]: Kestrel[A] = k.inputType(TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_CAP_WORDS)
   lazy val hasSystemNav = {
     val res = Application.context.getResources
     val id = res.getIdentifier("config_showNavigationBar", "bool", "android")
@@ -88,6 +88,8 @@ object Tweaks {
     kestrel { l => l.setOrientation(LinearLayout.HORIZONTAL) }
   val vertical: Kestrel[LinearLayout] =
     kestrel { l => l.setOrientation(LinearLayout.VERTICAL) }
+
+  def visGone[V <: View](b: Boolean): Kestrel[V] = k.visibility(if (b) View.VISIBLE else View.GONE)
   def buttonTweaks(implicit cx: Context): Kestrel[ImageButton] = c[LinearLayout](kestrel { b: ImageButton =>
     b.setFocusable(false)
     b.setFocusableInTouchMode(false)

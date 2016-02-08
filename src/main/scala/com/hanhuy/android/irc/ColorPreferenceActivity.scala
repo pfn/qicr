@@ -17,7 +17,7 @@ import android.view.{Gravity, ViewGroup, View, ContextThemeWrapper}
 import android.widget.{ScrollView, TextView, LinearLayout}
 import com.hanhuy.android.irc.model.BusEvent
 
-import iota.{textColor => _,_}
+import iota._
 import Tweaks._
 
 /**
@@ -112,9 +112,9 @@ object ColorPreferenceActivity {
     lazy val views: Array[View] = colorValues.map(_ | 0xff000000).map { color =>
       val bg = new DaynightDrawable(context, dark, light)
       val layers = new LayerDrawable(Array(bg, selectable))
-      val view = (w[TextView] >>= textGravity(Gravity.CENTER) >>=
-        backgroundDrawable(layers) >>= clickable >>= textAppearance(R.style.TextAppearance_AppCompat_Large) >>=
-        text(textColor(color,"abcdefghijklmnopqrstuvwxyz"))).perform()
+      val view = (w[TextView] >>= k.gravity(Gravity.CENTER) >>=
+        k.backgroundDrawable(layers) >>= k.clickable(true) >>= k.textAppearance(context, R.style.TextAppearance_AppCompat_Large) >>=
+        k.text(textColor(color,"abcdefghijklmnopqrstuvwxyz"))).perform()
       view.onClick0 {
         views.foreach(_.setSelected(false))
         setColors(colorSetting.updated(position, color))

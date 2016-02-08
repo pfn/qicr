@@ -61,30 +61,30 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
       new TextView(c))
     l[RelativeLayout](
       holder.icon.! >>= id(Id.notif_icon) >>=
-        imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
+        k.scaleType(ImageView.ScaleType.CENTER_INSIDE) >>=
         lpK(24.dp, 24.dp) { p: LP =>
           p.addRule(ALIGN_PARENT_LEFT, 1)
           p.addRule(BELOW, Id.channel_server)
           margins(all = 8.dp)(p)
         },
       holder.arrow.! >>= id(Id.notif_arrow) >>=
-        imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
-        imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
+        k.imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
+        k.scaleType(ImageView.ScaleType.CENTER_INSIDE) >>=
         lpK(24.dp, 24.dp) { p: LP =>
           p.addRule(ALIGN_PARENT_RIGHT, 1)
           p.addRule(BELOW, Id.timestamp)
           margins(all = 8.dp)(p)
-        } >>= gone >>= kestrel { iv =>
+        } >>= k.visibility(View.GONE) >>= kestrel { iv =>
         DrawableCompat.setTint(iv.getDrawable.mutate(), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
       },
       holder.channelServer.! >>= id(Id.channel_server) >>=
-        text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
+        k.text("#channel / server") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
         p.addRule(ALIGN_PARENT_LEFT, 1)
         p.addRule(RIGHT_OF, Id.notif_icon)
         p.addRule(ALIGN_PARENT_TOP, 1)
         margins(left = 8.dp)(p)
       },
-      holder.timestamp.! >>= id(Id.timestamp) >>= text("9:09pm") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
+      holder.timestamp.! >>= id(Id.timestamp) >>= k.text("9:09pm") >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
         p.addRule(ALIGN_PARENT_RIGHT, 1)
         p.addRule(ALIGN_PARENT_TOP, 1)
         margins(right = 8.dp)(p)
@@ -94,7 +94,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
         p.alignWithParent = true
         p.addRule(RIGHT_OF, Id.notif_icon)
         p.addRule(LEFT_OF, Id.notif_arrow)
-      } >>= textGravity(Gravity.CENTER_VERTICAL)
+      } >>= k.gravity(Gravity.CENTER_VERTICAL)
     ) >>= padding(top = 12.dp, bottom = 12.dp, right = 8.dp, left = 8.dp) >>= kestrel(_.setTag(Id.holder, holder))
   }
 
@@ -239,7 +239,7 @@ abstract class TrayAdapter[A] extends BaseAdapter {
       implicit val context = parent.getContext
       convertView.?.getOrElse {
         // do nothing with onClick so that onItemClick doesn't execute
-        c[AbsListView](w[TextView] >>= text(emptyItem) >>= textGravity(Gravity.CENTER) >>=
+        c[AbsListView](w[TextView] >>= k.text(emptyItem) >>= k.gravity(Gravity.CENTER) >>=
           hook0.onClick(IO(())) >>= lp(MATCH_PARENT, 128.dp)).perform()
       }
     } else {

@@ -72,9 +72,9 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
   var inputHeight = Option.empty[Int]
 
   lazy val drawerBackground =
-    themeAttrs(R.styleable.AppTheme, _.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0))
+    styleableAttrs(R.styleable.AppTheme, _.getColor(R.styleable.AppTheme_qicrDrawerBackground, 0))
   lazy val inputBackground =
-    themeAttrs(R.styleable.AppTheme, _.getDrawable(R.styleable.AppTheme_inputBackground))
+    styleableAttrs(R.styleable.AppTheme, _.getDrawable(R.styleable.AppTheme_inputBackground))
 
 
   def imeShowing = _imeShowing
@@ -88,7 +88,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
   lazy val drawerWidth = if(sw(600 dp)) 288.dp else 192.dp
 
   type RLP = RelativeLayout.LayoutParams
-  def buttonElevation[V <: View]: Kestrel[V] = condK(v(21) ? elevation(2.dp))
+  @TargetApi(21)
+  def buttonElevation[V <: View]: Kestrel[V] = condK(v(21) ? k.elevation(2.dp))
   lazy val mainLayout = c[FrameLayout](IO(drawer)(
     IO(qicrdrawers)(
       IO(tabs) >>= id(Id.tabs) >>=
@@ -104,31 +105,31 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       },
       IO(buttonLayout)(
         IO(nickcomplete) >>=
-          imageResource(resolveAttr(R.attr.qicrNickCompleteIcon, _.resourceId)) >>=
-            hook0.click(IO { proc.nickComplete(input) }) >>= gone >>= buttonTweaks >>=
+          k.imageResource(resolveAttr(R.attr.qicrNickCompleteIcon, _.resourceId)) >>=
+            hook0.click(IO { proc.nickComplete(input) }) >>= k.visibility(View.GONE) >>= buttonTweaks >>=
             buttonElevation,
         IO(newmessages) >>=
-          imageResource(resolveAttr(R.attr.qicrNewMessageIcon, _.resourceId)) >>=
-          gone >>= hook0.click(IO {
+          k.imageResource(resolveAttr(R.attr.qicrNewMessageIcon, _.resourceId)) >>=
+          k.visibility(View.GONE) >>= hook0.click(IO {
           qicrdrawers.openDrawer(toolbar)
         }) >>= buttonTweaks >>= buttonElevation,
         IO(input) >>= id(Id.input) >>=
           lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4.dp)) >>=
-          hint(R.string.input_placeholder) >>= inputTweaks >>= invisible >>=
+          k.hint(R.string.input_placeholder) >>= inputTweaks >>= k.visibility(View.INVISIBLE) >>=
           padding(left = 8 dp, right = 8 dp) >>=
-          backgroundDrawable(inputBackground) >>= kestrel { e =>
+          k.backgroundDrawable(inputBackground) >>= kestrel { e =>
             e.setOnEditorActionListener(proc.onEditorActionListener _)
             e.setOnKeyListener(proc.onKeyListener _)
             e.addTextChangedListener(proc.TextListener)
           } >>= buttonElevation,
         IO(send) >>=
-          imageResource(resolveAttr(R.attr.qicrSendIcon, _.resourceId)) >>=
+          k.imageResource(resolveAttr(R.attr.qicrSendIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
-          }) >>= buttonTweaks >>= gone >>= buttonElevation,
+          }) >>= buttonTweaks >>= k.visibility(View.GONE) >>= buttonElevation,
         IO(speechrec) >>= buttonElevation >>=
-          imageResource(resolveAttr(R.attr.qicrSpeechRecIcon, _.resourceId)) >>=
+          k.imageResource(resolveAttr(R.attr.qicrSpeechRecIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -212,7 +213,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
           }
         } >>= kitkatPaddingRight
       ) >>= kestrel { _.setClickable(true) } >>=
-        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
+        k.backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT),
       bottomdrawer.!(
         w[ListView] >>= lp(MATCH_PARENT, MATCH_PARENT) >>= kestrel { l =>
           l.setDivider(new ColorDrawable(Color.TRANSPARENT))
@@ -224,12 +225,11 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
             qicrdrawers.closeDrawer(uparrow)
           }
         } >>= kitkatPaddingRight
-      ) >>= clickable >>=
-        backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= condK(iota.v(21) ? elevation(12.dp))
-      ,
-      uparrow.! >>= imageResource(
+      ) >>= k.clickable(true) >>=
+        k.backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= buttonElevation,
+      uparrow.! >>= k.imageResource(
         resolveAttr(R.attr.qicrInputHistoryIcon, _.resourceId)) >>=
-        imageScale(ImageView.ScaleType.CENTER) >>=
+        k.scaleType(ImageView.ScaleType.CENTER) >>=
         lpK(48.dp, 48.dp) { p: RLP =>
           p.addRule(RelativeLayout.ALIGN_TOP, Id.buttonlayout)
           p.addRule(RelativeLayout.CENTER_HORIZONTAL, 1)
@@ -241,14 +241,14 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
     ) >>=
       lp(drawerWidth, MATCH_PARENT, Gravity.LEFT) >>=
-      backgroundColor(drawerBackground),
+      k.backgroundColor(drawerBackground),
     IO(drawerRight)(
       IO(userCount) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(
         margins(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))) >>= kitkatPaddingTop,
       IO(nickList) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPaddingBottom
     ) >>= vertical >>=
       lp(drawerWidth, MATCH_PARENT, Gravity.RIGHT) >>=
-      backgroundColor(drawerBackground)
+      k.backgroundColor(drawerBackground)
   ) >>= lp(MATCH_PARENT, MATCH_PARENT)).perform()
 
   lazy val toolbar = newToolbar
@@ -286,16 +286,16 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
         progress.setProgress(0)
         progress.setMax(100)
         val popupLayout = l[RelativeLayout](
-          IO(icon) >>= backgroundColor(0xff26a69a) >>= padding(left = 8 dp) >>=
-            imageResource(resolveAttr(R.attr.qicrBrowserOpenIcon, _.resourceId)) >>=
-            imageScale(ImageView.ScaleType.CENTER_INSIDE) >>=
+          IO(icon) >>= k.backgroundColor(0xff26a69a) >>= padding(left = 8 dp) >>=
+            k.imageResource(resolveAttr(R.attr.qicrBrowserOpenIcon, _.resourceId)) >>=
+            k.scaleType(ImageView.ScaleType.CENTER_INSIDE) >>=
             lpK(WRAP_CONTENT, 36 dp) {p: RLP =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
               p.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 1)
             } >>= id(Id.icon),
-          IO(title) >>= text(url) >>= textGravity(Gravity.LEFT | Gravity.CENTER) >>=
-            backgroundColor(0xff26A69A) >>= padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) >>=
-            singleLine >>=
+          IO(title) >>= k.text(url) >>= k.gravity(Gravity.LEFT | Gravity.CENTER) >>=
+            k.backgroundColor(0xff26A69A) >>= padding(left = 8 dp, top = 4 dp, right = 8 dp, bottom = 4 dp) >>=
+            k.singleLine(true) >>=
             lpK(MATCH_PARENT, 36 dp) { p: RLP =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)
               p.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 1)
@@ -613,9 +613,9 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
       case _: QueryFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
-        (IO(nickcomplete) >>= gone).perform()
+        (IO(nickcomplete) >>= k.visibility(View.GONE)).perform()
 
-        (IO(speechrec) >>= condK(showSpeechRec ? visible | gone)).perform()
+        (IO(speechrec) >>= visGone(showSpeechRec)).perform()
       case c: ChannelFragment =>
 
         drawer.setDrawerLockMode(
@@ -663,20 +663,20 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
             ()
         }
 
-        (IO(nickcomplete) >>= condK(showNickComplete ? visible | gone)).perform()
-        (IO(speechrec) >>= condK(showSpeechRec ? visible | gone)).perform()
+        (IO(nickcomplete) >>= visGone(showNickComplete)).perform()
+        (IO(speechrec) >>= visGone(showSpeechRec)).perform()
       case _: ServerMessagesFragment =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
         input.setVisibility(View.VISIBLE)
-        (IO(nickcomplete) >>= gone).perform()
-        (IO(speechrec) >>= gone).perform()
+        (IO(nickcomplete) >>= k.visibility(View.GONE)).perform()
+        (IO(speechrec) >>= k.visibility(View.GONE)).perform()
       case _ =>
         drawer.setDrawerLockMode(
           DrawerLayout.LOCK_MODE_LOCKED_CLOSED, drawerRight)
-        (IO(nickcomplete) >>= gone).perform()
+        (IO(nickcomplete) >>= k.visibility(View.GONE)).perform()
 
-        (IO(speechrec) >>= gone).perform()
+        (IO(speechrec) >>= k.visibility(View.GONE)).perform()
     }
     channels.setItemChecked(idx, true)
   }
