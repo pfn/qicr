@@ -393,7 +393,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner with Activit
     getSupportFragmentManager.findFragmentByTag(SERVERS_FRAGMENT).?.fold(new ServersFragment){
     _.asInstanceOf[ServersFragment]}
   }
-  lazy val tabs = new TabLayout(this)
+  lazy val tabs = new TabLayout(this, null, R.attr.qicrColorTabStyle)
   lazy val drawer = new KitKatDrawerLayout(this)
   lazy val drawerLeft = new LinearLayout(this)
   lazy val nickList = new ListView(this)

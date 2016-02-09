@@ -184,7 +184,7 @@ with EventBus.RefOwner {
       UiBus.handler.postDelayed(refreshTabRunnable, 100)
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
       if (tabindicators.getTabCount > pos)
-        tabindicators.getTabAt(pos).getCustomView.asInstanceOf[TextView].?.foreach (_.setText(makeTabTitle(pos)))
+        tabindicators.getTabAt(pos).setText(makeTabTitle(pos))
     }
   }
 
@@ -286,7 +286,7 @@ with EventBus.RefOwner {
     }
     tabs = insert(tabs, pos + base, info)
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
-      tabindicators.addTab(tabindicators.newTab.setCustomView(makeTabTextView(pos)), pos)
+      tabindicators.addTab(tabindicators.newTab.setText(makeTabTitle(pos)), pos)
     }
     if (tabs.size > 1) {
       notifyDataSetChanged()
@@ -456,19 +456,11 @@ with EventBus.RefOwner {
   override def notifyDataSetChanged() {
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
       (0 until (tabs.size - tabindicators.getTabCount)) foreach { _ =>
-        tabindicators.addTab(tabindicators.newTab.setCustomView(makeTabTextView(0)))
+        tabindicators.addTab(tabindicators.newTab.setText(makeTabTitle(0)))
       }
     }
     super.notifyDataSetChanged()
     DropDownAdapter.notifyDataSetChanged()
     refreshTabs()
-  }
-
-  def makeTabTextView(pos: Int) = {
-    val tv = new TextView(activity)
-    tv.setLayoutParams(new FrameLayout.LayoutParams(
-      ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-    tv.setText(makeTabTitle(pos))
-    tv
   }
 }
