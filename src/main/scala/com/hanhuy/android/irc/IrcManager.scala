@@ -151,7 +151,11 @@ class IrcManager extends EventBus.RefOwner {
     val h = new Handler(handlerThread.getLooper)
     def pingLoop(): Unit = {
       import scala.concurrent.duration._
-      h.postDelayed(() => pingLoop(), 30.seconds.toMillis)
+      h.postDelayed(() => pingLoop(), 10.seconds.toMillis)
+      Config.servers.now.filter(_.state.now == Server.CONNECTED).filterNot(mconnections.keySet) foreach { s =>
+        s += ServerInfo("Fixing state of orphaned server")
+        disconnect(s, None, true).onComplete { case _ => connect(s) }
+      }
       mconnections.filterKeys(!Config.servers.now.filter(
         _.state.now == Server.CONNECTED).toSet(_)).keys foreach { s =>
         disconnect(s, None, true)
@@ -301,6 +305,7 @@ class IrcManager extends EventBus.RefOwner {
     }
     removeConnection(server) // gotta go after the foreach above
     server.state() = Server.DISCONNECTED
+    server.currentPing = None
     // handled by onDisconnect
     server += ServerInfo(getString(R.string.server_disconnected))
 
