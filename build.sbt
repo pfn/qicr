@@ -62,6 +62,8 @@ applicationId := "com.hanhuy.android.irc.lite"
 
 resValue("string", "app_name", "qicr lite")
 
+resValue("bool", "debug_build", Def.task { apkbuildDebug.value().toString })
+
 run <<= run in Android
 
 dexMaxHeap := "3g"

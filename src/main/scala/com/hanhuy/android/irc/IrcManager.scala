@@ -172,7 +172,7 @@ class IrcManager extends EventBus.RefOwner {
           }
           if (delta > 2.minutes.toMillis) {
             // automatically reconnect if ping gets over 120s
-            server += ServerInfo("Disconnecting server due to ping timeout ($delta)")
+            server += ServerInfo(s"Disconnecting server due to ping timeout (${delta.millis.toSeconds}s)")
             disconnect(server, None, true).onComplete { case _ =>
               connect(server)
             }

@@ -142,5 +142,10 @@
             android:enabled="@bool/is_v16plus"
             android:title="Submit logs"
             android:summary="Send logcat to aid in issue diagnosis"/>
+        <Preference
+                android:key="logcat"
+                android:persistent="false"
+                android:title="Logcat"
+                android:summary="Show logcat messages"/>
     </PreferenceCategory>
 </PreferenceScreen>

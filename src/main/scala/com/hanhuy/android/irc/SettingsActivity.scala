@@ -161,6 +161,9 @@ extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResu
     addPreferencesFromResource(R.xml.settings)
     SettingsFragment.setupNotificationPreference(getActivity, getPreferenceScreen)
 
+    if (!BuildConfig.DEBUG) {
+      getPreferenceScreen.removePreference(findPreference("logcat"))
+    }
     getPreferenceScreen.findPreference(
       "debug.log").setOnPreferenceClickListener(
       new OnPreferenceClickListener {
@@ -222,6 +225,9 @@ extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResu
       true
     } else if (preference.getKey == Settings.NICK_COLORS.key) {
       startActivity(new Intent(getActivity, classOf[ColorPreferenceActivity]))
+      true
+    } else if (preference.getKey == "logcat") {
+      startActivity(new Intent(getActivity, classOf[LogcatActivity]))
       true
     } else {
       super.onPreferenceTreeClick(preference)
