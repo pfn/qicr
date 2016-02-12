@@ -65,7 +65,8 @@ object MainActivity {
 
   var instance = Option.empty[MainActivity]
 }
-class MainActivity extends AppCompatActivity with EventBus.RefOwner with ActivityResultManager {
+class MainActivity extends AppCompatActivity with EventBus.RefOwner
+  with ActivityResultManager {
   import ViewGroup.LayoutParams._
 
   private[this] var requestRecreate = false
