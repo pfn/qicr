@@ -880,6 +880,11 @@ case class IrcConnection2(name: String) extends IrcConnection {
     ACRA.getErrorReporter.handleSilentException(e)
     disconnect()
   }
+
+  override def sendRaw(line: String) = {
+    if (out != null)
+      super.sendRaw(line)
+  }
 }
 
 object PrintStream
