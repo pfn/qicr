@@ -134,7 +134,7 @@ private[irc] trait PureFragmentBase[S] {
   case class OnCreateOptionsMenu(state: S, menu: Menu, inflater: MenuInflater) extends FragmentStateUnit
   case class OnOptionsItemSelected(state: S, item: MenuItem) extends FragmentStateBoolean
 
-  def initialState(b: Option[Bundle]): S
+  def initialState(savedState: Option[Bundle], arguments: Option[Bundle]): S
   def transformState(f: S => S): IO[Unit] = IO {
     state = applyState(TransformState(f(state),state)).perform()._2
   }
@@ -156,7 +156,8 @@ trait PureFragment[S] extends android.app.Fragment with PureFragmentBase[S] {
 
   final override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
-    state = applyState(OnCreate(initialState(Option(savedInstanceState)))).perform()._2
+    state = applyState(OnCreate(initialState(
+      Option(savedInstanceState), Option(getArguments)))).perform()._2
   }
 
   final override def onCreateOptionsMenu(m: Menu, inflater: MenuInflater): Unit = {
@@ -236,7 +237,8 @@ trait PureFragmentCompat[S] extends android.support.v4.app.Fragment with PureFra
 
   final override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
-    state = applyState(OnCreate(initialState(Option(savedInstanceState)))).perform()._2
+    state = applyState(OnCreate(initialState(
+      Option(savedInstanceState), Option(getArguments)))).perform()._2
   }
 
   final override def onCreateOptionsMenu(m: Menu, inflater: MenuInflater): Unit = {
