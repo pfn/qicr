@@ -67,5 +67,8 @@ package object irc {
     @inline def onTextChange[A](f: CharSequence => A) =
       tv.addTextChangedListener(single[TextWatcher].onTextChanged(
         (s: CharSequence, start: Int, before: Int, count: Int) => f(s)))
+    @inline def onTextChangeIO[A](f: CharSequence => iota.IO[A]) =
+      tv.addTextChangedListener(single[TextWatcher].onTextChanged(
+        (s: CharSequence, start: Int, before: Int, count: Int) => f(s).perform()))
   }
 }

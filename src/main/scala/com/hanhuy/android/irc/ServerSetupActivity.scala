@@ -12,6 +12,7 @@ import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import iota._
 import Tweaks._
+import ViewGroup.LayoutParams._
 
 import scala.util.Try
 
@@ -31,7 +32,6 @@ class ServerSetupActivity extends AppCompatActivity {
   override def onCreate(savedInstanceState: Bundle) = {
     setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.SetupTheme_Light else R.style.SetupTheme_Dark)
     super.onCreate(savedInstanceState)
-    import ViewGroup.LayoutParams._
     val toolbar = newToolbar
     toolbar.setNavigationIcon(resolveAttr(R.attr.qicrCloseIcon, _.resourceId))
     setSupportActionBar(toolbar)
@@ -114,95 +114,151 @@ object ServerSetupFragment {
     }
   }
 }
-class ServerSetupFragment extends Fragment {
+class ServerSetupFragment extends Fragment with PureFragmentCompat[ServerSetupFragment.ServerEditModel] {
   import ServerSetupFragment._
 
-  override def onSaveInstanceState(outState: Bundle) = {
-    super.onSaveInstanceState(outState)
-    outState.putSerializable(EXTRA_MODEL, model)
+  override def applyState[T](s: FragmentState[T]) = s match {
+    case OnCreate(st) => s(IO(setHasOptionsMenu(true)))
+    case o@OnOptionsItemSelected(st, item) => o.applyResult(IO { // intellij...
+      item.getItemId match {
+        case R.id.save_server =>
+          if (st.valid) {
+            st.asData.foreach { data =>
+              if (st.id == -1)
+                manager.addServer(data)
+              else
+                manager.updateServer(data)
+            }
+            getActivity.finish()
+            hideIME()
+          } else {
+            Toast.makeText(getActivity, R.string.server_incomplete,
+              Toast.LENGTH_SHORT).show()
+          }
+          true
+        case android.R.id.home =>
+          getActivity.finish()
+          hideIME()
+          true
+        case _ => false
+      }
+    })
+    case o@OnCreateView(st, inflater, container) => o.applyResult(IO { // intellij again
+      loadModel(st)
+      server_name.onTextChangeIO(s => transformState(_.copy(name = sanitize(s))))
+      server_host.onTextChangeIO(s => transformState(_.copy(hostname = sanitize(s))))
+      port.onTextChangeIO(s =>
+        transformState(_.copy(port = Try(s.toString.trim.toInt).toOption.getOrElse(0))))
+      ssl.onCheckedChange0(transformState(_.copy(ssl = ssl.isChecked)).perform())
+      sasl.onCheckedChange0(transformState(_.copy(sasl = sasl.isChecked)).perform())
+      autoconnect.onCheckedChange0(transformState(_.copy(autoconnect = autoconnect.isChecked)).perform())
+      nickname.onTextChangeIO(s => transformState(_.copy(nickname = sanitize(s))))
+      altnick.onTextChangeIO(s => transformState(_.copy(altnick = sanitize(s))))
+      realname.onTextChangeIO(s => transformState(_.copy(realname = sanitize(s))))
+      username.onTextChangeIO(s => transformState(_.copy(username = sanitize(s))))
+      password.onTextChangeIO(s => transformState(_.copy(password = sanitize(s))))
+      autojoin.onTextChangeIO(s => transformState(_.copy(autojoin = sanitize(s))))
+      autorun.onTextChangeIO(s => transformState(_.copy(autorun = sanitize(s))))
+
+      layout
+    })
+    case OnCreateOptionsMenu(_, menu, inflater) =>
+      s(IO(inflater.inflate(R.menu.server_setup_menu, menu)))
+    case SaveState(st, bundle) => s(IO {
+      bundle.putSerializable(EXTRA_MODEL, st)
+    })
+    case x => defaultApplyState(s)
   }
 
-  var model = ServerEditModel.empty
+  override def initialState(savedState: Option[Bundle], arguments: Option[Bundle]) = {
+    val model = savedState flatMap { b =>
+      b.getSerializable(EXTRA_MODEL).asInstanceOf[ServerEditModel].?
+    } orElse {
+      for {
+        args <- arguments
+        id = args.getLong(ServerSetupActivity.EXTRA_SERVER, -1)
+        s <- Config.servers.now.find(_.id == id) if id != -1
+      } yield {
+        ServerEditModel.fromData(s.data)
+      }
+    }
+    model getOrElse ServerEditModel.empty
+  }
+
   val manager = IrcManager.init()
 
-  // hack to store text
-  var idholder = 0x10001000
-
-  import ViewGroup.LayoutParams._
-
-  def header = {
+  def header =
     new TextView(getActivity, null, android.R.attr.listSeparatorTextViewStyle)
-  }
 
   def label = c[TableRow](w[TextView] >>=
     lpK(WRAP_CONTENT, WRAP_CONTENT)(margins(right = 12.dp)))
 
-  def inputTweaks: Kestrel[EditText] = c[TableRow](kestrel { e: EditText =>
-    e.setSingleLine(true)
-    e.setId(idholder)
-    idholder = idholder + 1
-  } >=> lp(0, WRAP_CONTENT, 1))
+  lazy val layout = {
+    def inputTweaks: Kestrel[EditText] = c[TableRow](kestrel { e: EditText =>
+      e.setSingleLine(true)
+    } >=> lp(0, WRAP_CONTENT, 1))
 
-  lazy val layout = c[ViewGroup](l[ScrollView](
-    l[TableLayout](
-      IO(header) >>= k.text("Connection Info"),
-      l[TableRow](
-        label >>= k.text("Name"),
-        IO(server_name) >>= inputTweaks >>= k.hint("required") >>= textCapWords
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= k.text("Server address"),
-        IO(server_host) >>= inputTweaks >>= k.hint("required") >>= textUri
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= k.text("Port"),
-        IO(port) >>= inputTweaks >>= k.hint("Default: 6667") >>= number
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        w[View],
-        IO(autoconnect) >>= k.text("Enable Autoconnect")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        w[View],
-        IO(ssl) >>= k.text("Enable SSL")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      IO(header) >>= k.text("User Info"),
-      l[TableRow](
-        label >>= k.text("Nickname"),
-        IO(nickname) >>= inputTweaks >>= k.hint("required")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= k.text("Alt. nick"),
-        IO(altnick) >>= inputTweaks >>= k.hint("Default: <Nickname>_")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= k.text("Real name"),
-        IO(realname) >>= inputTweaks >>= k.hint("required") >>= textCapWords
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        w[View],
-        IO(sasl) >>= k.text("SASL authentication")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= k.text("Username"),
-        IO(username) >>= inputTweaks >>= k.hint("required")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= k.text("Password"),
-        IO(password) >>= inputTweaks >>= k.hint("optional") >>= textPassword
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      IO(header) >>= k.text("Session Options"),
-      l[TableRow](
-        label >>= k.text("Auto join"),
-        IO(autojoin) >>= inputTweaks >>= k.hint("#chan1 key;#chan2")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
-      l[TableRow](
-        label >>= k.text("Auto run"),
-        IO(autorun) >>= inputTweaks >>= k.hint("m pfn hi there;")
-      ) >>= lp(MATCH_PARENT, WRAP_CONTENT)
-    ) >>= lpK(MATCH_PARENT, MATCH_PARENT)(margins(all = 8 dp)) >>=
-      kestrel(_.setColumnStretchable(1, true)) >>= padding(all = 16.dp)
-  ) >>= lp(MATCH_PARENT, MATCH_PARENT)).perform()
+    c[ViewGroup](l[ScrollView](
+      l[TableLayout](
+        IO(header) >>= k.text("Connection Info"),
+        l[TableRow](
+          label >>= k.text("Name"),
+          IO(server_name) >>= inputTweaks >>= k.hint("required") >>= textCapWords
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= k.text("Server address"),
+          IO(server_host) >>= inputTweaks >>= k.hint("required") >>= textUri
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= k.text("Port"),
+          IO(port) >>= inputTweaks >>= k.hint("Default: 6667") >>= number
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[View],
+          IO(autoconnect) >>= k.text("Enable Autoconnect")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[View],
+          IO(ssl) >>= k.text("Enable SSL")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        IO(header) >>= k.text("User Info"),
+        l[TableRow](
+          label >>= k.text("Nickname"),
+          IO(nickname) >>= inputTweaks >>= k.hint("required")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= k.text("Alt. nick"),
+          IO(altnick) >>= inputTweaks >>= k.hint("Default: <Nickname>_")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= k.text("Real name"),
+          IO(realname) >>= inputTweaks >>= k.hint("required") >>= textCapWords
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          w[View],
+          IO(sasl) >>= k.text("SASL authentication")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= k.text("Username"),
+          IO(username) >>= inputTweaks >>= k.hint("required")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= k.text("Password"),
+          IO(password) >>= inputTweaks >>= k.hint("optional") >>= textPassword
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        IO(header) >>= k.text("Session Options"),
+        l[TableRow](
+          label >>= k.text("Auto join"),
+          IO(autojoin) >>= inputTweaks >>= k.hint("#chan1 key;#chan2")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+        l[TableRow](
+          label >>= k.text("Auto run"),
+          IO(autorun) >>= inputTweaks >>= k.hint("m pfn hi there;")
+        ) >>= lp(MATCH_PARENT, WRAP_CONTENT)
+      ) >>= lpK(MATCH_PARENT, MATCH_PARENT)(margins(all = 8 dp)) >>=
+        kestrel(_.setColumnStretchable(1, true)) >>= padding(all = 16.dp)
+    ) >>= lp(MATCH_PARENT, MATCH_PARENT)).perform()
+  }
 
   lazy val server_name = new EditText(getActivity)
   lazy val server_host = new EditText(getActivity)
@@ -234,70 +290,4 @@ class ServerSetupFragment extends Fragment {
     autojoin.setText(s.autojoin.getOrElse(""))
     autorun.setText(s.autorun.getOrElse(""))
   }
-
-  override def onCreate(bundle: Bundle) {
-    super.onCreate(bundle)
-    setHasOptionsMenu(true)
-  }
-
-  override def onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) =
-    inflater.inflate(R.menu.server_setup_menu, menu)
-
-  override def onOptionsItemSelected(item: MenuItem) = {
-    item.getItemId match {
-      case R.id.save_server =>
-        if (model.valid) {
-          model.asData.foreach { data =>
-            if (model.id == -1)
-              manager.addServer(data)
-            else
-              manager.updateServer(data)
-          }
-          getActivity.finish()
-          hideIME()
-        } else {
-          Toast.makeText(getActivity, R.string.server_incomplete,
-            Toast.LENGTH_SHORT).show()
-        }
-        true
-      case android.R.id.home =>
-        getActivity.finish()
-        hideIME()
-        true
-      case _ => false
-    }
-  }
-
-  override def onCreateView(inflater: LayoutInflater,
-                            container: ViewGroup, bundle: Bundle): View = {
-    for {
-      args <- getArguments.?
-      id = args.getLong(ServerSetupActivity.EXTRA_SERVER, -1)
-      s <- Config.servers.now.find(_.id == id) if id != -1
-    } {
-      if (bundle == null)
-        model = ServerEditModel.fromData(s.data)
-    }
-    bundle.?.foreach(b =>
-      model = b.getSerializable(EXTRA_MODEL).asInstanceOf[ServerEditModel].?.getOrElse(ServerEditModel.empty))
-    loadModel(model)
-
-    server_name.onTextChange(s => model = model.copy(name = sanitize(s)))
-    server_host.onTextChange(s => model = model.copy(hostname = sanitize(s)))
-    port.onTextChange(s =>
-      model = model.copy(port = Try(s.toString.trim.toInt).toOption.getOrElse(0)))
-    ssl.onCheckedChange0(model = model.copy(ssl = ssl.isChecked))
-    sasl.onCheckedChange0(model = model.copy(sasl = sasl.isChecked))
-    autoconnect.onCheckedChange0(model = model.copy(autoconnect = autoconnect.isChecked))
-    nickname.onTextChange(s => model = model.copy(nickname = sanitize(s)))
-    altnick.onTextChange(s => model = model.copy(altnick = sanitize(s)))
-    realname.onTextChange(s => model = model.copy(realname = sanitize(s)))
-    username.onTextChange(s => model = model.copy(username = sanitize(s)))
-    password.onTextChange(s => model = model.copy(password = sanitize(s)))
-    autojoin.onTextChange(s => model = model.copy(autojoin = sanitize(s)))
-    autorun.onTextChange(s => model = model.copy(autorun = sanitize(s)))
-
-    layout
-  }
-
 }

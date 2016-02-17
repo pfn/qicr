@@ -1,5 +1,6 @@
 package com.hanhuy.android.irc
 
+import android.annotation.TargetApi
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle
@@ -143,6 +144,7 @@ private[irc] trait PureFragmentBase[S] {
   def defaultApplyState[T](s: FragmentState[T]): IO[(T,S)] = IO(s.zero -> s.state)
 }
 
+@TargetApi(11)
 trait PureFragment[S] extends android.app.Fragment with PureFragmentBase[S] {
   final override def onActivityCreated(savedInstanceState: Bundle) = {
     super.onActivityCreated(savedInstanceState)
