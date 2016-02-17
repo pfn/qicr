@@ -3,7 +3,7 @@ package com.hanhuy.android.irc
 import android.graphics.Typeface
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.{Toolbar, LinearLayoutManager, RecyclerView}
+import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
 import android.view.ViewGroup
 import android.widget.{TextView, LinearLayout}
 import com.hanhuy.android.irc.model.{MessageAdapter, RingBuffer}
@@ -85,11 +85,9 @@ class LogcatActivity extends AppCompatActivity with PureActivity[Option[Process]
 
   case class LogEntry(tag: String, level: String, msg: String)
   case class LogcatHolder(view: TextView) extends RecyclerView.ViewHolder(view) {
-    def bind(e: LogEntry): Unit = {
-      view.setText(" %1 %2: %3" formatSpans (
-        textColor(MessageAdapter.nickColor(e.level), e.level),
-        textColor(MessageAdapter.nickColor(e.tag),   e.tag), e.msg))
-    }
+    def bind(e: LogEntry): Unit = view.setText(" %1 %2: %3" formatSpans (
+      textColor(MessageAdapter.nickColor(e.level), e.level),
+      textColor(MessageAdapter.nickColor(e.tag),   e.tag), e.msg))
   }
   object Adapter extends RecyclerView.Adapter[LogcatHolder] {
     val buffer = RingBuffer[LogEntry](buffersize)
