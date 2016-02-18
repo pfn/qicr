@@ -49,12 +49,12 @@ object Tweaks {
     tv => TypedValue.complexToDimensionPixelSize(tv.data, ctx.getResources.getDisplayMetrics))
 
   def kitkatPadding[V <: View](implicit ctx: Context): Kestrel[V] =
-    condK(v(19) ? padding(
+    condK(v(19) ? padding[V](
       top    = statusBarHeight + actionBarHeight,
       bottom = if (tablet | portrait) navBarHeight else 0,
       right  = if (phone & landscape) navBarWidth else 0) | padding(top = actionBarHeight))
   def kitkatPadding[V <: View](padTop: Boolean)(implicit ctx: Context): Kestrel[V] =
-    condK(v(19) ? padding(
+    condK(v(19) ? padding[V](
       top    = if (padTop) statusBarHeight + actionBarHeight else 0,
       bottom = if (tablet || portrait) navBarHeight else 0,
       right  = if (phone && landscape) navBarWidth else 0) | padding(top = if (padTop) actionBarHeight else 0))
@@ -111,7 +111,7 @@ object Tweaks {
       kestrel { t =>
         t.setPopupTheme(resolveAttr(R.attr.qicrToolbarPopupTheme, _.resourceId))
         t.setBackgroundColor(resolveAttr(R.attr.colorPrimary, _.data))
-      } >>= kitkatPaddingRight).perform()
+      } >>= kitkatPaddingRight[Toolbar]).perform()
 //    https://code.google.com/p/android/issues/detail?id=196729
       // setting lpK here doesn't carry margin, why??
       // >>= lpK(MATCH_PARENT, WRAP_CONTENT)(kitkatStatusMargin)

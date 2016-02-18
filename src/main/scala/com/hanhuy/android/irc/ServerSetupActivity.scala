@@ -11,6 +11,7 @@ import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import iota._
+import iota.pure.PureFragmentCompat
 import Tweaks._
 import ViewGroup.LayoutParams._
 

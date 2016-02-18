@@ -14,6 +14,7 @@ import java.lang.{Process => _}
 
 import com.hanhuy.android.common._
 import com.hanhuy.android.appcompat.extensions._
+import iota.pure.PureActivity
 import iota._
 import Tweaks._
 import Futures._

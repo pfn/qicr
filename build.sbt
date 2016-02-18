@@ -38,10 +38,11 @@ unmanagedJars in Compile ~= { _ filterNot (
 libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-conversions-appcompat" % supportSdkVersion,
-  "com.hanhuy.android" %% "scala-common" % "1.2",
-  "com.hanhuy.android" %% "iota" % "1.0.1",
+  "com.hanhuy.android" %% "scala-common" % "1.3-SNAPSHOT",
+  "com.hanhuy.android" %% "iota" % "1.0.4-SNAPSHOT",
+  "com.hanhuy.android" %% "iota-pure" % "0.1-SNAPSHOT",
   "com.hanhuy" % "sirc" % "1.1.6-pfn.2",
-  "ch.acra" % "acra" % "4.8.1",
+  "ch.acra" % "acra" % "4.8.2",
   "com.lihaoyi" %% "scalarx" % "0.3.0",
   "com.android.support" % "cardview-v7" % supportSdkVersion,
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,
@@ -55,7 +56,7 @@ proguardOptions ++=
   "-keep class android.support.v7.widget.SearchView { <init>(...); }" ::
   "-keep class android.support.v7.internal.widget.* { <init>(...); }" ::
   "-keep class scala.runtime.BoxesRunTime { *; }" :: // for debugging
-  "-dontwarn iota.**" ::
+  "-dontwarn iota.Internal210**" ::
   Nil
 
 applicationId := "com.hanhuy.android.irc.lite"
