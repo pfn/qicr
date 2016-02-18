@@ -42,8 +42,10 @@ class LogcatActivity extends AppCompatActivity with PureActivity[Option[Process]
   override def initialState(b: Option[Bundle]) = None
 
   override def applyState[T](s: ActivityState[T]) = s match {
-    case OnCreate(_) => s(IO {
+    case OnPreCreate(_) => s(IO(
       setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.SetupTheme_Light else R.style.SetupTheme_Dark)
+    ))
+    case OnCreate(_) => s(IO {
       toolbar.setTitle("Logcat")
       toolbar.setNavigationIcon(resolveAttr(R.attr.qicrCloseIcon, _.resourceId))
       toolbar.navigationOnClick0(finish())
