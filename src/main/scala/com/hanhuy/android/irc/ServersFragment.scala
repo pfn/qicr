@@ -102,7 +102,7 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
       val p = Promise[A]()
       view.onPreDraw(l => {
         if (pred) {
-          p.success(result)
+          p.trySuccess(result)
           view.getViewTreeObserver.removeOnPreDrawListener(l)
           true
         } else false
