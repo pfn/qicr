@@ -187,7 +187,7 @@ object MessageAdapter extends EventBus.RefOwner {
     if (nick != "***" && inMain)
       SpannedGenerator.span(NickClick(text.toString), text) else text
   }
-  def messageLayout(implicit ctx: Activity) = {
+  def messageLayout(implicit ctx: Context) = {
     import ViewGroup.LayoutParams._
     c[AbsListView](w[TextView] >>= id(android.R.id.text1) >>=
       lp(MATCH_PARENT, WRAP_CONTENT) >>=
@@ -212,8 +212,6 @@ object MessageAdapter extends EventBus.RefOwner {
 
 class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.RefOwner {
   import MessageAdapter._
-
-  // TODO FIXME might activity might be None
 
   implicit val channel = _channel
   def showJoinPartQuit = Settings.get(Settings.SHOW_JOIN_PART_QUIT)
@@ -309,7 +307,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
   override def getView(pos: Int, convertView: View, container: ViewGroup) = {
     val c = convertView.?.find(_.getContext == context).map(_.asInstanceOf[TextView])
     val view = c.getOrElse {
-      val v = messageLayout(_activity.get.get).perform()
+      val v = messageLayout(container.getContext).perform()
 
       if (!icsAndNewer)
         v.setTypeface(gbfont)

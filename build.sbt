@@ -20,7 +20,7 @@ versionCode := {
 }
 
 
-val supportSdkVersion = "23.1.1"
+val supportSdkVersion = "23.2.0"
 
 platformTarget := "android-23"
 

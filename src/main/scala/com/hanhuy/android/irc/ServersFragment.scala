@@ -1,6 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.app.{Activity, AlertDialog}
+import android.content.Context
 import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
@@ -28,11 +29,11 @@ import scala.concurrent.{Promise, Future}
 class ServersFragment extends Fragment with EventBus.RefOwner {
   def activity = getActivity.asInstanceOf[MainActivity]
   val manager = IrcManager.init()
-  lazy val adapter = ServersAdapter(getActivity)
+  lazy val adapter = ServersAdapter(getContext)
   def server = selectedItem.map(manager.getServers)
 
-  lazy val emptyView = new LinearLayout(getActivity)
-  lazy val recycler = new RecyclerView(getActivity)
+  lazy val emptyView = new LinearLayout(getContext)
+  lazy val recycler = new RecyclerView(getContext)
   lazy val layout = {
     l[FrameLayout](
       emptyView.!(
@@ -54,23 +55,26 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
     ) >>= id(Id.servers_container)
   }
 
-  UiBus += {
-    case BusEvent.ServerAdded(server)   =>
-      emptyView.setVisibility(View.GONE)
-      recycler.setVisibility(View.VISIBLE)
-      if (getActivity != null)
-        adapter.notifyItemInserted(manager.getServers.indexOf(server))
-    case BusEvent.ServerChanged(server) =>
-      if (getActivity != null)
-        adapter.notifyItemChanged(manager.getServers.indexOf(server))
-    case BusEvent.ServerRemoved(server) =>
-      if (Config.servers.now.isEmpty) {
-        emptyView.setVisibility(View.VISIBLE)
-        recycler.setVisibility(View.GONE)
-      }
-      selectedItem = None
-      if (getActivity != null)
-        adapter.notifyDataSetChanged()
+  override def onAttach(context: Context) = {
+    super.onAttach(context)
+    UiBus += {
+      case BusEvent.ServerAdded(server)   =>
+        emptyView.setVisibility(View.GONE)
+        recycler.setVisibility(View.VISIBLE)
+        if (getActivity != null)
+          adapter.notifyItemInserted(manager.getServers.indexOf(server))
+      case BusEvent.ServerChanged(server) =>
+        if (getActivity != null)
+          adapter.notifyItemChanged(manager.getServers.indexOf(server))
+      case BusEvent.ServerRemoved(server) =>
+        if (Config.servers.now.isEmpty) {
+          emptyView.setVisibility(View.VISIBLE)
+          recycler.setVisibility(View.GONE)
+        }
+        selectedItem = None
+        if (getActivity != null)
+          adapter.notifyDataSetChanged()
+    }
   }
 
   override def onCreate(bundle: Bundle) {
@@ -235,7 +239,7 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
       }
     }
   }
-  case class ServersAdapter(override val context: Activity) extends RecyclerView.Adapter[ServerItemHolder] with HasContext {
+  case class ServersAdapter(override val context: Context) extends RecyclerView.Adapter[ServerItemHolder] with HasContext {
 
     override def onBindViewHolder(holder: ServerItemHolder, pos: Int) = {
       val server = manager.getServers(pos)
