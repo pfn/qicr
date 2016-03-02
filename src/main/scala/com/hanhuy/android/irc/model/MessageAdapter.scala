@@ -355,7 +355,12 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
 }
 
 case class RingBuffer[A: ClassTag](capacity: Int) extends IndexedSeq[A] {
-  private val buffer = Array.ofDim[A](capacity)
+  private val buffer = try {
+    Array.ofDim[A](capacity)
+  } catch {
+    case oom: OutOfMemoryError if MessageAdapter.DEFAULT_MAXIMUM_SIZE != Settings.maximumMessageLines =>
+      Array.ofDim[A](MessageAdapter.DEFAULT_MAXIMUM_SIZE)
+  }
   private var _length = 0
   private var pos = 0
   def length = _length

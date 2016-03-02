@@ -564,7 +564,8 @@ class MessageLogActivity extends AppCompatActivity {
 
     setContentView(layout.perform())
     setSupportActionBar(toolbar)
-    toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_mtrl_am_alpha)
+    // TODO FIXME figure out how to get the new support vector stuff working properly
+    toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_material)
 
     onNewIntent(getIntent)
     var first = 0
