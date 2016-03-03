@@ -13,6 +13,7 @@ import android.graphics.drawable.ColorDrawable
 import android.os.{Bundle, Handler, HandlerThread}
 import android.provider.BaseColumns
 import MessageLog._
+import android.support.v4.graphics.drawable.DrawableCompat
 import android.support.v4.view.MenuItemCompat
 import android.support.v4.widget.CursorAdapter
 import android.support.v7.app.AppCompatActivity
@@ -564,8 +565,14 @@ class MessageLogActivity extends AppCompatActivity {
 
     setContentView(layout.perform())
     setSupportActionBar(toolbar)
-    // TODO FIXME figure out how to get the new support vector stuff working properly
-    toolbar.setNavigationIcon(R.drawable.abc_ic_ab_back_material)
+    // This is required because this is a vector drawable originally
+    // but we rasterize vectors during build
+    // due to a bug in Moto Display, it fails to render vector images
+    // as a result, vector images are also deleted so only the rasterized
+    // images remain. Tint manually!
+    val d = getDrawable(R.drawable.abc_ic_ab_back_material)
+    DrawableCompat.setTint(DrawableCompat.wrap(d.mutate()), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
+    toolbar.setNavigationIcon(d)
 
     onNewIntent(getIntent)
     var first = 0
