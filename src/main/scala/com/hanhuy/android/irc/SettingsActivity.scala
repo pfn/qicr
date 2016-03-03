@@ -127,7 +127,7 @@ class SettingsFragmentActivity extends AppCompatActivity {
     setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.SettingTheme_Light else R.style.SettingTheme_Dark)
     super.onCreate(bundle)
     val toolbar = newToolbar
-    toolbar.setNavigationIcon(resolveAttr(R.attr.qicrCloseIcon, _.resourceId))
+    toolbar.setNavigationIcon(Application.getDrawable(this, resolveAttr(R.attr.qicrCloseIcon, _.resourceId)))
     setSupportActionBar(toolbar)
     getSupportActionBar.setTitle(R.string.settings)
     toolbar.navigationOnClick0(finish())

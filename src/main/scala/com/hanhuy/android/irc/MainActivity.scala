@@ -106,11 +106,11 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
       },
       IO(buttonLayout)(
         IO(nickcomplete) >>=
-          k.imageResource(resolveAttr(R.attr.qicrNickCompleteIcon, _.resourceId)) >>=
+          imageResource(resolveAttr(R.attr.qicrNickCompleteIcon, _.resourceId)) >>=
             hook0.click(IO { proc.nickComplete(input) }) >>= k.visibility(View.GONE) >>= buttonTweaks >>=
             buttonElevation,
         IO(newmessages) >>=
-          k.imageResource(resolveAttr(R.attr.qicrNewMessageIcon, _.resourceId)) >>=
+          imageResource(resolveAttr(R.attr.qicrNewMessageIcon, _.resourceId)) >>=
           k.visibility(View.GONE) >>= hook0.click(IO {
           qicrdrawers.openDrawer(toolbar)
         }) >>= buttonTweaks >>= buttonElevation,
@@ -124,13 +124,13 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
             e.addTextChangedListener(proc.TextListener)
           } >>= buttonElevation,
         IO(send) >>=
-          k.imageResource(resolveAttr(R.attr.qicrSendIcon, _.resourceId)) >>=
+          imageResource(resolveAttr(R.attr.qicrSendIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             proc.handleLine(input.getText.toString)
             InputProcessor.clear(input)
           }) >>= buttonTweaks >>= k.visibility(View.GONE) >>= buttonElevation,
         IO(speechrec) >>= buttonElevation >>=
-          k.imageResource(resolveAttr(R.attr.qicrSpeechRecIcon, _.resourceId)) >>=
+          imageResource(resolveAttr(R.attr.qicrSpeechRecIcon, _.resourceId)) >>=
           hook0.onClick(IO {
             val intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -228,7 +228,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
         } >>= kitkatPaddingRight
       ) >>= k.clickable(true) >>=
         k.backgroundColor(drawerBackground) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= buttonElevation,
-      uparrow.! >>= k.imageResource(
+      uparrow.! >>= imageResource(
         resolveAttr(R.attr.qicrInputHistoryIcon, _.resourceId)) >>=
         k.scaleType(ImageView.ScaleType.CENTER) >>=
         lpK(48.dp, 48.dp) { p: RLP =>
@@ -288,7 +288,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
         progress.setMax(100)
         val popupLayout = l[RelativeLayout](
           IO(icon) >>= k.backgroundColor(0xff26a69a) >>= padding(left = 8 dp) >>=
-            k.imageResource(resolveAttr(R.attr.qicrBrowserOpenIcon, _.resourceId)) >>=
+            imageResource(resolveAttr(R.attr.qicrBrowserOpenIcon, _.resourceId)) >>=
             k.scaleType(ImageView.ScaleType.CENTER_INSIDE) >>=
             lpK(WRAP_CONTENT, 36 dp) {p: RLP =>
               p.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1)

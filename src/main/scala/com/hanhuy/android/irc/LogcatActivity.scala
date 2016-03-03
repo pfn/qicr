@@ -47,7 +47,8 @@ class LogcatActivity extends AppCompatActivity with PureActivity[Option[Process]
     ))
     case OnCreate(_) => s(IO {
       toolbar.setTitle("Logcat")
-      toolbar.setNavigationIcon(resolveAttr(R.attr.qicrCloseIcon, _.resourceId))
+      toolbar.setNavigationIcon(Application.getDrawable(
+        this, resolveAttr(R.attr.qicrCloseIcon, _.resourceId)))
       toolbar.navigationOnClick0(finish())
       setContentView(layout.perform())
     })

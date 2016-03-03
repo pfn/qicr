@@ -13,6 +13,7 @@ import com.hanhuy.android.common.UiBus
 import com.hanhuy.android.irc.model.{BusEvent, RingBuffer}
 
 import iota._
+import Tweaks._
 
 /**
   * @author pfnguyen
@@ -68,7 +69,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
           margins(all = 8.dp)(p)
         },
       holder.arrow.! >>= id(Id.notif_arrow) >>=
-        k.imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
+        imageResource(R.drawable.ic_navigate_next_white_24dp) >>=
         k.scaleType(ImageView.ScaleType.CENTER_INSIDE) >>=
         lpK(24.dp, 24.dp) { p: LP =>
           p.addRule(ALIGN_PARENT_RIGHT, 1)
@@ -107,7 +108,7 @@ object NotificationCenter extends TrayAdapter[NotificationMessage] {
     val holder = view.getTag(Id.holder).asInstanceOf[NotificationHolder]
     getItem(position) foreach { n =>
       holder.text.setText(n.message)
-      holder.icon.setImageResource(n.icon)
+      holder.icon.setImageDrawable(Application.getDrawable(parent.getContext, n.icon))
       val sdf = new SimpleDateFormat("h:mma")
       holder.timestamp.setText(sdf.format(n.ts).toLowerCase)
       if (n.isNew && n.important) {

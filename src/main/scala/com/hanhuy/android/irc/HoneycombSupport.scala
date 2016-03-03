@@ -116,8 +116,8 @@ object HoneycombSupport {
       mode.setTitle(nick)
       val item = menu.findItem(R.id.nick_ignore)
       item.setChecked(Config.Ignores(nick))
-      item.setIcon(iota.resolveAttr(if (Config.Ignores(nick))
-        R.attr.qicrChatIgnoreIcon else R.attr.qicrChatEndIcon, _.resourceId))
+      item.setIcon(Application.getDrawable(a, iota.resolveAttr(if (Config.Ignores(nick))
+        R.attr.qicrChatIgnoreIcon else R.attr.qicrChatEndIcon, _.resourceId)))
       true
     }
 

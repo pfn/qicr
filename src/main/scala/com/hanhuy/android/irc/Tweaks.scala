@@ -89,6 +89,10 @@ object Tweaks {
   val vertical: Kestrel[LinearLayout] =
     kestrel { l => l.setOrientation(LinearLayout.VERTICAL) }
 
+  def imageResource[A <: ImageView](resid: Int): Kestrel[A] = kestrel { iv =>
+    iv.setImageDrawable(Application.getDrawable(iv.getContext, resid))
+  }
+
   def visGone[V <: View](b: Boolean): Kestrel[V] = k.visibility(if (b) View.VISIBLE else View.GONE)
   def buttonTweaks(implicit cx: Context): Kestrel[ImageButton] = c[LinearLayout](kestrel { b: ImageButton =>
     b.setFocusable(false)

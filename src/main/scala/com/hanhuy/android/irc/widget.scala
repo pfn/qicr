@@ -464,7 +464,7 @@ extends Activity with TypedFindView with ActivityResultManager {
   lazy val layout = l[FrameLayout](
     l[FrameLayout](
       w[ImageView] >>=
-        k.imageResource(R.drawable.ic_appicon) >>=
+        imageResource(R.drawable.ic_appicon) >>=
         hook0.onClick(IO {
           val launchIntent = new Intent(this, classOf[MainActivity])
           launchIntent.putExtra(IrcManager.EXTRA_SUBJECT,
@@ -507,13 +507,13 @@ extends Activity with TypedFindView with ActivityResultManager {
       } >>= padding(bottom = 48 dp),
     l[LinearLayout](
       IO(nickcomplete) >>= buttonTweaks >>=
-        k.imageResource(R.drawable.ic_person_pin_white_24dp),
+        imageResource(R.drawable.ic_person_pin_white_24dp),
       IO(input) >>= inputTweaks >>=
         k.hint(R.string.input_placeholder) >>=
         lpK(0, MATCH_PARENT, 1.0f)(margins(all = 4 dp)) >>=
         padding(left = 8 dp, right = 8 dp),
       IO(speechrec) >>= buttonTweaks >>=
-        k.imageResource(R.drawable.ic_mic_white_24dp)
+        imageResource(R.drawable.ic_mic_white_24dp)
     ) >>= horizontal >>= lp(MATCH_PARENT, 48 dp, Gravity.BOTTOM)
   ) >>= kestrel { v: FrameLayout =>
     val p = new Point

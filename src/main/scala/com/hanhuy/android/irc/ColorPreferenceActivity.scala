@@ -152,7 +152,7 @@ class ColorPreferenceActivity extends AppCompatActivity with EventBus.RefOwner {
     super.onCreate(savedInstanceState)
     setSupportActionBar(toolbar)
     setContentView(layout.perform())
-    toolbar.setNavigationIcon(resolveAttr(R.attr.qicrCloseIcon, _.resourceId))
+    toolbar.setNavigationIcon(Application.getDrawable(this, resolveAttr(R.attr.qicrCloseIcon, _.resourceId)))
     toolbar.navigationOnClick0(finish())
     getSupportActionBar.setTitle("Select Nick Colors")
   }

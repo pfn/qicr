@@ -1,5 +1,7 @@
 import android.dsl._
 
+useSupportVectors
+
 versionName := {
   import com.typesafe.sbt.SbtGit.GitKeys.gitReader
   gitReader.value.withGit(_.describedVersion)
@@ -18,7 +20,6 @@ versionCode := {
     }._1 + math.min(9,commit) // commits beyond 9 do not move versionCode
   }
 }
-
 
 val supportSdkVersion = "23.2.0"
 

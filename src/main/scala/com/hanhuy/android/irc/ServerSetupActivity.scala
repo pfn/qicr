@@ -34,7 +34,7 @@ class ServerSetupActivity extends AppCompatActivity {
     setTheme(if (Settings.get(Settings.DAYNIGHT_MODE)) R.style.SetupTheme_Light else R.style.SetupTheme_Dark)
     super.onCreate(savedInstanceState)
     val toolbar = newToolbar
-    toolbar.setNavigationIcon(resolveAttr(R.attr.qicrCloseIcon, _.resourceId))
+    toolbar.setNavigationIcon(Application.getDrawable(this, resolveAttr(R.attr.qicrCloseIcon, _.resourceId)))
     setSupportActionBar(toolbar)
     val content = c[ViewGroup](l[FrameLayout](
       toolbar.! >>= lp(MATCH_PARENT, actionBarHeight, Gravity.TOP) >>= padding(all = 0),
