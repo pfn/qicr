@@ -151,9 +151,12 @@ object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
           case ('#', '&') => 1
           case _ =>
             val r = stripInitial(c1.name).compareToIgnoreCase(stripInitial(c2.name))
-            if (r == 0)
-              c1.server.name.compareToIgnoreCase(c2.server.name)
-            else r
+            if (r == 0) {
+              val r2 = c1name.compareTo(c2name)
+              if (r2 == 0)
+                c1.server.name.compareToIgnoreCase(c2.server.name)
+              else r2
+            } else r
         }
     }
   }
