@@ -2,10 +2,11 @@ package com.hanhuy.android.irc
 
 import java.util.UUID
 
+import android.annotation.TargetApi
 import android.app.AlertDialog
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.content.{ClipData, ClipboardManager}
 import android.os.Bundle
+import android.text.{SpannableString, Spannable, Selection}
 import android.view._
 import android.widget.AbsListView.OnScrollListener
 import android.widget._
@@ -38,15 +39,28 @@ extends Fragment with EventBus.RefOwner {
   def tag: String
 
   import ViewGroup.LayoutParams._
+  @TargetApi(11)
   def layout = c[FrameLayout](w[ListView] >>= id(android.R.id.list) >>= lp(MATCH_PARENT, MATCH_PARENT) >>=
     kitkatPadding(getActivity.tabs.getVisibility == View.GONE) >>=
     kestrel { l =>
-      l.setDrawSelectorOnTop(true)
-      l.setDivider(new ColorDrawable(Color.BLACK))
       l.setDividerHeight(0)
       l.setChoiceMode(AbsListView.CHOICE_MODE_NONE)
       l.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_NORMAL)
       l.setSelector(R.drawable.message_selector)
+      if (v(11)) {
+        l.setOnItemLongClickListener(single[AdapterView.OnItemLongClickListener] {
+          (_: AdapterView[_], view: View, pos: Int, id: Long) => {
+            val text = view.asInstanceOf[TextView].getText
+            getActivity.systemService[ClipboardManager].setPrimaryClip(
+              ClipData.newPlainText("", text))
+            Selection.selectAll(text match {
+              case s: Spannable => s
+              case cs => new SpannableString(cs)
+            })
+            true
+          }
+        })
+      }
       if (v(19)) l.setClipToPadding(false)
       l.setDrawSelectorOnTop(true)
       if (!getActivity.isFinishing)

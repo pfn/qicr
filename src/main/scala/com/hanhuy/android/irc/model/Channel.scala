@@ -3,7 +3,6 @@ package com.hanhuy.android.irc.model
 import com.hanhuy.android.irc.{Config, MessageLog, IrcManager, IrcListeners}
 
 import MessageLike._
-import scala.annotation.tailrec
 import android.util.Log
 import com.hanhuy.android.common._
 
@@ -128,15 +127,8 @@ class Query private(s: Server, n: String) extends ChannelLike(s, n) {
 }
 
 object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
-  @tailrec
-  private def stripInitial(_name: String): String = {
-    val name = if (_name.length == 0) "" else _name.charAt(0) match {
-      case '#' => _name.substring(1)
-      case '&' => _name.substring(1)
-      case _   => _name
-    }
-    if (name == _name) name else stripInitial(name)
-  }
+  private def stripInitial(_name: String): String =
+    _name.dropWhile(c => c == '&' || c == '#')
   override def compare(c1: ChannelLike, c2: ChannelLike): Int = {
     (c1, c2) match {
       case (_: Channel, _: Query) => 1
@@ -152,7 +144,7 @@ object ChannelLikeComparator extends java.util.Comparator[ChannelLike] {
           case _ =>
             val r = stripInitial(c1.name).compareToIgnoreCase(stripInitial(c2.name))
             if (r == 0) {
-              val r2 = c1name.compareTo(c2name)
+              val r2 = c1name.compareToIgnoreCase(c2name)
               if (r2 == 0)
                 c1.server.name.compareToIgnoreCase(c2.server.name)
               else r2

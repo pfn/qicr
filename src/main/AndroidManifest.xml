@@ -15,6 +15,7 @@
         android:value="AEdPqrEAAAAIKU_SLiEP2MRhsncxderquUs47kYTlDzgSHpggQ" />
     -->
     <application android:label="@string/app_name"
+                 tools:ignore="UnusedAttribute"
                  android:icon="@drawable/ic_appicon"
                  android:logo="@drawable/ic_appicon"
                  android:name="com.hanhuy.android.irc.Application"
