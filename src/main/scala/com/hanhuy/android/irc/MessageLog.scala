@@ -800,8 +800,8 @@ class MessageLogActivity extends AppCompatActivity {
     searchView.setOnQueryTextListener(new OnQueryTextListener {
       override def onQueryTextSubmit(p1: String) = {
         hideIME()
-        val query = searchView.getQuery.toString
-        if (query.trim.nonEmpty) {
+        val query = searchView.getQuery.toString.trim
+        if (query.nonEmpty) {
           setAdapter(None)
           Future {
             MessageLog.get(MessageLogActivity.this, nid, channel, query)
