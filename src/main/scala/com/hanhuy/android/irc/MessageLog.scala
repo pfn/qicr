@@ -44,7 +44,7 @@ import Futures._
 object MessageLog {
   val logcat = Logcat("MessageLog")
   val DATABASE_NAME    = "logs"
-  val DATABASE_VERSION = 2
+  val DATABASE_VERSION = 3
 
   val TABLE_SERVERS  = "servers"
   val TABLE_CHANNELS = "channels"
@@ -95,6 +95,12 @@ object MessageLog {
        | $TABLE_LOGS($FIELD_CHANNEL,$FIELD_SENDER);
      """.stripMargin
 
+  val TABLE_LOGS_NICK_INDEX2_DDL =
+    s"""
+       |CREATE INDEX idx_logs_nick2 ON
+       | $TABLE_LOGS($FIELD_CHANNEL,$FIELD_SENDER collate nocase);
+     """.stripMargin
+
   val TABLE_LOGS_CHANNEL_INDEX_DDL =
     s"""
        |CREATE INDEX idx_logs_chan ON $TABLE_LOGS($FIELD_CHANNEL);
@@ -120,7 +126,8 @@ object MessageLog {
       s"INSERT INTO new_$TABLE_SERVERS SELECT * FROM $TABLE_SERVERS",
       s"DROP TABLE $TABLE_SERVERS",
       s"ALTER TABLE new_$TABLE_SERVERS RENAME TO $TABLE_SERVERS"
-    )
+    ),
+    3 -> Seq(TABLE_LOGS_NICK_INDEX2_DDL)
   )
 
   case class Network(name: String, id: Long = -1) {
@@ -439,7 +446,7 @@ class MessageLog private(context: Context)
     val query =
       s"""
          |SELECT * FROM $TABLE_LOGS WHERE $FIELD_CHANNEL = ?
-         | AND ($FIELD_SENDER = ? OR $FIELD_MESSAGE LIKE ?)
+         | AND ($FIELD_SENDER = ? COLLATE NOCASE OR $FIELD_MESSAGE LIKE ?)
          |  ORDER BY $FIELD_TIMESTAMP
        """.stripMargin
     val cursor = db.rawQuery(query,
