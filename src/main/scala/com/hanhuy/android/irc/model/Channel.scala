@@ -71,7 +71,7 @@ abstract class ChannelLike(val server: Server, val name: String)
     ServiceBus.send(BusEvent.ChannelMessage(this, m))
     UiBus.send(BusEvent.ChannelMessage(this, m))
   }
-  def +=(m: MessageLike) = synchronized {
+  def +=(m: MessageLike) = {
     if (isNew(m)) m match {
       case c: ChatMessage =>
         lastTs = m.ts.getTime
@@ -108,19 +108,21 @@ class Channel private(s: Server, n: String) extends ChannelLike(s, n) {
     _state = state
   }
 
-  override def +=(m: MessageLike) = m match {
-    case t@Topic(sender, topic, ts, force) =>
-      // do not repeat topic when re-connecting to a bnc
-      if (!lastTopic.exists(_.topic == topic) || force)
-        super.+=(m)
+  override def +=(m: MessageLike) = synchronized {
+    m match {
+      case t@Topic(sender, topic, ts, force) =>
+        // do not repeat topic when re-connecting to a bnc
+        if (!lastTopic.exists(_.topic == topic) || force)
+          super.+=(m)
 
-      lastTopic = Some(t)
-    case _ =>
-      super.+=(m)
+        lastTopic = Some(t)
+      case _ =>
+        super.+=(m)
+    }
   }
 }
 class Query private(s: Server, n: String) extends ChannelLike(s, n) {
-  override def +=(m: MessageLike) {
+  override def +=(m: MessageLike) = synchronized {
     newMentions = true // always true in a query
     super.+=(m)
   }
