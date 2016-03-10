@@ -14,4 +14,8 @@
     <style name="SettingTheme.Light" parent="Base.AppTheme.Light">
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
     </style>
+    <style name="ColorTabText" parent="TextAppearance.Design.Tab">
+        <item name="textAllCaps">false</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
 </resources>
