@@ -103,7 +103,7 @@ object ColorPreferenceActivity {
     val colorValues = getResources.getIntArray(colors)
     val container = new LinearLayout(context)
     container.setOrientation(LinearLayout.VERTICAL)
-    val res = resolveAttr(android.R.attr.selectableItemBackground, _.resourceId)
+    val res = resolveAttr(R.attr.selectableItemBackground, _.resourceId)
     @TargetApi(21)
     def selectable = if (v(21))
       getResources.getDrawable(res, context.getTheme)
