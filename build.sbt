@@ -20,7 +20,9 @@ versionCode := {
 }
 
 
-val supportSdkVersion = "23.2.0"
+val supportSdkVersion = "23.2.1"
+
+val conversionsVersion = "23.2.0"
 
 platformTarget := "android-23"
 
@@ -36,8 +38,8 @@ unmanagedJars in Compile ~= { _ filterNot (
   _.data.getName startsWith "android-support-v4") }
 
 libraryDependencies ++= Seq(
-  "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
-  "com.hanhuy.android" %% "scala-conversions-appcompat" % supportSdkVersion,
+  "com.hanhuy.android" %% "scala-conversions" % conversionsVersion,
+  "com.hanhuy.android" %% "scala-conversions-appcompat" % conversionsVersion,
   "com.hanhuy.android" %% "scala-common" % "1.3",
   "com.hanhuy.android" %% "iota" % "1.0.4",
   "com.hanhuy.android" %% "iota-pure" % "0.1",
