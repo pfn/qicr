@@ -99,13 +99,13 @@
     <style name="SetupTheme.Dark" parent="AppTheme.Dark"/>
     <style name="SetupTheme.Light" parent="AppTheme.Light"/>
     <style name="AppTheme.CardView.Light" parent="CardView.Light">
-        <item name="android:foreground">?android:selectableItemBackground</item>
+        <item name="android:foreground">?selectableItemBackground</item>
         <item name="cardUseCompatPadding">true</item>
         <item name="cardCornerRadius">2dp</item>
         <item name="cardElevation">2dp</item>
     </style>
     <style name="AppTheme.CardView.Dark" parent="CardView.Dark">
-        <item name="android:foreground">?android:selectableItemBackground</item>
+        <item name="android:foreground">?selectableItemBackground</item>
         <item name="cardUseCompatPadding">true</item>
         <item name="cardCornerRadius">2dp</item>
         <item name="cardElevation">2dp</item>
