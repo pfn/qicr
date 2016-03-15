@@ -59,21 +59,23 @@ class ServersFragment extends Fragment with EventBus.RefOwner {
     super.onAttach(context)
     UiBus += {
       case BusEvent.ServerAdded(server)   =>
-        emptyView.setVisibility(View.GONE)
-        recycler.setVisibility(View.VISIBLE)
-        if (getActivity != null)
+        if (getActivity != null) {
+          emptyView.setVisibility(View.GONE)
+          recycler.setVisibility(View.VISIBLE)
           adapter.notifyItemInserted(manager.getServers.indexOf(server))
+        }
       case BusEvent.ServerChanged(server) =>
         if (getActivity != null)
           adapter.notifyItemChanged(manager.getServers.indexOf(server))
       case BusEvent.ServerRemoved(server) =>
-        if (Config.servers.now.isEmpty) {
-          emptyView.setVisibility(View.VISIBLE)
-          recycler.setVisibility(View.GONE)
-        }
-        selectedItem = None
-        if (getActivity != null)
+        if (getActivity != null) {
+          if (Config.servers.now.isEmpty) {
+            emptyView.setVisibility(View.VISIBLE)
+            recycler.setVisibility(View.GONE)
+          }
+          selectedItem = None
           adapter.notifyDataSetChanged()
+        }
     }
   }
 
