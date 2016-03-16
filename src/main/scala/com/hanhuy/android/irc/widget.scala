@@ -186,12 +186,12 @@ object Widgets extends EventBus.RefOwner {
 
   private var messageViews: Map[Int,String] = Map.empty
 
-  def assignMessageView(id: Int, subj: String) = synchronized {
+  def assignMessageView(id: Int, subj: String) = ScalaWorkaround.sync(this, () => {
     messageViews += id -> subj
-  }
-  def unassignMessageView(id: Int) = synchronized {
+  })
+  def unassignMessageView(id: Int) = ScalaWorkaround.sync(this, () => {
     messageViews -= id
-  }
+  })
 
   def toString(m: MessageAppender) = m match {
     case c: ChannelLike => c.server.name + IrcManager.EXTRA_SPLITTER + c.name
@@ -199,7 +199,7 @@ object Widgets extends EventBus.RefOwner {
   }
 
   @TargetApi(14)
-  def updateMessageWidget(m: MessageAppender) = synchronized {
+  def updateMessageWidget(m: MessageAppender) = ScalaWorkaround.sync(this, () => {
     val subject = toString(m)
     messageViews.toList filter { case (id, subj) => subject == subj } map {
       case (id,_) =>
@@ -207,12 +207,12 @@ object Widgets extends EventBus.RefOwner {
       awm.notifyAppWidgetViewDataChanged(id, R.id.message_list)
       id
     }
-  }
+  })
   private val handler = new Handler
-  def updateStatusWidget() = synchronized {
+  def updateStatusWidget() = ScalaWorkaround.sync(this, () => {
     handler.removeCallbacks(updateStatusRunnable)
     handler.postDelayed(updateStatusRunnable, 250)
-  }
+  })
 
   @TargetApi(14)
   def updateStatus(): Unit = {

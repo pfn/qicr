@@ -250,7 +250,7 @@ class MessageLog private(context: Context)
     db.execSQL(TABLE_LOGS_CHANNEL_INDEX_DDL)
   }
 
-  override def onUpgrade(db: SQLiteDatabase, prev: Int, ver: Int) = synchronized {
+  override def onUpgrade(db: SQLiteDatabase, prev: Int, ver: Int) = ScalaWorkaround.sync(this, () => {
     if (prev < ver) {
       db.beginTransaction()
       Range(prev, ver + 1) foreach { v =>
@@ -261,15 +261,15 @@ class MessageLog private(context: Context)
       db.setTransactionSuccessful()
       db.endTransaction()
     }
-  }
+  })
 
-  override def onOpen(db: SQLiteDatabase) = synchronized {
+  override def onOpen(db: SQLiteDatabase) = ScalaWorkaround.sync(this, () => {
     super.onOpen(db)
     if (!db.isReadOnly)
       db.execSQL("PRAGMA foreign_keys=ON")
-  }
+  })
 
-  private def getChannel(channel: ChannelLike): Channel = synchronized {
+  private def getChannel(channel: ChannelLike): Channel = ScalaWorkaround.sync(this, () => {
     val network = networks.getOrElse(channel.server.id, {
       val net = Network(channel.server.name, channel.server.id)
       logcat.d(s"Inserting: $net, previous existing: $networks")
@@ -294,7 +294,7 @@ class MessageLog private(context: Context)
       channels += (network.id, ch2.name.toLowerCase) -> ch2
       ch2
     })
-  }
+  })
 
   def log(m: MessageLike, c: ChannelLike) = m match {
     case Privmsg(sender, message, _, _, ts) =>
@@ -306,7 +306,7 @@ class MessageLog private(context: Context)
     case _ =>
   }
 
-  def logEntry(e: Entry) = synchronized {
+  def logEntry(e: Entry) = ScalaWorkaround.sync(this, () => {
     if (e.message != null) { // how can message possibly be null...
       val lastTs = e.channel.lastTs
       if (lastTs < e.ts) {
@@ -322,7 +322,7 @@ class MessageLog private(context: Context)
         close(db)
       }
     }
-  }
+  })
 
   def delete(netId: Long, channel: String) = {
     val c = channels(netId -> channel)
@@ -336,9 +336,9 @@ class MessageLog private(context: Context)
     db.endTransaction()
     db.execSQL("VACUUM")
     close(db)
-    this.synchronized {
+    ScalaWorkaround.sync(this, () => {
       channels -= (netId -> channel)
-    }
+    })
   }
 
   def deleteAll() = {
@@ -351,28 +351,28 @@ class MessageLog private(context: Context)
     db.endTransaction()
     db.execSQL("VACUUM")
     close(db)
-    this.synchronized {
+    ScalaWorkaround.sync(this, () => {
       channels = Map.empty
       networks = Map.empty
-    }
+    })
   }
 
   var openCount = 0
-  override def getWritableDatabase = synchronized {
+  override def getWritableDatabase = ScalaWorkaround.sync(this, () => {
     openCount += 1
     super.getWritableDatabase
-  }
+  })
 
-  override def getReadableDatabase = synchronized {
+  override def getReadableDatabase = ScalaWorkaround.sync(this, () => {
     openCount += 1
     super.getReadableDatabase
-  }
+  })
 
-  def close(db: SQLiteDatabase): Unit = synchronized {
+  def close(db: SQLiteDatabase): Unit = ScalaWorkaround.sync(this, () => {
     openCount -= 1
     if (openCount == 0)
       db.close()
-  }
+  })
 
   def get(ctx: Activity, netId: Long, channel: String): LogAdapter =
     get(ctx, channels(netId -> channel.toLowerCase))

@@ -71,7 +71,7 @@ abstract class ChannelLike(val server: Server, val name: String)
     ServiceBus.send(BusEvent.ChannelMessage(this, m))
     UiBus.send(BusEvent.ChannelMessage(this, m))
   }
-  def +=(m: MessageLike) = synchronized {
+  def +=(m: MessageLike) = com.hanhuy.android.irc.ScalaWorkaround.sync(this, () => {
     if (isNew(m)) m match {
       case c: ChatMessage =>
         lastTs = m.ts.getTime
@@ -87,7 +87,7 @@ abstract class ChannelLike(val server: Server, val name: String)
       case _ =>
         addInternal(m)
     }
-  }
+  })
 
   override def toString = name
 
