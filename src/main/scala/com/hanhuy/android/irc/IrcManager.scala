@@ -223,15 +223,15 @@ class IrcManager extends EventBus.RefOwner {
     _messages += ((idx, adapter))
   }
 
-  def removeConnection(server: Server) = ScalaWorkaround.sync(this, () => {
+  def removeConnection(server: Server) = synchronized {
 //    log.d("Unregistering connection: " + server, new StackTrace)
     connections.get(server).foreach(c => {
       mconnections -= server
       m_connections -= c
     })
-  })
+  }
 
-  def addConnection(server: Server, connection: IrcConnection) = ScalaWorkaround.sync(this, () => {
+  def addConnection(server: Server, connection: IrcConnection) = synchronized {
     log.i("Registering connection: " + server + " => " + connection)
     mconnections += ((server, connection))
     m_connections += ((connection, server))
@@ -239,7 +239,7 @@ class IrcManager extends EventBus.RefOwner {
     if (!showing && _running) {
       nm.notify(RUNNING_ID, runningNotification(runningString))
     }
-  })
+  }
 
   def start() {
     if (!running) {
