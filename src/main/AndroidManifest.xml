@@ -3,7 +3,7 @@
           xmlns:tools="http://schemas.android.com/tools"
       package="com.hanhuy.android.irc">
     <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="23"
-              tools:overrideLibrary="android.support.v14.preference"/>
+              tools:overrideLibrary="android.support.v14.preference,android.support.graphics.drawable.animated"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.VIBRATE"/>

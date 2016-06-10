@@ -361,24 +361,25 @@ case class RingBuffer[A: ClassTag](capacity: Int) extends IndexedSeq[A] {
     case oom: OutOfMemoryError if MessageAdapter.DEFAULT_MAXIMUM_SIZE != Settings.maximumMessageLines =>
       Array.ofDim[A](MessageAdapter.DEFAULT_MAXIMUM_SIZE)
   }
+  val realCap = buffer.length
   private var _length = 0
   private var pos = 0
   def length = _length
 
-  private def zero = (capacity + (pos - _length)) % capacity
+  private def zero = (realCap + (pos - _length)) % realCap
 
   def clear() {
     _length = 0
     pos = 0
   }
   def +=(a: A) {
-    buffer(pos % capacity) = a
-    _length = math.min(_length + 1, capacity)
+    buffer(pos % realCap) = a
+    _length = math.min(_length + 1, realCap)
     pos += 1
   }
 
-  def apply(i: Int) = buffer((zero + i) % capacity)
-  def copy(capacity: Int = capacity) = {
+  def apply(i: Int) = buffer((zero + i) % realCap)
+  def copy(capacity: Int = realCap) = {
     val b = RingBuffer[A](capacity)
     foreach { item => b += item }
     b

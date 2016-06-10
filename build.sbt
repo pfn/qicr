@@ -1,5 +1,7 @@
 import android.dsl._
 
+dexInProcess := false
+
 versionName := {
   import com.typesafe.sbt.SbtGit.GitKeys.gitReader
   gitReader.value.withGit(_.describedVersion)
@@ -20,7 +22,7 @@ versionCode := {
 }
 
 
-val supportSdkVersion = "23.2.1"
+val supportSdkVersion = "23.4.0"
 
 val conversionsVersion = "23.2.0"
 
