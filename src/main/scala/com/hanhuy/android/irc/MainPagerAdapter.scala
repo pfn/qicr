@@ -1,7 +1,6 @@
 package com.hanhuy.android.irc
 
 import android.support.design.widget.TabLayout
-import android.support.design.widget.TabLayout.{Tab, OnTabSelectedListener}
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ServerComparator
 import com.hanhuy.android.irc.model.Channel
@@ -15,7 +14,7 @@ import android.app.NotificationManager
 import android.util.Log
 import android.view.{View, ViewGroup}
 import android.view.LayoutInflater
-import android.widget.{FrameLayout, TextView, BaseAdapter}
+import android.widget.{TextView, BaseAdapter}
 
 import android.support.v4.view.{ViewPager, PagerAdapter}
 import android.support.v4.app.Fragment

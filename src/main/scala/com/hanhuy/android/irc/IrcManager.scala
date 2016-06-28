@@ -151,7 +151,7 @@ class IrcManager extends EventBus.RefOwner {
     val h = new Handler(handlerThread.getLooper)
     def pingLoop(): Unit = {
       import scala.concurrent.duration._
-      h.postDelayed(() => pingLoop(), 10.seconds.toMillis)
+      h.postDelayed(() => pingLoop(), 30.seconds.toMillis)
       Config.servers.now.filter(_.state.now == Server.CONNECTED).filterNot(mconnections.keySet) foreach { s =>
         s += ServerInfo("Fixing state of orphaned server")
         disconnect(s, None, true).onComplete { case _ => connect(s) }
@@ -478,7 +478,7 @@ class IrcManager extends EventBus.RefOwner {
     if (!showing && c.isNew(m)) {
       showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
         getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
-    } else {
+    } else if (!c.isNew(m)) {
       markCurrentRead()
     }
   }

@@ -202,14 +202,12 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
               qicrdrawers.closeDrawer (toolbar)
               action(adapter)
             }
-            NotificationCenter.getItem(pos) foreach { n =>
-              n match {
-                case n@UserMessageNotification(_,_,_,_) =>
-                  onActiveNotification(n.action)
-                case n@ChannelMessageNotification(_,_,_,_,_) =>
-                  onActiveNotification(n.action)
-                case _ =>
-              }
+            NotificationCenter.getItem(pos) foreach {
+              case n@UserMessageNotification(_,_,_,_) =>
+                onActiveNotification(n.action)
+              case n@ChannelMessageNotification(_,_,_,_,_) =>
+                onActiveNotification(n.action)
+              case _ =>
             }
           }
         } >>= kitkatPaddingRight
