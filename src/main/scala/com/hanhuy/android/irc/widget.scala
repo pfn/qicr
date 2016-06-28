@@ -1,26 +1,27 @@
 package com.hanhuy.android.irc
 
 import android.annotation.TargetApi
-import android.graphics.{Point, Color}
+import android.graphics.{Color, Point}
 import android.graphics.drawable.ColorDrawable
 import android.text.TextUtils.TruncateAt
 import android.widget.AbsListView.OnScrollListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
-
 import android.appwidget.{AppWidgetManager, AppWidgetProvider}
 import android.widget._
-import android.content.{DialogInterface, Context, BroadcastReceiver, Intent}
-import android.app.{AlertDialog, Activity, PendingIntent}
-import android.view.{Gravity, ViewGroup, View, WindowManager}
+import android.content.{BroadcastReceiver, Context, DialogInterface, Intent}
+import android.app.{Activity, AlertDialog, PendingIntent}
+import android.view.{Gravity, View, ViewGroup, WindowManager}
 import com.hanhuy.android.irc.model._
 import android.widget.RemoteViewsService.RemoteViewsFactory
-import android.os.{Handler, Bundle}
+import android.os.{Bundle, Handler}
 import android.speech.RecognizerIntent
 import com.hanhuy.android.irc.model.BusEvent._
 import iota._
 import Futures._
+
+import scala.util.Try
 
 object Widgets extends EventBus.RefOwner {
   val ACTION_LAUNCH = "com.hanhuy.android.irc.action.LAUNCH"
@@ -455,7 +456,7 @@ with RemoteViewsService.RemoteViewsFactory {
 // TODO refactor and cleanup, so ugly, copy/paste from MainActivity
 @TargetApi(14)
 class WidgetChatActivity
-extends Activity with TypedFindView with ActivityResultManager {
+extends Activity with TypedFindView with ActivityResultManager with EventBus.RefOwner {
   import Tweaks._
   import ViewGroup.LayoutParams._
 
@@ -654,5 +655,14 @@ extends Activity with TypedFindView with ActivityResultManager {
   override def onSearchRequested() = {
     proc.foreach(_.nickComplete(input))
     true // prevent KEYCODE_SEARCH being sent to onKey
+  }
+
+  UiBus += {
+    case BusEvent.LinkClickEvent(url) =>
+      val uri = android.net.Uri.parse(url)
+      val intent = new Intent(Intent.ACTION_VIEW, uri)
+      intent.putExtra(android.provider.Browser.EXTRA_APPLICATION_ID, getPackageName)
+      Try(startActivity(intent)).getOrElse(
+        Toast.makeText(this, "Activity was not found for intent: " + intent, Toast.LENGTH_SHORT).show())
   }
 }

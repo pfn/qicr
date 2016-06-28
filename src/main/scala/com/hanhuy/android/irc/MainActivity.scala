@@ -272,7 +272,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
   }
 
   UiBus += {
-    case BusEvent.LinkClickEvent(url) =>
+    case BusEvent.LinkClickEvent(url) if IrcManager.instance.exists(_.showing) =>
       if (!supportIsDestroyed) { // reference holding badness causes this to fail otherwise
         val p = new DisplayMetrics
         getWindow.getWindowManager.getDefaultDisplay.getMetrics(p)
