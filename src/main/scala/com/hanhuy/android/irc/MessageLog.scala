@@ -568,7 +568,7 @@ class MessageLogActivity extends AppCompatActivity {
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
       if (Settings.get(Settings.ROTATE_LOCK))
-        SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
+        SCREEN_ORIENTATION_LOCKED else SCREEN_ORIENTATION_UNSPECIFIED)
 
     setContentView(layout.perform())
     setSupportActionBar(toolbar)

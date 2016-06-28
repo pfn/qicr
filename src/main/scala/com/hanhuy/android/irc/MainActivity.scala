@@ -483,7 +483,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
     import android.content.pm.ActivityInfo._
     setRequestedOrientation(
       if (Settings.get(Settings.ROTATE_LOCK))
-        SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
+        SCREEN_ORIENTATION_LOCKED else SCREEN_ORIENTATION_UNSPECIFIED)
   }
 
   override def onPostCreate(savedInstanceState: Bundle) {
@@ -720,7 +720,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
       item.setChecked(locked)
       Settings.set(Settings.ROTATE_LOCK, locked)
       setRequestedOrientation(
-        if (locked) SCREEN_ORIENTATION_NOSENSOR else SCREEN_ORIENTATION_SENSOR)
+        if (locked) SCREEN_ORIENTATION_LOCKED else SCREEN_ORIENTATION_UNSPECIFIED)
       true
     case _ => false
     }
