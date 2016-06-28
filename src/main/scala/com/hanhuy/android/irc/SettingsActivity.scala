@@ -85,6 +85,7 @@ object Settings {
   val SHOW_NICK_COMPLETE = BooleanSetting("ui_show_nick_complete",
     honeycombAndNewer)
   val DAYNIGHT_MODE = BooleanSetting("ui_daynight_mode", false)
+  val INTERNAL_BROWSER = BooleanSetting("ui_use_internal_browser", true)
 
 
   private lazy val instance = new Settings

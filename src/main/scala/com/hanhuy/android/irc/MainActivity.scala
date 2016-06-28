@@ -1,39 +1,37 @@
 package com.hanhuy.android.irc
 
 import android.annotation.TargetApi
-import android.app.{NotificationManager, Activity, AlertDialog}
-import android.content.{Context, Intent, DialogInterface}
+import android.app.{Activity, AlertDialog, NotificationManager}
+import android.content.{Context, DialogInterface, Intent}
 import android.graphics.{Color, Rect}
 import android.graphics.drawable.ColorDrawable
 import android.os.{Build, Bundle}
 import android.speech.RecognizerIntent
 import android.support.design.widget.TabLayout
-import android.support.v4.view.{ViewCompat, MotionEventCompat, ViewPager}
+import android.support.v4.view.{MotionEventCompat, ViewCompat, ViewPager}
 import android.util.DisplayMetrics
 import android.view.View.MeasureSpec
 import android.view._
-import android.webkit.{WebChromeClient, WebViewClient, WebView}
+import android.webkit.{WebChromeClient, WebView, WebViewClient}
 import android.widget._
-
 import android.support.v4.app.FragmentManager
+
 import scala.collection.JavaConversions._
-
 import com.hanhuy.android.irc.model._
-
 import MainActivity._
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
-
-import android.support.v7.app.{AppCompatActivity, ActionBarDrawerToggle}
+import android.support.v7.app.{ActionBarDrawerToggle, AppCompatActivity}
 import android.support.v7.widget.Toolbar
-import android.support.v4.widget.{ViewDragHelper, DrawerLayout}
+import android.support.v4.widget.{DrawerLayout, ViewDragHelper}
 import android.database.DataSetObserver
 import com.hanhuy.android.irc.model.BusEvent
-
 import iota._
 import Tweaks._
 import Futures._
+
+import scala.util.Try
 
 object MainActivity {
   val MAIN_FRAGMENT         = "mainfrag"
@@ -273,7 +271,13 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
 
   UiBus += {
     case BusEvent.LinkClickEvent(url) if IrcManager.instance.exists(_.showing) =>
-      if (!supportIsDestroyed) { // reference holding badness causes this to fail otherwise
+      if (!Settings.get(Settings.INTERNAL_BROWSER)) {
+        val uri = android.net.Uri.parse(url)
+        val intent = new Intent(Intent.ACTION_VIEW, uri)
+        intent.putExtra(android.provider.Browser.EXTRA_APPLICATION_ID, getPackageName)
+        Try(startActivity(intent)).getOrElse(
+          Toast.makeText(this, "Activity was not found for intent: " + intent, Toast.LENGTH_SHORT).show())
+      } else if (!supportIsDestroyed) { // reference holding badness causes this to fail otherwise
         val p = new DisplayMetrics
         getWindow.getWindowManager.getDefaultDisplay.getMetrics(p)
         val popup = new PopupWindow(this)
@@ -328,6 +332,9 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
         val settings = web.getSettings
         settings.setJavaScriptCanOpenWindowsAutomatically(false)
         settings.setJavaScriptEnabled(true)
+        settings.setSupportZoom(true)
+        settings.setBuiltInZoomControls(true)
+        if (v(11)) settings.setDisplayZoomControls(false)
         val chrome = new WebChromeClient {
           override def onProgressChanged(view: WebView, newProgress: Int) = {
             progress.setProgress(newProgress)

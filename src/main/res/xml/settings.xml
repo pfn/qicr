@@ -53,6 +53,11 @@
             android:numeric="integer"
             android:singleLine="true"
         />
+        <CheckBoxPreference
+            android:key="ui_use_internal_browser"
+            android:title="@string/pref_use_internal_browser_title"
+            android:defaultValue="true"
+            />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_speech_rec">
         <CheckBoxPreference
