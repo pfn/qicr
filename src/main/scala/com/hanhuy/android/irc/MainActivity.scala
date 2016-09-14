@@ -66,22 +66,9 @@ object MainActivity {
 class MainActivity extends AppCompatActivity with EventBus.RefOwner
   with ActivityResultManager {
 
-  override def onMultiWindowModeChanged(b: Boolean) {
-//    UiBus.send(BusEvent.MultiWindow(b))
-//    super.onMultiWindowModeChanged(b)
-//    if (!b) {
-//      getWindow.setFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION, WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-//      getWindow.getDecorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
-//    }
-//    if (b) {
-//      IO.perform(
-//        IO(buttonLayout) >>= kitkatInputMargin,
-//        IO(channels) >>= listTweaks >>= kitkatPadding,
-//        IO(nickList) >>= listTweaks >>= kitkatPaddingBottom
-//      )
-//      buttonLayout.requestLayout()
-//    }
-  }
+  @TargetApi(24)
+  override def onMultiWindowModeChanged(b: Boolean) =
+    if (!b) recreate()
 
   import ViewGroup.LayoutParams._
 

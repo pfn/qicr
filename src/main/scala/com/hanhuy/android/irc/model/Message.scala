@@ -88,5 +88,4 @@ object BusEvent {
   case class LinkClickEvent(url: String) extends BusEvent
   case object NewNotification extends BusEvent
   case object ReadNotification extends BusEvent
-  case class MultiWindow(on: Boolean) extends BusEvent
 }
