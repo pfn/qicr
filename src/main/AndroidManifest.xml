@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools"
       package="com.hanhuy.android.irc">
-    <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="23"
+    <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="24"
               tools:overrideLibrary="android.support.v14.preference,android.support.graphics.drawable.animated"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.INTERNET"/>

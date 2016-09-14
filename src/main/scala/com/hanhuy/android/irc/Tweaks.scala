@@ -1,5 +1,7 @@
 package com.hanhuy.android.irc
 
+import android.annotation.TargetApi
+import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.text.InputType
@@ -9,7 +11,6 @@ import android.view.inputmethod.EditorInfo
 import android.view._
 import android.widget._
 import android.support.v7.widget.{CardView, Toolbar}
-
 import iota._
 
 /**
@@ -48,27 +49,27 @@ object Tweaks {
   def actionBarHeight(implicit ctx: Context) = resolveAttr(R.attr.actionBarSize,
     tv => TypedValue.complexToDimensionPixelSize(tv.data, ctx.getResources.getDisplayMetrics))
 
-  def kitkatPadding[V <: View](implicit ctx: Context): Kestrel[V] =
+  def kitkatPadding[V <: View](implicit ctx: Activity): Kestrel[V] =
     condK(v(19) ? padding[V](
       top    = statusBarHeight + actionBarHeight,
-      bottom = if (tablet | portrait) navBarHeight else 0,
-      right  = if (phone & landscape) navBarWidth else 0) | padding(top = actionBarHeight))
-  def kitkatPadding[V <: View](padTop: Boolean)(implicit ctx: Context): Kestrel[V] =
+      bottom = if (tablet || portrait) navBarHeight else 0,
+      right  = if (phone && landscape && !ctx.isMultiWindow) navBarWidth else 0) | padding(top = actionBarHeight))
+  def kitkatPadding[V <: View](padTop: Boolean)(implicit ctx: Activity): Kestrel[V] =
     condK(v(19) ? padding[V](
       top    = if (padTop) statusBarHeight + actionBarHeight else 0,
-      bottom = if (tablet || portrait) navBarHeight else 0,
-      right  = if (phone && landscape) navBarWidth else 0) | padding(top = if (padTop) actionBarHeight else 0))
-  def kitkatPaddingRight[V <: View](implicit ctx: Context): Kestrel[V] =
-    condK(v(19) ? padding(right  = if (phone & landscape) navBarWidth else 0))
+      bottom = if ((tablet || portrait) && !ctx.isMultiWindow) navBarHeight else 0,
+      right  = if (phone && landscape && !ctx.isMultiWindow) navBarWidth else 0) | padding(top = if (padTop) actionBarHeight else 0))
+  def kitkatPaddingRight[V <: View](implicit ctx: Activity): Kestrel[V] =
+    condK(v(19) ? padding(right  = if (phone && landscape && !ctx.isMultiWindow) navBarWidth else 0))
 
-  def kitkatPaddingBottom[V <: View](implicit ctx: Context): Kestrel[V] =
+  def kitkatPaddingBottom[V <: View](implicit ctx: Activity): Kestrel[V] =
     padding(bottom = kitkatBottomPadding)
 
   def kitkatStatusTopPadding(implicit c: Context) =
     if (v(19)) statusBarHeight else 0
 
-  def kitkatBottomPadding(implicit c: Context) =
-    if ((tablet || portrait) && v(19)) navBarHeight else 0
+  def kitkatBottomPadding(implicit c: Activity) =
+    if ((tablet || portrait) && v(19) && !c.isMultiWindow) navBarHeight else 0
 
   def kitkatStatusMargin[V <: View](implicit c: Context) =
     margins(top = if (v(19)) statusBarHeight else 0)
@@ -77,11 +78,11 @@ object Tweaks {
   def kitkatPaddingTop[V <: View](implicit c: Context): Kestrel[V] =
     padding(top = actionBarHeight + (if (v(19)) statusBarHeight else 0))
 
-  def kitkatInputMargin[A <: View](implicit ctx: Context): Kestrel[A] = kestrel { a =>
+  def kitkatInputMargin[A <: View](implicit ctx: Activity): Kestrel[A] = kestrel { a =>
     val lp = a.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
     if(v(19)) margins(
-      bottom = if (tablet || portrait) navBarHeight else 0,
-      right = if (phone && landscape) navBarWidth else 0)(lp)
+      bottom = if ((tablet || portrait) && !ctx.isMultiWindow) navBarHeight else 0,
+      right = if (phone && landscape && !ctx.isMultiWindow) navBarWidth else 0)(lp)
   }
 
   val horizontal: Kestrel[LinearLayout] =
@@ -105,7 +106,7 @@ object Tweaks {
   def cardView(implicit ctx: Context) = {
     IO(new CardView(ctx, null, R.attr.qicrCardStyle))
   }
-  def newToolbar(implicit ctx: Context) = {
+  def newToolbar(implicit ctx: Activity) = {
     (IO(new Toolbar(new ContextThemeWrapper(
       ctx, R.style.ThemeOverlay_AppCompat_ActionBar))) >>=
       kestrel { t =>
@@ -123,6 +124,11 @@ object Tweaks {
       new CheckedTextView(ctx)
     else
       new android.support.v7.widget.AppCompatCheckedTextView(ctx)
+
+  implicit class NougatActivity(val activity: Activity) extends AnyVal {
+    @TargetApi(24)
+    @inline def isMultiWindow = v(24) && activity.isInMultiWindowMode
+  }
 }
 class SquareImageButton(c: Context) extends ImageButton(c) {
   override def onMeasure(mw: Int, mh: Int) = {

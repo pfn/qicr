@@ -577,7 +577,7 @@ class MessageLogActivity extends AppCompatActivity {
     // due to a bug in Moto Display, it fails to render vector images
     // as a result, vector images are also deleted so only the rasterized
     // images remain. Tint manually!
-    val d = getResources.getDrawable(R.drawable.abc_ic_ab_back_mtrl_am_alpha)
+    val d = getResources.getDrawable(R.drawable.abc_ic_ab_back_material)
     DrawableCompat.setTint(DrawableCompat.wrap(d.mutate()), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
     toolbar.setNavigationIcon(d)
 

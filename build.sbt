@@ -21,11 +21,11 @@ versionCode := {
   }
 }
 
-val supportSdkVersion = "23.4.0"
+val supportSdkVersion = "24.2.1"
 
 val conversionsVersion = "23.2.0"
 
-platformTarget := "android-23"
+platformTarget := "android-24"
 
 scalaVersion in Global := "2.11.7"
 
@@ -83,7 +83,5 @@ collectResources := {
   IO.delete(res / "drawable-anydpi-v21")
   (assets,res)
 }
-
-useProguardInDebug := false
 
 protifySettings

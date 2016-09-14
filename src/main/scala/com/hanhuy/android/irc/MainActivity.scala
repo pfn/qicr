@@ -65,6 +65,24 @@ object MainActivity {
 }
 class MainActivity extends AppCompatActivity with EventBus.RefOwner
   with ActivityResultManager {
+
+  override def onMultiWindowModeChanged(b: Boolean) {
+//    UiBus.send(BusEvent.MultiWindow(b))
+//    super.onMultiWindowModeChanged(b)
+//    if (!b) {
+//      getWindow.setFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION, WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+//      getWindow.getDecorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+//    }
+//    if (b) {
+//      IO.perform(
+//        IO(buttonLayout) >>= kitkatInputMargin,
+//        IO(channels) >>= listTweaks >>= kitkatPadding,
+//        IO(nickList) >>= listTweaks >>= kitkatPaddingBottom
+//      )
+//      buttonLayout.requestLayout()
+//    }
+  }
+
   import ViewGroup.LayoutParams._
 
   private[this] var requestRecreate = false
@@ -802,7 +820,7 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
   }
 }
 
-case class QicrRelativeLayout(val activity: Activity, toolbar: Toolbar, input: View, topdrawer: View, bottomdrawer: View) extends RelativeLayout(activity) with HasActivity {
+case class QicrRelativeLayout(activity: Activity, toolbar: Toolbar, input: View, topdrawer: View, bottomdrawer: View) extends RelativeLayout(activity) with HasActivity {
   lazy val vdh = ViewDragHelper.create(this, 1.0f, VdhCallback)
 
   object VdhCallback extends ViewDragHelper.Callback {
@@ -881,7 +899,6 @@ case class QicrRelativeLayout(val activity: Activity, toolbar: Toolbar, input: V
       vdh.cancel()
       val x = ev.getX.toInt
       val y = ev.getY.toInt
-      val r = new Rect
       if (!vdh.isViewUnder(topdrawer, x, y) && !vdh.isViewUnder(bottomdrawer, x, y) &&
         !vdh.isViewUnder(toolbar, x, y) && !vdh.isViewUnder(input, x, y))
         closeDrawers()
