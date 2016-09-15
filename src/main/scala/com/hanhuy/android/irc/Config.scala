@@ -75,33 +75,36 @@ object Config {
        |);
      """.stripMargin
 
-  // TODO fix case sensitivity issues that remain (can add
-  // multiple ignores of the same nick but with different case
-  // removing and ignore of the wrong case will fail to remove)
   object Ignores {
-    private lazy val initialIgnores = instance.listIgnores
-    private var _ignored = Option.empty[Set[String]]
-    private var _ignoredIC = Option.empty[Set[String]]
-    private def ignored = _ignored getOrElse initialIgnores
-    private def ignoredIC = _ignoredIC getOrElse {
-      val igs = initialIgnores.map(_.toLowerCase)
-      _ignoredIC = Some(igs)
-      igs
+    case class CaseInsensitiveSet(underlying: Set[String]) extends Set[String] {
+      lazy val uppers = underlying.map(_.toUpperCase)
+      lazy val distinct: Set[String] =
+        underlying.foldLeft((Set.empty[String],Set.empty[String])) {
+          case ((ss,lc),s) =>
+            if (lc(s.toUpperCase)) (ss,lc) else (ss + s, lc + s.toUpperCase)
+        }._1
+      override def contains(s: String) = uppers.contains(s.toUpperCase)
+      override def iterator = distinct.iterator
+      override def +(s: String) = CaseInsensitiveSet(distinct + s)
+      override def -(s: String) = CaseInsensitiveSet(
+        distinct.filterNot(_.toUpperCase == s.toUpperCase))
     }
+    private lazy val initialIgnores = CaseInsensitiveSet(instance.listIgnores)
+    private var _ignored = Option.empty[CaseInsensitiveSet]
+    private def ignored = _ignored getOrElse initialIgnores
 
     def size = ignored.size
     def isEmpty = ignored.isEmpty
     def mkString(s: String) = ignored.mkString(s)
     def map[A](f: String => A) = ignored.map(f)
 
-    def apply(s: String) = ignoredIC.apply(s.toLowerCase)
+    def apply(s: String) = ignored(s)
 
     def +=(n: String) = {
       val newIgnores = ignored + n
       val change = newIgnores -- ignored
       instance.addIgnores(change)
       _ignored = Some(newIgnores)
-      _ignoredIC = Some(newIgnores.map(_.toLowerCase))
       UiBus.send(IgnoreListChanged)
     }
 
@@ -110,14 +113,12 @@ object Config {
       val changed = ignored -- newIgnores
       instance.deleteIgnores(changed)
       _ignored = Some(newIgnores)
-      _ignoredIC = Some(newIgnores.map(_.toLowerCase))
       UiBus.send(IgnoreListChanged)
     }
 
     def clear(): Unit = {
       instance.deleteIgnores(ignored)
-      _ignored = Some(Set.empty)
-      _ignoredIC = Some(Set.empty)
+      _ignored = Some(CaseInsensitiveSet(Set.empty))
     }
   }
 
@@ -260,7 +261,7 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     val db = getWritableDatabase
     db.beginTransaction()
     ignores foreach { i =>
-      db.delete(TABLE_IGNORES, s"$FIELD_NICKNAME = ?", Array(i))
+      db.delete(TABLE_IGNORES, s"UPPER($FIELD_NICKNAME) = ?", Array(i.toUpperCase))
     }
     db.setTransactionSuccessful()
     db.endTransaction()
