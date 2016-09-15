@@ -75,23 +75,33 @@ object Config {
        |);
      """.stripMargin
 
+  // TODO fix case sensitivity issues that remain (can add
+  // multiple ignores of the same nick but with different case
+  // removing and ignore of the wrong case will fail to remove)
   object Ignores {
     private lazy val initialIgnores = instance.listIgnores
     private var _ignored = Option.empty[Set[String]]
+    private var _ignoredIC = Option.empty[Set[String]]
     private def ignored = _ignored getOrElse initialIgnores
+    private def ignoredIC = _ignoredIC getOrElse {
+      val igs = initialIgnores.map(_.toLowerCase)
+      _ignoredIC = Some(igs)
+      igs
+    }
 
     def size = ignored.size
     def isEmpty = ignored.isEmpty
     def mkString(s: String) = ignored.mkString(s)
     def map[A](f: String => A) = ignored.map(f)
 
-    def apply(s: String) = ignored.apply(s)
+    def apply(s: String) = ignoredIC.apply(s.toLowerCase)
 
     def +=(n: String) = {
       val newIgnores = ignored + n
       val change = newIgnores -- ignored
       instance.addIgnores(change)
       _ignored = Some(newIgnores)
+      _ignoredIC = Some(newIgnores.map(_.toLowerCase))
       UiBus.send(IgnoreListChanged)
     }
 
@@ -100,12 +110,14 @@ object Config {
       val changed = ignored -- newIgnores
       instance.deleteIgnores(changed)
       _ignored = Some(newIgnores)
+      _ignoredIC = Some(newIgnores.map(_.toLowerCase))
       UiBus.send(IgnoreListChanged)
     }
 
     def clear(): Unit = {
       instance.deleteIgnores(ignored)
       _ignored = Some(Set.empty)
+      _ignoredIC = Some(Set.empty)
     }
   }
 
