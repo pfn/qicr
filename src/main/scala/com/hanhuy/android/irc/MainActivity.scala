@@ -339,7 +339,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
         settings.setJavaScriptEnabled(true)
         settings.setSupportZoom(true)
         settings.setBuiltInZoomControls(true)
-        if (v(11)) settings.setDisplayZoomControls(false)
+        if (Build.VERSION.SDK_INT >= 11) settings.setDisplayZoomControls(false)
         val chrome = new WebChromeClient {
           override def onProgressChanged(view: WebView, newProgress: Int) = {
             progress.setProgress(newProgress)
