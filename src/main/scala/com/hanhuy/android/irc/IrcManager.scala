@@ -742,8 +742,11 @@ class IrcManager extends EventBus.RefOwner {
     val pending = PendingIntent.getActivity(Application.context, RUNNING_ID,
       intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
+    import android.view.ContextThemeWrapper
+    val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
     val builder = new NotificationCompat.Builder(Application.context)
       .setSmallIcon(R.drawable.ic_notify_mono)
+      .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setWhen(System.currentTimeMillis())
       .setContentIntent(pending)
       .setContentText(text)
@@ -752,8 +755,6 @@ class IrcManager extends EventBus.RefOwner {
 
     lastChannel orElse first map { c =>
       val MAX_LINES = if (v(24)) 6 else 9
-      import android.view.ContextThemeWrapper
-      val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
 
       val chatIntent = new Intent(Application.context, classOf[WidgetChatActivity])
       chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
