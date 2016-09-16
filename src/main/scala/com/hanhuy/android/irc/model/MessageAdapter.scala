@@ -401,11 +401,11 @@ case class NickClick(nick: String) extends ClickableSpan {
               a.overridePendingTransition(
                 R.anim.slide_in_left, R.anim.slide_out_right)
             case R.id.nick_whois =>
-              val proc = CommandProcessor(a, null)
+              val proc = CommandProcessor(a)
               proc.channel = manager.lastChannel
               proc.WhoisCommand.execute(Some(nick))
             case R.id.nick_ignore => ()
-              val proc = CommandProcessor(a, null)
+              val proc = CommandProcessor(a)
               proc.channel = manager.lastChannel
               if (Config.Ignores(nick))
                 proc.UnignoreCommand.execute(Some(nick))

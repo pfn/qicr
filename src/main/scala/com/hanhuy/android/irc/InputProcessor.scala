@@ -72,7 +72,7 @@ abstract class InputProcessor(activity: Activity) {
   import InputProcessor._
   val TAG = "InputProcessor"
 
-  val processor = CommandProcessor(activity, this)
+  val processor = CommandProcessor(activity)
 
   def currentState: (Option[Server],Option[ChannelLike])
 
@@ -303,7 +303,7 @@ extends InputProcessor(activity) {
 }
 
 // set ctx, server and channel prior to invoking executeLine
-case class CommandProcessor(ctx: Context, proc: InputProcessor) {
+case class CommandProcessor(ctx: Context) {
   val TAG = "CommandProcessor"
 
   def getString(res: Int, args: String*) = ctx.getString(res, args: _*)
@@ -587,7 +587,6 @@ case class CommandProcessor(ctx: Context, proc: InputProcessor) {
           val r = CtcpRequest(manager._connections(c),
              target, command.toUpperCase, trimmedArg.?.find(_.nonEmpty))
 
-          val (server, channel) = proc.currentState
           // show in currently visible tab or the server's message tab
           // if not currently on a message tab
           (channel orElse server).fold(currentServer foreach { _ += r })(_ += r)

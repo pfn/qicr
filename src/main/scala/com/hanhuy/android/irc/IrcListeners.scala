@@ -89,7 +89,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
           server += ServerInfo(manager.getString(R.string.server_connected))
         }
         if (server.autorun.isDefined || server.autojoin.isDefined) {
-          val proc = CommandProcessor(Application.context, null)
+          val proc = CommandProcessor(Application.context)
           proc.server = Some(server)
           server.autorun.foreach { autorun =>
             autorun.split(";") foreach { cmd =>
