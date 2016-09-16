@@ -48,6 +48,7 @@
     <string name="quit_confirm">
         You are still connected, are you sure you would like to quit?</string>
 
+    <string name="send_message">Send Message</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
 

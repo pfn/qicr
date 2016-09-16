@@ -47,11 +47,13 @@ object IrcManager {
   val EXTRA_PAGE     = "com.hanhuy.android.irc.extra.page"
   val EXTRA_SUBJECT  = "com.hanhuy.android.irc.extra.subject"
   val EXTRA_SPLITTER = "::qicr-splitter-boundary::"
+  val EXTRA_MESSAGE = "com.hanhuy.android.irc.extra.message"
 
   val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
   val ACTION_PREV_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_PREV"
   val ACTION_CANCEL_MENTION = "com.hanhuy.android.irc.action.CANCEL_MENTION"
   val ACTION_QUICK_CHAT = "com.hanhuy.android.irc.action.QUICK_CHAT"
+  val ACTION_QUICK_SEND = "com.hanhuy.android.irc.action.QUICK_SEND"
 
   var instance: Option[IrcManager] = None
 
@@ -79,6 +81,7 @@ class IrcManager extends EventBus.RefOwner {
   IrcDebug.setEnabled(ircdebug)
   val filter = new IntentFilter
 
+  filter.addAction(ACTION_QUICK_SEND)
   filter.addAction(ACTION_NEXT_CHANNEL)
   filter.addAction(ACTION_PREV_CHANNEL)
   filter.addAction(ACTION_CANCEL_MENTION)
@@ -594,6 +597,8 @@ class IrcManager extends EventBus.RefOwner {
         chans.indexOf(c)
       } getOrElse 0)
       val tgt = if (chans.isEmpty) 0 else intent.getAction match {
+        case ACTION_QUICK_SEND =>
+          idx
         case ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
         case ACTION_PREV_CHANNEL => (idx - 1) % chans.size
         case ACTION_CANCEL_MENTION =>
@@ -713,6 +718,7 @@ class IrcManager extends EventBus.RefOwner {
     connections.size: java.lang.Integer)
 
   def runningNotification(text: CharSequence): Notification = {
+    import iota.{c => _,_}
     val intent = new Intent(Application.context, classOf[MainActivity])
     val first = channels.keySet.toSeq sortWith { (a,b) =>
       ChannelLikeComparator.compare(a,b) < 0} headOption
@@ -732,7 +738,7 @@ class IrcManager extends EventBus.RefOwner {
 
 
     lastChannel orElse first map { c =>
-      val MAX_LINES = 9
+      val MAX_LINES = if (v(24)) 6 else 9
 
       val chatIntent = new Intent(Application.context, classOf[WidgetChatActivity])
       chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
@@ -743,7 +749,9 @@ class IrcManager extends EventBus.RefOwner {
       val n = builder
         .setContentIntent(PendingIntent.getActivity(Application.context,
         ACTION_QUICK_CHAT.hashCode,
-        if (Build.VERSION.SDK_INT < 11) intent else chatIntent,
+        if (Build.VERSION.SDK_INT < 11) intent
+        else if (v(24)) intent
+        else chatIntent,
         PendingIntent.FLAG_UPDATE_CURRENT)).build
 
       if (Build.VERSION.SDK_INT >= 16 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
@@ -769,8 +777,8 @@ class IrcManager extends EventBus.RefOwner {
         val metrics = new DisplayMetrics
         context.systemService[WindowManager].getDefaultDisplay.getMetrics(metrics)
         // 8px margins on notification content
-        val margin = TypedValue.applyDimension(
-          TypedValue.COMPLEX_UNIT_DIP, 16, context.getResources.getDisplayMetrics)
+        val margin = if (v(24)) 16.dp(context) + 32.dp(context) else 16.dp(context)
+//          TypedValue.COMPLEX_UNIT_DIP, 16, context.getResources.getDisplayMetrics)
         // api21 has non-maxwidth notification panels on phones
         val width = math.min(metrics.widthPixels,
           if (d < 0) metrics.widthPixels else d.toInt) - margin
@@ -792,7 +800,8 @@ class IrcManager extends EventBus.RefOwner {
             ACTION_PREV_CHANNEL.hashCode,
             new Intent(ACTION_PREV_CHANNEL),
             PendingIntent.FLAG_UPDATE_CURRENT))
-        view.setOnClickPendingIntent(R.id.widget_input, pending)
+        if (!v(24))
+          view.setOnClickPendingIntent(R.id.widget_input, pending)
         view.setOnClickPendingIntent(R.id.go_next,
           PendingIntent.getBroadcast(Application.context,
             ACTION_NEXT_CHANNEL.hashCode,
@@ -802,7 +811,30 @@ class IrcManager extends EventBus.RefOwner {
         n.bigContentView = view
       }
 
-      n
+      if (Build.VERSION.SDK_INT >= 24 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
+        import android.view.ContextThemeWrapper
+        import android.graphics.drawable.Icon
+        val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
+        val input = new android.app.RemoteInput.Builder(EXTRA_MESSAGE)
+            .setLabel(themed.getString(R.string.send_message))
+            .build()
+        val sendIntent = PendingIntent.getBroadcast(Application.context,
+          ACTION_NEXT_CHANNEL.hashCode,
+          new Intent(ACTION_QUICK_SEND),
+          PendingIntent.FLAG_UPDATE_CURRENT)
+        val resId = iota.resolveAttr(R.attr.qicrSendIcon, _.resourceId)(themed)
+        val icon = Icon.createWithResource(themed, resId)
+        val send = new Notification.Action.Builder(
+          icon, themed.getString(R.string.send_message), sendIntent)
+            .addRemoteInput(input)
+            .build()
+        val bldr = Notification.Builder.recoverBuilder(Application.context, n)
+        bldr
+          .setStyle(new Notification.DecoratedCustomViewStyle)
+          .setCustomBigContentView(n.bigContentView)
+          .addAction(send)
+          .build()
+      } else n
     } getOrElse builder.build
   }
 

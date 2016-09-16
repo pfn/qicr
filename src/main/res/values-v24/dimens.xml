@@ -1,0 +1,8 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      // 284dp max height minus 16dp top/bottom margins
+      // 53dp header height
+      // 56dp action height
+      -->
+    <dimen name="notification_height">143dp</dimen>
+</resources>

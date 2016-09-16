@@ -302,11 +302,8 @@ extends InputProcessor(activity) {
   }
 }
 
-object CommandProcessor {
-  def apply(c: Context, p: InputProcessor) = new CommandProcessor(c, p)
-}
 // set ctx, server and channel prior to invoking executeLine
-sealed class CommandProcessor(ctx: Context, proc: InputProcessor) {
+case class CommandProcessor(ctx: Context, proc: InputProcessor) {
   val TAG = "CommandProcessor"
 
   def getString(res: Int, args: String*) = ctx.getString(res, args: _*)
