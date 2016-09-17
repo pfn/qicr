@@ -515,6 +515,16 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
     true // prevent KEYCODE_SEARCH being sent to onKey
   }
 
+  override def onKeyUp(k: Int, e: KeyEvent) = {
+    val r = if (page == 0 && !getCurrentFocus.isInstanceOf[EditText]) {
+      proc.onKeyListener(getCurrentFocus, k, e)
+    } else if (!input.isFocused) {
+      input.requestFocus()
+      false
+    } else false
+    r || super.onKeyUp(k, e)
+  }
+
   override def onResume() {
     super.onResume()
     val nm = this.systemService[NotificationManager]

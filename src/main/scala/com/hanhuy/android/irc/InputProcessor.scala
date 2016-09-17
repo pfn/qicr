@@ -223,7 +223,7 @@ case class SimpleInputProcessor(activity: Activity, appender: MessageAppender)
     case c: ChannelLike => (Some(c.server), Some(c))
   }
   def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
-    if (KeyEvent.KEYCODE_SEARCH != k) {
+    if (KeyEvent.KEYCODE_SEARCH != k && KeyEvent.KEYCODE_TAB != k) {
       completionPrefix = None
       completionOffset = None
     }
@@ -241,12 +241,25 @@ extends InputProcessor(activity) {
     case q: QueryFragment => (Some(q.query.get.server), Some(q.query.get))
     case _ => (None, None)
   }
+
+  def move(forward: Boolean) {
+    val count = activity.adapter.getCount()
+    val current = activity.pager.getCurrentItem
+    val next = if (forward) {
+      if (current + 1 >= count) 0 else current + 1
+    } else {
+      if (current - 1 < 0) count - 1 else current - 1
+    }
+    activity.pager.setCurrentItem(next)
+  }
   def onKeyListener(v: View, k: Int, e: KeyEvent): Boolean = {
-    if (KeyEvent.KEYCODE_SEARCH != k) {
+    if (KeyEvent.KEYCODE_SEARCH != k && KeyEvent.KEYCODE_TAB != k) {
       completionPrefix = None
       completionOffset = None
     }
     // keyboard shortcuts / honeycomb and above only
+    if (KeyEvent.ACTION_DOWN == e.getAction && k == KeyEvent.KEYCODE_TAB)
+      nickComplete(activity.input)
     if (KeyEvent.ACTION_UP == e.getAction) {
       val meta = e.getMetaState
       val altOn   = (meta & KeyEvent.META_ALT_ON)   > 0
@@ -255,18 +268,17 @@ extends InputProcessor(activity) {
       val (handled, target) = k match {
         case KeyEvent.KEYCODE_TAB =>
           if (ctrlOn && shiftOn) { // move backward in tabs
-          val count = activity.adapter.getCount()
-            val current = activity.pager.getCurrentItem
-            val next = if (current - 1 < 0) count - 1 else current - 1
-            activity.pager.setCurrentItem(next)
+            move(false)
           } else if (ctrlOn) {
-            // move forward in tabs
-            val count = activity.adapter.getCount()
-            val current = activity.pager.getCurrentItem
-            val next = if (current + 1 >= count) 0 else current + 1
-            activity.pager.setCurrentItem(next)
+            move(true)
           }
           (true.?,None)
+        case KeyEvent.KEYCODE_DPAD_RIGHT =>
+          if (altOn) move(true)
+          (altOn.?,None)
+        case KeyEvent.KEYCODE_DPAD_LEFT =>
+          if (altOn) move(false)
+          (altOn.?,None)
         case KeyEvent.KEYCODE_1 => (None,  1.?)
         case KeyEvent.KEYCODE_2 => (None,  2.?)
         case KeyEvent.KEYCODE_3 => (None,  3.?)
