@@ -10,7 +10,6 @@ import com.hanhuy.android.irc.model.ChannelLikeComparator
 import com.hanhuy.android.irc.model.FragmentPagerAdapter
 import com.hanhuy.android.irc.model.BusEvent
 
-import android.app.NotificationManager
 import android.util.Log
 import android.view.{View, ViewGroup}
 import android.view.LayoutInflater
@@ -91,7 +90,6 @@ with EventBus.RefOwner {
     p.addOnPageChangeListener(this)
     p
   }
-  lazy val nm = activity.systemService[NotificationManager]
 
   var page = 0
 
@@ -218,13 +216,8 @@ with EventBus.RefOwner {
     t.flags &= ~TabInfo.FLAG_NEW_MESSAGES
     t.flags &= ~TabInfo.FLAG_NEW_MENTIONS
     t.channel.foreach(c => {
+      Notifications.markRead(c)
       NotificationCenter.markRead(c.name, c.server.name)
-      if (c.newMentions) {
-        nm.cancel(c match {
-          case _: Channel => IrcManager.MENTION_ID
-          case _: Query   => IrcManager.PRIVMSG_ID
-        })
-      }
       c.newMessages = false
       c.newMentions = false
       ServiceBus.send(ChannelStatusChanged(c))

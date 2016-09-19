@@ -27,7 +27,7 @@ class LifecycleService extends Service with EventBus.RefOwner {
     case MainActivityStop =>
       IrcManager.instance foreach { m =>
         if (m.running) {
-          startForeground(RUNNING_ID, m.runningNotification(m.runningString))
+          startForeground(RUNNING_ID, Notifications.runningNotification(m.runningString, m.firstChannel, m.lastChannel))
         }
       }
   }

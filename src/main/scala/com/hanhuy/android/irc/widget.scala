@@ -8,6 +8,7 @@ import android.widget.AbsListView.OnScrollListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.conversions._
+import Notifications.pid
 import android.appwidget.{AppWidgetManager, AppWidgetProvider}
 import android.widget._
 import android.content.{BroadcastReceiver, Context, DialogInterface, Intent}
@@ -181,9 +182,6 @@ object Widgets extends EventBus.RefOwner {
         PendingIntent.FLAG_UPDATE_CURRENT))
     awm.updateAppWidget(ids, views)
   }
-
-  /** generate a pending intent ID */
-  def pid(id: Int, id2: Int) = (android.os.Process.myPid() + id) * 100 + id2
 
   private var messageViews: Map[Int,String] = Map.empty
 

@@ -1,7 +1,7 @@
 package com.hanhuy.android.irc
 
 import android.annotation.TargetApi
-import android.app.{Activity, AlertDialog, NotificationManager}
+import android.app.{Activity, AlertDialog}
 import android.content.{Context, DialogInterface, Intent}
 import android.graphics.{Color, Rect}
 import android.graphics.drawable.ColorDrawable
@@ -200,7 +200,8 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
           l.setAdapter(NotificationCenter)
           l.onItemClick { (_, _, pos, _) =>
             def onActiveNotification[A](action: MainPagerAdapter => A): Unit = {
-              NotificationCenter.markAllRead ()
+              NotificationCenter.markAllRead()
+              Notifications.markAllRead()
               newmessages.setVisibility (View.GONE)
               qicrdrawers.closeDrawer (toolbar)
               action(adapter)
@@ -527,8 +528,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
 
   override def onResume() {
     super.onResume()
-    val nm = this.systemService[NotificationManager]
-    nm.cancelAll()
+    Notifications.markAllRead()
 
     def refreshTabs() {
       adapter.refreshTabs()

@@ -1,6 +1,5 @@
 package com.hanhuy.android.irc
 
-import android.app.NotificationManager
 import com.hanhuy.android.irc.model.BusEvent
 import com.hanhuy.android.irc.model.Server
 import com.hanhuy.android.irc.model.ChannelLike
@@ -115,6 +114,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
         }
         UiBus.run {
           NotificationCenter += ServerNotification(R.drawable.ic_wifi_black_24dp, server.name, "Connected")
+          Notifications.connected(server)
         }
       case None =>
         Log.w(TAG, s"server not found in onConnect?! $c", new StackTrace)
@@ -521,9 +521,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
   }
 
   private def cancelNotifications(c: ChannelLike): Unit = {
-    val nm = Application.context.systemService[NotificationManager]
-    nm.cancel(IrcManager.MENTION_ID)
-    nm.cancel(IrcManager.PRIVMSG_ID)
+    Notifications.markRead(c)
     c.newMessages = false
     c.newMentions = false
     ServiceBus.send(BusEvent.ChannelStatusChanged(c))

@@ -6,21 +6,12 @@ import java.util.Date
 import javax.net.ssl.SSLContext
 
 import android.annotation.TargetApi
-import android.graphics.Typeface
-import android.text.{Layout, StaticLayout, TextPaint, TextUtils}
-import android.text.style.TextAppearanceSpan
-import android.util.{DisplayMetrics, TypedValue}
-import android.view.WindowManager
 import com.hanhuy.android.irc.model._
 
-import android.app.NotificationManager
 import android.app.RemoteInput
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
-import android.os.{PowerManager, Build, Handler, HandlerThread}
-import android.app.Notification
-import android.app.PendingIntent
-import android.widget.{Toast, RemoteViews}
-import android.support.v4.app.NotificationCompat
+import android.os.{PowerManager, Handler, HandlerThread}
+import android.widget.Toast
 
 import com.sorcix.sirc.{Channel => SircChannel, _}
 import com.sorcix.sirc.cap.{CapNegotiator, CompoundNegotiator, ServerTimeNegotiator}
@@ -28,7 +19,7 @@ import com.sorcix.sirc.cap.{CapNegotiator, CompoundNegotiator, ServerTimeNegotia
 import com.hanhuy.android.common._
 import Futures._
 import IrcManager._
-import android.net.{Uri, ConnectivityManager}
+import android.net.ConnectivityManager
 import com.hanhuy.android.irc.model.MessageLike.{Query => _, _}
 import com.hanhuy.android.irc.model.BusEvent.{IrcManagerStop, IrcManagerStart, ChannelStatusChanged}
 import com.hanhuy.android.irc.model.BusEvent
@@ -69,7 +60,7 @@ object IrcManager {
   def running = instance exists (_.running)
 }
 class IrcManager extends EventBus.RefOwner {
-  Application.context.systemService[NotificationManager].cancelAll()
+  Notifications.cancelAll()
   val version =
     Application.context.getPackageManager.getPackageInfo(
       Application.context.getPackageName, 0).versionName
@@ -107,7 +98,6 @@ class IrcManager extends EventBus.RefOwner {
   private var _running = false
   private var _showing = false
   def showing = _showing
-  val nm = Application.context.systemService[NotificationManager]
 
   ServiceBus += {
     case BusEvent.MainActivityStart => _showing = true
@@ -135,8 +125,7 @@ class IrcManager extends EventBus.RefOwner {
       if (!showing && c == ch) {
         val text = getString(R.string.notif_connected_servers, connections.size)
 
-        val n = runningNotification(text)
-        nm.notify(RUNNING_ID, n)
+        Notifications.running(text, firstChannel, lastChannel)
       }
     }
   }
@@ -194,6 +183,8 @@ class IrcManager extends EventBus.RefOwner {
   private var m_connections  = Map.empty[IrcConnection,Server]
 
   var lastChannel: Option[ChannelLike] = None
+  def firstChannel = channels.keySet.toSeq sortWith { (a,b) =>
+    ChannelLikeComparator.compare(a,b) < 0} headOption
 
   def channels = mchannels
   def _channels = m_channels
@@ -241,7 +232,7 @@ class IrcManager extends EventBus.RefOwner {
     m_connections += ((connection, server))
 
     if (!showing && _running) {
-      nm.notify(RUNNING_ID, runningNotification(runningString))
+      Notifications.running(runningString, firstChannel, lastChannel)
     }
   }
 
@@ -275,7 +266,8 @@ class IrcManager extends EventBus.RefOwner {
     Application.context.unregisterReceiver(receiver)
     Application.context.unregisterReceiver(dozeReceiver)
     Application.context.unregisterReceiver(connReceiver)
-    nm.cancelAll()
+    Notifications.cancelAll()
+    Notifications.exit()
     ServiceBus.send(BusEvent.ExitApplication)
 
     _running = false
@@ -284,7 +276,7 @@ class IrcManager extends EventBus.RefOwner {
       case _ =>
         log.d("All disconnects completed, running callback: " + cb)
         cb.foreach { callback => UiBus.run { callback() } }
-        nm.cancelAll()
+        Notifications.cancelAll()
     }
     handlerThread.quit()
     ServiceBus.send(IrcManagerStop)
@@ -394,8 +386,7 @@ class IrcManager extends EventBus.RefOwner {
           val msg2 = Application.context.getString(fmt) formatSpans(MessageAdapter.colorNick(nick), msg)
           NotificationCenter += UserMessageNotification(m.ts, server.name, nick, msg2)
           if (!showing)
-            showNotification(PRIVMSG_ID, R.drawable.ic_notify_mono_star,
-              m.toString, Some(query))
+            Notifications.pm(query, m)
           else {
             markCurrentRead()
           }
@@ -452,16 +443,14 @@ class IrcManager extends EventBus.RefOwner {
       if (_running) {
         if (connections.isEmpty) {
           lastChannel = None
-          nm.notify(RUNNING_ID, runningNotification(
-            getString(R.string.server_disconnected)))
+          Notifications.running(getString(R.string.server_disconnected), firstChannel, lastChannel)
         } else {
-          nm.notify(RUNNING_ID, runningNotification(runningString))
+          Notifications.running(runningString, firstChannel, lastChannel)
         }
       }
     }
     if (!showing && _running)
-      showNotification(DISCON_ID, R.drawable.ic_notify_mono_bang,
-        getString(R.string.notif_server_disconnected, server.name))
+      Notifications.disconnected(server)
   }
 
   // TODO decouple
@@ -480,8 +469,7 @@ class IrcManager extends EventBus.RefOwner {
         NotificationCenter += ChannelMessageNotification(m.ts, c.server.name, c.name, sender, msg)
     }
     if (!showing && c.isNew(m)) {
-      showNotification(MENTION_ID, R.drawable.ic_notify_mono_star,
-        getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
+      Notifications.mention(c, m)
     } else if (!c.isNew(m)) {
       markCurrentRead()
     }
@@ -493,49 +481,8 @@ class IrcManager extends EventBus.RefOwner {
       channel <- activity.adapter.currentTab.channel
     } {
       NotificationCenter.markRead(channel.name, channel.server.name)
+      Notifications.markRead(channel)
     }
-  }
-
-  private def showNotification(id: Int, icon: Int, text: String,
-                       channel: Option[ChannelLike] = None) {
-    val intent = new Intent(Application.context, classOf[MainActivity])
-    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-    channel foreach { c =>
-      intent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
-    }
-
-    val pending = PendingIntent.getActivity(Application.context, id, intent,
-      PendingIntent.FLAG_UPDATE_CURRENT)
-    val builder = new NotificationCompat.Builder(Application.context)
-      .setSmallIcon(icon)
-      .setWhen(System.currentTimeMillis())
-      .setContentIntent(pending)
-      .setContentText(text)
-      .setContentTitle(getString(R.string.notif_title))
-
-    val notif = if (channel.isDefined) {
-      builder.setPriority(Notification.PRIORITY_HIGH)
-        .setCategory(Notification.CATEGORY_MESSAGE)
-        .setSound(Uri.parse(Settings.get(Settings.NOTIFICATION_SOUND)))
-        .setVibrate(if (Settings.get(Settings.NOTIFICATION_VIBRATE))
-        Array(0l, 100l, 100l, 100l) else Array(0l)) // required to make heads-up show on lollipop
-        .setStyle(new NotificationCompat.BigTextStyle()
-        .bigText(text).setBigContentTitle(getString(R.string.notif_title)))
-      .build
-    } else builder.build
-
-    notif.flags |= Notification.FLAG_AUTO_CANCEL
-    channel foreach { c =>
-      val cancel = new Intent(ACTION_CANCEL_MENTION)
-      cancel.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
-      notif.deleteIntent = PendingIntent.getBroadcast(Application.context,
-        ACTION_CANCEL_MENTION.hashCode, cancel,
-        PendingIntent.FLAG_UPDATE_CURRENT)
-    }
-    if (Build.VERSION.SDK_INT >= 21)
-      notif.headsUpContentView = notif.bigContentView
-    nm.notify(id, notif)
   }
 
   def ping(c: IrcConnection, server: Server, pingTime: Option[Long] = None) {
@@ -579,11 +526,11 @@ class IrcManager extends EventBus.RefOwner {
               disconnections.onComplete { case _ =>
                 getServers filter (_.autoconnect) foreach { s =>
                   s += ServerInfo("Connectivity restored, reconnecting...")
+                  Notifications.cancel(Notifications.ServerDisconnected(s))
                   connect(s)
                 }
                 disconnections = Future.successful(())
               }
-              nm.cancel(DISCON_ID)
             }
             lastConnectedInfo = if (connectivity) inf else EmptyNetInfo
           }
@@ -627,7 +574,7 @@ class IrcManager extends EventBus.RefOwner {
         case _ => idx % chans.size
       }
       lastChannel = if (chans.size > tgt) chans(tgt).? else None
-      nm.notify(RUNNING_ID, runningNotification(runningString))
+      Notifications.running(runningString, firstChannel, lastChannel)
     }
   }
 
@@ -729,128 +676,6 @@ class IrcManager extends EventBus.RefOwner {
   }
   def runningString = getString(R.string.notif_connected_servers,
     connections.size: java.lang.Integer)
-
-  def runningNotification(text: CharSequence): Notification = {
-    import iota.{c => _,_}
-    val intent = new Intent(Application.context, classOf[MainActivity])
-    val first = channels.keySet.toSeq sortWith { (a,b) =>
-      ChannelLikeComparator.compare(a,b) < 0} headOption
-
-    lastChannel orElse first foreach { c =>
-      intent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
-    }
-    val pending = PendingIntent.getActivity(Application.context, RUNNING_ID,
-      intent, PendingIntent.FLAG_UPDATE_CURRENT)
-
-    import android.view.ContextThemeWrapper
-    val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
-    val builder = new NotificationCompat.Builder(Application.context)
-      .setSmallIcon(R.drawable.ic_notify_mono)
-      .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
-      .setWhen(System.currentTimeMillis())
-      .setContentIntent(pending)
-      .setContentText(text)
-      .setContentTitle(getString(R.string.notif_title))
-
-
-    lastChannel orElse first map { c =>
-      val MAX_LINES = if (v(24)) 6 else 9
-
-      val chatIntent = new Intent(Application.context, classOf[WidgetChatActivity])
-      chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
-      chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-        Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
-        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
-
-      val n = builder
-        .setContentIntent(PendingIntent.getActivity(Application.context,
-        ACTION_QUICK_CHAT.hashCode,
-        if (Build.VERSION.SDK_INT < 11) intent
-        else if (v(24)) intent
-        else chatIntent,
-        PendingIntent.FLAG_UPDATE_CURRENT)).build
-
-      if (Build.VERSION.SDK_INT >= 16 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
-        val title = c.name
-        val msgs = if (c.messages.filteredMessages.nonEmpty) {
-          TextUtils.concat(
-            c.messages.filteredMessages.takeRight(MAX_LINES).map { m =>
-              MessageAdapter.formatText(Application.context, m)(c)
-            }.flatMap (m => Seq(m, "\n")).init:_*)
-        } else {
-          getString(R.string.no_messages)
-        }
-
-        // TODO account for height of content text view (enable font-sizes)
-        val context = Application.context
-        val tas = new TextAppearanceSpan(
-          themed, android.R.style.TextAppearance_Small)
-        val paint = new TextPaint
-        paint.setTypeface(Typeface.create(tas.getFamily, tas.getTextStyle))
-        paint.setTextSize(tas.getTextSize)
-        val d = context.getResources.getDimension(
-          R.dimen.notification_panel_width)
-        val metrics = new DisplayMetrics
-        context.systemService[WindowManager].getDefaultDisplay.getMetrics(metrics)
-        // pre-24 has 8dp margins on each side, 16 total
-        // 24+ has 16dp margins on each side from system ui
-        val margin = if (v(24)) 32.dp(context) else 16.dp(context)
-        // api21 has non-maxwidth notification panels on phones
-        val width = math.min(metrics.widthPixels,
-          if (d < 0) metrics.widthPixels else d.toInt) - margin
-
-        val layout = new StaticLayout(msgs, paint, width.toInt,
-          Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, true)
-        val lines = layout.getLineCount
-        val startOffset = if (lines > MAX_LINES) {
-          layout.getLineStart(lines - MAX_LINES)
-        } else 0
-        n.priority = Notification.PRIORITY_HIGH
-        val view = new RemoteViews(
-          Application.context.getPackageName, R.layout.notification_content)
-        view.setTextViewText(R.id.title, title)
-        view.setTextViewText(R.id.content, msgs.subSequence(
-          startOffset, msgs.length))
-        view.setOnClickPendingIntent(R.id.go_prev,
-          PendingIntent.getBroadcast(Application.context,
-            ACTION_PREV_CHANNEL.hashCode,
-            new Intent(ACTION_PREV_CHANNEL),
-            PendingIntent.FLAG_UPDATE_CURRENT))
-        if (!v(24))
-          view.setOnClickPendingIntent(R.id.widget_input, pending)
-        view.setOnClickPendingIntent(R.id.go_next,
-          PendingIntent.getBroadcast(Application.context,
-            ACTION_NEXT_CHANNEL.hashCode,
-            new Intent(ACTION_NEXT_CHANNEL),
-            PendingIntent.FLAG_UPDATE_CURRENT))
-
-        n.bigContentView = view
-      }
-
-      if (Build.VERSION.SDK_INT >= 24 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
-        import android.graphics.drawable.Icon
-        val input = new RemoteInput.Builder(EXTRA_MESSAGE)
-            .setLabel(themed.getString(R.string.send_message))
-            .build()
-        val sendIntent = PendingIntent.getBroadcast(Application.context,
-          ACTION_QUICK_SEND.hashCode,
-          new Intent(ACTION_QUICK_SEND),
-          PendingIntent.FLAG_UPDATE_CURRENT)
-        val resId = iota.resolveAttr(R.attr.qicrSendIcon, _.resourceId)(themed)
-        val icon = Icon.createWithResource(themed, resId)
-        val send = new Notification.Action.Builder(
-          icon, themed.getString(R.string.send_message), sendIntent)
-            .addRemoteInput(input)
-            .build()
-        val bldr = Notification.Builder.recoverBuilder(Application.context, n)
-        bldr
-          .setStyle(new Notification.DecoratedCustomViewStyle)
-          .setCustomBigContentView(n.bigContentView)
-          .addAction(send)
-          .build()
-      } else n
-    } getOrElse builder.build
-  }
 
   val dozeReceiver: BroadcastReceiver = (c: Context, i: Intent) => {
     @TargetApi(23)

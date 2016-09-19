@@ -3,24 +3,23 @@ package com.hanhuy.android.irc
 import android.media.RingtoneManager
 import android.net.Uri
 import android.support.v7.preference.Preference.OnPreferenceClickListener
-import android.support.v7.preference.{ListPreference, Preference, PreferenceScreen, PreferenceManager}
+import android.support.v7.preference.{ListPreference, Preference, PreferenceManager, PreferenceScreen}
 import android.text.{Editable, TextWatcher}
 import android.provider.{Settings => ASettings}
 import android.util.AttributeSet
 import android.view.ViewGroup
-import android.widget.{LinearLayout, Toast, EditText}
-import com.hanhuy.android.irc.model.{MessageAdapter, BusEvent}
-
+import android.widget.{EditText, LinearLayout, Toast}
+import com.hanhuy.android.irc.model.{BusEvent, MessageAdapter}
 import android.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
-import android.content.{Intent, DialogInterface, Context, SharedPreferences}
+import android.content.{Context, DialogInterface, Intent, SharedPreferences}
 import android.os.{Build, Bundle}
 import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 import org.acra.ACRA
 import iota._
-
 import Futures._
+import android.support.v4.view.ViewCompat
 
 import scala.util.Try
 
@@ -134,7 +133,9 @@ class SettingsFragmentActivity extends AppCompatActivity {
     toolbar.navigationOnClick0(finish())
     setContentView(
       (l[LinearLayout](
-        toolbar.! >>= lp(MATCH_PARENT, actionBarHeight) >>= condK(v(21) ? k.elevation(4.dp))
+        toolbar.! >>= lp(MATCH_PARENT, actionBarHeight) >>= kestrel {
+          ViewCompat.setElevation(_, 4.dp)
+        }
       ) >>= vertical >>= id(Id.content)).perform())
     if (getSupportFragmentManager.findFragmentByTag("settings fragment") == null) {
       val tx = getSupportFragmentManager.beginTransaction()
