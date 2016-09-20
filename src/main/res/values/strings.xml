@@ -32,6 +32,7 @@
     <string name="server_connected">Connected</string>
     <string name="server_disconnected">Disconnected</string>
     <string name="server_connect">Connect</string>
+    <string name="server_reconnect">Reconnect</string>
     <string name="server_disconnect">Disconnect</string>
     <string name="server_delete">Delete server</string>
     <string name="server_options">Edit server</string>

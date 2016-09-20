@@ -65,6 +65,7 @@ class IrcManager extends EventBus.RefOwner {
   IrcDebug.setEnabled(ircdebug)
   val filter = new IntentFilter
 
+  filter.addAction(Notifications.ACTION_SERVER_RECONNECT)
   filter.addAction(Notifications.ACTION_QUICK_SEND)
   filter.addAction(Notifications.ACTION_NEXT_CHANNEL)
   filter.addAction(Notifications.ACTION_PREV_CHANNEL)
@@ -538,6 +539,14 @@ class IrcManager extends EventBus.RefOwner {
         chans.indexOf(c)
       } getOrElse 0)
       val tgt = if (chans.isEmpty) 0 else intent.getAction match {
+        case Notifications.ACTION_SERVER_RECONNECT =>
+          val subject = intent.getStringExtra(Notifications.EXTRA_SUBJECT)
+          getServers.filter(_.name == subject).foreach { s =>
+              Notifications.cancel(Notifications.ServerDisconnected(s))
+              if (s.state.now == Server.DISCONNECTED)
+                connect(s)
+            }
+          idx % chans.size
         case Notifications.ACTION_QUICK_SEND =>
           val result = RemoteInput.getResultsFromIntent(intent).?
           for {

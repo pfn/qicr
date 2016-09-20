@@ -302,6 +302,7 @@ object Notifications {
   val ACTION_PREV_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_PREV"
   val ACTION_QUICK_SEND = "com.hanhuy.android.irc.action.QUICK_SEND"
   val ACTION_CANCEL_MENTION = "com.hanhuy.android.irc.action.CANCEL_MENTION"
+  val ACTION_SERVER_RECONNECT = "com.hanhuy.android.irc.action.RECONNECT"
   val DISCONNECT_NOTIFICATIONS = "qicr.group.disconnected"
   val MENTION_NOTIFICATIONS = "qicr.group.mention"
   val PRIVMSG_NOTIFICATIONS = "qicr.group.privmsg"
@@ -467,7 +468,11 @@ object Notifications {
   }
 
   def markAllRead(): Unit = {
-
+    currentNotifications.keys.filter {
+      case ChannelMention(_, _, _) => true
+      case PrivateMessage(_, _, _) => true
+      case _ => false
+    }.foreach(cancel)
   }
 
   def markRead(c: ChannelLike): Unit = {
@@ -482,11 +487,17 @@ object Notifications {
     cancel(ServerDisconnected(server))
   }
 
+  def clearDisconnected(): Unit = {
+    currentNotifications.keys.filter {
+      case ServerDisconnected(_) => true
+      case _ => false
+    }.foreach(cancel)
+  }
   def disconnected(server: Server): Unit = {
     cancel(ServerDisconnected(server))
     summarize(ServerDisconnectedSummary)
     showNotification(ServerDisconnected(server), R.drawable.ic_notify_mono_bang,
-      themed.getString(R.string.notif_server_disconnected, server.name), ServerDisconnectedSummary)
+      themed.getString(R.string.notif_server_disconnected, server.name), ServerDisconnectedSummary, server = Some(server))
   }
 
   def summarize(tpe: NotificationType with Summary): Unit = {
@@ -536,7 +547,8 @@ object Notifications {
 
   private def showNotification(tpe: NotificationType, icon: Int, text: CharSequence,
                                group: NotificationType,
-                               channel: Option[ChannelLike] = None): Int = {
+                               channel: Option[ChannelLike] = None,
+                               server: Option[Server] = None): Int = {
     val id = nextNotificationId()
     val intent = new Intent(themed, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -558,6 +570,19 @@ object Notifications {
     if (!v(21))
       builder.setContentTitle(themed.getString(R.string.notif_title))
 
+    server.foreach { srv =>
+      val ri = new Intent(ACTION_SERVER_RECONNECT)
+      ri.putExtra(EXTRA_SUBJECT, srv.name)
+      val pi = PendingIntent.getBroadcast(themed,
+        pid(id, 2), ri, PendingIntent.FLAG_UPDATE_CURRENT)
+
+      val reconnect = new NotificationCompat.Action.Builder(
+        resolveAttr(R.attr.qicrReconnectIcon, _.resourceId)(themed),
+        themed.getString(R.string.server_reconnect),
+        pi).build()
+      builder.addAction(reconnect)
+    }
+
     val notif = if (channel.isDefined) {
       builder.setPriority(Notification.PRIORITY_HIGH)
         .setCategory(Notification.CATEGORY_MESSAGE)
@@ -574,7 +599,7 @@ object Notifications {
       val cancel = new Intent(ACTION_CANCEL_MENTION)
       cancel.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
       notif.deleteIntent = PendingIntent.getBroadcast(themed,
-        pid(id, 2), cancel,
+        pid(id, 3), cancel,
         PendingIntent.FLAG_UPDATE_CURRENT)
     }
     if (Build.VERSION.SDK_INT >= 21)

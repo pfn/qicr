@@ -529,6 +529,7 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
   override def onResume() {
     super.onResume()
     Notifications.markAllRead()
+    Notifications.clearDisconnected()
 
     def refreshTabs() {
       adapter.refreshTabs()
