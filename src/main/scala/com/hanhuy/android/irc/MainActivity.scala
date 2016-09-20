@@ -241,14 +241,14 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
       toolbar.! >>= lpK(MATCH_PARENT, actionBarHeight)(kitkatStatusMargin)
     ) >>= lp(MATCH_PARENT, actionBarHeight),
     IO(drawerLeft)(
-      IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
+      IO(channels) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPaddingBottom
     ) >>=
       lp(drawerWidth, MATCH_PARENT, Gravity.LEFT) >>=
       k.backgroundColor(drawerBackground),
     IO(drawerRight)(
       IO(userCount) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(
         margins(all = getResources.getDimensionPixelSize(R.dimen.standard_margin))) >>= kitkatPaddingTop,
-      IO(nickList) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPaddingBottom
+      IO(nickList) >>= lp(MATCH_PARENT, MATCH_PARENT) >>= listTweaks >>= kitkatPadding
     ) >>= vertical >>=
       lp(drawerWidth, MATCH_PARENT, Gravity.RIGHT) >>=
       k.backgroundColor(drawerBackground)
