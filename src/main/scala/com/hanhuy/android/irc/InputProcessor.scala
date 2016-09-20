@@ -258,7 +258,7 @@ extends InputProcessor(activity) {
       completionOffset = None
     }
     // keyboard shortcuts / honeycomb and above only
-    if (KeyEvent.ACTION_DOWN == e.getAction && k == KeyEvent.KEYCODE_TAB)
+    if (KeyEvent.ACTION_DOWN == e.getAction && k == KeyEvent.KEYCODE_TAB && e.getMetaState == 0)
       nickComplete(activity.input)
     if (KeyEvent.ACTION_UP == e.getAction) {
       val meta = e.getMetaState
