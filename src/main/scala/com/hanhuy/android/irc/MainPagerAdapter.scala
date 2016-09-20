@@ -233,7 +233,7 @@ with EventBus.RefOwner {
     val disconnected = (tab.flags & TabInfo.FLAG_DISCONNECTED) > 0
     val title = tab.channel map { _.server } orElse
       tab.server map { s =>
-      "%s / %s" format(tab.title, s.name)
+      "%s : %s" format(tab.title, s.name)
     } getOrElse activity.getString(R.string.app_name)
     HoneycombSupport.setTitle(if (disconnected) s"($title)" else title)
     val lag = tab.channel.map(_.server).orElse(tab.server).map(

@@ -54,11 +54,11 @@ object Tweaks {
       top    = statusBarHeight + actionBarHeight,
       bottom = if (tablet || portrait) navBarHeight else 0,
       right  = if (phone && landscape && !ctx.isMultiWindow) navBarWidth else 0) | padding(top = actionBarHeight))
-  def kitkatPadding[V <: View](padTop: Boolean)(implicit ctx: Activity): Kestrel[V] =
+  def kitkatPadding[V <: View](padTop: Boolean, padRight: Boolean = true)(implicit ctx: Activity): Kestrel[V] =
     condK(v(19) ? padding[V](
       top    = if (padTop) statusBarHeight + actionBarHeight else 0,
       bottom = if ((tablet || portrait) && !ctx.isMultiWindow) navBarHeight else 0,
-      right  = if (phone && landscape && !ctx.isMultiWindow) navBarWidth else 0) | padding(top = if (padTop) actionBarHeight else 0))
+      right  = if (phone && landscape && !ctx.isMultiWindow && padRight) navBarWidth else 0) | padding(top = if (padTop) actionBarHeight else 0))
   def kitkatPaddingRight[V <: View](implicit ctx: Activity): Kestrel[V] =
     condK(v(19) ? padding(right  = if (phone && landscape && !ctx.isMultiWindow) navBarWidth else 0))
 
