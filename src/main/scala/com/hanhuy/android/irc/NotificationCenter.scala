@@ -435,10 +435,15 @@ object Notifications {
     } getOrElse builder.build
   }
 
-  // TODO cancel summary if it's the last one standing
   def cancel(n: NotificationType): Unit = {
     currentNotifications.get(n).foreach(nm.cancel)
     currentNotifications -= n
+    n match {
+      case ChannelMention(_,_,_) => summarize(ChannelMentionSummary)
+      case PrivateMessage(_,_,_) => summarize(PrivateMessageSummary)
+      case ServerDisconnected(_) => summarize(ServerDisconnectedSummary)
+      case _ =>
+    }
   }
   def cancelAll(): Unit = {
     nm.cancelAll()
@@ -450,14 +455,14 @@ object Notifications {
   }
 
   def mention(c: ChannelLike, m: MessageLike): Unit = {
+    summarize(ChannelMentionSummary)
     showNotification(ChannelMention(c, m), R.drawable.ic_notify_mono_star,
       themed.getString(R.string.notif_mention_template, c.name, m.toString), ChannelMentionSummary, Some(c))
-    summarize(ChannelMentionSummary)
   }
   def pm(query: Query, m: MessageLike) {
+    summarize(PrivateMessageSummary)
     showNotification(PrivateMessage(query, m), R.drawable.ic_notify_mono_star,
       m.toString, PrivateMessageSummary, Some(query))
-    summarize(PrivateMessageSummary)
   }
 
   def markAllRead(): Unit = {
@@ -466,10 +471,8 @@ object Notifications {
 
   def markRead(c: ChannelLike): Unit = {
     currentNotifications.foreach {
-      case (a@ChannelMention(c2, _, _), id) if c == c2 => nm.cancel(id)
-        currentNotifications -= a
-      case (a@PrivateMessage(q, _, _), id)  if c == q  => nm.cancel(id)
-        currentNotifications -= a
+      case (a@ChannelMention(c2, _, _), id) if c == c2 => cancel(a)
+      case (a@PrivateMessage(q, _, _), id)  if c == q  => cancel(a)
       case _ =>
     }
   }
@@ -479,32 +482,36 @@ object Notifications {
   }
 
   def disconnected(server: Server): Unit = {
+    summarize(ServerDisconnectedSummary)
     showNotification(ServerDisconnected(server), R.drawable.ic_notify_mono_bang,
       themed.getString(R.string.notif_server_disconnected, server.name), ServerDisconnectedSummary)
-    summarize(ServerDisconnectedSummary)
   }
 
   def summarize(tpe: NotificationType with Summary): Unit = {
     if (v(21)) {
-      val (summTpe, icon, m, ms) = tpe match {
+      val (summTpe, icon, m, c, ms) = tpe match {
         case PrivateMessageSummary =>
           val cnt = currentNotifications.keys.collect {
             case p@PrivateMessage(_, m, _) => m
           }
-          (PrivateMessageSummary, R.drawable.ic_notify_mono_star, themed.getString(R.string.notif_unread_private_messages, cnt.size.asInstanceOf[Integer]), cnt.toList)
+          (PrivateMessageSummary, R.drawable.ic_notify_mono_star, themed.getString(R.string.notif_unread_private_messages, cnt.size.asInstanceOf[Integer]), cnt.size, cnt.toList)
         case ChannelMentionSummary =>
           val cnt = currentNotifications.keys.collect {
             case c@ChannelMention(_, m, _) => m
           }
-          (ChannelMentionSummary, R.drawable.ic_notify_mono_star, themed.getString(R.string.notif_unread_messages, cnt.size.asInstanceOf[Integer]), cnt.toList)
+          (ChannelMentionSummary, R.drawable.ic_notify_mono_star, themed.getString(R.string.notif_unread_messages, cnt.size.asInstanceOf[Integer]), cnt.size, cnt.toList)
         case ServerDisconnectedSummary =>
           val cnt = currentNotifications.keys.collect {
             case s@ServerDisconnected(_) => s
           }.size
-          (ServerDisconnectedSummary, R.drawable.ic_notify_mono_bang, themed.getString(R.string.notif_disconnected_servers, cnt.asInstanceOf[Integer]), Nil)
+          (ServerDisconnectedSummary, R.drawable.ic_notify_mono_bang, themed.getString(R.string.notif_disconnected_servers, cnt.asInstanceOf[Integer]), cnt.size, Nil)
       }
-      cancel(summTpe)
-      showSummary(summTpe, icon, m, summTpe.toString, ms)
+      if (c > 0) {
+        showSummary(summTpe, icon, m, summTpe.toString, ms)
+        currentNotifications += summTpe -> summTpe.id
+      } else {
+        cancel(summTpe)
+      }
     }
   }
 
@@ -514,6 +521,8 @@ object Notifications {
     val id = tpe.id
     val summaryNotification = new NotificationCompat.Builder(themed)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
+      .setPriority(Notification.PRIORITY_HIGH)
+      .setCategory(Notification.CATEGORY_MESSAGE)
       .setContentTitle(text)
       .setSmallIcon(icon)
       .setStyle(style)
