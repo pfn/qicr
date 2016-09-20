@@ -20,6 +20,8 @@
         <item name="qicrColorTabStyle">@style/ColorTabs</item>
         <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
+        <item name="qicrFavoriteOnIcon">@drawable/ic_favorite_white_24dp</item>
+        <item name="qicrFavoriteOffIcon">@drawable/ic_favorite_border_white_24dp</item>
         <item name="qicrAddServerIcon">@drawable/ic_add_circle_white_24dp</item>
         <item name="qicrHistoryIcon">@drawable/ic_history_white_24dp</item>
         <item name="qicrReconnectIcon">@drawable/ic_refresh_white_24dp</item>
@@ -58,6 +60,8 @@
         <item name="colorAccent">#99cc00</item>
         <item name="colorPrimary">#a4c639</item>
         <item name="qicrHistoryIcon">@drawable/ic_history_black_24dp</item>
+        <item name="qicrFavoriteOnIcon">@drawable/ic_favorite_black_24dp</item>
+        <item name="qicrFavoriteOffIcon">@drawable/ic_favorite_border_black_24dp</item>
         <item name="qicrAddServerIcon">@drawable/ic_add_circle_black_24dp</item>
         <item name="qicrReconnectIcon">@drawable/ic_refresh_black_24dp</item>
         <item name="qicrInfoIcon">@drawable/ic_info_outline_black_24dp</item>

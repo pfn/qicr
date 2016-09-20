@@ -12,6 +12,8 @@
     <attr name="qicrProgressSpinnerStyle" format="reference"/>
     <attr name="qicrHistoryIcon" format="reference"/>
     <attr name="qicrReconnectIcon" format="reference"/>
+    <attr name="qicrFavoriteOnIcon" format="reference"/>
+    <attr name="qicrFavoriteOffIcon" format="reference"/>
     <attr name="qicrInfoIcon" format="reference"/>
     <attr name="qicrCloseIcon" format="reference"/>
     <attr name="qicrEditIcon" format="reference"/>

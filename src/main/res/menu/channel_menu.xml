@@ -15,6 +15,12 @@
           android:orderInCategory="2"
           android:title="Channel Log"
           />
+    <item android:id="@+id/channel_favorite"
+          qicr:showAsAction="ifRoom"
+          android:checkable="true"
+          android:checked="false"
+          android:icon="?qicrFavoriteOffIcon"
+          android:title="@string/favorite"/>
     <item android:id="@+id/channel_close"
         qicr:showAsAction="never"
         android:icon="?qicrChatEndIcon"

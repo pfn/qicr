@@ -16,7 +16,7 @@ import rx.Var
 object Config {
   val log = Logcat("QicrConfig")
   // TODO encrypt the password with pbkdf2 on primary account username + salt
-  val DATABASE_VERSION = 2
+  val DATABASE_VERSION = 3
   val DATABASE_NAME = "config"
   val TABLE_SERVERS = "servers"
 
@@ -75,20 +75,32 @@ object Config {
        |);
      """.stripMargin
 
+  val FIELD_CHANNEL = "channel"
+  val FIELD_SERVER = "server"
+  val TABLE_FAVORITES = "favorites"
+  val TABLE_FAVORITES_DDL =
+    s"""
+       |CREATE TABLE $TABLE_FAVORITES (
+       |  $FIELD_CHANNEL TEXT NOT NULL COLLATE NOCASE,
+       |  $FIELD_SERVER TEXT NOT NULL COLLATE NOCASE,
+       |  CONSTRAINT unq_favorite UNIQUE ($FIELD_CHANNEL,$FIELD_SERVER)
+       |);
+     """.stripMargin
+
+  case class CaseInsensitiveSet(underlying: Set[String]) extends Set[String] {
+    lazy val uppers = underlying.map(_.toUpperCase)
+    lazy val distinct: Set[String] =
+      underlying.foldLeft((Set.empty[String],Set.empty[String])) {
+        case ((ss,lc),s) =>
+          if (lc(s.toUpperCase)) (ss,lc) else (ss + s, lc + s.toUpperCase)
+      }._1
+    override def contains(s: String) = uppers.contains(s.toUpperCase)
+    override def iterator = distinct.iterator
+    override def +(s: String) = CaseInsensitiveSet(distinct + s)
+    override def -(s: String) = CaseInsensitiveSet(
+      distinct.filterNot(_.toUpperCase == s.toUpperCase))
+  }
   object Ignores {
-    case class CaseInsensitiveSet(underlying: Set[String]) extends Set[String] {
-      lazy val uppers = underlying.map(_.toUpperCase)
-      lazy val distinct: Set[String] =
-        underlying.foldLeft((Set.empty[String],Set.empty[String])) {
-          case ((ss,lc),s) =>
-            if (lc(s.toUpperCase)) (ss,lc) else (ss + s, lc + s.toUpperCase)
-        }._1
-      override def contains(s: String) = uppers.contains(s.toUpperCase)
-      override def iterator = distinct.iterator
-      override def +(s: String) = CaseInsensitiveSet(distinct + s)
-      override def -(s: String) = CaseInsensitiveSet(
-        distinct.filterNot(_.toUpperCase == s.toUpperCase))
-    }
     private lazy val initialIgnores = CaseInsensitiveSet(instance.listIgnores)
     private var _ignored = Option.empty[CaseInsensitiveSet]
     private def ignored = _ignored getOrElse initialIgnores
@@ -122,6 +134,48 @@ object Config {
     }
   }
 
+  object Favorites {
+    case class Favorite(channel: String, server: String) {
+      override def equals(other: Any) = other match {
+        case Favorite(c, s) =>
+          c.equalsIgnoreCase(channel) && s.equalsIgnoreCase(server)
+        case _ => false
+      }
+      override def hashCode =
+        channel.toLowerCase.hashCode + server.toLowerCase.hashCode
+    }
+    private lazy val initialFavorites = instance.listFavorites
+    private var _favorited = Option.empty[Set[Favorite]]
+    private def favorited = _favorited getOrElse initialFavorites
+
+    def size = favorited.size
+    def isEmpty = favorited.isEmpty
+    def mkString(s: String) = favorited.mkString(s)
+    def map[A](f: Favorite => A) = favorited.map(f)
+
+    import model.Channel
+    def apply(c: Channel) = favorited(Favorite(c.name, c.server.name))
+
+    def +=(n: Channel) = {
+      val newFavorites = favorited + Favorite(n.name, n.server.name)
+      val change = newFavorites -- favorited
+      instance.addFavorites(change)
+      _favorited = Some(newFavorites)
+    }
+
+    def -=(n: Channel) = {
+      val newFavorites = favorited - Favorite(n.name, n.server.name)
+      val changed = favorited -- newFavorites
+      instance.deleteFavorites(changed)
+      _favorited = Some(newFavorites)
+    }
+
+    def clear(): Unit = {
+      instance.deleteFavorites(favorited)
+      _favorited = Some(Set.empty)
+    }
+  }
+
   val addServer    = instance.addServer _
   val updateServer = instance.updateServer _
   val deleteServer = instance.deleteServer _
@@ -136,17 +190,19 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     db.beginTransaction()
     db.execSQL(TABLE_SERVERS_DDL)
     db.execSQL(TABLE_IGNORES_DDL)
+    db.execSQL(TABLE_FAVORITES_DDL)
     db.setTransactionSuccessful()
     db.endTransaction()
   }
   val UPGRADES: Map[Int,Seq[String]] = Map(
-    2 -> Seq(TABLE_IGNORES_DDL)
+    2 -> Seq(TABLE_IGNORES_DDL),
+    3 -> Seq(TABLE_FAVORITES_DDL)
   )
 
   override def onUpgrade(db: SQLiteDatabase, oldv: Int, newv: Int) {
     if (oldv < newv) {
       db.beginTransaction()
-      Range(oldv, newv + 1) foreach { v =>
+      (oldv + 1) to newv foreach { v =>
         log.d("Upgrading to: " + v)
         UPGRADES.getOrElse(v, Seq.empty) foreach db.execSQL
       }
@@ -257,11 +313,35 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     list
   }
 
+  def listFavorites: Set[Favorites.Favorite] = {
+    val db = getReadableDatabase
+    val c = db.query(TABLE_FAVORITES, Array(FIELD_CHANNEL, FIELD_SERVER), null, null, null, null, null)
+    val list = Iterator.continually(c.moveToNext()).takeWhile (_==true).map { _ =>
+      Favorites.Favorite(c.getString(0), c.getString(1))
+    } toSet
+
+    c.close()
+    db.close()
+    list
+  }
+
   def deleteIgnores(ignores: Set[String]): Unit = {
     val db = getWritableDatabase
     db.beginTransaction()
     ignores foreach { i =>
       db.delete(TABLE_IGNORES, s"UPPER($FIELD_NICKNAME) = ?", Array(i.toUpperCase))
+    }
+    db.setTransactionSuccessful()
+    db.endTransaction()
+    db.close()
+  }
+
+  def deleteFavorites(favorites: Set[Favorites.Favorite]): Unit = {
+    val db = getWritableDatabase
+    db.beginTransaction()
+    favorites foreach { case Favorites.Favorite(c, s) =>
+      db.delete(TABLE_FAVORITES, s"$FIELD_CHANNEL = ? AND $FIELD_SERVER = ?",
+        Array(c, s))
     }
     db.setTransactionSuccessful()
     db.endTransaction()
@@ -275,6 +355,19 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     ignores foreach { i =>
       values.put(FIELD_NICKNAME, i)
       db.insertOrThrow(TABLE_IGNORES, null, values)
+    }
+    db.setTransactionSuccessful()
+    db.endTransaction()
+    db.close()
+  }
+  def addFavorites(favorites: Set[Favorites.Favorite]): Unit = {
+    val db = getWritableDatabase
+    val values = new ContentValues
+    db.beginTransaction()
+    favorites foreach { case Favorites.Favorite(c, s) =>
+      values.put(FIELD_CHANNEL, c)
+      values.put(FIELD_SERVER, s)
+      db.insertOrThrow(TABLE_FAVORITES, null, values)
     }
     db.setTransactionSuccessful()
     db.endTransaction()

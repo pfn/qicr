@@ -460,6 +460,8 @@ with ModeListener with ServerEventListener with MessageEventListener {
         val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice, ts = message.timestamp)
         if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
           manager.addChannelMention(c, pm)
+        else if (Config.Favorites(c) && !src.isUs && !Config.Ignores(src.getNick))
+          manager.addChannelMention(c, pm)
 
         UiBus.run {
           c += pm
@@ -517,6 +519,8 @@ with ModeListener with ServerEventListener with MessageEventListener {
       UiBus.run { c += notice }
       if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
         manager.addChannelMention(c, notice)
+      else if (Config.Favorites(c) && !src.isUs && !Config.Ignores(src.getNick))
+        manager.addChannelMention(c, notice)
     }
   }
 
@@ -551,6 +555,8 @@ with ModeListener with ServerEventListener with MessageEventListener {
           c += action
         }
         if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
+          manager.addChannelMention(c, action)
+        else if (Config.Favorites(c) && !src.isUs && !Config.Ignores(src.getNick))
           manager.addChannelMention(c, action)
       }
     }

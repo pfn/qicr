@@ -3,6 +3,7 @@
     <string name="no_history">No input history</string>
     <string name="no_notifications">No notifications</string>
     <string name="ignore">Ignore</string>
+    <string name="favorite">Favorite</string>
     <string name="open">Open</string>
     <string name="prev">Prev</string>
     <string name="next">Next</string>
@@ -61,7 +62,7 @@
     <string name="speech_cancel">Cancel</string>
     <string name="speech_select">Select message</string>
     <string name="tab_servers">Servers</string>
-    <string name="notif_mention_template">%1$s: %2$s</string>
+    <string name="notif_mention_template" formatted="false">%1: %2</string>
     <string name="notif_running">running...</string>
     <string name="notif_connected_servers">Connected servers: %d</string>
     <string name="notif_disconnected_servers">Disconnected servers: %d</string>

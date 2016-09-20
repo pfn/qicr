@@ -165,16 +165,43 @@ class ChannelFragment(_channel: Option[Channel])
       val item = menu.findItem(R.id.channel_log)
       item.setVisible(false)
     }
+
+    channel foreach { chan =>
+      val favorite = menu.findItem(R.id.channel_favorite)
+      if (Config.Favorites(chan)) {
+        favorite.setIcon(resolveAttr(R.attr.qicrFavoriteOnIcon, _.resourceId))
+        favorite.setChecked(true)
+      } else {
+        favorite.setIcon(resolveAttr(R.attr.qicrFavoriteOffIcon, _.resourceId))
+        favorite.setChecked(false)
+      }
+    }
   }
 
   override def onOptionsItemSelected(item: MenuItem): Boolean = {
     if (R.id.nicklist == item.getItemId) {
       MainActivity.instance foreach { _.toggleNickList() }
     }
-    if (R.id.channel_log == item.getItemId) {
-      startActivity(MessageLogActivity.createIntent(channel.get))
-      getActivity.overridePendingTransition(
-        R.anim.slide_in_left, R.anim.slide_out_right)
+    if (R.id.channel_favorite == item.getItemId) {
+      val favorite = !item.isChecked
+      item.setIcon(resolveAttr(
+        if (favorite) R.attr.qicrFavoriteOnIcon
+        else R.attr.qicrFavoriteOffIcon, _.resourceId))
+      channel foreach { ch =>
+        if (favorite) {
+          Config.Favorites += ch
+        } else {
+          Config.Favorites -= ch
+        }
+      }
+      item.setChecked(favorite)
+      true
+    } else if (R.id.channel_log == item.getItemId) {
+      channel foreach { ch =>
+        startActivity(MessageLogActivity.createIntent(ch))
+        getActivity.overridePendingTransition(
+          R.anim.slide_in_left, R.anim.slide_out_right)
+      }
       true
     } else if (R.id.channel_close == item.getItemId) {
       val activity = getActivity

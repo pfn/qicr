@@ -8,6 +8,7 @@ import android.content.Context
 import android.support.v4.graphics.drawable.DrawableCompat
 import android.view.{ContextThemeWrapper, Gravity, View, ViewGroup}
 import android.widget._
+import com.hanhuy.android.common.SpannedGenerator._
 import com.hanhuy.android.common.UiBus
 import com.hanhuy.android.irc.model.{BusEvent, RingBuffer}
 import iota._
@@ -457,12 +458,12 @@ object Notifications {
   def mention(c: ChannelLike, m: MessageLike): Unit = {
     summarize(ChannelMentionSummary)
     showNotification(ChannelMention(c, m), R.drawable.ic_notify_mono_star,
-      themed.getString(R.string.notif_mention_template, c.name, m.toString), ChannelMentionSummary, Some(c))
+      themed.getString(R.string.notif_mention_template) formatSpans (c.name, MessageAdapter.formatText(themed, m)(c)), ChannelMentionSummary, Some(c))
   }
   def pm(query: Query, m: MessageLike) {
     summarize(PrivateMessageSummary)
     showNotification(PrivateMessage(query, m), R.drawable.ic_notify_mono_star,
-      m.toString, PrivateMessageSummary, Some(query))
+      MessageAdapter.formatText(themed, m)(query), PrivateMessageSummary, Some(query))
   }
 
   def markAllRead(): Unit = {
@@ -532,7 +533,7 @@ object Notifications {
     nm.notify(id, summaryNotification)
   }
 
-  private def showNotification(tpe: NotificationType, icon: Int, text: String,
+  private def showNotification(tpe: NotificationType, icon: Int, text: CharSequence,
                                group: NotificationType,
                                channel: Option[ChannelLike] = None): Int = {
     val id = nextNotificationId()
