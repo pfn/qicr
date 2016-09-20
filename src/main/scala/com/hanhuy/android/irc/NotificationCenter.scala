@@ -471,11 +471,11 @@ object Notifications {
   }
 
   def markRead(c: ChannelLike): Unit = {
-    currentNotifications.foreach {
-      case (a@ChannelMention(c2, _, _), id) if c == c2 => cancel(a)
-      case (a@PrivateMessage(q, _, _), id)  if c == q  => cancel(a)
-      case _ =>
-    }
+    currentNotifications.keys.filter {
+      case ChannelMention(c2, _, _) => c == c2
+      case PrivateMessage(q, _, _) => q == c
+      case _ => false
+    }.foreach(cancel)
   }
 
   def connected(server: Server): Unit = {
