@@ -86,18 +86,18 @@ object Widgets extends EventBus.RefOwner {
     }
 
     val launchIntent = new Intent(c, classOf[MainActivity])
-    launchIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
+    launchIntent.putExtra(Notifications.EXTRA_SUBJECT, subject)
     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     views.setOnClickPendingIntent(R.id.widget_app_icon,
       PendingIntent.getActivity(c, pid(id, PID_OPEN_CHANNEL),
         launchIntent, PendingIntent.FLAG_UPDATE_CURRENT))
 
     val nextIntent = new Intent(ACTION_NEXT)
-    nextIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
+    nextIntent.putExtra(Notifications.EXTRA_SUBJECT, subject)
     nextIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
 
     val prevIntent = new Intent(ACTION_PREV)
-    prevIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
+    prevIntent.putExtra(Notifications.EXTRA_SUBJECT, subject)
     prevIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
 
     views.setTextViewText(R.id.title, title)
@@ -108,7 +108,7 @@ object Widgets extends EventBus.RefOwner {
       c, pid(id, PID_GO_PREV), prevIntent, PendingIntent.FLAG_UPDATE_CURRENT))
 
     val chatIntent = new Intent(c, classOf[WidgetChatActivity])
-    chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, subject)
+    chatIntent.putExtra(Notifications.EXTRA_SUBJECT, subject)
     chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
       Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
       Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
@@ -117,7 +117,7 @@ object Widgets extends EventBus.RefOwner {
 
     val service = new Intent(c, classOf[WidgetMessageService])
     service.setAction(Widgets.ACTION_SUBJECT_PREFIX + subject.hashCode)
-    service.putExtra(IrcManager.EXTRA_SUBJECT, subject)
+    service.putExtra(Notifications.EXTRA_SUBJECT, subject)
     service.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
     views.setRemoteAdapter(R.id.message_list, service)
 
@@ -284,7 +284,7 @@ class WidgetProvider extends AppWidgetProvider {
       case Widgets.ACTION_STATUS_CLICK =>
         Widgets.setMessageView(c, intent.getIntExtra(
           AppWidgetManager.EXTRA_APPWIDGET_ID, 0),
-          intent.getStringExtra(IrcManager.EXTRA_SUBJECT).?)
+          intent.getStringExtra(Notifications.EXTRA_SUBJECT).?)
       case Widgets.ACTION_BACK =>
         Widgets.setStatusView(c,
           intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0))
@@ -301,7 +301,7 @@ class WidgetProvider extends AppWidgetProvider {
     def all = manager.channels.keys.toList.sortWith(_ < _).groupBy(_.server)
       .toList.sortWith(_._1 < _._1) flatMap { case (k, v) => k :: v}
 
-    val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
+    val subject = intent.getStringExtra(Notifications.EXTRA_SUBJECT)
     Widgets.appenderForSubject(subject) foreach { m =>
       val idx = all.indexOf(m)
       if (idx != -1 && all.size > 0) {
@@ -322,7 +322,7 @@ class WidgetMessageService extends RemoteViewsService {
         Widgets(this).ids)
       new WidgetEmptyViewsFactory
     }
-    val subject = intent.getStringExtra(IrcManager.EXTRA_SUBJECT)
+    val subject = intent.getStringExtra(Notifications.EXTRA_SUBJECT)
     Widgets.appenderForSubject(subject) map {
       new WidgetMessageViewsFactory(_)
     } getOrElse {
@@ -373,7 +373,7 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
             Application.context.getPackageName, R.layout.widget_server_item)
           serverView.setTextViewText(android.R.id.text1, s.name)
           val intent = new Intent(Widgets.ACTION_STATUS_CLICK)
-          intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(s))
+          intent.putExtra(Notifications.EXTRA_SUBJECT, Widgets.toString(s))
           serverView.setOnClickFillInIntent(android.R.id.text1, intent)
           serverView
         case c: ChannelLike =>
@@ -385,7 +385,7 @@ with RemoteViewsService.RemoteViewsFactory with EventBus.RefOwner {
           else if (c.newMessages) 0xff00afaf else 0xffbebebe
           channelView.setTextColor(android.R.id.text1, color)
           channelView.setOnClickFillInIntent(android.R.id.text1, intent)
-          intent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
+          intent.putExtra(Notifications.EXTRA_SUBJECT, Widgets.toString(c))
           channelView
       }
     } else {
@@ -466,8 +466,8 @@ extends Activity with TypedFindView with ActivityResultManager with EventBus.Ref
         k.imageResource(R.drawable.ic_appicon) >>=
         hook0.onClick(IO {
           val launchIntent = new Intent(this, classOf[MainActivity])
-          launchIntent.putExtra(IrcManager.EXTRA_SUBJECT,
-            getIntent.getStringExtra(IrcManager.EXTRA_SUBJECT))
+          launchIntent.putExtra(Notifications.EXTRA_SUBJECT,
+            getIntent.getStringExtra(Notifications.EXTRA_SUBJECT))
           startActivity(launchIntent)
           finish()
         }) >>=
@@ -535,7 +535,7 @@ extends Activity with TypedFindView with ActivityResultManager with EventBus.Ref
 
   private def withAppender[A](f: MessageAppender => A): Option[A] = {
     Widgets.appenderForSubject(
-      getIntent.getStringExtra(IrcManager.EXTRA_SUBJECT)) map f
+      getIntent.getStringExtra(Notifications.EXTRA_SUBJECT)) map f
   }
 
   private def withAdapter[A](f: MessageAdapter => A): Option[A] = {

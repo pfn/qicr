@@ -31,21 +31,13 @@ object IrcManager {
   val log = Logcat("IrcManager")
 
   // notification IDs
-  val RUNNING_ID = 1
   val DISCON_ID  = 2
   val PRIVMSG_ID = 3
   val MENTION_ID = 4
 
   val EXTRA_PAGE     = "com.hanhuy.android.irc.extra.page"
-  val EXTRA_SUBJECT  = "com.hanhuy.android.irc.extra.subject"
   val EXTRA_SPLITTER = "::qicr-splitter-boundary::"
-  val EXTRA_MESSAGE = "com.hanhuy.android.irc.extra.message"
 
-  val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
-  val ACTION_PREV_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_PREV"
-  val ACTION_CANCEL_MENTION = "com.hanhuy.android.irc.action.CANCEL_MENTION"
-  val ACTION_QUICK_CHAT = "com.hanhuy.android.irc.action.QUICK_CHAT"
-  val ACTION_QUICK_SEND = "com.hanhuy.android.irc.action.QUICK_SEND"
 
   var instance: Option[IrcManager] = None
 
@@ -73,10 +65,10 @@ class IrcManager extends EventBus.RefOwner {
   IrcDebug.setEnabled(ircdebug)
   val filter = new IntentFilter
 
-  filter.addAction(ACTION_QUICK_SEND)
-  filter.addAction(ACTION_NEXT_CHANNEL)
-  filter.addAction(ACTION_PREV_CHANNEL)
-  filter.addAction(ACTION_CANCEL_MENTION)
+  filter.addAction(Notifications.ACTION_QUICK_SEND)
+  filter.addAction(Notifications.ACTION_NEXT_CHANNEL)
+  filter.addAction(Notifications.ACTION_PREV_CHANNEL)
+  filter.addAction(Notifications.ACTION_CANCEL_MENTION)
 
   private var channelHolder = Map.empty[String,MessageAppender]
   def getChannel[A](id: String): Option[A] = {
@@ -546,11 +538,11 @@ class IrcManager extends EventBus.RefOwner {
         chans.indexOf(c)
       } getOrElse 0)
       val tgt = if (chans.isEmpty) 0 else intent.getAction match {
-        case ACTION_QUICK_SEND =>
+        case Notifications.ACTION_QUICK_SEND =>
           val result = RemoteInput.getResultsFromIntent(intent).?
           for {
             r <- result
-            s <- r.getString(EXTRA_MESSAGE).?
+            s <- r.getString(Notifications.EXTRA_MESSAGE).?
           } {
             val proc = CommandProcessor(c)
             proc.channel = lastChannel
@@ -559,10 +551,10 @@ class IrcManager extends EventBus.RefOwner {
           }
 
           idx % chans.size
-        case ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
-        case ACTION_PREV_CHANNEL => (idx - 1) % chans.size
-        case ACTION_CANCEL_MENTION =>
-          val subject = intent.getStringExtra(EXTRA_SUBJECT)
+        case Notifications.ACTION_NEXT_CHANNEL => (idx + 1) % chans.size
+        case Notifications.ACTION_PREV_CHANNEL => (idx - 1) % chans.size
+        case Notifications.ACTION_CANCEL_MENTION =>
+          val subject = intent.getStringExtra(Notifications.EXTRA_SUBJECT)
           Widgets.appenderForSubject(subject) match {
             case Some(c: ChannelLike) =>
               c.newMentions = false

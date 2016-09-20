@@ -538,10 +538,10 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
           page = -1
         }
       } { i =>
-        if (i.hasExtra(IrcManager.EXTRA_SUBJECT)) {
-          val subject = i.getStringExtra(IrcManager.EXTRA_SUBJECT)
+        if (i.hasExtra(Notifications.EXTRA_SUBJECT)) {
+          val subject = i.getStringExtra(Notifications.EXTRA_SUBJECT)
           // removeExtra so subsequent onResume doesn't select this tab
-          i.removeExtra(IrcManager.EXTRA_SUBJECT)
+          i.removeExtra(Notifications.EXTRA_SUBJECT)
           if (subject == "")
             pager.setCurrentItem(0)
           else {

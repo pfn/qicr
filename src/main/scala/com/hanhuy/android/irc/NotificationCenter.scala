@@ -295,13 +295,13 @@ object Notifications {
   }
   val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
   val nm = themed.systemService[NotificationManager]
-  val RUNNING_ID = IrcManager.RUNNING_ID
-  val EXTRA_SUBJECT = IrcManager.EXTRA_SUBJECT
-  val EXTRA_MESSAGE = IrcManager.EXTRA_MESSAGE
-  val ACTION_NEXT_CHANNEL = IrcManager.ACTION_NEXT_CHANNEL
-  val ACTION_PREV_CHANNEL = IrcManager.ACTION_PREV_CHANNEL
-  val ACTION_QUICK_SEND = IrcManager.ACTION_QUICK_CHAT
-  val ACTION_CANCEL_MENTION = IrcManager.ACTION_CANCEL_MENTION
+  val RUNNING_ID = 1
+  val EXTRA_SUBJECT  = "com.hanhuy.android.irc.extra.subject"
+  val EXTRA_MESSAGE = "com.hanhuy.android.irc.extra.message"
+  val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
+  val ACTION_PREV_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_PREV"
+  val ACTION_QUICK_SEND = "com.hanhuy.android.irc.action.QUICK_SEND"
+  val ACTION_CANCEL_MENTION = "com.hanhuy.android.irc.action.CANCEL_MENTION"
   val DISCONNECT_NOTIFICATIONS = "qicr.group.disconnected"
   val MENTION_NOTIFICATIONS = "qicr.group.mention"
   val PRIVMSG_NOTIFICATIONS = "qicr.group.privmsg"
@@ -340,7 +340,7 @@ object Notifications {
       val MAX_LINES = if (v(24)) 6 else 9
 
       val chatIntent = new Intent(themed, classOf[WidgetChatActivity])
-      chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
+      chatIntent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
       chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
         Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
         Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
@@ -483,6 +483,7 @@ object Notifications {
   }
 
   def disconnected(server: Server): Unit = {
+    cancel(ServerDisconnected(server))
     summarize(ServerDisconnectedSummary)
     showNotification(ServerDisconnected(server), R.drawable.ic_notify_mono_bang,
       themed.getString(R.string.notif_server_disconnected, server.name), ServerDisconnectedSummary)
