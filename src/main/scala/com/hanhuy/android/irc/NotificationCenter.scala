@@ -1,17 +1,15 @@
 package com.hanhuy.android.irc
 
 import com.hanhuy.android.common._
-
 import java.text.SimpleDateFormat
 import java.util.Date
 
 import android.content.Context
 import android.support.v4.graphics.drawable.DrawableCompat
-import android.view.{Gravity, ViewGroup, View}
+import android.view.{ContextThemeWrapper, Gravity, View, ViewGroup}
 import android.widget._
 import com.hanhuy.android.common.UiBus
 import com.hanhuy.android.irc.model.{BusEvent, RingBuffer}
-
 import iota._
 
 /**
@@ -280,9 +278,22 @@ object Notifications {
 
   sealed trait NotificationType
   case class ServerDisconnected(server: Server) extends NotificationType
-  case class ChannelMention(c: ChannelLike, ts: Long = System.currentTimeMillis) extends NotificationType
-  case class PrivateMessage(query: Query, ts: Long = System.currentTimeMillis) extends NotificationType
-  val nm = Application.context.systemService[NotificationManager]
+  case class ChannelMention(c: ChannelLike, msg: MessageLike, ts: Long = System.currentTimeMillis) extends NotificationType
+  case class PrivateMessage(query: Query, msg: MessageLike, ts: Long = System.currentTimeMillis) extends NotificationType
+  trait Summary {
+    val id: Int
+  }
+  case object ServerDisconnectedSummary extends NotificationType with Summary {
+    val id = 2
+  }
+  case object ChannelMentionSummary extends NotificationType with Summary {
+    val id = 3
+  }
+  case object PrivateMessageSummary extends NotificationType with Summary {
+    val id = 4
+  }
+  val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
+  val nm = themed.systemService[NotificationManager]
   val RUNNING_ID = IrcManager.RUNNING_ID
   val EXTRA_SUBJECT = IrcManager.EXTRA_SUBJECT
   val EXTRA_MESSAGE = IrcManager.EXTRA_MESSAGE
@@ -290,6 +301,9 @@ object Notifications {
   val ACTION_PREV_CHANNEL = IrcManager.ACTION_PREV_CHANNEL
   val ACTION_QUICK_SEND = IrcManager.ACTION_QUICK_CHAT
   val ACTION_CANCEL_MENTION = IrcManager.ACTION_CANCEL_MENTION
+  val DISCONNECT_NOTIFICATIONS = "qicr.group.disconnected"
+  val MENTION_NOTIFICATIONS = "qicr.group.mention"
+  val PRIVMSG_NOTIFICATIONS = "qicr.group.privmsg"
   val STARTING_NOTIFICATION_ID = RUNNING_ID + 20
   var currentNotification = STARTING_NOTIFICATION_ID
   def nextNotificationId() = {
@@ -305,17 +319,15 @@ object Notifications {
 
   def runningNotification(text: CharSequence, first: Option[ChannelLike], lastChannel: Option[ChannelLike]): Notification = {
     import iota.{c => _,_}
-    val intent = new Intent(Application.context, classOf[MainActivity])
+    val intent = new Intent(themed, classOf[MainActivity])
 
     lastChannel orElse first foreach { c =>
       intent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
     }
-    val pending = PendingIntent.getActivity(Application.context, pid(RUNNING_ID, 0),
+    val pending = PendingIntent.getActivity(themed, pid(RUNNING_ID, 0),
       intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
-    import android.view.ContextThemeWrapper
-    val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
-    val builder = new NotificationCompat.Builder(Application.context)
+    val builder = new NotificationCompat.Builder(themed)
       .setSmallIcon(R.drawable.ic_notify_mono)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setWhen(System.currentTimeMillis())
@@ -323,18 +335,17 @@ object Notifications {
       .setContentText(text)
       .setContentTitle(themed.getString(R.string.notif_title))
 
-
     lastChannel orElse first map { c =>
       val MAX_LINES = if (v(24)) 6 else 9
 
-      val chatIntent = new Intent(Application.context, classOf[WidgetChatActivity])
+      val chatIntent = new Intent(themed, classOf[WidgetChatActivity])
       chatIntent.putExtra(IrcManager.EXTRA_SUBJECT, Widgets.toString(c))
       chatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
         Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
         Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
 
       val n = builder
-        .setContentIntent(PendingIntent.getActivity(Application.context,
+        .setContentIntent(PendingIntent.getActivity(themed,
           pid(RUNNING_ID, 1),
           if (Build.VERSION.SDK_INT < 11) intent
           else if (v(24)) intent
@@ -346,14 +357,14 @@ object Notifications {
         val msgs = if (c.messages.filteredMessages.nonEmpty) {
           TextUtils.concat(
             c.messages.filteredMessages.takeRight(MAX_LINES).map { m =>
-              MessageAdapter.formatText(Application.context, m)(c)
+              MessageAdapter.formatText(themed, m)(c)
             }.flatMap (m => Seq(m, "\n")).init:_*)
         } else {
           themed.getString(R.string.no_messages)
         }
 
         // TODO account for height of content text view (enable font-sizes)
-        val context = Application.context
+        val context = themed
         val tas = new TextAppearanceSpan(
           themed, android.R.style.TextAppearance_Small)
         val paint = new TextPaint
@@ -378,53 +389,56 @@ object Notifications {
         } else 0
         n.priority = Notification.PRIORITY_HIGH
         val view = new RemoteViews(
-          Application.context.getPackageName, R.layout.notification_content)
+          themed.getPackageName, R.layout.notification_content)
         view.setTextViewText(R.id.title, title)
         view.setTextViewText(R.id.content, msgs.subSequence(
           startOffset, msgs.length))
         view.setOnClickPendingIntent(R.id.go_prev,
-          PendingIntent.getBroadcast(Application.context,
+          PendingIntent.getBroadcast(themed,
             pid(RUNNING_ID, 2),
             new Intent(ACTION_PREV_CHANNEL),
             PendingIntent.FLAG_UPDATE_CURRENT))
         if (!v(24))
           view.setOnClickPendingIntent(R.id.widget_input, pending)
         view.setOnClickPendingIntent(R.id.go_next,
-          PendingIntent.getBroadcast(Application.context,
+          PendingIntent.getBroadcast(themed,
             pid(RUNNING_ID, 3),
             new Intent(ACTION_NEXT_CHANNEL),
             PendingIntent.FLAG_UPDATE_CURRENT))
 
         n.bigContentView = view
-      }
 
-      if (Build.VERSION.SDK_INT >= 24 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
-        import android.graphics.drawable.Icon
-        val input = new RemoteInput.Builder(EXTRA_MESSAGE)
-          .setLabel(themed.getString(R.string.send_message))
-          .build()
-        val sendIntent = PendingIntent.getBroadcast(Application.context,
-          pid(RUNNING_ID, 4),
-          new Intent(ACTION_QUICK_SEND),
-          PendingIntent.FLAG_UPDATE_CURRENT)
-        val resId = iota.resolveAttr(R.attr.qicrSendIcon, _.resourceId)(themed)
-        val icon = Icon.createWithResource(themed, resId)
-        val send = new Notification.Action.Builder(
-          icon, themed.getString(R.string.send_message), sendIntent)
-          .addRemoteInput(input)
-          .build()
-        val bldr = Notification.Builder.recoverBuilder(Application.context, n)
-        bldr
-          .setStyle(new Notification.DecoratedCustomViewStyle)
-          .setCustomBigContentView(n.bigContentView)
-          .addAction(send)
-          .build()
+        if (Build.VERSION.SDK_INT >= 24 && Settings.get(Settings.RUNNING_NOTIFICATION)) {
+          import android.graphics.drawable.Icon
+          val input = new RemoteInput.Builder(EXTRA_MESSAGE)
+            .setLabel(themed.getString(R.string.send_message))
+            .build()
+          val sendIntent = PendingIntent.getBroadcast(themed,
+            pid(RUNNING_ID, 4),
+            new Intent(ACTION_QUICK_SEND),
+            PendingIntent.FLAG_UPDATE_CURRENT)
+          val resId = iota.resolveAttr(R.attr.qicrSendIcon, _.resourceId)(themed)
+          val icon = Icon.createWithResource(themed, resId)
+          val send = new Notification.Action.Builder(
+            icon, themed.getString(R.string.send_message), sendIntent)
+            .addRemoteInput(input)
+            .build()
+          val bldr = Notification.Builder.recoverBuilder(themed, n)
+          bldr
+            .setStyle(new Notification.DecoratedCustomViewStyle)
+            .setContentTitle(null)
+            .setCustomBigContentView(view)
+            .addAction(send)
+            .build()
+        } else n
       } else n
     } getOrElse builder.build
   }
 
+  // TODO cancel summary if it's the last one standing
   def cancel(n: NotificationType): Unit = {
     currentNotifications.get(n).foreach(nm.cancel)
+    currentNotifications -= n
   }
   def cancelAll(): Unit = {
     nm.cancelAll()
@@ -436,8 +450,14 @@ object Notifications {
   }
 
   def mention(c: ChannelLike, m: MessageLike): Unit = {
-    showNotification(ChannelMention(c), R.drawable.ic_notify_mono_star,
-      Application.context.getString(R.string.notif_mention_template, c.name, m.toString), Some(c))
+    showNotification(ChannelMention(c, m), R.drawable.ic_notify_mono_star,
+      themed.getString(R.string.notif_mention_template, c.name, m.toString), ChannelMentionSummary, Some(c))
+    summarize(ChannelMentionSummary)
+  }
+  def pm(query: Query, m: MessageLike) {
+    showNotification(PrivateMessage(query, m), R.drawable.ic_notify_mono_star,
+      m.toString, PrivateMessageSummary, Some(query))
+    summarize(PrivateMessageSummary)
   }
 
   def markAllRead(): Unit = {
@@ -446,43 +466,86 @@ object Notifications {
 
   def markRead(c: ChannelLike): Unit = {
     currentNotifications.foreach {
-      case (ChannelMention(c2, _), id) if c == c2 => nm.cancel(id)
-      case (PrivateMessage(q, _), id)  if c == q  => nm.cancel(id)
+      case (a@ChannelMention(c2, _, _), id) if c == c2 => nm.cancel(id)
+        currentNotifications -= a
+      case (a@PrivateMessage(q, _, _), id)  if c == q  => nm.cancel(id)
+        currentNotifications -= a
       case _ =>
     }
   }
 
-  def pm(query: Query, m: MessageLike) {
-    showNotification(PrivateMessage(query), R.drawable.ic_notify_mono_star,
-      m.toString, Some(query))
-  }
   def connected(server: Server): Unit = {
     cancel(ServerDisconnected(server))
   }
 
   def disconnected(server: Server): Unit = {
     showNotification(ServerDisconnected(server), R.drawable.ic_notify_mono_bang,
-      Application.context.getString(R.string.notif_server_disconnected, server.name))
+      themed.getString(R.string.notif_server_disconnected, server.name), ServerDisconnectedSummary)
+    summarize(ServerDisconnectedSummary)
+  }
+
+  def summarize(tpe: NotificationType with Summary): Unit = {
+    if (v(21)) {
+      val (summTpe, icon, m, ms) = tpe match {
+        case PrivateMessageSummary =>
+          val cnt = currentNotifications.keys.collect {
+            case p@PrivateMessage(_, m, _) => m
+          }
+          (PrivateMessageSummary, R.drawable.ic_notify_mono_star, themed.getString(R.string.notif_unread_private_messages, cnt.size.asInstanceOf[Integer]), cnt.toList)
+        case ChannelMentionSummary =>
+          val cnt = currentNotifications.keys.collect {
+            case c@ChannelMention(_, m, _) => m
+          }
+          (ChannelMentionSummary, R.drawable.ic_notify_mono_star, themed.getString(R.string.notif_unread_messages, cnt.size.asInstanceOf[Integer]), cnt.toList)
+        case ServerDisconnectedSummary =>
+          val cnt = currentNotifications.keys.collect {
+            case s@ServerDisconnected(_) => s
+          }.size
+          (ServerDisconnectedSummary, R.drawable.ic_notify_mono_bang, themed.getString(R.string.notif_disconnected_servers, cnt.asInstanceOf[Integer]), Nil)
+      }
+      cancel(summTpe)
+      showSummary(summTpe, icon, m, summTpe.toString, ms)
+    }
+  }
+
+  def showSummary(tpe: NotificationType with Summary, icon: Int, text: String, group: String, ms: List[MessageLike]): Unit = {
+    val style = new NotificationCompat.InboxStyle().setBigContentTitle(text)
+    ms.foreach(m => style.addLine(m.toString))
+    val id = tpe.id
+    val summaryNotification = new NotificationCompat.Builder(themed)
+      .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
+      .setContentTitle(text)
+      .setSmallIcon(icon)
+      .setStyle(style)
+      .setGroup(tpe.toString)
+      .setGroupSummary(true)
+      .build()
+    nm.notify(id, summaryNotification)
   }
 
   private def showNotification(tpe: NotificationType, icon: Int, text: String,
+                               group: NotificationType,
                                channel: Option[ChannelLike] = None): Int = {
     val id = nextNotificationId()
-    val intent = new Intent(Application.context, classOf[MainActivity])
+    val intent = new Intent(themed, classOf[MainActivity])
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     channel foreach { c =>
       intent.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
     }
 
-    val pending = PendingIntent.getActivity(Application.context, pid(id, 1), intent,
+    val pending = PendingIntent.getActivity(themed, pid(id, 1), intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
-    val builder = new NotificationCompat.Builder(Application.context)
+    val builder = new NotificationCompat.Builder(themed)
+      .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setSmallIcon(icon)
       .setWhen(System.currentTimeMillis())
       .setContentIntent(pending)
+      .setGroup(group.toString)
       .setContentText(text)
-      .setContentTitle(Application.context.getString(R.string.notif_title))
+
+    if (!v(21))
+      builder.setContentTitle(themed.getString(R.string.notif_title))
 
     val notif = if (channel.isDefined) {
       builder.setPriority(Notification.PRIORITY_HIGH)
@@ -491,7 +554,7 @@ object Notifications {
         .setVibrate(if (Settings.get(Settings.NOTIFICATION_VIBRATE))
           Array(0l, 100l, 100l, 100l) else Array(0l)) // required to make heads-up show on lollipop
         .setStyle(new NotificationCompat.BigTextStyle()
-        .bigText(text).setBigContentTitle(Application.context.getString(R.string.notif_title)))
+        .bigText(text))
         .build
     } else builder.build
 
@@ -499,7 +562,7 @@ object Notifications {
     channel foreach { c =>
       val cancel = new Intent(ACTION_CANCEL_MENTION)
       cancel.putExtra(EXTRA_SUBJECT, Widgets.toString(c))
-      notif.deleteIntent = PendingIntent.getBroadcast(Application.context,
+      notif.deleteIntent = PendingIntent.getBroadcast(themed,
         pid(id, 2), cancel,
         PendingIntent.FLAG_UPDATE_CURRENT)
     }

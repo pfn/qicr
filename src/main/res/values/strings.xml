@@ -64,6 +64,9 @@
     <string name="notif_mention_template">%1$s: %2$s</string>
     <string name="notif_running">running...</string>
     <string name="notif_connected_servers">Connected servers: %d</string>
+    <string name="notif_disconnected_servers">Disconnected servers: %d</string>
+    <string name="notif_unread_messages">Unread messages: %d</string>
+    <string name="notif_unread_private_messages">Unread private messages: %d</string>
     <string name="notif_title">qicr</string>
     <string name="notif_server_disconnected">Server disconnected: %s</string>
     <string name="channel_names">Names list</string>
