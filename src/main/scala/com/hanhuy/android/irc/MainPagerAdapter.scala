@@ -229,12 +229,16 @@ with EventBus.RefOwner {
   }
 
   private def updateServerInformation(tab: TabInfo, pos: Int): Unit = {
-    HoneycombSupport.setSubtitle(tab.channel.map(_.server).orElse(tab.server).map(
-      s => Server.intervalString(s.currentLag.now)).orNull)
-    HoneycombSupport.setTitle(tab.channel map { _.server } orElse
+    import SpannedGenerator._
+    val disconnected = (tab.flags & TabInfo.FLAG_DISCONNECTED) > 0
+    val title = tab.channel map { _.server } orElse
       tab.server map { s =>
       "%s / %s" format(tab.title, s.name)
-    } getOrElse activity.getString(R.string.app_name))
+    } getOrElse activity.getString(R.string.app_name)
+    HoneycombSupport.setTitle(if (disconnected) s"($title)" else title)
+    val lag = tab.channel.map(_.server).orElse(tab.server).map(
+      s => Server.intervalString(s.currentLag.now)).orNull
+    HoneycombSupport.setSubtitle(if (disconnected) "---" else lag)
 
     refreshTabTitle(pos)
   }
