@@ -559,6 +559,7 @@ class IrcManager extends EventBus.RefOwner {
             case Some(c: ChannelLike) =>
               c.newMentions = false
               c.newMessages = false
+              Notifications.markRead(c)
               ServiceBus.send(ChannelStatusChanged(c))
             case _ =>
           }
