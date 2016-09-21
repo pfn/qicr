@@ -4,12 +4,10 @@ import android.content.ContentValues
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.model.BusEvent.IgnoreListChanged
 import com.hanhuy.android.irc.model.Server
-
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
 import android.widget.Toast
-
 import Config._
 import rx.Var
 
@@ -134,16 +132,18 @@ object Config {
     }
   }
 
-  object Favorites {
-    case class Favorite(channel: String, server: String) {
-      override def equals(other: Any) = other match {
-        case Favorite(c, s) =>
-          c.equalsIgnoreCase(channel) && s.equalsIgnoreCase(server)
-        case _ => false
-      }
-      override def hashCode =
-        channel.toLowerCase.hashCode + server.toLowerCase.hashCode
+  case class Favorite(channel: String, server: String) {
+    override def equals(other: Any) = other match {
+      case Favorite(c, s) =>
+        c.equalsIgnoreCase(channel) && s.equalsIgnoreCase(server)
+      case _ => false
     }
+    override def hashCode =
+      channel.toLowerCase.hashCode + server.toLowerCase.hashCode
+  }
+  object Favorites {
+    import model.ChannelLike
+    import model.Channel
     private lazy val initialFavorites = instance.listFavorites
     private var _favorited = Option.empty[Set[Favorite]]
     private def favorited = _favorited getOrElse initialFavorites
@@ -153,8 +153,7 @@ object Config {
     def mkString(s: String) = favorited.mkString(s)
     def map[A](f: Favorite => A) = favorited.map(f)
 
-    import model.Channel
-    def apply(c: Channel) = favorited(Favorite(c.name, c.server.name))
+    def apply(c: ChannelLike) = favorited(Favorite(c.name, c.server.name))
 
     def +=(n: Channel) = {
       val newFavorites = favorited + Favorite(n.name, n.server.name)
@@ -313,11 +312,11 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     list
   }
 
-  def listFavorites: Set[Favorites.Favorite] = {
+  def listFavorites: Set[Favorite] = {
     val db = getReadableDatabase
     val c = db.query(TABLE_FAVORITES, Array(FIELD_CHANNEL, FIELD_SERVER), null, null, null, null, null)
     val list = Iterator.continually(c.moveToNext()).takeWhile (_==true).map { _ =>
-      Favorites.Favorite(c.getString(0), c.getString(1))
+      Favorite(c.getString(0), c.getString(1))
     } toSet
 
     c.close()
@@ -336,10 +335,10 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     db.close()
   }
 
-  def deleteFavorites(favorites: Set[Favorites.Favorite]): Unit = {
+  def deleteFavorites(favorites: Set[Favorite]): Unit = {
     val db = getWritableDatabase
     db.beginTransaction()
-    favorites foreach { case Favorites.Favorite(c, s) =>
+    favorites foreach { case Favorite(c, s) =>
       db.delete(TABLE_FAVORITES, s"$FIELD_CHANNEL = ? AND $FIELD_SERVER = ?",
         Array(c, s))
     }
@@ -360,11 +359,11 @@ extends SQLiteOpenHelper(Application.context, DATABASE_NAME, null, DATABASE_VERS
     db.endTransaction()
     db.close()
   }
-  def addFavorites(favorites: Set[Favorites.Favorite]): Unit = {
+  def addFavorites(favorites: Set[Favorite]): Unit = {
     val db = getWritableDatabase
     val values = new ContentValues
     db.beginTransaction()
-    favorites foreach { case Favorites.Favorite(c, s) =>
+    favorites foreach { case Favorite(c, s) =>
       values.put(FIELD_CHANNEL, c)
       values.put(FIELD_SERVER, s)
       db.insertOrThrow(TABLE_FAVORITES, null, values)

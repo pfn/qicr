@@ -457,12 +457,10 @@ object Notifications {
   }
 
   def mention(c: ChannelLike, m: MessageLike): Unit = {
-    summarize(ChannelMentionSummary)
     showNotification(ChannelMention(c, m), R.drawable.ic_notify_mono_star,
       themed.getString(R.string.notif_mention_template) formatSpans (c.name, MessageAdapter.formatText(themed, m)(c)), ChannelMentionSummary, Some(c))
   }
   def pm(query: Query, m: MessageLike) {
-    summarize(PrivateMessageSummary)
     showNotification(PrivateMessage(query, m), R.drawable.ic_notify_mono_star,
       MessageAdapter.formatText(themed, m)(query), PrivateMessageSummary, Some(query))
   }
@@ -495,7 +493,6 @@ object Notifications {
   }
   def disconnected(server: Server): Unit = {
     cancel(ServerDisconnected(server))
-    summarize(ServerDisconnectedSummary)
     showNotification(ServerDisconnected(server), R.drawable.ic_notify_mono_bang,
       themed.getString(R.string.notif_server_disconnected, server.name), ServerDisconnectedSummary, server = Some(server))
   }
@@ -546,7 +543,7 @@ object Notifications {
   }
 
   private def showNotification(tpe: NotificationType, icon: Int, text: CharSequence,
-                               group: NotificationType,
+                               group: NotificationType with Summary,
                                channel: Option[ChannelLike] = None,
                                server: Option[Server] = None): Int = {
     val id = nextNotificationId()
@@ -604,8 +601,9 @@ object Notifications {
     }
     if (Build.VERSION.SDK_INT >= 21)
       notif.headsUpContentView = notif.bigContentView
-    nm.notify(id, notif)
     currentNotifications += tpe -> id
+    summarize(group)
+    nm.notify(id, notif)
     id
   }
 

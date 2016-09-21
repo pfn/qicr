@@ -187,12 +187,14 @@ with EventBus.RefOwner {
 
   def makeTabTitle(pos: Int) = {
     val t = tabs(pos)
+    val favorite = t.channel.fold(false)(Config.Favorites.apply)
 
-    val title = if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
+    val title0 = if ((t.flags & TabInfo.FLAG_NEW_MENTIONS) > 0)
       SpannedGenerator.textColor(0xffec407a, t.title)
     else if ((t.flags & TabInfo.FLAG_NEW_MESSAGES) > 0)
       SpannedGenerator.textColor(0xff26a69a, t.title)
     else t.title
+    val title = if (favorite) "%1%2" formatSpans(title0, SpannedGenerator.textColor(0xffec407a, "*")) else title0
 
     if ((t.flags & TabInfo.FLAG_DISCONNECTED) > 0)
       "(%1)" formatSpans title else title
