@@ -169,7 +169,7 @@ class IrcManager extends EventBus.RefOwner {
           if (delta > 2.minutes.toMillis) {
             // automatically reconnect if ping gets over 120s
             server += ServerInfo(s"Disconnecting server due to ping timeout (${delta.millis.toSeconds}s)")
-            disconnect(server, None, true).onComplete { case _ =>
+            disconnect(server, None, true).onComplete { _ =>
               connect(server)
             }
           } else if (delta > server.currentLag.now)
@@ -271,12 +271,11 @@ class IrcManager extends EventBus.RefOwner {
 
     _running = false
     val fs = Future.sequence(connections.keys.map(disconnect(_, message, false, true)))
-    fs.onComplete {
-      case _ =>
-        log.d("All disconnects completed, running callback: " + cb)
-        cb.foreach { callback => UiBus.run { callback() } }
-        Notifications.cancelAll()
-        UiBus.post(System.exit(0))
+    fs.onComplete { _ =>
+      log.d("All disconnects completed, running callback: " + cb)
+      cb.foreach { callback => UiBus.run { callback() } }
+      Notifications.cancelAll()
+      UiBus.post(System.exit(0))
     }
     handlerThread.quit()
     ServiceBus.send(IrcManagerStop)
@@ -529,7 +528,7 @@ class IrcManager extends EventBus.RefOwner {
               disconnections = fs
             }
             if (connectivity && lastConnectedInfo != inf) {
-              disconnections.onComplete { case _ =>
+              disconnections.onComplete { _ =>
                 getServers filter (_.autoconnect) foreach { s =>
                   s += ServerInfo("Connectivity restored, reconnecting...")
                   Notifications.cancel(Notifications.ServerDisconnected(s))
