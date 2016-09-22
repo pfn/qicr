@@ -15,7 +15,7 @@ import android.util.Log
 
 import com.sorcix.sirc.IrcConnection
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.common._
@@ -181,9 +181,9 @@ abstract class InputProcessor(activity: Activity) {
         else selected).toLowerCase
 
         val ch = manager.channels(c)
-        val users = ch.getUsers.map {
+        val users = ch.getUsers.?.map(_.asScala).fold(Map.empty[String,String])(_.map {
           u => (u.getNick.toLowerCase, u.getNick)
-        }.toMap
+        }.toMap)
 
         val recent = c.messages.messages.reverse.collect {
           case ChatMessage(s, m) => s.toLowerCase
