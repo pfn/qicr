@@ -36,11 +36,10 @@ object MessageLike {
 
     // too hard to reference R.string, hardcode <> -- and *
     case class Privmsg(sender: String, message: String,
-            op: Boolean = false, voice: Boolean = false, ts: Date = new Date) extends MessageLike
+                       mode: UserMode = UserMode.NoMode, ts: Date = new Date) extends MessageLike
     with ChatMessage {
         override def toString = "<" +
-                (if (op) "@" else if (voice) "+" else "") +
-                sender + "> " + message
+                mode.prefix + sender + "> " + message
     }
     case class CtcpAction(sender: String, message: String, ts: Date = new Date) extends MessageLike
     with ChatMessage {
@@ -54,6 +53,48 @@ object MessageLike {
 
 trait MessageLike {
     def ts: Date
+}
+
+sealed trait UserMode extends Ordered[UserMode] {
+  val order: Int
+  val prefix: String
+
+  override def compare(that: UserMode) = order - that.order
+}
+
+object UserMode {
+  case object Admin extends UserMode {
+    val order = 5
+    val prefix = "&"
+  }
+  case object Founder extends UserMode {
+    val order = 4
+    val prefix = "~"
+  }
+  case object Op extends UserMode {
+    val order = 3
+    val prefix = "@"
+  }
+  case object HalfOp extends UserMode {
+    val order = 2
+    val prefix = "%"
+  }
+  case object Voice extends UserMode {
+    val order = 1
+    val prefix = "+"
+  }
+  case object NoMode extends UserMode {
+    val order = 0
+    val prefix = ""
+  }
+  def apply(admin: Boolean, founder: Boolean, op: Boolean, halfop: Boolean, voice: Boolean): UserMode = {
+    if (admin) Admin
+    else if (founder) Founder
+    else if (op) Op
+    else if (halfop) HalfOp
+    else if (voice) Voice
+    else NoMode
+  }
 }
 
 sealed trait BusEvent extends com.hanhuy.android.common.BusEvent

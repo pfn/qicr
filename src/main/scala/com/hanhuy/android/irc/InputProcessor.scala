@@ -375,7 +375,7 @@ case class CommandProcessor(ctx: Context) {
               chan.getUs.?.fold(
                 ch += Privmsg(ch.server.currentNick, l)
               ){ u => ch += Privmsg(ch.server.currentNick, l,
-                  u.hasOperator, u.hasVoice)
+                  usermode(u))
               }
               chan.sendMessage(l)
             }

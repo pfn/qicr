@@ -457,7 +457,7 @@ with ModeListener with ServerEventListener with MessageEventListener {
           cancelNotifications(c)
         }
 
-        val pm = Privmsg(src.getNick, msg, src.hasOperator, src.hasVoice, ts = message.timestamp)
+        val pm = Privmsg(src.getNick, msg, usermode(src), ts = message.timestamp)
         if (matchesNick(c.server, msg) && !src.isUs && !Config.Ignores(src.getNick))
           manager.addChannelMention(c, pm)
         else if (Config.Favorites(c) && !src.isUs && !Config.Ignores(src.getNick))

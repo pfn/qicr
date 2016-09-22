@@ -296,7 +296,7 @@ class MessageLog private(context: Context)
   }
 
   def log(m: MessageLike, c: ChannelLike) = m match {
-    case Privmsg(sender, message, _, _, ts) =>
+    case Privmsg(sender, message, _, ts) =>
       logEntry(Entry(getChannel(c), sender, ts.getTime, message))
     case Notice(sender, message, ts) =>
       logEntry(Entry(getChannel(c), sender, ts.getTime, message, notice = true))

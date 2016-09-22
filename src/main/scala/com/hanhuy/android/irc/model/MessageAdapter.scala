@@ -57,8 +57,8 @@ object MessageAdapter extends EventBus.RefOwner {
       case Whois(text,_) => text
       case MessageLike.Query(_) => formatText(c, msg, R.string.query_template,
         colorNick(ch.get.name))
-      case Privmsg(s, m, o, v,_) => gets(c, R.string.message_template, msg,
-         s, m, (o,v))
+      case Privmsg(s, m, mode,_) => gets(c, R.string.message_template, msg,
+         s, m, mode)
       case Notice(s, m,_) => gets(c, R.string.notice_template, msg, s, m)
       case CtcpAction(s, m,_) => gets(c, R.string.action_template, msg, s, m)
       case CtcpRequest(server, t, cmd, args,_) =>
@@ -137,12 +137,11 @@ object MessageAdapter extends EventBus.RefOwner {
 
   def nickColor(n: String) = NICK_COLORS(math.abs(n.hashCode) % NICK_COLORS.length)
   private def gets(c: Context, res: Int, m: MessageLike, src: String,
-      msg: String, modes: (Boolean,Boolean) = (false, false))(
+      msg: String, mode: UserMode = UserMode.NoMode)(
       implicit channel: ChannelLike, currentNicks: Set[String]) = {
     val server = channel.? map (_.server)
-    val (op, voice) = modes
 
-    val prefix = {if (op) "@" else if (voice) "+" else ""}
+    val prefix = mode.prefix
 
     if (channel.isInstanceOf[Query]) {
       if (server exists (_.currentNick equalsIgnoreCase src))
@@ -274,7 +273,7 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
   implicit def currentNicks = {
     nickCache getOrElse {
       val nicks = filteredMessages.collect {
-        case Privmsg(sender, _, _, _, _) => sender
+        case Privmsg(sender, _, _, _) => sender
       }.toSet
       nickCache = Some(nicks)
       nicks

@@ -33,7 +33,17 @@ object NickListAdapter {
   }
 }
 
-case class NickAndMode(mode: Char, nick: String)
+object NickAndMode {
+  implicit val nickOrdering: Ordering[NickAndMode] = new Ordering[NickAndMode] {
+    override def compare(x: NickAndMode, y: NickAndMode) = {
+      val r = y.mode.order - x.mode.order
+      if (r == 0) {
+        x.nick.compareToIgnoreCase(y.nick)
+      } else r
+    }
+  }
+}
+case class NickAndMode(mode: UserMode, nick: String)
 
 // must reference activity for resources
 class NickListAdapter private(activity: WeakReference[MainActivity], channel: Channel)
@@ -41,7 +51,7 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
   import ViewGroup.LayoutParams._
   val manager = IrcManager.init()
   val c = manager.channels.get(channel)
-  var nicks: Vector[android.text.Spanned] = Vector.empty
+  var nicks: Vector[NickAndMode] = Vector.empty
   notifyDataSetChanged()
 
   override def context = activity()
@@ -58,26 +68,10 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
   override def notifyDataSetChanged() {
     c.foreach { c =>
       nicks = c.getUsers.?.fold(nicks)(_.asScala.toVector.map { u =>
-        val prefix = if (u.hasOperator) '@' else if (u.hasVoice) '+' else ' '
-        NickAndMode(prefix, u.getNick)
+        NickAndMode(usermode(u), u.getNick)
       }.filterNot {
         _.nick == "***" // znc playback user
-      }.sortWith { (a, b) =>
-        (a.mode, b.mode) match {
-          case ('@', y) if y != '@' => true
-          case (x, '@') if x != '@' => false
-          case ('+', y) if y != '@' && y != '+' => true
-          case (x, '+') if x != '@' && x != '+' => false
-          case (_, _) => a.nick.compareToIgnoreCase(b.nick) < 0
-        }
-      }.map { n =>
-        val colored = SpannedGenerator.textColor(MessageAdapter.nickColor(n.nick), n.nick)
-        val s = if (Config.Ignores(n.nick))
-          span(new StrikethroughSpan, colored)
-        else colored
-
-        "%1%2" formatSpans(String.valueOf(n.mode), s)
-      })
+      }.sorted)
       super.notifyDataSetChanged()
     }
   }
@@ -88,7 +82,14 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
   override def getView(pos: Int, convertView: View, container: ViewGroup) = {
     val view = convertView.?.fold(layout.perform())(_.asInstanceOf[TextView])
 
-    view.setText(getItem(pos))
+    val n = getItem(pos)
+    val colored = SpannedGenerator.textColor(MessageAdapter.nickColor(n.nick), n.nick)
+    val s = if (Config.Ignores(n.nick))
+      span(new StrikethroughSpan, colored)
+    else colored
+
+    val text = "%1%2" formatSpans(f"${n.mode.prefix}%1s", s)
+    view.setText(text)
     view
   }
 

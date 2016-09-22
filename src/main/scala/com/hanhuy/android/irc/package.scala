@@ -71,4 +71,7 @@ package object irc {
       tv.addTextChangedListener(single[TextWatcher].onTextChanged(
         (s: CharSequence, start: Int, before: Int, count: Int) => f(s).perform()))
   }
+
+  def usermode(u: com.sorcix.sirc.User): model.UserMode =
+    model.UserMode(u.hasAdmin, u.hasFounder, u.hasOperator, u.hasHalfOp, u.hasVoice)
 }

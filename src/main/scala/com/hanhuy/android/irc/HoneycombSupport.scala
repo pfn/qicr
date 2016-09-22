@@ -97,8 +97,7 @@ object HoneycombSupport {
 
   def startNickActionMode(nick: String)(f: (MenuItem => Unit)) {
       _actionmode = activity.fold(WeakReference.empty[ActionMode])(a => WeakReference(
-        a.startSupportActionMode(
-          NickListActionModeSetup(nick.dropWhile(Set(' ', '@', '+')), f))))
+        a.startSupportActionMode(NickListActionModeSetup(nick, f))))
   }
 
   case class NickListActionModeSetup[A](nick: String, callback: MenuItem => A) extends ActionMode.Callback {

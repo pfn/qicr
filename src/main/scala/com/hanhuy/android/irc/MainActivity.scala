@@ -654,35 +654,34 @@ class MainActivity extends AppCompatActivity with EventBus.RefOwner
             nickList.getAdapter.getCount: java.lang.Integer))
         nickList.getAdapter.registerDataSetObserver(observer)
         nickList.onItemClick { (_,_,pos,_) =>
-            HoneycombSupport.startNickActionMode(
-              nickList.getAdapter.getItem(pos).toString) { item: MenuItem =>
-              // TODO refactor this callback (see messageadapter)
-              val nick = nickList.getAdapter.getItem(pos).toString.dropWhile(n => Set(' ','@','+')(n))
-              item.getItemId match {
-                case R.id.nick_whois =>
-                  proc.processor.channel = manager.lastChannel
-                  proc.processor.WhoisCommand.execute(Some(nick))
-                case R.id.channel_log =>
-                  c.channel foreach { ch =>
-                    startActivity(MessageLogActivity.createIntent(ch, nick))
-                  }
-                  overridePendingTransition(
-                    R.anim.slide_in_left, R.anim.slide_out_right)
-                case R.id.nick_ignore =>
-                  proc.processor.channel = manager.lastChannel
-                  if (Config.Ignores(nick))
-                    proc.processor.UnignoreCommand.execute(Some(nick))
-                  else
-                    proc.processor.IgnoreCommand.execute(Some(nick))
-                case R.id.nick_start_chat =>
-                  c.channel.foreach { ch =>
-                    manager.startQuery(ch.server, nick)
-                  }
-              }
-
-              ()
+          val nick = nickList.getAdapter.asInstanceOf[NickListAdapter].getItem(pos).nick
+          HoneycombSupport.startNickActionMode(nick) { item =>
+            // TODO refactor this callback (see messageadapter)
+            item.getItemId match {
+              case R.id.nick_whois =>
+                proc.processor.channel = manager.lastChannel
+                proc.processor.WhoisCommand.execute(Some(nick))
+              case R.id.channel_log =>
+                c.channel foreach { ch =>
+                  startActivity(MessageLogActivity.createIntent(ch, nick))
+                }
+                overridePendingTransition(
+                  R.anim.slide_in_left, R.anim.slide_out_right)
+              case R.id.nick_ignore =>
+                proc.processor.channel = manager.lastChannel
+                if (Config.Ignores(nick))
+                  proc.processor.UnignoreCommand.execute(Some(nick))
+                else
+                  proc.processor.IgnoreCommand.execute(Some(nick))
+              case R.id.nick_start_chat =>
+                c.channel.foreach { ch =>
+                  manager.startQuery(ch.server, nick)
+                }
             }
+
             ()
+          }
+          ()
         }
 
         (IO(nickcomplete) >>= visGone(showNickComplete)).perform()
