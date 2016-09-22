@@ -270,6 +270,7 @@ class IrcManager extends EventBus.RefOwner {
         log.d("All disconnects completed, running callback: " + cb)
         cb.foreach { callback => UiBus.run { callback() } }
         Notifications.cancelAll()
+        UiBus.post(System.exit(0))
     }
     handlerThread.quit()
     ServiceBus.send(IrcManagerStop)
