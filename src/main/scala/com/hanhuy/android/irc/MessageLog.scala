@@ -1,14 +1,13 @@
 package com.hanhuy.android.irc
 
 import java.io.Closeable
-
 import java.util.Date
 
-import android.app.{AlertDialog, Activity}
-import android.content.{Intent, ContentValues, Context}
+import android.app.{Activity, AlertDialog}
+import android.content.{ContentValues, Context, Intent}
 import android.database.Cursor
 import android.database.sqlite.{SQLiteDatabase, SQLiteOpenHelper}
-import android.graphics.{Typeface, Color}
+import android.graphics.{Color, Typeface}
 import android.graphics.drawable.ColorDrawable
 import android.os.{Bundle, Handler, HandlerThread}
 import android.provider.BaseColumns
@@ -17,6 +16,7 @@ import android.support.v4.graphics.drawable.DrawableCompat
 import android.support.v4.view.MenuItemCompat
 import android.support.v4.widget.CursorAdapter
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.content.res.AppCompatResources
 import android.support.v7.widget.SearchView.{OnCloseListener, OnQueryTextListener}
 import android.text.format.DateFormat
 import android.text.method.LinkMovementMethod
@@ -25,7 +25,7 @@ import android.view.ViewGroup.LayoutParams._
 import android.view._
 import android.widget.AbsListView.OnScrollListener
 import android.widget.ExpandableListView.OnChildClickListener
-import android.widget.{CursorAdapter => _,_}
+import android.widget.{CursorAdapter => _, _}
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.irc.Tweaks._
@@ -35,7 +35,6 @@ import iota._
 
 import scala.concurrent.Future
 import scala.util.Try
-
 import Futures._
 
 /**
@@ -577,7 +576,7 @@ class MessageLogActivity extends AppCompatActivity {
     // due to a bug in Moto Display, it fails to render vector images
     // as a result, vector images are also deleted so only the rasterized
     // images remain. Tint manually!
-    val d = getResources.getDrawable(R.drawable.abc_ic_ab_back_material)
+    val d = AppCompatResources.getDrawable(this, R.drawable.abc_ic_ab_back_material)
     DrawableCompat.setTint(DrawableCompat.wrap(d.mutate()), resolveAttr(R.attr.qicrNotificationIconTint, _.data))
     toolbar.setNavigationIcon(d)
 
