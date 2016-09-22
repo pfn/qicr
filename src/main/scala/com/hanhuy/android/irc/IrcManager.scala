@@ -127,6 +127,11 @@ class IrcManager extends EventBus.RefOwner {
   var recreateActivity: Option[Int] = None // int = page to flip to
   def connected = connections.nonEmpty
 
+  def connections  = mconnections
+  def _connections = m_connections
+  private var mconnections   = Map.empty[Server,IrcConnection]
+  private var m_connections  = Map.empty[IrcConnection,Server]
+
   lazy val handlerThread = {
     val t = new HandlerThread("IrcManagerHandler")
     t.start()
@@ -169,11 +174,6 @@ class IrcManager extends EventBus.RefOwner {
     }
     h.post(() => pingLoop())
   }
-
-  def connections  = mconnections
-  def _connections = m_connections
-  private var mconnections   = Map.empty[Server,IrcConnection]
-  private var m_connections  = Map.empty[IrcConnection,Server]
 
   var lastChannel: Option[ChannelLike] = None
   def firstChannel = channels.keySet.toSeq sortWith { (a,b) =>
@@ -256,9 +256,10 @@ class IrcManager extends EventBus.RefOwner {
 
   def quit[A](message: Option[String] = None, cb: Option[() => A] = None) {
     instance = None
-    Application.context.unregisterReceiver(receiver)
-    Application.context.unregisterReceiver(dozeReceiver)
-    Application.context.unregisterReceiver(connReceiver)
+    // ignore errors from unregisteringreceivers
+    util.Try(Application.context.unregisterReceiver(receiver))
+    util.Try(Application.context.unregisterReceiver(dozeReceiver))
+    util.Try(Application.context.unregisterReceiver(connReceiver))
     Notifications.cancelAll()
     Notifications.exit()
     ServiceBus.send(BusEvent.ExitApplication)
@@ -350,8 +351,10 @@ class IrcManager extends EventBus.RefOwner {
   def addQuery(c: IrcConnection, _nick: String, msg: String,
                sending: Boolean = false, action: Boolean = false,
                notice: Boolean = false, ts: Date = new Date) {
-    if (_connections.contains(c)) {
-      val server = _connections(c)
+    _connections.get(c).orElse {
+      c.disconnect()
+      None
+    }.foreach { server =>
       val nick = if (sending) server.currentNick else _nick
 
       if (!Config.Ignores(nick)) {
@@ -482,7 +485,11 @@ class IrcManager extends EventBus.RefOwner {
   def ping(c: IrcConnection, server: Server, pingTime: Option[Long] = None) {
     val p = pingTime getOrElse System.currentTimeMillis
     server.currentPing = p.?
-    c.sendRaw("PING " + p)
+    try {
+      c.sendRaw("PING " + p)
+    } catch {
+      case n: NullPointerException => // prevent crash, let ping fail
+    }
   }
 
   val connReceiver = new BroadcastReceiver {

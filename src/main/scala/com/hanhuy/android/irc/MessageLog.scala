@@ -313,9 +313,10 @@ class MessageLog private(context: Context)
         channels += (c.network.id, c.name) -> c
         val db = getWritableDatabase
         db.beginTransaction()
-        db.update(TABLE_CHANNELS, c.values, s"${BaseColumns._ID}  = ?",
+        val rows = db.update(TABLE_CHANNELS, c.values, s"${BaseColumns._ID}  = ?",
           Array(String.valueOf(c.id)))
-        db.insertOrThrow(TABLE_LOGS, null, e.values)
+        if (rows > 0) // somehow the channel got deleted between the call to log() and logEntry() ???
+          db.insertOrThrow(TABLE_LOGS, null, e.values)
         db.setTransactionSuccessful()
         db.endTransaction()
         close(db)
@@ -525,7 +526,7 @@ class MessageLogActivity extends AppCompatActivity {
 
   def setAdapter(a: Option[LogAdapter]): Unit = {
     if (a.isEmpty)
-      getSupportActionBar.setSubtitle(null)
+      getSupportActionBar.?.foreach(_.setSubtitle(null))
     listview.setAdapter(a orNull)
     progressbar.setVisibility(if (a.isEmpty) View.VISIBLE else View.GONE)
     adapter foreach (_.close())
@@ -535,7 +536,7 @@ class MessageLogActivity extends AppCompatActivity {
     adapter foreach { a =>
       if (a.getCount > 0) {
         val t = a.getItem(0)
-        getSupportActionBar.setSubtitle(dfmt.format(t) + " " + tfmt.format(t))
+        getSupportActionBar.?.foreach(_.setSubtitle(dfmt.format(t) + " " + tfmt.format(t)))
       }
       listview.setSelection(a.getCount - 1)
     }
