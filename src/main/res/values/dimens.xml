@@ -5,4 +5,5 @@
     <item name="standard_padding" type="dimen">12dp</item>
     <dimen name="widget_chat_width">320dp</dimen>
     <dimen name="notification_panel_width">-1px</dimen>
+    <dimen name="notification_height">256dp</dimen>
 </resources>

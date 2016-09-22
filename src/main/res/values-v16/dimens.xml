@@ -1,3 +1,0 @@
-<resources xmlns:android="http://schemas.android.com/apk/res/android">
-    <dimen name="notification_height">256dp</dimen>
-</resources>
