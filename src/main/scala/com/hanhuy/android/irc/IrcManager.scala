@@ -145,7 +145,12 @@ class IrcManager extends EventBus.RefOwner {
       h.postDelayed(() => pingLoop(), 30.seconds.toMillis)
       Config.servers.now.filter(_.state.now == Server.CONNECTED).filterNot(mconnections.keySet) foreach { s =>
         s += ServerInfo("Fixing state of orphaned server")
-        disconnect(s, None, true).onComplete { case _ => connect(s) }
+        val cn = m_connections.find { case (_, srv) => srv == s }
+        disconnect(s, None, true).onComplete { _ => connect(s) }
+        cn.foreach { case (conn, srv) =>
+          conn.disconnect()
+          m_connections -= conn
+        }
       }
       mconnections.filterKeys(!Config.servers.now.filter(
         _.state.now == Server.CONNECTED).toSet(_)).keys foreach { s =>
