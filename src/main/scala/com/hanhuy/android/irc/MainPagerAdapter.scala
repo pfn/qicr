@@ -53,9 +53,9 @@ extends FragmentPagerAdapter(activity.getSupportFragmentManager)
 with ViewPager.OnPageChangeListener
 with EventBus.RefOwner {
   val manager = IrcManager.init()
-  private var channels = List.empty[ChannelLike]
-  private var servers  = List.empty[Server]
-  private var tabs = List.empty[TabInfo]
+  private var channels = Vector.empty[ChannelLike]
+  private var servers  = Vector.empty[Server]
+  private var tabs = Vector.empty[TabInfo]
   lazy val channelcomp = ChannelLikeComparator
   lazy val servercomp  = ServerComparator
   lazy val tabindicators = activity.tabs
@@ -288,15 +288,13 @@ with EventBus.RefOwner {
         tabindicators.addTab(tabindicators.newTab.setText(makeTabTitle(pos)), pos)
       }
     }
-    if (tabs.size > 1) {
-      notifyDataSetChanged()
-    }
+    notifyDataSetChanged()
     info
   }
 
-  private def insert[A](list: List[A], idx: Int, item: A): List[A] = {
+  private def insert[A](list: Vector[A], idx: Int, item: A): Vector[A] = {
     val (prefix,suffix) = list.splitAt(idx)
-    prefix ++ List(item) ++ suffix
+    prefix ++ Vector(item) ++ suffix
   }
   private def addChannel(c: ChannelLike) = {
     val idx = Collections.binarySearch(channels, c, channelcomp)
@@ -454,7 +452,7 @@ with EventBus.RefOwner {
     }
   }
   override def notifyDataSetChanged() {
-    if (navMode == Settings.NAVIGATION_MODE_TABS) {
+    if (navMode == Settings.NAVIGATION_MODE_TABS && tabs.nonEmpty) {
       (0 until (tabs.size - tabindicators.getTabCount)) foreach { _ =>
         tabindicators.addTab(tabindicators.newTab.setText(makeTabTitle(0)))
       }
