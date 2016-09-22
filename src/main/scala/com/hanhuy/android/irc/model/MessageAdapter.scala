@@ -263,12 +263,11 @@ class MessageAdapter(_channel: ChannelLike) extends BaseAdapter with EventBus.Re
     notifyDataSetChanged()
   }
 
-  protected[model] def add(item: MessageLike) {
+  protected[model] def add(item: MessageLike) = synchronized {
     messages += item
     filterCache = None
     nickCache = None
-    if (isMainThread)
-      _activity.get foreach { _ => notifyDataSetChanged() }
+    UiBus.run(notifyDataSetChanged())
   }
 
   private[this] var nickCache = Option.empty[Set[String]]

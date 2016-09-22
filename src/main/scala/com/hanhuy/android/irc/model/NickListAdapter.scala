@@ -9,7 +9,7 @@ import SpannedGenerator._
 import android.view.{Gravity, View, ViewGroup}
 import android.widget.{AbsListView, BaseAdapter, TextView}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 import com.hanhuy.android.irc.model.BusEvent.{IgnoreListChanged, NickListChanged}
 import scala.ref.WeakReference
@@ -41,7 +41,7 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
   import ViewGroup.LayoutParams._
   val manager = IrcManager.init()
   val c = manager.channels.get(channel)
-  var nicks: List[android.text.Spanned] = Nil
+  var nicks: Vector[android.text.Spanned] = Vector.empty
   notifyDataSetChanged()
 
   override def context = activity()
@@ -57,7 +57,7 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
 
   override def notifyDataSetChanged() {
     c.foreach { c =>
-      nicks = c.getUsers.toList.map { u =>
+      nicks = c.getUsers.?.fold(nicks)(_.asScala.toVector.map { u =>
         val prefix = if (u.hasOperator) '@' else if (u.hasVoice) '+' else ' '
         NickAndMode(prefix, u.getNick)
       }.filterNot {
@@ -77,14 +77,14 @@ extends BaseAdapter with EventBus.RefOwner with HasContext {
         else colored
 
         "%1%2" formatSpans(String.valueOf(n.mode), s)
-      }
+      })
       super.notifyDataSetChanged()
     }
   }
 
   override def getItemId(pos: Int) = pos
   override def getItem(pos: Int) = nicks(pos)
-  override def getCount : Int = nicks.?.fold(0)(_.size)
+  override def getCount : Int = nicks.size
   override def getView(pos: Int, convertView: View, container: ViewGroup) = {
     val view = convertView.?.fold(layout.perform())(_.asInstanceOf[TextView])
 

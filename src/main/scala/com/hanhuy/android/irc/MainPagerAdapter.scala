@@ -284,7 +284,9 @@ with EventBus.RefOwner {
     }
     tabs = insert(tabs, pos + base, info)
     if (navMode == Settings.NAVIGATION_MODE_TABS) {
-      tabindicators.addTab(tabindicators.newTab.setText(makeTabTitle(pos)), pos)
+      if (pos < tabindicators.getTabCount) { // dunno why this is possible, let notifyDataSetChanged do its thing
+        tabindicators.addTab(tabindicators.newTab.setText(makeTabTitle(pos)), pos)
+      }
     }
     if (tabs.size > 1) {
       notifyDataSetChanged()
