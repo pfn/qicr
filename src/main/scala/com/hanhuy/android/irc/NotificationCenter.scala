@@ -529,11 +529,15 @@ object Notifications {
     val style = new NotificationCompat.InboxStyle().setBigContentTitle(text)
     ms.foreach(m => style.addLine(m.toString))
     val id = tpe.id
+    val intent = new Intent(Application.context, classOf[MainActivity])
+    val pending = PendingIntent.getActivity(Application.context, pid(id, 0),
+      intent, PendingIntent.FLAG_UPDATE_CURRENT)
     val summaryNotification = new NotificationCompat.Builder(themed)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setPriority(Notification.PRIORITY_HIGH)
       .setCategory(Notification.CATEGORY_MESSAGE)
       .setContentTitle(text)
+      .setContentIntent(pending)
       .setSmallIcon(icon)
       .setStyle(style)
       .setGroup(tpe.toString)
