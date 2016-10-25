@@ -59,7 +59,10 @@ abstract class ChannelLike(val server: Server, val name: String)
   // locally only move the isNew watermark up to the device's time. However,
   // the copy of the message on the server may have a more recent timestamp
   // and will end up getting re-played in duplicate
-  def isNew(m: MessageLike) = lastTs < m.ts.getTime
+  def isNew(m: MessageLike) = (lastTs < m.ts.getTime) ||
+    (lastTs == m.ts.getTime && lastTs > (System.currentTimeMillis - 1000))
+  // allow messages with the same timestamp if they occur within the last second
+  // supports spammy services, like znc's *status
 
   def clear(): Unit = {
     messages.clear()
