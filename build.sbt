@@ -1,6 +1,7 @@
 import android.dsl._
 
-androidBuild
+enablePlugins(AndroidApp)
+enablePlugins(AndroidProtify)
 
 versionName := {
   import com.typesafe.sbt.SbtGit.GitKeys.gitReader
@@ -27,7 +28,7 @@ val conversionsVersion = "23.2.0"
 
 platformTarget := "android-24"
 
-scalaVersion in Global := "2.11.7"
+scalaVersion in Global := "2.11.8"
 
 scalacOptions in Compile ++= Seq("-deprecation", "-Xexperimental")
 
@@ -83,5 +84,3 @@ collectResources := {
   IO.delete(res / "drawable-anydpi-v21")
   (assets,res)
 }
-
-protifySettings
