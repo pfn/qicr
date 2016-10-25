@@ -569,6 +569,7 @@ class IrcManager extends EventBus.RefOwner {
             proc.channel = lastChannel
             proc.server = lastChannel.map(_.server)
             proc.executeLine(s)
+            HistoryAdapter += s
           }
 
           idx % chans.size
