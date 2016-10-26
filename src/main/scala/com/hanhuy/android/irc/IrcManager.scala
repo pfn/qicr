@@ -324,7 +324,6 @@ class IrcManager extends EventBus.RefOwner {
     server.currentPing = None // have to reset the last ping or else it'll get lost
     if (server.state.now == Server.CONNECTING || server.state.now == Server.CONNECTED) {
     } else {
-      server.state() = Server.CONNECTING
       Future(connectServerTask(server))
     }
     _running = true
@@ -601,7 +600,9 @@ class IrcManager extends EventBus.RefOwner {
   }
 
   def connectServerTask(server: Server) {
-    var state = server.state.now
+    var state: Server.State = Server.CONNECTING
+    server.state() = state
+
     val ircserver = new IrcServer(server.hostname, server.port,
       if (server.sasl) null else server.password.orNull, server.ssl)
     val connection = IrcConnection2(server.name)
@@ -685,7 +686,8 @@ class IrcManager extends EventBus.RefOwner {
       connection.disconnect()
 
     UiBus.run {
-      server.state() = state
+      if (state != Server.CONNECTING)
+        server.state() = state
       if (state == Server.CONNECTED)
         ping(connection, server)
     }
