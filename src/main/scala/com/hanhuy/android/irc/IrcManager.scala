@@ -442,7 +442,6 @@ class IrcManager extends EventBus.RefOwner {
       disconnect(server, disconnected = true)
       if (_running) {
         if (connections.isEmpty) {
-          lastChannel = None
           Notifications.running(getString(R.string.server_disconnected), firstChannel, lastChannel)
         } else {
           Notifications.running(runningString, firstChannel, lastChannel)

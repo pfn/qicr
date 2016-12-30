@@ -3,15 +3,12 @@ package com.hanhuy.android.irc
 import java.io._
 import java.nio.ByteBuffer
 
-import android.app.Activity
 import android.content.Context
-import android.content.res.TypedArray
 import android.graphics.{Paint, Typeface}
 import android.support.v7.preference.{PreferenceViewHolder, ListPreference, Preference}
-import android.text.{TextPaint, TextUtils}
+import android.text.TextPaint
 import android.text.style.MetricAffectingSpan
 import android.util.{TypedValue, AttributeSet}
-import android.view.{ContextThemeWrapper, View, Gravity, ViewGroup}
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget._
 import com.hanhuy.android.common._
@@ -45,7 +42,7 @@ object FontManager {
     }
 
     _fontsByFile = Some(fonts)
-    val byName = fonts map { case (k,v) => v -> k } toMap
+    val byName = fonts.map { case (k,v) => v -> k }
 
     _fontsByName = Some(byName)
 
@@ -55,6 +52,7 @@ object FontManager {
   // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6.html
   // https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6name.html
   private val SUPPORTED_VERSIONS = Set(0x74727565, 0x00010000, 0x4f54544f)
+  private val SUPPORTED_PLATFORM_IDS = Set(0,1,3)
   def getFontName(fontFilename: String): Option[String] = {
     val file = new RandomAccessFile(fontFilename, "r")
     val version = file.readInt()
@@ -87,7 +85,7 @@ object FontManager {
                 val platformID    = buf.getShort(nameid_offset)
                 val nameid_value  = buf.getShort(nameid_offset + 6)
 
-                if (nameid_value == 4 && platformID == 1) {
+                if (nameid_value == 4 && SUPPORTED_PLATFORM_IDS(platformID)) {
                   val name_length = buf.getShort(nameid_offset + 8)
                   val name_offset = buf.getShort(nameid_offset + 10) + string_offset
 
