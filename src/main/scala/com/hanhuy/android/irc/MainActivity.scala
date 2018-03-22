@@ -810,7 +810,10 @@ class KitKatDrawerLayout(c: Context) extends DrawerLayout(c) {
     if (Build.VERSION.SDK_INT >= 19) {
       val h = MeasureSpec.getSize(mh)
       val s = MeasureSpec.getMode(mh)
-      super.onMeasure(mw, MeasureSpec.makeMeasureSpec(h - change, s))
+      // is this samsung-only?
+      val ch = if (change == statusBarHeight) 0
+        else change
+      super.onMeasure(mw, MeasureSpec.makeMeasureSpec(h - ch, s))
     } else {
       super.onMeasure(mw, mh)
     }
