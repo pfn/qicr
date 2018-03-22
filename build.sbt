@@ -22,11 +22,11 @@ versionCode := {
   }
 }
 
-val supportSdkVersion = "24.2.1"
+val supportSdkVersion = "25.3.1"
 
 val conversionsVersion = "23.2.0"
 
-platformTarget := "android-24"
+platformTarget := "android-26"
 
 scalaVersion in Global := "2.11.8"
 

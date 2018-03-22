@@ -330,6 +330,7 @@ object Notifications {
       intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
     val builder = new NotificationCompat.Builder(themed)
+      .setLocalOnly(true)
       .setSmallIcon(R.drawable.ic_notify_mono)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setWhen(System.currentTimeMillis())
@@ -389,7 +390,7 @@ object Notifications {
         val startOffset = if (lines > MAX_LINES) {
           layout.getLineStart(lines - MAX_LINES)
         } else 0
-        n.priority = Notification.PRIORITY_HIGH
+        n.priority = Notification.PRIORITY_MIN
         val view = new RemoteViews(
           themed.getPackageName, R.layout.notification_content)
         view.setTextViewText(R.id.title, title)

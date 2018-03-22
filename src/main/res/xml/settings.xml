@@ -58,6 +58,12 @@
             android:title="@string/pref_use_internal_browser_title"
             android:defaultValue="true"
             />
+        <CheckBoxPreference
+            android:key="ui_force_system_nav_hw"
+            android:title="@string/pref_assume_hw_nav_title"
+            android:summary="@string/pref_assume_hw_nav_summary"
+            android:defaultValue="false"
+            />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_speech_rec">
         <CheckBoxPreference

@@ -85,6 +85,7 @@ object Settings {
     honeycombAndNewer)
   val DAYNIGHT_MODE = BooleanSetting("ui_daynight_mode", false)
   val INTERNAL_BROWSER = BooleanSetting("ui_use_internal_browser", true)
+  val ASSUME_HARDWARE_NAV = BooleanSetting("ui_force_system_nav_hw", false)
 
 
   private lazy val instance = new Settings

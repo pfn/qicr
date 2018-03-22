@@ -69,6 +69,9 @@
     <string name="pref_hide_keyboard_title">Hide keyboard</string>
     <string name="pref_use_internal_browser_title">Use internal browser</string>
 
+    <string name="pref_assume_hw_nav_title">Assume Hardware Navigation</string>
+    <string name="pref_assume_hw_nav_summary">Removes padding below input area for system navigation (requires restart)</string>
+
     <string-array name="selector_options">
         <item>Tabs</item>
         <item>Drawer</item>
