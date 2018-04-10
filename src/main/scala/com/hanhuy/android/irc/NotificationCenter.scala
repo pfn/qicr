@@ -294,8 +294,40 @@ object Notifications {
     val id = 4
   }
   val themed = new ContextThemeWrapper(Application.context, R.style.AppTheme_Light)
-  val nm = themed.systemService[NotificationManager]
+  @android.annotation.TargetApi(26)
+  def _nm = {
+    val m = themed.systemService[NotificationManager]
+    import iota.v
+
+    if (v(26)) {
+      import android.app.NotificationChannel
+      import android.app.Notification
+      val runningChannel = new NotificationChannel(CHANNEL_RUNNING, "Notification Chat", NotificationManager.IMPORTANCE_DEFAULT)
+      runningChannel.enableLights(false)
+      runningChannel.enableVibration(false)
+      runningChannel.setBypassDnd(false)
+      runningChannel.setDescription("Live messages in the notification tray")
+      runningChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC)
+      runningChannel.setShowBadge(false)
+      m.createNotificationChannel(runningChannel)
+
+      val messagesChannel = new NotificationChannel(CHANNEL_MESSAGES, "Messages", NotificationManager.IMPORTANCE_HIGH)
+      messagesChannel.enableLights(true)
+      messagesChannel.enableVibration(true)
+      messagesChannel.setBypassDnd(false)
+      messagesChannel.setVibrationPattern(Array(0l, 100l, 100l, 100l))
+      messagesChannel.setDescription("Direct messages and mentions")
+      messagesChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC)
+      messagesChannel.setShowBadge(true)
+      m.createNotificationChannel(messagesChannel)
+    }
+
+    m
+  }
+  lazy val nm = _nm
   val RUNNING_ID = 1
+  val CHANNEL_RUNNING  = "running-notifications"
+  val CHANNEL_MESSAGES = "message-notifications"
   val EXTRA_SUBJECT  = "com.hanhuy.android.irc.extra.subject"
   val EXTRA_MESSAGE = "com.hanhuy.android.irc.extra.message"
   val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
@@ -329,7 +361,7 @@ object Notifications {
     val pending = PendingIntent.getActivity(themed, pid(RUNNING_ID, 0),
       intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
-    val builder = new NotificationCompat.Builder(themed)
+    val builder = new NotificationCompat.Builder(themed, CHANNEL_RUNNING)
       .setLocalOnly(true)
       .setSmallIcon(R.drawable.ic_notify_mono)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
@@ -390,7 +422,8 @@ object Notifications {
         val startOffset = if (lines > MAX_LINES) {
           layout.getLineStart(lines - MAX_LINES)
         } else 0
-        n.priority = Notification.PRIORITY_MIN
+        if (!v(26))
+          n.priority = Notification.PRIORITY_MIN
         val view = new RemoteViews(
           themed.getPackageName, R.layout.notification_content)
         view.setTextViewText(R.id.title, title)
@@ -449,7 +482,8 @@ object Notifications {
     }
   }
   def cancelAll(): Unit = {
-    nm.cancelAll()
+    // using nm too early causes an NPE creating NotificationChannel
+    themed.systemService[NotificationManager].cancelAll()
   }
 
   def running(text: CharSequence, first: Option[ChannelLike], lastChannel: Option[ChannelLike]) = {
@@ -533,7 +567,7 @@ object Notifications {
     val intent = new Intent(Application.context, classOf[MainActivity])
     val pending = PendingIntent.getActivity(Application.context, pid(id, 0),
       intent, PendingIntent.FLAG_UPDATE_CURRENT)
-    val summaryNotification = new NotificationCompat.Builder(themed)
+    val summaryNotification = new NotificationCompat.Builder(themed, CHANNEL_MESSAGES)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setPriority(Notification.PRIORITY_HIGH)
       .setCategory(Notification.CATEGORY_MESSAGE)
@@ -561,7 +595,7 @@ object Notifications {
 
     val pending = PendingIntent.getActivity(themed, pid(id, 1), intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
-    val builder = new NotificationCompat.Builder(themed)
+    val builder = new NotificationCompat.Builder(themed, CHANNEL_MESSAGES)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setSmallIcon(icon)
       .setWhen(System.currentTimeMillis())

@@ -22,7 +22,7 @@ versionCode := {
   }
 }
 
-val supportSdkVersion = "25.3.1"
+val supportSdkVersion = "26.1.0"
 
 val conversionsVersion = "23.2.0"
 
@@ -84,3 +84,5 @@ collectResources := {
   IO.delete(res / "drawable-anydpi-v21")
   (assets,res)
 }
+
+resolvers += "google" at "https://maven.google.com"
