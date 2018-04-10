@@ -167,6 +167,9 @@ extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResu
     if (!BuildConfig.DEBUG) {
       getPreferenceScreen.removePreference(findPreference("logcat"))
     }
+    if (!iota.v(26)) {
+      getPreferenceScreen.removePreference(findPreference("notification_settings"))
+    }
     getPreferenceScreen.findPreference(
       "debug.log").setOnPreferenceClickListener(
       new OnPreferenceClickListener {
@@ -231,6 +234,12 @@ extends android.support.v7.preference.PreferenceFragmentCompat with FragmentResu
       true
     } else if (preference.getKey == "logcat") {
       startActivity(new Intent(getActivity, classOf[LogcatActivity]))
+      true
+    } else if (preference.getKey == "notification_settings") {
+      import android.provider.{Settings => S}
+      val intent = new Intent(S.ACTION_APP_NOTIFICATION_SETTINGS);
+      intent.putExtra(S.EXTRA_APP_PACKAGE, getContext.getPackageName);
+      startActivity(intent)
       true
     } else {
       super.onPreferenceTreeClick(preference)

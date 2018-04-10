@@ -2,4 +2,5 @@
     <bool name="is_phone">true</bool>
     <bool name="is_v14plus">false</bool>
     <bool name="is_v16plus">false</bool>
+    <bool name="is_v26plus">false</bool>
 </resources>

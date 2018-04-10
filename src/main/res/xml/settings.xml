@@ -120,6 +120,13 @@
             android:key="notification_vibrate_enable"
             android:title="Vibrate"
             android:defaultValue="false"/>
+        <Preference
+            android:key="notification_settings"
+            android:persistent="false"
+            android:title="Notification Settings"
+            android:summary="System notification settings for qicr"
+            android:enabled="@bool/is_v26plus"
+            />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_irc">
         <com.hanhuy.android.irc.CharsetPreference
