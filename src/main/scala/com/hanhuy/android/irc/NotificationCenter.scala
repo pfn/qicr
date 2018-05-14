@@ -325,7 +325,7 @@ object Notifications {
       messagesChannel.setShowBadge(true)
       m.createNotificationChannel(messagesChannel)
 
-      val disconnectsChannel = new NotificationChannel(CHANNEL_DISCONNECTS, "Disconnects", NotificationManager.IMPORTANCE_DEFAULT)
+      val disconnectsChannel = new NotificationChannel(CHANNEL_DISCONNECTS, "Disconnects", NotificationManager.IMPORTANCE_LOW)
       disconnectsChannel.enableLights(false)
       disconnectsChannel.enableVibration(false)
       disconnectsChannel.setBypassDnd(false)
