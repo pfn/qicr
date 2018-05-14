@@ -277,8 +277,12 @@ object Notifications {
   import android.net.Uri
   import model._
 
-  sealed trait NotificationType
-  case class ServerDisconnected(server: Server) extends NotificationType
+  sealed trait NotificationType {
+    def channel = CHANNEL_MESSAGES
+  }
+  case class ServerDisconnected(server: Server) extends NotificationType {
+    override def channel = CHANNEL_DISCONNECTS
+  }
   case class ChannelMention(c: ChannelLike, msg: MessageLike, ts: Long = System.currentTimeMillis) extends NotificationType
   case class PrivateMessage(query: Query, msg: MessageLike, ts: Long = System.currentTimeMillis) extends NotificationType
   trait Summary {
@@ -320,14 +324,24 @@ object Notifications {
       messagesChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC)
       messagesChannel.setShowBadge(true)
       m.createNotificationChannel(messagesChannel)
+
+      val disconnectsChannel = new NotificationChannel(CHANNEL_DISCONNECTS, "Disconnects", NotificationManager.IMPORTANCE_DEFAULT)
+      disconnectsChannel.enableLights(false)
+      disconnectsChannel.enableVibration(false)
+      disconnectsChannel.setBypassDnd(false)
+      disconnectsChannel.setDescription("Notifications of IRC server disconnects")
+      disconnectsChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC)
+      disconnectsChannel.setShowBadge(false)
+      m.createNotificationChannel(disconnectsChannel)
     }
 
     m
   }
   lazy val nm = _nm
   val RUNNING_ID = 1
-  val CHANNEL_RUNNING  = "running-notifications"
-  val CHANNEL_MESSAGES = "message-notifications"
+  val CHANNEL_RUNNING     = "running-notifications"
+  val CHANNEL_MESSAGES    = "message-notifications"
+  val CHANNEL_DISCONNECTS = "disconnect-notifications"
   val EXTRA_SUBJECT  = "com.hanhuy.android.irc.extra.subject"
   val EXTRA_MESSAGE = "com.hanhuy.android.irc.extra.message"
   val ACTION_NEXT_CHANNEL = "com.hanhuy.android.irc.action.NOTIF_NEXT"
@@ -567,7 +581,7 @@ object Notifications {
     val intent = new Intent(Application.context, classOf[MainActivity])
     val pending = PendingIntent.getActivity(Application.context, pid(id, 0),
       intent, PendingIntent.FLAG_UPDATE_CURRENT)
-    val summaryNotification = new NotificationCompat.Builder(themed, CHANNEL_MESSAGES)
+    val summaryNotification = new NotificationCompat.Builder(themed, tpe.channel)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setPriority(Notification.PRIORITY_HIGH)
       .setCategory(Notification.CATEGORY_MESSAGE)
@@ -595,7 +609,7 @@ object Notifications {
 
     val pending = PendingIntent.getActivity(themed, pid(id, 1), intent,
       PendingIntent.FLAG_UPDATE_CURRENT)
-    val builder = new NotificationCompat.Builder(themed, CHANNEL_MESSAGES)
+    val builder = new NotificationCompat.Builder(themed, tpe.channel)
       .setColor(resolveAttr(R.attr.colorPrimary, _.data)(themed))
       .setSmallIcon(icon)
       .setWhen(System.currentTimeMillis())
