@@ -289,6 +289,7 @@ object Notifications {
     val id: Int
   }
   case object ServerDisconnectedSummary extends NotificationType with Summary {
+    override def channel = CHANNEL_DISCONNECTS
     val id = 2
   }
   case object ChannelMentionSummary extends NotificationType with Summary {
