@@ -45,7 +45,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-common" % "1.3",
   "com.hanhuy.android" %% "iota" % "1.0.4",
   "com.hanhuy.android" %% "iota-pure" % "0.1",
-  "com.hanhuy" % "sirc" % "1.1.6-pfn.2",
+  "com.hanhuy" % "sirc" % "1.1.6-pfn.3",
   "ch.acra" % "acra" % "4.8.2",
   "com.lihaoyi" %% "scalarx" % "0.3.0",
   "com.android.support" % "cardview-v7" % supportSdkVersion,
